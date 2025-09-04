@@ -1,0 +1,22 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="60" fill="#2563eb"/>
+  
+  <!-- Main Icon - Trophy/Cup Shape -->
+  <path d="M35 45 C35 35, 45 25, 60 25 C75 25, 85 35, 85 45 L85 55 C85 70, 75 80, 60 80 C45 80, 35 70, 35 55 Z" fill="white"/>
+  
+  <!-- Trophy Base -->
+  <rect x="50" y="80" width="20" height="8" rx="2" fill="white"/>
+  <rect x="45" y="88" width="30" height="6" rx="3" fill="white"/>
+  
+  <!-- Trophy Handles -->
+  <path d="M30 50 C25 50, 20 45, 20 40 C20 35, 25 30, 30 30" stroke="white" stroke-width="3" fill="none"/>
+  <path d="M90 50 C95 50, 100 45, 100 40 C100 35, 95 30, 90 30" stroke="white" stroke-width="3" fill="none"/>
+  
+  <!-- Inner Details -->
+  <circle cx="60" cy="50" r="8" fill="#2563eb"/>
+  <rect x="52" y="58" width="16" height="2" rx="1" fill="#2563eb"/>
+  
+  <!-- Text -->
+  <text x="60" y="110" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="bold">TipsterBro</text>
+</svg>

@@ -138,24 +138,32 @@ export function DeepLinkHandler({
 
           <div className="text-sm text-gray-500 mb-4">Don't have the app?</div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {iosAppStoreUrl && (
               <button
                 onClick={() => handleDownloadApp('ios')}
-                className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+                className="w-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
                 aria-label="Download TipsterBro from App Store"
               >
-                Download for iOS
+                <img 
+                  src="/assets/appstore.png" 
+                  alt="Download on the App Store" 
+                  className="h-12 w-auto mx-auto"
+                />
               </button>
             )}
 
             {androidPlayUrl && (
               <button
                 onClick={() => handleDownloadApp('android')}
-                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                className="w-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-lg"
                 aria-label="Download TipsterBro from Google Play"
               >
-                Download for Android
+                <img 
+                  src="/assets/playstore.png" 
+                  alt="Get it on Google Play" 
+                  className="h-12 w-auto mx-auto"
+                />
               </button>
             )}
           </div>

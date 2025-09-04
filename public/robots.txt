@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /invite/
+Disallow: /channels/
+
+Sitemap: https://tipsterbro.com/sitemap.xml
