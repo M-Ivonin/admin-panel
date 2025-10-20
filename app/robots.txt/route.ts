@@ -6,7 +6,7 @@ Allow: /
 Disallow: /invite/
 Disallow: /channels/
 
-Sitemap: https://${process.env.APP_HOST || 'tipsterbro.com'}/sitemap.xml`;
+Sitemap: https://${process.env.APP_HOST || 'sirbro.com'}/sitemap.xml`;
 
   return new NextResponse(robotsTxt, {
     status: 200,

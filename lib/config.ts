@@ -19,8 +19,8 @@ export interface AppConfig {
  */
 export function getAppConfig(): AppConfig {
   const config = {
-    appCustomScheme: process.env.APP_CUSTOM_SCHEME || 'tipsterbro',
-    appHost: process.env.APP_HOST || 'tipsterbro.com',
+    appCustomScheme: process.env.APP_CUSTOM_SCHEME || 'sirbro',
+    appHost: process.env.APP_HOST || 'sirbro.com',
     iosAppStoreUrl: process.env.IOS_APP_STORE_URL || '',
     iosBundle: process.env.IOS_BUNDLE_ID || '',
     iosTeamId: process.env.IOS_TEAM_ID || 'PLACEHOLDER_TEAM_ID',
@@ -51,7 +51,7 @@ export function validateConfig(config: AppConfig): string[] {
  */
 export function getClientConfig() {
   return {
-    appCustomScheme: process.env.NEXT_PUBLIC_APP_CUSTOM_SCHEME || 'tipsterbro',
+    appCustomScheme: process.env.NEXT_PUBLIC_APP_CUSTOM_SCHEME || 'sirbro',
     iosAppStoreUrl: process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || '',
     androidPlayUrl: process.env.NEXT_PUBLIC_ANDROID_PLAY_URL || '',
   };

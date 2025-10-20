@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.APP_HOST ? `https://${process.env.APP_HOST}` : 'https://tipsterbro.com'),
+  metadataBase: new URL(process.env.APP_HOST ? `https://${process.env.APP_HOST}` : 'https://sirbro.com'),
   alternates: {
     canonical: '/',
     languages: {

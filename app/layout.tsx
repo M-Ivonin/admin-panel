@@ -3,20 +3,20 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'TipsterBro',
-    template: '%s | TipsterBro',
+    default: 'SirBro',
+    template: '%s | SirBro',
   },
   description: 'Sports betting tips and community platform',
   keywords: ['sports betting', 'tips', 'community', 'analysis'],
-  authors: [{ name: 'TipsterBro Team' }],
-  creator: 'TipsterBro',
-  publisher: 'TipsterBro',
+  authors: [{ name: 'SirBro Team' }],
+  creator: 'SirBro',
+  publisher: 'SirBro',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.APP_HOST ? `https://${process.env.APP_HOST}` : 'https://tipsterbro.com'),
+  metadataBase: new URL(process.env.APP_HOST ? `https://${process.env.APP_HOST}` : 'https://sirbro.com'),
   alternates: {
     canonical: '/',
   },
@@ -24,11 +24,11 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    siteName: 'TipsterBro',
+    siteName: 'SirBro',
   },
   twitter: {
     card: 'summary_large_image',
-    creator: '@tipsterbro',
+    creator: '@sirbro',
   },
   robots: {
     index: true,

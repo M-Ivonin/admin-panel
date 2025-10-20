@@ -8,7 +8,7 @@ import '@testing-library/jest-dom'
 // Mock window.location for deep link tests
 Object.defineProperty(window, 'location', {
   value: {
-    href: 'http://localhost:3000',
+    href: 'http://localhost:3001',
     assign: jest.fn(),
     replace: jest.fn(),
     reload: jest.fn(),
