@@ -3,22 +3,57 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    font-family: system-ui, sans-serif;
+  :root {
+    /* SirBro Dark Theme - Background #121212, Text #f9fafb, Secondary #6b7280, Brand Purple #5b4eff */
+    --background: 0 0% 7%;
+    --foreground: 210 20% 98%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 247 89% 65%;
+    --primary-foreground: 210 20% 98%;
+
+    --secondary: 220 9% 46%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 247 89% 65%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 247 89% 65%;
+
+    --radius: 0.75rem;
   }
-  
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-background text-foreground;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    @apply bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+    @apply bg-secondary text-secondary-foreground px-6 py-3 rounded-lg font-semibold hover:bg-secondary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2;
   }
   
   .card {
