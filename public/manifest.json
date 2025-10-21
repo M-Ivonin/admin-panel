@@ -1,7 +1,7 @@
 {
-    "name": "TipsterBro Deep Link Handler",
+    "name": "SirBro Deep Link Handler",
     "short_name": "TipsterBro",
-    "description": "Deep link handler for TipsterBro mobile app",
+    "description": "Deep link handler for SirBro mobile app",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
