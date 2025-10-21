@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
   if (pathnameIsMissingLocale) {
     return NextResponse.redirect(
       new URL(`/${i18n.defaultLocale}${pathname}`, request.url)
-    );
+    ); 
   }
 
   return NextResponse.next();

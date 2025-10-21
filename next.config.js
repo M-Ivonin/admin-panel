@@ -30,7 +30,7 @@ const nextConfig = {
         ]
       },
       {
-        source: '/(.*)',
+        source: '/((?!.*embed$).*)',
         headers: [
           {
             key: 'Strict-Transport-Security',
