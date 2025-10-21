@@ -2,7 +2,7 @@
   "version": 2,
   "headers": [
     {
-      "source": "/(.*)/embed",
+      "source": "/:lang(en|pt|es)/:page(privacy|terms|disclaimer)/embed",
       "headers": [
         {
           "key": "X-Content-Type-Options",
@@ -11,11 +11,15 @@
         {
           "key": "Referrer-Policy",
           "value": "no-referrer"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
         }
       ]
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\/embed$).*)",
       "headers": [
         {
           "key": "X-Content-Type-Options",
