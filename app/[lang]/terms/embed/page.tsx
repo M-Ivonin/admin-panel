@@ -1,4 +1,13 @@
 import { TermsContent } from '@/components/legal/TermsContent';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function TermsEmbedPage() {
   return (

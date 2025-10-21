@@ -1,4 +1,13 @@
 import { PrivacyContent } from '@/components/legal/PrivacyContent';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function PrivacyEmbedPage() {
   return (

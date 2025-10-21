@@ -1,4 +1,13 @@
 import { DisclaimerContent } from '@/components/legal/DisclaimerContent';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Disclaimer',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function DisclaimerEmbedPage() {
   return (
