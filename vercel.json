@@ -2,6 +2,19 @@
   "version": 2,
   "headers": [
     {
+      "source": "/(.*)/embed",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {
