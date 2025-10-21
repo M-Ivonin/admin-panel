@@ -31,7 +31,17 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  return NextResponse.next();
+  // Create response
+  const response = NextResponse.next();
+
+  // Remove X-Frame-Options for embed routes to allow WebView loading
+  if (pathname.endsWith('/embed')) {
+    response.headers.delete('X-Frame-Options');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+  }
+
+  return response;
 }
 
 export const config = {
