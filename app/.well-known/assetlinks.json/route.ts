@@ -10,9 +10,9 @@ export async function GET() {
         relation: ['delegate_permission/common.handle_all_urls'],
         target: {
           namespace: 'android_app',
-          package_name: config.androidPackageName || 'ai.levantem.tipsterbro',
+          package_name: config.androidPackageName || 'ai.levantem.sirbro',
           sha256_cert_fingerprints: [
-            'DE:AE:7C:24:44:DF:73:56:24:F6:AE:30:E1:CD:EF:89:18:6A:02:10:B6:62:E5:4E:4E:FE:75:A3:03:D1:BD:9B'
+            '7e:5f:36:fb:27:5c:49:e2:68:58:a4:14:4d:84:c4:b2:47:2b:3f:ad:9d:30:37:71:89:cd:38:79:c8:57:9e:67'
           ]
         }
       }

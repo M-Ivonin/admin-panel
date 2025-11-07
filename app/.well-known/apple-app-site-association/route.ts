@@ -7,7 +7,7 @@ export async function GET() {
     
     // Use placeholder if iOS Team ID is not set
     const teamId = config.iosTeamId === 'PLACEHOLDER_TEAM_ID' ? 'PLACEHOLDER_TEAM_ID' : config.iosTeamId;
-    const bundleId = config.iosBundle || 'com.tipsterbro.app';
+    const bundleId = config.iosBundle || 'ai.levantem.sirbro';
     
     const appSiteAssociation = {
       applinks: {
