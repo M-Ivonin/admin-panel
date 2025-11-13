@@ -1,7 +1,9 @@
 import { Apple } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getAppConfig } from '@/lib/config';
 
 export const AppStoreButtons = () => {
+   const config = getAppConfig();
   return (
     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
       <Button
@@ -10,7 +12,7 @@ export const AppStoreButtons = () => {
         asChild
       >
         <a
-          href="https://play.google.com/store/apps/details?id=ai.levantem.tipsterbro"
+          href={config.androidPlayUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3"
@@ -28,7 +30,7 @@ export const AppStoreButtons = () => {
         asChild
       >
         <a
-          href="https://apps.apple.com"
+          href={config.iosAppStoreUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3"
