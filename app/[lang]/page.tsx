@@ -10,8 +10,9 @@ import { Locale } from '@/lib/i18n/config';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { AppStoreButtons } from '@/components/AppStoreButtons';
 
-export default async function LandingPage({ params }: { params: { lang: Locale } }) {
-  const t = getDictionary(params.lang);
+export default async function LandingPage({ params }: { params: Promise<{ lang: Locale }> }) {
+  const { lang } = await params;
+  const t = getDictionary(lang);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
@@ -24,7 +25,7 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
                 alt="SirBro" 
                 width={40} 
                 height={40} 
-                style={{ height: 'auto', width: 'auto', maxHeight: 40, maxWidth: 40 }}
+                style={{ width: 'auto', height: 'auto', maxHeight: 40, maxWidth: 40 }}
               />
               <Image 
                 src="/assets/typemark.png" 
@@ -34,7 +35,7 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
                 style={{ height: 'auto', width: 'auto', maxHeight: 32, maxWidth: 120 }}
               />
             </Box>
-            <LanguageSwitcher currentLocale={params.lang} />
+            <LanguageSwitcher currentLocale={lang} />
           </Toolbar>
         </Container>
       </AppBar>
@@ -97,13 +98,11 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
               }}
             >
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, md: 3 } }}>
-                <Link href={`/${params.lang}/privacy`} passHref legacyBehavior>
+                <Link href={`/${lang}/privacy`} style={{ textDecoration: 'none' }}>
                   <Typography 
-                    component="a" 
                     variant="body2" 
                     color="text.secondary"
                     sx={{ 
-                      textDecoration: 'none',
                       '&:hover': { color: 'text.primary' },
                       transition: 'color 0.2s'
                     }}
@@ -111,13 +110,11 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
                     {t.footer.privacy}
                   </Typography>
                 </Link>
-                <Link href={`/${params.lang}/terms`} passHref legacyBehavior>
+                <Link href={`/${lang}/terms`} style={{ textDecoration: 'none' }}>
                   <Typography 
-                    component="a" 
                     variant="body2" 
                     color="text.secondary"
                     sx={{ 
-                      textDecoration: 'none',
                       '&:hover': { color: 'text.primary' },
                       transition: 'color 0.2s'
                     }}
@@ -125,13 +122,11 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
                     {t.footer.terms}
                   </Typography>
                 </Link>
-                <Link href={`/${params.lang}/disclaimer`} passHref legacyBehavior>
+                <Link href={`/${lang}/disclaimer`} style={{ textDecoration: 'none' }}>
                   <Typography 
-                    component="a" 
                     variant="body2" 
                     color="text.secondary"
                     sx={{ 
-                      textDecoration: 'none',
                       '&:hover': { color: 'text.primary' },
                       transition: 'color 0.2s'
                     }}
@@ -139,13 +134,11 @@ export default async function LandingPage({ params }: { params: { lang: Locale }
                     {t.footer.disclaimer}
                   </Typography>
                 </Link>
-                <Link href={`/${params.lang}/cookies`} passHref legacyBehavior>
+                <Link href={`/${lang}/cookies`} style={{ textDecoration: 'none' }}>
                   <Typography 
-                    component="a" 
                     variant="body2" 
                     color="text.secondary"
                     sx={{ 
-                      textDecoration: 'none',
                       '&:hover': { color: 'text.primary' },
                       transition: 'color 0.2s'
                     }}

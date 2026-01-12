@@ -55,15 +55,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LangLayout({
+export default async function LangLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { lang: Locale };
+  params: Promise<{ lang: string }>;
 }) {
+  const { lang } = await params as { lang: Locale };
   return (
-    <html lang={params.lang}>
+    <html lang={lang}>
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

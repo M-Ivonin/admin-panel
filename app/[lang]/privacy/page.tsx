@@ -11,27 +11,28 @@ import { Locale } from '@/lib/i18n/config';
 import { getDictionary } from '@/lib/i18n/get-dictionary';
 import { PrivacyContent } from '@/components/legal/PrivacyContent';
 
-export default async function PrivacyPage({ params }: { params: { lang: Locale } }) {
-  const t = getDictionary(params.lang);
+export default async function PrivacyPage({ params }: { params: Promise<{ lang: Locale }> }) {
+  const { lang } = await params;
+  const t = getDictionary(lang);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
       <AppBar position="static" color="default" elevation={0}>
         <Container maxWidth="lg">
           <Toolbar sx={{ px: { xs: 2, sm: 0 } }}>
-            <Button
-              component={Link}
-              href={`/${params.lang}`}
-              startIcon={<ArrowBackIcon />}
-              color="inherit"
-              sx={{ 
-                color: 'text.secondary',
-                '&:hover': { color: 'text.primary' },
-                transition: 'color 0.2s'
-              }}
-            >
-              {t.nav.backToHome}
-            </Button>
+            <Link href={`/${lang}`} passHref legacyBehavior>
+              <Button
+                startIcon={<ArrowBackIcon />}
+                color="inherit"
+                sx={{ 
+                  color: 'text.secondary',
+                  '&:hover': { color: 'text.primary' },
+                  transition: 'color 0.2s'
+                }}
+              >
+                {t.nav.backToHome}
+              </Button>
+            </Link>
           </Toolbar>
         </Container>
       </AppBar>
@@ -63,7 +64,7 @@ export default async function PrivacyPage({ params }: { params: { lang: Locale }
         <Container maxWidth="lg">
           <Box sx={{ py: 4 }}>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, md: 3 }, mb: 3 }}>
-              <Link href={`/${params.lang}/privacy`} passHref legacyBehavior>
+              <Link href={`/${lang}/privacy`} passHref legacyBehavior>
                 <Typography 
                   component="a" 
                   variant="body2" 
@@ -77,7 +78,7 @@ export default async function PrivacyPage({ params }: { params: { lang: Locale }
                   {t.footer.privacy}
                 </Typography>
               </Link>
-              <Link href={`/${params.lang}/terms`} passHref legacyBehavior>
+              <Link href={`/${lang}/terms`} passHref legacyBehavior>
                 <Typography 
                   component="a" 
                   variant="body2" 
@@ -91,7 +92,7 @@ export default async function PrivacyPage({ params }: { params: { lang: Locale }
                   {t.footer.terms}
                 </Typography>
               </Link>
-              <Link href={`/${params.lang}/disclaimer`} passHref legacyBehavior>
+              <Link href={`/${lang}/disclaimer`} passHref legacyBehavior>
                 <Typography 
                   component="a" 
                   variant="body2" 
@@ -105,7 +106,7 @@ export default async function PrivacyPage({ params }: { params: { lang: Locale }
                   {t.footer.disclaimer}
                 </Typography>
               </Link>
-              <Link href={`/${params.lang}/cookies`} passHref legacyBehavior>
+              <Link href={`/${lang}/cookies`} passHref legacyBehavior>
                 <Typography 
                   component="a" 
                   variant="body2" 
