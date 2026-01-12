@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { i18n, type Locale } from '@/lib/i18n/config';
+import AppRouterCacheProvider from '@/components/providers/AppRouterCacheProvider';
+import { MuiThemeProvider } from '@/components/providers/MuiThemeProvider';
 import '../globals.css';
 
 export async function generateStaticParams() {
@@ -69,7 +71,11 @@ export default function LangLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body className="antialiased">
-        {children}
+        <AppRouterCacheProvider>
+          <MuiThemeProvider>
+            {children}
+          </MuiThemeProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

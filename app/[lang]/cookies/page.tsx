@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Locale } from '@/lib/i18n/config';
 import { getDictionary } from '@/lib/i18n/get-dictionary';
 
@@ -8,67 +14,148 @@ export default async function CookiesPage({ params }: { params: { lang: Locale }
   const t = getDictionary(params.lang);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4">
-          <Link href={`/${params.lang}`} className="inline-flex items-center gap-2 text-secondary hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span>{t.nav.backToHome}</span>
-          </Link>
-        </div>
-      </header>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
+      <AppBar position="static" color="default" elevation={0}>
+        <Container maxWidth="lg">
+          <Toolbar sx={{ px: { xs: 2, sm: 0 } }}>
+            <Button
+              component={Link}
+              href={`/${params.lang}`}
+              startIcon={<ArrowBackIcon />}
+              color="inherit"
+              sx={{ 
+                color: 'text.secondary',
+                '&:hover': { color: 'text.primary' },
+                transition: 'color 0.2s'
+              }}
+            >
+              {t.nav.backToHome}
+            </Button>
+          </Toolbar>
+        </Container>
+      </AppBar>
 
-      <main className="container mx-auto px-4 py-12">
-        <article className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Image src="/assets/brandmark.png" alt="SirBro" width={48} height={48} className="h-12 w-12" />
-            <h1 className="text-4xl font-bold">{t.footer.cookies}</h1>
-          </div>
+      <Container maxWidth="lg" component="main" sx={{ py: 6 }}>
+        <Box component="article" sx={{ maxWidth: 900, mx: 'auto' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
+            <Image 
+              src="/assets/brandmark.png" 
+              alt="SirBro" 
+              width={48} 
+              height={48}
+              style={{ height: 48, width: 48 }}
+            />
+            <Typography variant="h3" component="h1" fontWeight={700}>
+              {t.footer.cookies}
+            </Typography>
+          </Box>
           
-          <p className="text-sm text-secondary mb-8">{t.legal.lastUpdated}</p>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+            {t.legal.lastUpdated}
+          </Typography>
           
-          <div className="space-y-6 text-foreground [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_p]:mb-4">
-            <p className="text-secondary">
+          <Box sx={{ '& > *': { mb: 3 } }}>
+            <Typography color="text.secondary">
               By installing, accessing, or using SirBro, you confirm that you have read, understood, and agreed to all the terms, policies, and conditions described in this document.
-            </p>
+            </Typography>
 
-            <h2>1. What Are Cookies</h2>
-            <p>Cookies are small text files stored on your device to help improve your experience.</p>
+            <Typography variant="h5" component="h2" fontWeight={700} sx={{ mt: 4, mb: 2 }}>
+              1. What Are Cookies
+            </Typography>
+            <Typography>
+              Cookies are small text files stored on your device to help improve your experience.
+            </Typography>
 
-            <h2>2. How We Use Cookies</h2>
-            <ul>
+            <Typography variant="h5" component="h2" fontWeight={700} sx={{ mt: 4, mb: 2 }}>
+              2. How We Use Cookies
+            </Typography>
+            <Box component="ul" sx={{ pl: 4, '& li': { mb: 1 } }}>
               <li>Essential cookies for app functionality</li>
               <li>Analytics cookies to understand usage patterns</li>
               <li>Preference cookies to remember your settings</li>
-            </ul>
+            </Box>
 
-            <h2>3. Managing Cookies</h2>
-            <p>You can control cookies through your device settings.</p>
+            <Typography variant="h5" component="h2" fontWeight={700} sx={{ mt: 4, mb: 2 }}>
+              3. Managing Cookies
+            </Typography>
+            <Typography>
+              You can control cookies through your device settings.
+            </Typography>
 
-            <p className="mt-8 text-secondary">© 2025 Levantem AI LTD. All rights reserved.</p>
-          </div>
-        </article>
-      </main>
+            <Typography color="text.secondary" sx={{ mt: 4 }}>
+              © 2025 Levantem AI LTD. All rights reserved.
+            </Typography>
+          </Box>
+        </Box>
+      </Container>
 
-      <footer className="border-t border-border mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-wrap gap-4 md:gap-6 mb-6">
-            <Link href={`/${params.lang}/privacy`} className="text-sm text-secondary hover:text-foreground transition-colors">
-              {t.footer.privacy}
-            </Link>
-            <Link href={`/${params.lang}/terms`} className="text-sm text-secondary hover:text-foreground transition-colors">
-              {t.footer.terms}
-            </Link>
-            <Link href={`/${params.lang}/disclaimer`} className="text-sm text-secondary hover:text-foreground transition-colors">
-              {t.footer.disclaimer}
-            </Link>
-            <Link href={`/${params.lang}/cookies`} className="text-sm text-secondary hover:text-foreground transition-colors">
-              {t.footer.cookies}
-            </Link>
-          </div>
-          <p className="text-sm text-secondary">{t.footer.copyright}</p>
-        </div>
-      </footer>
-    </div>
+      <Box component="footer" sx={{ borderTop: 1, borderColor: 'divider', mt: 8 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ py: 4 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, md: 3 }, mb: 3 }}>
+              <Link href={`/${params.lang}/privacy`} passHref legacyBehavior>
+                <Typography 
+                  component="a" 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    textDecoration: 'none',
+                    '&:hover': { color: 'text.primary' },
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {t.footer.privacy}
+                </Typography>
+              </Link>
+              <Link href={`/${params.lang}/terms`} passHref legacyBehavior>
+                <Typography 
+                  component="a" 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    textDecoration: 'none',
+                    '&:hover': { color: 'text.primary' },
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {t.footer.terms}
+                </Typography>
+              </Link>
+              <Link href={`/${params.lang}/disclaimer`} passHref legacyBehavior>
+                <Typography 
+                  component="a" 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    textDecoration: 'none',
+                    '&:hover': { color: 'text.primary' },
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {t.footer.disclaimer}
+                </Typography>
+              </Link>
+              <Link href={`/${params.lang}/cookies`} passHref legacyBehavior>
+                <Typography 
+                  component="a" 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    textDecoration: 'none',
+                    '&:hover': { color: 'text.primary' },
+                    transition: 'color 0.2s'
+                  }}
+                >
+                  {t.footer.cookies}
+                </Typography>
+              </Link>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {t.footer.copyright}
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Globe } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import LanguageIcon from '@mui/icons-material/Language';
 import { Locale } from '@/lib/i18n/config';
 
 export const LanguageSwitcher = ({ currentLocale }: { currentLocale: Locale }) => {
@@ -15,28 +17,46 @@ export const LanguageSwitcher = ({ currentLocale }: { currentLocale: Locale }) =
   ];
 
   const switchLanguage = (newLocale: Locale) => {
-    // Remove current locale from pathname and add new locale
     const segments = pathname.split('/');
     segments[1] = newLocale;
     router.push(segments.join('/'));
   };
 
   return (
-    <div className="flex items-center gap-2 bg-card border border-border rounded-lg p-1">
-      <Globe className="w-4 h-4 text-secondary ml-2" />
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 0.5, 
+      bgcolor: 'background.paper', 
+      border: 1, 
+      borderColor: 'divider',
+      borderRadius: 2,
+      p: 0.5
+    }}>
+      <LanguageIcon sx={{ width: 16, height: 16, color: 'text.secondary', ml: 1 }} />
       {languages.map((lang) => (
-        <button
+        <Button
           key={lang.code}
           onClick={() => switchLanguage(lang.code)}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-            currentLocale === lang.code
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          size="small"
+          variant={currentLocale === lang.code ? 'contained' : 'text'}
+          sx={{
+            minWidth: 'auto',
+            px: 1.5,
+            py: 0.5,
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            ...(currentLocale !== lang.code && {
+              color: 'text.secondary',
+              '&:hover': {
+                color: 'text.primary',
+              }
+            })
+          }}
         >
           {lang.label}
-        </button>
+        </Button>
       ))}
-    </div>
+    </Box>
   );
 };

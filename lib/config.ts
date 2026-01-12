@@ -21,7 +21,7 @@ export function getAppConfig(): AppConfig {
   const config = {
     appCustomScheme: process.env.APP_CUSTOM_SCHEME || 'sirbro',
     appHost: process.env.APP_HOST || 'sirbro.com',
-    iosAppStoreUrl: process.env.IOS_APP_STORE_URL || '',
+    iosAppStoreUrl: process.env.IOS_APP_STORE_URL || 'https://apps.apple.com/us/app/sirbro/id6753070536',
     iosBundle: process.env.IOS_BUNDLE_ID || '',
     iosTeamId: process.env.IOS_TEAM_ID || 'PLACEHOLDER_TEAM_ID',
     androidPlayUrl: process.env.ANDROID_PLAY_URL || '',
@@ -52,7 +52,7 @@ export function validateConfig(config: AppConfig): string[] {
 export function getClientConfig() {
   return {
     appCustomScheme: process.env.NEXT_PUBLIC_APP_CUSTOM_SCHEME || 'sirbro',
-    iosAppStoreUrl: process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || '',
+    iosAppStoreUrl: process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || 'https://apps.apple.com/us/app/sirbro/id6753070536',
     androidPlayUrl: process.env.NEXT_PUBLIC_ANDROID_PLAY_URL || '',
   };
 }
