@@ -47,7 +47,7 @@ APP_HOST=tipsterbro.com
 
 ### iOS Configuration
 ```bash
-IOS_APP_STORE_URL=https://apps.apple.com/app/tipsterbro/id123456789
+IOS_APP_STORE_URL=
 IOS_BUNDLE_ID=com.tipsterbro.app
 IOS_TEAM_ID=ABC123DEF4  # Update this when available
 ```
@@ -62,7 +62,7 @@ ANDROID_PACKAGE_NAME=ai.levantem.tipsterbro
 For client-side access, prefix with `NEXT_PUBLIC_`:
 ```bash
 NEXT_PUBLIC_APP_CUSTOM_SCHEME=tipsterbro
-NEXT_PUBLIC_IOS_APP_STORE_URL=https://apps.apple.com/app/tipsterbro/id123456789
+NEXT_PUBLIC_IOS_APP_STORE_URL=
 NEXT_PUBLIC_ANDROID_PLAY_URL=https://play.google.com/store/apps/details?id=ai.levantem.tipsterbro
 ```
 
