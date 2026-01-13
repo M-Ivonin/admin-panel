@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { detectPlatform, getAppStoreUrl, type Platform } from './platform';
 import { redactToken, createSafeLogData } from './redact';
+import { Translations } from './i18n/translations';
 
 interface DeepLinkHandlerProps {
   channelId: string;
@@ -10,6 +11,7 @@ interface DeepLinkHandlerProps {
   appCustomScheme: string;
   iosAppStoreUrl: string;
   androidPlayUrl: string;
+  translations: Translations;
 }
 
 export function DeepLinkHandler({
@@ -18,6 +20,7 @@ export function DeepLinkHandler({
   appCustomScheme,
   iosAppStoreUrl,
   androidPlayUrl,
+  translations,
 }: DeepLinkHandlerProps) {
   const [platform, setPlatform] = useState<Platform>('desktop');
   const [attempted, setAttempted] = useState(false);
@@ -103,12 +106,12 @@ export function DeepLinkHandler({
         <div className="text-center p-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            Opening TipsterBro...
+            {translations.deepLink.openingApp}
           </h1>
           <p className="text-gray-600">
             {attempted
-              ? 'If the app doesn\'t open, you\'ll be redirected to the app store.'
-              : 'Preparing to open the app...'}
+              ? translations.deepLink.appWillOpen
+              : translations.deepLink.preparingApp}
           </p>
         </div>
       </div>
@@ -120,10 +123,10 @@ export function DeepLinkHandler({
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Join SirBro Channel
+            {translations.deepLink.joinChannel}
           </h1>
           <p className="text-gray-600">
-            You've been invited to join a channel on TipsterBro
+            {translations.deepLink.invitedToJoin}
           </p>
         </div>
 
@@ -133,10 +136,10 @@ export function DeepLinkHandler({
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             aria-label="Open TipsterBro app"
           >
-            Open SirBro App
+            {translations.deepLink.openApp}
           </button>
 
-          <div className="text-sm text-gray-500 mb-4">Don't have the app?</div>
+          <div className="text-sm text-gray-500 mb-4">{translations.deepLink.dontHaveApp}</div>
 
           <div className="space-y-3">
             {iosAppStoreUrl && (
@@ -170,7 +173,7 @@ export function DeepLinkHandler({
         </div>
 
         <div className="mt-6 text-xs text-gray-400">
-          Channel ID: {redactToken(channelId) || 'Invalid'}
+          {translations.deepLink.channelId}: {redactToken(channelId) || translations.deepLink.invalid}
         </div>
       </div>
     </div>

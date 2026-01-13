@@ -1,19 +1,17 @@
 import { Metadata } from 'next';
-import { DeepLinkHandler } from '../../../lib/deep-link';
+import { BrowserLanguageWrapper } from '../../../components/BrowserLanguageWrapper';
 import { getClientConfig } from '../../../lib/config';
 
 interface InvitePageProps {
-  params: {
+  params: Promise<{
     channelId: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     token?: string;
-  };
+  }>;
 }
 
-export async function generateMetadata(
-  { params }: InvitePageProps
-): Promise<Metadata> {
+export async function generateMetadata({ params }: InvitePageProps): Promise<Metadata> {
   return {
     title: 'Join SirBro Channel',
     description: 'You\'ve been invited to join a channel on SirBro',
@@ -26,18 +24,10 @@ export async function generateMetadata(
   };
 }
 
-export default function InvitePage({ params, searchParams }: InvitePageProps) {
-  const { channelId } = params;
-  const { token } = searchParams;
+export default async function InvitePage({ params, searchParams }: InvitePageProps) {
+  const { channelId } = await params;
+  const { token } = await searchParams;
   const config = getClientConfig();
 
-  return (
-    <DeepLinkHandler
-      channelId={channelId}
-      token={token}
-      appCustomScheme={config.appCustomScheme}
-      iosAppStoreUrl={config.iosAppStoreUrl}
-      androidPlayUrl={config.androidPlayUrl}
-    />
-  );
+  return <BrowserLanguageWrapper channelId={channelId} token={token} config={config} />;
 }
