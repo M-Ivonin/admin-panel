@@ -3,16 +3,17 @@ import { DeepLinkHandler } from '../../../lib/deep-link';
 import { getClientConfig } from '../../../lib/config';
 
 interface ChannelJoinPageProps {
-  searchParams: {
+  searchParams: Promise<{
     channelId?: string;
     token?: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   searchParams,
 }: ChannelJoinPageProps): Promise<Metadata> {
-  const channelId = searchParams.channelId || 'unknown';
+  const params = await searchParams;
+  const channelId = params.channelId || 'unknown';
   
   return {
     title: `Join TipsterBro Channel - ${channelId}`,
@@ -25,10 +26,11 @@ export async function generateMetadata({
   };
 }
 
-export default function ChannelJoinPage({ searchParams }: ChannelJoinPageProps) {
+export default async function ChannelJoinPage({ searchParams }: ChannelJoinPageProps) {
   const config = getClientConfig();
-  const channelId = searchParams.channelId;
-  const token = searchParams.token;
+  const params = await searchParams;
+  const channelId = params.channelId;
+  const token = params.token;
 
   // If no channelId is provided, show an error
   if (!channelId) {
