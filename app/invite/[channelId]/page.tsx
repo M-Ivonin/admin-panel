@@ -15,12 +15,12 @@ export async function generateMetadata(
   { params }: InvitePageProps
 ): Promise<Metadata> {
   return {
-    title: 'Join TipsterBro Channel',
-    description: 'You\'ve been invited to join a channel on TipsterBro',
+    title: 'Join SirBro Channel',
+    description: 'You\'ve been invited to join a channel on SirBro',
     robots: 'noindex, nofollow',
     openGraph: {
-      title: 'Join TipsterBro Channel',
-      description: 'You\'ve been invited to join a channel on TipsterBro',
+      title: 'Join SirBro Channel',
+      description: 'You\'ve been invited to join a channel on SirBro',
       type: 'website',
     },
   };

@@ -120,7 +120,7 @@ export function DeepLinkHandler({
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Join TipsterBro Channel
+            Join SirBro Channel
           </h1>
           <p className="text-gray-600">
             You've been invited to join a channel on TipsterBro
@@ -133,7 +133,7 @@ export function DeepLinkHandler({
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             aria-label="Open TipsterBro app"
           >
-            Open TipsterBro App
+            Open SirBro App
           </button>
 
           <div className="text-sm text-gray-500 mb-4">Don't have the app?</div>
