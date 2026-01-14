@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import Script from 'next/script';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -16,6 +17,18 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=AW-17738539582"
+        strategy="afterInteractive"
+      />
+      <Script id="gtag-init" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-17738539582');
+        `}
+      </Script>
       <AppBar position="static" color="default" elevation={0}>
         <Container maxWidth="lg">
           <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 0 } }}>
