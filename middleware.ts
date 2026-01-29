@@ -7,6 +7,10 @@ export function middleware(request: NextRequest) {
 
   // Skip middleware for existing routes (channels, invite, api, static files)
   if (
+    pathname === '/' ||
+    pathname.startsWith('/admin-login') ||
+    pathname.startsWith('/magic-verify') ||
+    pathname.startsWith('/login') ||
     pathname.startsWith('/channels') ||
     pathname.startsWith('/invite') ||
     pathname.startsWith('/api') ||
@@ -29,7 +33,7 @@ export function middleware(request: NextRequest) {
   if (pathnameIsMissingLocale) {
     return NextResponse.redirect(
       new URL(`/${i18n.defaultLocale}${pathname}`, request.url)
-    ); 
+    );
   }
 
   return NextResponse.next();

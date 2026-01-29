@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { i18n, type Locale } from '@/lib/i18n/config';
+import { i18n } from '@/lib/i18n/config';
 import AppRouterCacheProvider from '@/components/providers/AppRouterCacheProvider';
 import { MuiThemeProvider } from '@/components/providers/MuiThemeProvider';
 import '../globals.css';
@@ -57,27 +57,15 @@ export const metadata: Metadata = {
 
 export default async function LangLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
   params: Promise<{ lang: string }>;
 }) {
-  const { lang } = await params as { lang: Locale };
   return (
-    <html lang={lang}>
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#5b4eff" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </head>
-      <body className="antialiased">
-        <AppRouterCacheProvider>
-          <MuiThemeProvider>
-            {children}
-          </MuiThemeProvider>
-        </AppRouterCacheProvider>
-      </body>
-    </html>
+    <AppRouterCacheProvider>
+      <MuiThemeProvider>
+        {children}
+      </MuiThemeProvider>
+    </AppRouterCacheProvider>
   );
 }
