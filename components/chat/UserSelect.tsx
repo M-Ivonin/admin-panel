@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAllUsers } from '@/lib/api/chat';
+import { getAllUsers, User } from '@/lib/api/users';
 import { Input } from '@/components/ui/input';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,8 +11,12 @@ interface UserSelectProps {
   selectedUserId?: string;
 }
 
+function getUserDisplayName(user: User): string {
+  return user.name_app || user.name_tg || user.email || user.telegram_username || 'Unknown';
+}
+
 export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
-  const [users, setUsers] = useState<Array<{ id: string; email: string; name: string }>>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,11 +40,16 @@ export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
     loadUsers();
   }, []);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter((user) => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      user.email?.toLowerCase().includes(term) ||
+      user.name_app?.toLowerCase().includes(term) ||
+      user.name_tg?.toLowerCase().includes(term) ||
+      user.telegram_username?.toLowerCase().includes(term)
+    );
+  });
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
 
@@ -52,8 +61,8 @@ export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
       >
         {selectedUser ? (
           <div>
-            <div className="font-medium text-gray-900">{selectedUser.name}</div>
-            <div className="text-sm text-gray-600">{selectedUser.email}</div>
+            <div className="font-medium text-gray-900">{getUserDisplayName(selectedUser)}</div>
+            <div className="text-sm text-gray-600">{selectedUser.email || '-'}</div>
           </div>
         ) : (
           <div className="text-gray-500">Select a user...</div>
@@ -67,49 +76,51 @@ export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
+              className="w-full text-gray-900"
               autoFocus
             />
           </div>
 
-          {error && (
-            <div className="p-4">
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </div>
-          )}
+          <div className="max-h-64 overflow-y-auto">
+            {error && (
+              <div className="p-4">
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              </div>
+            )}
 
-          {isLoading && (
-            <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              <span className="text-sm text-gray-600">Loading users...</span>
-            </div>
-          )}
+            {isLoading && (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="text-sm text-gray-600">Loading users...</span>
+              </div>
+            )}
 
-          {!isLoading && !error && filteredUsers.length === 0 && (
-            <div className="p-4 text-center text-sm text-gray-600">
-              {users.length === 0 ? 'No users found' : 'No matching users'}
-            </div>
-          )}
+            {!isLoading && !error && filteredUsers.length === 0 && (
+              <div className="p-4 text-center text-sm text-gray-600">
+                {users.length === 0 ? 'No users found' : 'No matching users'}
+              </div>
+            )}
 
-          {!isLoading &&
-            !error &&
-            filteredUsers.map((user) => (
-              <button
-                key={user.id}
-                onClick={() => {
-                  onUserSelect(user.id);
-                  setIsOpen(false);
-                  setSearchTerm('');
-                }}
-                className="w-full px-4 py-3 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
-              >
-                <div className="font-medium text-gray-900">{user.name}</div>
-                <div className="text-sm text-gray-600">{user.email}</div>
-              </button>
-            ))}
+            {!isLoading &&
+              !error &&
+              filteredUsers.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    onUserSelect(user.id);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
+                >
+                  <div className="font-medium text-gray-900">{getUserDisplayName(user)}</div>
+                  <div className="text-sm text-gray-600">{user.email || '-'}</div>
+                </button>
+              ))}
+          </div>
         </div>
       )}
     </div>

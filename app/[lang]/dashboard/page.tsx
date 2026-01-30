@@ -59,15 +59,17 @@ export default function DashboardPage() {
             </Link>
 
             {/* Users Card */}
-            <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full opacity-50">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4">
-                👥
+            <Link href="/dashboard/users">
+              <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4">
+                  👥
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Users</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  View and manage users
+                </p>
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Users</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                Manage users and permissions (coming soon)
-              </p>
-            </div>
+            </Link>
 
             {/* Settings Card */}
             <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full opacity-50">
