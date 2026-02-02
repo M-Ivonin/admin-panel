@@ -13,7 +13,7 @@ export default function RootPage() {
   useEffect(() => {
     const path = window.location.pathname;
 
-    if (path === '/admin') {
+    if (path === '/admin-login') {
       if (isAuthenticated) {
         router.push('/en/dashboard');
       } else {

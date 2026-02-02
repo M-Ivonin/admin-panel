@@ -8,7 +8,6 @@ export function middleware(request: NextRequest) {
   // Skip middleware for existing routes (channels, invite, api, static files)
   if (
     pathname === '/' ||
-    pathname.startsWith('/admin') ||
     pathname.startsWith('/admin-login') ||
     pathname.startsWith('/magic-verify') ||
     pathname.startsWith('/login') ||
