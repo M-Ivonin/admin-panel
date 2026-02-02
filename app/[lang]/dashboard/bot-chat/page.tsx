@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useChat } from '@/lib/hooks/useChat';
 import { UserSelect } from '@/components/chat/UserSelect';
@@ -10,8 +11,16 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function BotChatPage() {
-  const [selectedUserId, setSelectedUserId] = useState<string>();
+  const searchParams = useSearchParams();
+  const userIdFromUrl = searchParams.get('userId');
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(userIdFromUrl || undefined);
   const { messages, isLoading, error, dailyRequests, refresh } = useChat(selectedUserId);
+
+  useEffect(() => {
+    if (userIdFromUrl) {
+      setSelectedUserId(userIdFromUrl);
+    }
+  }, [userIdFromUrl]);
 
   return (
     <ProtectedRoute>
