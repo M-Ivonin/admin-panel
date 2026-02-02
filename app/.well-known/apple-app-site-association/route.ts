@@ -6,18 +6,29 @@ export async function GET() {
     const config = getAppConfig();
     
     // Use placeholder if iOS Team ID is not set
-    const teamId = config.iosTeamId === 'PLACEHOLDER_TEAM_ID' ? 'PLACEHOLDER_TEAM_ID' : config.iosTeamId;
+    const teamId = config.iosTeamId;
     const bundleId = config.iosBundle || 'ai.levantem.sirbro';
     
     const appSiteAssociation = {
       applinks: {
-        apps: [],
         details: [
           {
-            appID: `${teamId}.${bundleId}`,
-            paths: ['/invite/*', '/channels/*']
+            appIDs: [`${teamId}.${bundleId}`],
+            components: [
+              {
+                "/": "/channels/join",
+                "comment": "Channel join deep link"
+              },
+              {
+                "/": "/*",
+                "comment": "All other app links"
+              }
+            ]
           }
         ]
+      },
+      webcredentials: {
+        apps: [`${teamId}.${bundleId}`]
       }
     };
 
