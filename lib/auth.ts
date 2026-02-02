@@ -24,9 +24,16 @@ export interface AuthResponse {
  */
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const hostname = window.location.hostname;
+    const isLocalhost =
+      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+
+    if (isLocalhost) {
+      return 'http://localhost:3001';
+    }
   }
-  return process.env.API_URL || 'http://localhost:3001';
+
+  return 'https://api.tipsterbro.com/v1';
 }
 
 /**
