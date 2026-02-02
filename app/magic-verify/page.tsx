@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { exchangeMagicLinkToken } from '@/lib/api/auth';
 import { storeTokens } from '@/lib/auth';
 
-export default function MagicVerifyPage() {
+function MagicVerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
@@ -96,5 +96,22 @@ export default function MagicVerifyPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function MagicVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            <p className="text-gray-600">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <MagicVerifyContent />
+    </Suspense>
   );
 }

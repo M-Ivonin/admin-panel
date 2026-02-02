@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useChat } from '@/lib/hooks/useChat';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function BotChatPage() {
+function BotChatContent() {
   const searchParams = useSearchParams();
   const userIdFromUrl = searchParams.get('userId');
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(userIdFromUrl || undefined);
@@ -71,5 +71,17 @@ export default function BotChatPage() {
         </main>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function BotChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    }>
+      <BotChatContent />
+    </Suspense>
   );
 }
