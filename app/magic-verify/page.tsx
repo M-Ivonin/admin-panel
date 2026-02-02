@@ -98,3 +98,20 @@ function MagicVerifyContent() {
     </div>
   );
 }
+
+export default function MagicVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+            <p className="text-gray-600">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <MagicVerifyContent />
+    </Suspense>
+  );
+}
