@@ -40,9 +40,9 @@ function MagicVerifyContent() {
 
         setStatus('success');
 
-        // Redirect на dashboard через 1 секунду
+        // Redirect на dashboard через 1 секунду (full page reload to refresh auth state)
         setTimeout(() => {
-          router.push('/en/dashboard');
+          window.location.href = '/en/dashboard';
         }, 1000);
       } catch (err) {
         setStatus('error');
