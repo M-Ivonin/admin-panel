@@ -1,28 +1,32 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { i18n } from '@/lib/i18n/config';
 
+// Root: send /admin to admin-login; otherwise load public landing at default locale
 export default function RootPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/en/dashboard');
-    } else {
-      router.push('/admin-login');
+    const path = window.location.pathname;
+
+    if (path === '/admin-login') {
+      if (isAuthenticated) {
+        router.push('/en/dashboard');
+      } else {
+        router.push('/admin-login');
+      }
+      return;
+    }
+
+    // Only redirect the root path; leave deep-link targets intact
+    if (path === '/') {
+      redirect(`/${i18n.defaultLocale}`);
     }
   }, [isAuthenticated, router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-        <p className="text-gray-600">Loading...</p>
-      </div>
-    </div>
-  );
+  return null;
 }
