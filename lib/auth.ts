@@ -29,7 +29,7 @@ export function getApiBaseUrl(): string {
       hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
 
     if (isLocalhost) {
-      return 'http://localhost:3001';
+      return 'http://localhost:3001/v1';
     }
   }
 
