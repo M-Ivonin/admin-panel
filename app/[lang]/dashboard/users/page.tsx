@@ -1,18 +1,40 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw, Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  TableSortLabel,
+  Paper,
+  TextField,
+  Button,
+  IconButton,
+  Chip,
+  CircularProgress,
+  InputAdornment,
+  Box,
+  Typography,
+  Alert,
+} from '@mui/material';
+import {
+  ArrowBack,
+  Refresh,
+  Search,
+  Chat,
+} from '@mui/icons-material';
 import {
   getUsers,
   User,
   RetentionStage,
   RETENTION_STAGE_LABELS,
-  RETENTION_STAGE_COLORS,
   PaginatedUsersResponse,
   RetentionCounts,
 } from '@/lib/api/users';
@@ -37,13 +59,26 @@ function formatDateTime(dateString: string | null): string {
   });
 }
 
-function getPlanBadge(plan: string | undefined) {
-  const colors: Record<string, string> = {
-    free: 'bg-gray-100 text-gray-800',
-    playmaker: 'bg-purple-100 text-purple-800',
-    probro: 'bg-amber-100 text-amber-800',
+function getPlanColor(plan: string | undefined): 'default' | 'secondary' | 'warning' {
+  const colors: Record<string, 'default' | 'secondary' | 'warning'> = {
+    free: 'default',
+    playmaker: 'secondary',
+    probro: 'warning',
   };
-  return colors[plan || 'free'] || 'bg-gray-100 text-gray-800';
+  return colors[plan || 'free'] || 'default';
+}
+
+function getRetentionChipColor(stage: RetentionStage): 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary' {
+  const colorMap: Record<RetentionStage, 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary'> = {
+    [RetentionStage.NEW]: 'info',
+    [RetentionStage.CURRENT]: 'success',
+    [RetentionStage.AT_RISK_WAU]: 'warning',
+    [RetentionStage.AT_RISK_MAU]: 'warning',
+    [RetentionStage.DEAD]: 'error',
+    [RetentionStage.REACTIVATED]: 'primary',
+    [RetentionStage.RESURRECTED]: 'secondary',
+  };
+  return colorMap[stage] || 'default';
 }
 
 const RETENTION_STAGES = [
@@ -65,15 +100,18 @@ export default function UsersPage() {
   // Data state
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [retentionCounts, setRetentionCounts] = useState<RetentionCounts | null>(null);
 
   // Filter state
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [page, setPage] = useState(0); // MUI TablePagination uses 0-based index
+  const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedRetentionStage, setSelectedRetentionStage] = useState<RetentionStage | null>(null);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
@@ -88,7 +126,7 @@ export default function UsersPage() {
     }
     searchTimeoutRef.current = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(1); // Reset to first page on search
+      setPage(0); // Reset to first page on search
     }, 300);
 
     return () => {
@@ -103,21 +141,34 @@ export default function UsersPage() {
     setError(null);
     try {
       const response: PaginatedUsersResponse = await getUsers({
-        page,
-        limit,
+        page: page + 1, // API uses 1-based index
+        limit: rowsPerPage,
         search: debouncedSearch || undefined,
         retentionStage: selectedRetentionStage || undefined,
+        sortBy: sortBy || undefined,
+        sortOrder: sortBy ? sortOrder : undefined,
       });
       setUsers(response.users || []);
       setTotal(response.total || 0);
-      setTotalPages(response.totalPages || 0);
       setRetentionCounts(response.retentionCounts || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, debouncedSearch, selectedRetentionStage]);
+  }, [page, rowsPerPage, debouncedSearch, selectedRetentionStage, sortBy, sortOrder]);
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle order if same column
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // New column, start with DESC
+      setSortBy(column);
+      setSortOrder('DESC');
+    }
+    setPage(0);
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -129,345 +180,301 @@ export default function UsersPage() {
     } else {
       setSelectedRetentionStage(stage);
     }
-    setPage(1); // Reset to first page on filter change
+    setPage(0); // Reset to first page on filter change
   };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setPage(newPage);
-    }
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
   };
 
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
-    setPage(1); // Reset to first page on limit change
+  const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   const getUserDisplayName = (user: User) => {
     return user.name_app || user.name_tg || user.email || user.telegram_username || 'Unknown';
   };
 
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-
-      if (page > 3) {
-        pages.push('...');
-      }
-
-      const start = Math.max(2, page - 1);
-      const end = Math.min(totalPages - 1, page + 1);
-
-      for (let i = start; i <= end; i++) {
-        if (!pages.includes(i)) {
-          pages.push(i);
-        }
-      }
-
-      if (page < totalPages - 2) {
-        pages.push('...');
-      }
-
-      if (!pages.includes(totalPages)) {
-        pages.push(totalPages);
-      }
-    }
-
-    return pages;
-  };
-
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
+              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
                 Back
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-            <span className="text-sm text-gray-500">({total} total)</span>
-          </div>
-        </header>
+            <Typography variant="h5" fontWeight="bold" color="text.primary">
+              Users
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              ({total} total)
+            </Typography>
+          </Box>
+        </Paper>
 
         {/* Main content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>
           {/* Retention Stage Filter Chips */}
           {retentionCounts && (
-            <div className="bg-white rounded-lg shadow p-4 mb-6">
-              <div className="flex flex-wrap gap-2">
-                <button
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Chip
+                  label={`All (${total})`}
                   onClick={() => {
                     setSelectedRetentionStage(null);
-                    setPage(1);
+                    setPage(0);
                   }}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                    selectedRetentionStage === null
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  All ({total})
-                </button>
+                  color={selectedRetentionStage === null ? 'primary' : 'default'}
+                  variant={selectedRetentionStage === null ? 'filled' : 'outlined'}
+                />
                 {RETENTION_STAGES.map((stage) => {
                   const count = retentionCounts[stage] || 0;
                   const isSelected = selectedRetentionStage === stage;
                   return (
-                    <button
+                    <Chip
                       key={stage}
+                      label={`${RETENTION_STAGE_LABELS[stage]} (${count})`}
                       onClick={() => handleRetentionStageClick(stage)}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
-                        isSelected
-                          ? 'ring-2 ring-offset-1 ring-gray-900'
-                          : ''
-                      } ${RETENTION_STAGE_COLORS[stage]}`}
-                    >
-                      {RETENTION_STAGE_LABELS[stage]} ({count})
-                    </button>
+                      color={getRetentionChipColor(stage)}
+                      variant={isSelected ? 'filled' : 'outlined'}
+                    />
                   );
                 })}
-              </div>
-            </div>
+              </Box>
+            </Paper>
           )}
 
           {/* Search and actions */}
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full sm:w-96">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search by name, email, username..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 text-gray-900"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Show:</span>
-                  <select
-                    value={limit}
-                    onChange={(e) => handleLimitChange(Number(e.target.value))}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm text-gray-900"
-                  >
-                    {PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchUsers}
-                  disabled={isLoading}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-          </div>
+          <Paper sx={{ p: 2, mb: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
+              <TextField
+                size="small"
+                placeholder="Search by name, email, username..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                sx={{ width: { xs: '100%', sm: 384 } }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search color="action" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              <IconButton onClick={fetchUsers} disabled={isLoading} color="primary">
+                <Refresh sx={{ animation: isLoading ? 'spin 1s linear infinite' : 'none', '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } } }} />
+              </IconButton>
+            </Box>
+          </Paper>
 
           {/* Error state */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-800">{error}</p>
-            </div>
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
           )}
 
           {/* Loading state */}
           {isLoading && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-              <p className="mt-2 text-gray-600">Loading users...</p>
-            </div>
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }} color="text.secondary">
+                Loading users...
+              </Typography>
+            </Paper>
           )}
 
           {/* Users table */}
           {!isLoading && !error && (
-            <>
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <Paper>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'name'}
+                          direction={sortBy === 'name' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('name')}
+                        >
                           User
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'retentionStage'}
+                          direction={sortBy === 'retentionStage' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('retentionStage')}
+                        >
                           Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'activePlan'}
+                          direction={sortBy === 'activePlan' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('activePlan')}
+                        >
                           Plan
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'level'}
+                          direction={sortBy === 'level' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('level')}
+                        >
                           Level
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'totalXp'}
+                          direction={sortBy === 'totalXp' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('totalXp')}
+                        >
                           XP / Points
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'first_seen_at'}
+                          direction={sortBy === 'first_seen_at' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('first_seen_at')}
+                        >
                           First Seen
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'last_active_at'}
+                          direction={sortBy === 'last_active_at' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('last_active_at')}
+                        >
                           Last Active
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortBy === 'language'}
+                          direction={sortBy === 'language' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          onClick={() => handleSort('language')}
+                        >
                           Language
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-gray-900">
-                                {getUserDisplayName(user)}
-                              </span>
-                              <span className="text-xs text-gray-500">{user.email || '-'}</span>
-                              {user.telegram_username && (
-                                <span className="text-xs text-blue-600">@{user.telegram_username}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.retentionStage ? RETENTION_STAGE_COLORS[user.retentionStage] : 'bg-gray-100 text-gray-800'}`}
-                            >
-                              {user.retentionStage ? RETENTION_STAGE_LABELS[user.retentionStage] : 'Unknown'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPlanBadge(user.subscription?.activePlan)}`}
-                            >
-                              {user.subscription?.activePlan || 'free'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium text-gray-900">
-                                Lvl {user.level}
-                              </span>
-                              <span className="text-xs text-gray-500">{user.levelName}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="text-sm text-gray-900">
-                                {user.totalXp.toLocaleString()} XP
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {user.totalPoints.toLocaleString()} pts
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id} hover>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {getUserDisplayName(user)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {user.email || '-'}
+                            </Typography>
+                            {user.telegram_username && (
+                              <Typography variant="caption" color="primary">
+                                @{user.telegram_username}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={user.retentionStage ? RETENTION_STAGE_LABELS[user.retentionStage] : 'Unknown'}
+                            size="small"
+                            color={user.retentionStage ? getRetentionChipColor(user.retentionStage) : 'default'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={user.subscription?.activePlan || 'free'}
+                            size="small"
+                            color={getPlanColor(user.subscription?.activePlan)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              Lvl {user.level}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {user.levelName}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">
+                              {user.totalXp.toLocaleString()} XP
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {user.totalPoints.toLocaleString()} pts
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
                             {formatDate(user.first_seen_at)}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
                             {formatDateTime(user.last_active_at)}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
                             {user.language}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <Link href={`/${lang}/dashboard/bot-chat?userId=${user.id}`}>
-                              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                                <MessageCircle className="h-4 w-4" />
-                                Chat
-                              </Button>
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                      {users.length === 0 && (
-                        <tr>
-                          <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/${lang}/dashboard/bot-chat?userId=${user.id}`}>
+                            <Button variant="outlined" size="small" startIcon={<Chat />}>
+                              Chat
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {users.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                          <Typography color="text.secondary">
                             {debouncedSearch || selectedRetentionStage
                               ? 'No users found matching your filters'
                               : 'No users found'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} users
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page - 1)}
-                      disabled={page === 1}
-                      className="flex items-center gap-1"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {getPageNumbers().map((pageNum, index) =>
-                        pageNum === '...' ? (
-                          <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
-                            ...
-                          </span>
-                        ) : (
-                          <button
-                            key={pageNum}
-                            onClick={() => handlePageChange(pageNum as number)}
-                            className={`px-3 py-1 text-sm rounded-md ${
-                              page === pageNum
-                                ? 'bg-gray-900 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        )
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(page + 1)}
-                      disabled={page === totalPages}
-                      className="flex items-center gap-1"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={total}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+              />
+            </Paper>
           )}
-        </main>
-      </div>
+        </Box>
+      </Box>
     </ProtectedRoute>
   );
 }

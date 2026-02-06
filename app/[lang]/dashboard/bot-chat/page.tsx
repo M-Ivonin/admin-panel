@@ -6,9 +6,15 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useChat } from '@/lib/hooks/useChat';
 import { UserSelect } from '@/components/chat/UserSelect';
 import { ChatDisplay } from '@/components/chat/ChatDisplay';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  CircularProgress,
+} from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
 
 function BotChatContent() {
   const searchParams = useSearchParams();
@@ -24,33 +30,36 @@ function BotChatContent() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" />
+              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
                 Back
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Bot Chat History</h1>
-          </div>
-        </header>
+            <Typography variant="h5" fontWeight="bold" color="text.primary">
+              Bot Chat History
+            </Typography>
+          </Box>
+        </Paper>
 
         {/* Main content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 3fr' }, gap: 3 }}>
             {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Select User</h2>
+            <Box>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
+                  Select User
+                </Typography>
                 <UserSelect onUserSelect={setSelectedUserId} selectedUserId={selectedUserId} />
-              </div>
-            </div>
+              </Paper>
+            </Box>
 
             {/* Chat Display */}
-            <div className="lg:col-span-3">
+            <Box>
               {selectedUserId ? (
                 <ChatDisplay
                   messages={messages}
@@ -60,16 +69,16 @@ function BotChatContent() {
                   dailyRequests={dailyRequests}
                 />
               ) : (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                  <div className="space-y-2">
-                    <p className="text-gray-600">Select a user to view their chat history</p>
-                  </div>
-                </div>
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">
+                    Select a user to view their chat history
+                  </Typography>
+                </Paper>
               )}
-            </div>
-          </div>
-        </main>
-      </div>
+            </Box>
+          </Box>
+        </Box>
+      </Box>
     </ProtectedRoute>
   );
 }
@@ -77,9 +86,9 @@ function BotChatContent() {
 export default function BotChatPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
-      </div>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Box>
     }>
       <BotChatContent />
     </Suspense>
