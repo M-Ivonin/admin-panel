@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getAllUsers, User } from '@/lib/api/users';
-import { Input } from '@/components/ui/input';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState, useEffect, useRef } from 'react';
+import { getUsers, getUser, User } from '@/lib/api/users';
+import {
+  Box,
+  TextField,
+  Paper,
+  Typography,
+  CircularProgress,
+  Alert,
+  List,
+  ListItemButton,
+  ListItemText,
+  InputAdornment,
+  ClickAwayListener,
+} from '@mui/material';
+import { Search } from '@mui/icons-material';
 
 interface UserSelectProps {
   onUserSelect: (userId: string) => void;
@@ -17,112 +28,169 @@ function getUserDisplayName(user: User): string {
 
 export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Load selected user details
   useEffect(() => {
-    const loadUsers = async () => {
+    if (selectedUserId && !selectedUser) {
+      getUser(selectedUserId)
+        .then(setSelectedUser)
+        .catch(() => setSelectedUser(null));
+    }
+  }, [selectedUserId, selectedUser]);
+
+  // Search users with debounce
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await getAllUsers();
-        setUsers(data);
+        const response = await getUsers({
+          search: searchTerm || undefined,
+          limit: 50,
+        });
+        setUsers(response.users);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load users';
         setError(message);
       } finally {
         setIsLoading(false);
       }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
     };
-
-    loadUsers();
-  }, []);
-
-  const filteredUsers = users.filter((user) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      user.email?.toLowerCase().includes(term) ||
-      user.name_app?.toLowerCase().includes(term) ||
-      user.name_tg?.toLowerCase().includes(term) ||
-      user.telegram_username?.toLowerCase().includes(term)
-    );
-  });
-
-  const selectedUser = users.find((u) => u.id === selectedUserId);
+  }, [searchTerm, isOpen]);
 
   return (
-    <div className="relative w-full">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 text-left border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      >
-        {selectedUser ? (
-          <div>
-            <div className="font-medium text-gray-900">{getUserDisplayName(selectedUser)}</div>
-            <div className="text-sm text-gray-600">{selectedUser.email || '-'}</div>
-          </div>
-        ) : (
-          <div className="text-gray-500">Select a user...</div>
+    <ClickAwayListener onClickAway={() => setIsOpen(false)}>
+      <Box sx={{ position: 'relative', width: '100%' }}>
+        <Box
+          onClick={() => setIsOpen(!isOpen)}
+          sx={{
+            width: '100%',
+            px: 2,
+            py: 1.5,
+            textAlign: 'left',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            bgcolor: 'background.paper',
+            cursor: 'pointer',
+            '&:hover': { bgcolor: 'action.hover' },
+          }}
+        >
+          {selectedUser ? (
+            <Box>
+              <Typography variant="body2" fontWeight="medium" color="text.primary">
+                {getUserDisplayName(selectedUser)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {selectedUser.email || '-'}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Select a user...
+            </Typography>
+          )}
+        </Box>
+
+        {isOpen && (
+          <Paper
+            sx={{
+              position: 'absolute',
+              zIndex: 10,
+              width: '100%',
+              mt: 0.5,
+              boxShadow: 3,
+            }}
+          >
+            <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <TextField
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                fullWidth
+                size="small"
+                autoFocus
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search fontSize="small" color="action" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ maxHeight: 256, overflowY: 'auto' }}>
+              {error && (
+                <Box sx={{ p: 2 }}>
+                  <Alert severity="error">{error}</Alert>
+                </Box>
+              )}
+
+              {isLoading && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress size={20} sx={{ mr: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Loading users...
+                  </Typography>
+                </Box>
+              )}
+
+              {!isLoading && !error && users.length === 0 && (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {searchTerm ? 'No matching users' : 'Start typing to search users'}
+                  </Typography>
+                </Box>
+              )}
+
+              {!isLoading && !error && (
+                <List disablePadding>
+                  {users.map((user) => (
+                    <ListItemButton
+                      key={user.id}
+                      onClick={() => {
+                        onUserSelect(user.id);
+                        setSelectedUser(user);
+                        setIsOpen(false);
+                        setSearchTerm('');
+                      }}
+                      sx={{ borderBottom: 1, borderColor: 'divider', '&:last-child': { borderBottom: 0 } }}
+                    >
+                      <ListItemText
+                        primary={getUserDisplayName(user)}
+                        secondary={user.email || '-'}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 'medium' }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </Paper>
         )}
-      </button>
-
-      {isOpen && (
-        <div className="absolute z-10 w-full mt-1 border border-gray-300 rounded-md bg-white shadow-lg">
-          <div className="p-2 border-b border-gray-200">
-            <Input
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-gray-900"
-              autoFocus
-            />
-          </div>
-
-          <div className="max-h-64 overflow-y-auto">
-            {error && (
-              <div className="p-4">
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              </div>
-            )}
-
-            {isLoading && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <span className="text-sm text-gray-600">Loading users...</span>
-              </div>
-            )}
-
-            {!isLoading && !error && filteredUsers.length === 0 && (
-              <div className="p-4 text-center text-sm text-gray-600">
-                {users.length === 0 ? 'No users found' : 'No matching users'}
-              </div>
-            )}
-
-            {!isLoading &&
-              !error &&
-              filteredUsers.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => {
-                    onUserSelect(user.id);
-                    setIsOpen(false);
-                    setSearchTerm('');
-                  }}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0 transition-colors"
-                >
-                  <div className="font-medium text-gray-900">{getUserDisplayName(user)}</div>
-                  <div className="text-sm text-gray-600">{user.email || '-'}</div>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </Box>
+    </ClickAwayListener>
   );
 }
