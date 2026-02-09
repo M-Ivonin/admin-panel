@@ -3,16 +3,17 @@
 import { useState, FormEvent, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  Box,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Mail, Loader2, CheckCircle } from 'lucide-react';
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Avatar,
+} from '@mui/material';
+import { Mail, CheckCircle } from '@mui/icons-material';
 import { requestMagicLink } from '@/lib/api/auth';
 import { storeTokens } from '@/lib/auth';
 
@@ -76,47 +77,52 @@ function AdminLoginContent() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-            <Mail className="w-6 h-6 text-blue-600" />
-          </div>
-          <CardTitle className="text-2xl font-bold">🎯 Tipster Admin</CardTitle>
-          <CardDescription>
-            Enter your email to receive a sign-in link
-          </CardDescription>
-        </CardHeader>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 400, mx: 2 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+              <Mail />
+            </Avatar>
+            <Typography variant="h5" fontWeight="bold" color="text.primary" gutterBottom>
+              Tipster Admin
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Enter your email to receive a sign-in link
+            </Typography>
+          </Box>
 
-        <CardContent className="space-y-4">
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
             </Alert>
           )}
 
           {success && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <p className="font-semibold mb-2">Check your email!</p>
-                <p className="text-sm">
-                  We sent you a magic link. Click it to sign in.
-                </p>
-              </AlertDescription>
+            <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight="medium" gutterBottom>
+                Check your email!
+              </Typography>
+              <Typography variant="caption">
+                We sent you a magic link. Click it to sign in.
+              </Typography>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-gray-700"
-              >
+          <form onSubmit={handleSubmit}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" fontWeight="medium" color="text.primary" sx={{ mb: 1 }}>
                 Email Address
-              </label>
-              <Input
+              </Typography>
+              <TextField
                 id="email"
                 type="email"
                 placeholder="admin@example.com"
@@ -124,45 +130,46 @@ function AdminLoginContent() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading}
                 required
-                className="w-full"
+                fullWidth
+                size="small"
               />
-            </div>
+            </Box>
 
             <Button
               type="submit"
+              variant="contained"
+              fullWidth
               disabled={!email || isLoading}
-              className="w-full"
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <Mail />}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send Magic Link
-                </>
-              )}
+              {isLoading ? 'Sending...' : 'Send Magic Link'}
             </Button>
           </form>
 
-          <div className="pt-4 border-t">
-            <p className="text-xs text-center text-gray-500">
+          <Box sx={{ pt: 3, mt: 3, borderTop: 1, borderColor: 'divider' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
               Only authorized emails can access this panel
-            </p>
-          </div>
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
-    </div>
+    </Box>
   );
 }
 
 function LoadingFallback() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <Loader2 className="h-8 w-8 animate-spin" />
-    </div>
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
+      <CircularProgress />
+    </Box>
   );
 }
 
