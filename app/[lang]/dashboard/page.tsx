@@ -3,13 +3,27 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardActionArea,
+  Avatar,
+} from '@mui/material';
+import {
+  Logout,
+  Chat,
+  People,
+  Settings,
+} from '@mui/icons-material';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -18,72 +32,85 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h5" fontWeight="bold" color="text.primary">
+                Admin Dashboard
+              </Typography>
               {user && (
-                <p className="text-sm text-gray-600 mt-1">
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                   Welcome, {user.name} ({user.email})
-                </p>
+                </Typography>
               )}
-            </div>
+            </Box>
             <Button
-              variant="outline"
-              size="sm"
+              variant="outlined"
+              size="small"
               onClick={handleLogout}
-              className="flex items-center gap-2"
+              startIcon={<Logout />}
             >
-              <LogOut className="h-4 w-4" />
               Logout
             </Button>
-          </div>
-        </header>
+          </Box>
+        </Paper>
 
         {/* Main content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 6 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
             {/* Bot Chat Card */}
-            <Link href="/dashboard/bot-chat">
-              <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white mb-4">
-                  💬
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Bot Chat</h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  View user conversations with the bot
-                </p>
-              </div>
+            <Link href="/dashboard/bot-chat" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48, mb: 2 }}>
+                    <Chat />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Bot Chat
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    View user conversations with the bot
+                  </Typography>
+                </CardActionArea>
+              </Card>
             </Link>
 
             {/* Users Card */}
-            <Link href="/dashboard/users">
-              <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white mb-4">
-                  👥
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Users</h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  View and manage users
-                </p>
-              </div>
+            <Link href="/dashboard/users" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48, mb: 2 }}>
+                    <People />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Users
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    View and manage users
+                  </Typography>
+                </CardActionArea>
+              </Card>
             </Link>
 
             {/* Settings Card */}
-            <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 cursor-pointer h-full opacity-50">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-purple-500 text-white mb-4">
-                ⚙️
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Settings</h3>
-              <p className="mt-2 text-sm text-gray-600">
-                Configure system settings (coming soon)
-              </p>
-            </div>
-          </div>
-        </main>
-      </div>
+            <Card sx={{ height: '100%', opacity: 0.5 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48, mb: 2 }}>
+                  <Settings />
+                </Avatar>
+                <Typography variant="h6" color="text.primary" gutterBottom>
+                  Settings
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Configure system settings (coming soon)
+                </Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      </Box>
     </ProtectedRoute>
   );
 }

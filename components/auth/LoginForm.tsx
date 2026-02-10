@@ -3,15 +3,22 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Divider,
+} from '@mui/material';
+import { Google } from '@mui/icons-material';
 
 export function LoginForm() {
   const router = useRouter();
-  const { login, loginWithMagicLink, isLoading, error } = useAuth();
+  const { loginWithMagicLink, isLoading, error } = useAuth();
   const [magicLinkToken, setMagicLinkToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -36,56 +43,68 @@ export function LoginForm() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Admin Panel</CardTitle>
-          <CardDescription>Sign in to access the admin dashboard</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 400, mx: 2 }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography variant="h5" fontWeight="bold" color="text.primary" gutterBottom>
+              Admin Panel
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in to access the admin dashboard
+            </Typography>
+          </Box>
+
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
             </Alert>
           )}
 
           {successMessage && (
-            <Alert className="border-green-200 bg-green-50">
-              <AlertCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {successMessage}
-              </AlertDescription>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {successMessage}
             </Alert>
           )}
 
-          <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="token" className="text-sm font-medium text-gray-700">
+          <form onSubmit={handleMagicLinkSubmit}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" fontWeight="medium" color="text.primary" sx={{ mb: 1 }}>
                 Magic Link Token
-              </label>
-              <Input
+              </Typography>
+              <TextField
                 id="token"
                 type="text"
                 placeholder="Paste your magic link token here"
                 value={magicLinkToken}
                 onChange={(e) => setMagicLinkToken(e.target.value)}
                 disabled={isSubmitting || isLoading}
-                className="w-full"
+                fullWidth
+                size="small"
               />
-              <p className="text-xs text-gray-500">
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                 You can get a magic link token by requesting one via email
-              </p>
-            </div>
+              </Typography>
+            </Box>
 
             <Button
               type="submit"
+              variant="contained"
+              fullWidth
               disabled={!magicLinkToken || isSubmitting || isLoading}
-              className="w-full"
+              sx={{ mb: 3 }}
             >
               {isSubmitting || isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <CircularProgress size={20} sx={{ mr: 1 }} color="inherit" />
                   Signing in...
                 </>
               ) : (
@@ -94,41 +113,40 @@ export function LoginForm() {
             </Button>
           </form>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
+          <Divider sx={{ my: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              Or continue with
+            </Typography>
+          </Divider>
 
           <Button
-            variant="outline"
-            className="w-full"
+            variant="outlined"
+            fullWidth
+            startIcon={<Google />}
             onClick={() => {
-              // This would integrate with Google OAuth
-              // For now, showing placeholder
               alert('Google OAuth integration needed. Use magic link for now.');
             }}
+            sx={{ mb: 2 }}
           >
             Continue with Google
           </Button>
 
-          <p className="text-xs text-center text-gray-500">
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center' }}>
             Don&apos;t have an account?{' '}
-            <button
-              type="button"
-              className="text-blue-600 hover:underline"
+            <Button
+              component="span"
+              variant="text"
+              size="small"
+              sx={{ p: 0, minWidth: 'auto', textTransform: 'none' }}
               onClick={() => {
                 alert('Contact your administrator to create an account');
               }}
             >
               Contact admin
-            </button>
-          </p>
+            </Button>
+          </Typography>
         </CardContent>
       </Card>
-    </div>
+    </Box>
   );
 }
