@@ -1,10 +1,16 @@
 'use client';
 
 import { ChatMessage } from '@/lib/api/chat';
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
+  Alert,
+  IconButton,
+} from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
@@ -48,87 +54,104 @@ export function ChatDisplay({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow">
+    <Paper sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-200">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Chat History</h2>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Box>
+          <Typography variant="h6" color="text.primary">
+            Chat History
+          </Typography>
           {dailyRequests !== undefined && (
-            <p className="text-sm text-gray-600">Daily requests: {dailyRequests}</p>
+            <Typography variant="body2" color="text.secondary">
+              Daily requests: {dailyRequests}
+            </Typography>
           )}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+        </Box>
+        <IconButton onClick={onRefresh} disabled={isLoading} color="primary">
+          <Refresh sx={{ animation: isLoading ? 'spin 1s linear infinite' : 'none', '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } } }} />
+        </IconButton>
+      </Box>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 2, bgcolor: 'background.default' }}>
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
           </Alert>
         )}
 
         {isLoading && messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-2">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-400" />
-              <p className="text-sm text-gray-600">Loading chat history...</p>
-            </div>
-          </div>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <CircularProgress sx={{ mb: 1 }} />
+            <Typography variant="body2" color="text.secondary">
+              Loading chat history...
+            </Typography>
+          </Box>
         )}
 
         {!isLoading && messages.length === 0 && !error && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">No messages yet</p>
-            </div>
-          </div>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <Typography variant="body2" color="text.secondary">
+              No messages yet
+            </Typography>
+          </Box>
         )}
 
-        {messages.map((message) => {
-          const type = getMessageType(message);
-          const isUserMessage = type === 'user';
-          const isBotMessage = type === 'bot';
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {messages.map((message) => {
+            const type = getMessageType(message);
+            const isUserMessage = type === 'user';
+            const isBotMessage = type === 'bot';
 
-          return (
-            <div
-              key={message.id}
-              className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg ${
-                  isUserMessage
-                    ? 'bg-blue-500 text-white rounded-br-none'
-                    : isBotMessage
-                      ? 'bg-gray-200 text-gray-900 rounded-bl-none'
-                      : 'bg-gray-100 text-gray-900 rounded-bl-none'
-                }`}
+            return (
+              <Box
+                key={message.id}
+                sx={{ display: 'flex', justifyContent: isUserMessage ? 'flex-end' : 'flex-start' }}
               >
-                <p className="text-sm break-words whitespace-pre-wrap">
-                  {formatContent(message.content)}
-                </p>
-                <p
-                  className={`text-xs mt-2 ${
-                    isUserMessage ? 'text-blue-100' : 'text-gray-600'
-                  }`}
+                <Box
+                  sx={{
+                    maxWidth: { xs: '85%', lg: '60%' },
+                    px: 2,
+                    py: 1.5,
+                    borderRadius: 2,
+                    ...(isUserMessage
+                      ? {
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderBottomRightRadius: 0,
+                        }
+                      : isBotMessage
+                        ? {
+                            bgcolor: 'grey.700',
+                            color: 'text.primary',
+                            borderBottomLeftRadius: 0,
+                          }
+                        : {
+                            bgcolor: 'grey.800',
+                            color: 'text.primary',
+                            borderBottomLeftRadius: 0,
+                          }),
+                  }}
                 >
-                  {formatTime(message.timestamp || message.createdAt)}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                    {formatContent(message.content)}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      mt: 1,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {formatTime(message.timestamp || message.createdAt)}
+                  </Typography>
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    </Paper>
   );
 }
