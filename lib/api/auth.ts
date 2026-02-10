@@ -22,7 +22,7 @@ export async function requestMagicLink(email: string): Promise<void> {
 }
 
 /**
- * Exchange magic link token for JWT tokens
+ * Exchange magic link token for JWT tokens (admin panel)
  */
 export async function exchangeMagicLinkToken(token: string): Promise<{
   accessToken: string;
@@ -36,6 +36,32 @@ export async function exchangeMagicLinkToken(token: string): Promise<{
     },
     body: JSON.stringify({ token }),
   });
+
+  if (!response.ok) {
+    throw new Error('Invalid or expired magic link');
+  }
+
+  return response.json();
+}
+
+/**
+ * Exchange magic link token for JWT tokens (mobile app users)
+ */
+export async function exchangeMagicLinkForApp(token: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: { id: string; email: string; name: string };
+}> {
+  const response = await fetch(
+    `${getApiBaseUrl()}/auth/magic-link/exchange-app`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    },
+  );
 
   if (!response.ok) {
     throw new Error('Invalid or expired magic link');
