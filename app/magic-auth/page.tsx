@@ -6,13 +6,16 @@ import { exchangeMagicLinkForApp } from '@/lib/api/auth';
 import { detectPlatform, getAppStoreUrl } from '@/lib/platform';
 import { getClientConfig } from '@/lib/config';
 
-type Status = 'loading' | 'redirecting' | 'fallback' | 'error';
+const ANDROID_PACKAGE = 'ai.levantem.sirbro';
+
+type Status = 'loading' | 'ready' | 'error';
 
 function MagicAuthContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
   const [deepLinkUrl, setDeepLinkUrl] = useState<string | null>(null);
+  const [intentUrl, setIntentUrl] = useState<string | null>(null);
 
   const config = getClientConfig();
   const platform = detectPlatform();
@@ -22,7 +25,6 @@ function MagicAuthContent() {
     const locale = searchParams.get('locale') || 'en-us';
     const errorParam = searchParams.get('error');
 
-    // Handle error redirects from backend verify endpoint
     if (errorParam === 'invalid_link') {
       setStatus('error');
       setError('This magic link is invalid or has expired.');
@@ -35,48 +37,32 @@ function MagicAuthContent() {
       return;
     }
 
-    const exchangeAndRedirect = async () => {
+    const exchange = async () => {
       try {
         const result = await exchangeMagicLinkForApp(token);
 
-        // Build deep link URL for the mobile app
-        const url = `${config.appCustomScheme}://auth/callback?access_token=${result.accessToken}&refresh_token=${result.refreshToken}&user_id=${encodeURIComponent(result.user.id)}&email=${encodeURIComponent(result.user.email)}&name=${encodeURIComponent(result.user.name)}&locale=${locale}`;
-        setDeepLinkUrl(url);
+        const params = `access_token=${result.accessToken}&refresh_token=${result.refreshToken}&user_id=${encodeURIComponent(result.user.id)}&email=${encodeURIComponent(result.user.email)}&name=${encodeURIComponent(result.user.name)}&locale=${locale}`;
 
-        // Attempt to open the app
-        setStatus('redirecting');
-        window.location.href = url;
+        // Custom scheme URL (works on iOS user tap + Android fallback)
+        const schemeUrl = `${config.appCustomScheme}://auth/callback?${params}`;
+        setDeepLinkUrl(schemeUrl);
 
-        // If the app doesn't open within 1.5s, show fallback UI
-        const fallbackTimer = setTimeout(() => {
-          setStatus('fallback');
-        }, 1500);
+        // Android Intent URL (works reliably in WebViews like Gmail)
+        const intent = `intent://auth/callback?${params}#Intent;scheme=${config.appCustomScheme};package=${ANDROID_PACKAGE};end`;
+        setIntentUrl(intent);
 
-        const handleVisibility = () => {
-          if (document.visibilityState === 'hidden') {
-            clearTimeout(fallbackTimer);
-          }
-        };
-        document.addEventListener('visibilitychange', handleVisibility);
-
-        return () => {
-          clearTimeout(fallbackTimer);
-          document.removeEventListener('visibilitychange', handleVisibility);
-        };
+        // Show the button immediately — don't try programmatic redirect
+        setStatus('ready');
       } catch {
         setStatus('error');
         setError('This magic link is invalid or has expired.');
       }
     };
 
-    exchangeAndRedirect();
+    exchange();
   }, [searchParams, config.appCustomScheme]);
 
-  const handleOpenApp = () => {
-    if (deepLinkUrl) {
-      window.location.href = deepLinkUrl;
-    }
-  };
+  const openAppUrl = platform.isAndroid ? intentUrl : deepLinkUrl;
 
   const handleDownload = () => {
     const storeUrl = getAppStoreUrl(
@@ -100,22 +86,6 @@ function MagicAuthContent() {
     );
   }
 
-  if (status === 'redirecting') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4" />
-          <h1 className="text-white text-xl font-semibold mb-2">
-            Opening SirBro...
-          </h1>
-          <p className="text-gray-400">
-            If the app doesn&apos;t open automatically, tap the button below.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (status === 'error') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -133,7 +103,7 @@ function MagicAuthContent() {
     );
   }
 
-  // Fallback UI — app didn't open automatically
+  // Token exchanged — show button for user to tap (user-initiated = works in WebViews)
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">
       <div className="max-w-md w-full bg-gray-900 rounded-lg shadow-lg p-8 text-center mx-4">
@@ -141,16 +111,17 @@ function MagicAuthContent() {
           Welcome to SirBro
         </h1>
         <p className="text-gray-400 mb-6">
-          Your magic link has been verified. Open the app to continue.
+          Your magic link has been verified. Tap below to open the app.
         </p>
 
         <div className="space-y-4">
-          <button
-            onClick={handleOpenApp}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          {/* Use <a> tag — more reliable than window.location.href in WebViews */}
+          <a
+            href={openAppUrl || '#'}
+            className="block w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
           >
             Open SirBro App
-          </button>
+          </a>
 
           <div className="text-gray-500 text-sm">
             Don&apos;t have the app?
