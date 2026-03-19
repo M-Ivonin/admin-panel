@@ -203,7 +203,7 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
         </Container>
       </Box>
       <Script
-        src={process.env.NEXT_PUBLIC_CHATBOT_WIDGET_URL || 'https://sirbro-chatbot.vercel.app/sirbro-chat.js'}
+        src={process.env.NEXT_PUBLIC_CHATBOT_WIDGET_URL || 'https://chatbot-widget-alpha-two.vercel.app/sirbro-chat.js'}
         strategy="afterInteractive"
         {...(process.env.NEXT_PUBLIC_CHATBOT_WIDGET_URL?.includes('localhost') ? { type: 'module' } : {})}
       />
