@@ -202,6 +202,17 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
           </Box>
         </Container>
       </Box>
+      <Script
+        src={process.env.NEXT_PUBLIC_CHATBOT_WIDGET_URL || 'https://chatbot-widget-alpha-two.vercel.app/sirbro-chat.js'}
+        strategy="afterInteractive"
+        {...(process.env.NEXT_PUBLIC_CHATBOT_WIDGET_URL?.includes('localhost') ? { type: 'module' } : {})}
+      />
+      <div
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: `<sirbro-chat api-url="${process.env.NEXT_PUBLIC_API_URL || 'https://api.tipsterbro.com/v1'}" brand-icon="/assets/brandmark.png"></sirbro-chat>`,
+        }}
+      />
     </Box>
   );
 }

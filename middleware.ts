@@ -10,6 +10,7 @@ export function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/admin-login') ||
     pathname.startsWith('/magic-verify') ||
+    pathname.startsWith('/magic-auth') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/channels') ||
     pathname.startsWith('/invite') ||
