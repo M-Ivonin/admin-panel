@@ -211,7 +211,7 @@ export default async function LandingPage({ params }: { params: Promise<{ lang: 
         suppressHydrationWarning
         dangerouslySetInnerHTML={{
           // __html: `<sirbro-chat api-url="${process.env.NEXT_PUBLIC_API_URL || 'https://api.tipsterbro.com/v1'}" brand-icon="/assets/brandmark.png" show-markdown="${process.env.SHOW_MARKDOWN ?? 'true'}"></sirbro-chat>`,
-          __html: `<sirbro-chat api-url="${process.env.NEXT_PUBLIC_API_URL || 'https://api.tipsterbro.com/v1'}" brand-icon="/assets/brandmark.png" show-markdown="${process.env.SHOW_MARKDOWN ?? 'true'}" partner-id="TEST_PARTNER" partner-name="TEST_PARTNER" partner-logo="https://intellireach.agency/plain.png" faq-link="http://localhost:3000/en/disclaimer"></sirbro-chat>`,
+          __html: `<sirbro-chat api-url="${process.env.NEXT_PUBLIC_API_URL || 'https://api.tipsterbro.com/v1'}" brand-icon="/assets/brandmark.png" show-markdown="${process.env.SHOW_MARKDOWN ?? 'true'}" partner-id="TEST_PARTNER" partner-name="TEST_PARTNER" partner-logo="https://intellireach.agency/plain.png" faq-link="http://localhost:3000/en/disclaimer" affiliates='[{"casino":"YourBrand","url":"https://yourdomain.com/register","bonus":"100% up to €200"},{"casino":"Sister Casino","url":"https://sister.com/promo","bonus":"50 Free Spins"}]'></sirbro-chat>`,
         }}
       />
     </Box>
