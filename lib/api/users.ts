@@ -37,6 +37,7 @@ export interface User {
   level: number;
   levelName: string;
   subscription: UserSubscription | null;
+  partnerId: string | null;
 }
 
 export enum RetentionStage {
@@ -86,6 +87,7 @@ export interface GetUsersParams {
   retentionStage?: RetentionStage;
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
+  partnerId?: string;
 }
 
 export interface PaginatedUsersResponse {
@@ -113,6 +115,7 @@ export async function getUsers(params: GetUsersParams = {}): Promise<PaginatedUs
   if (params.retentionStage) searchParams.set('retentionStage', params.retentionStage);
   if (params.sortBy) searchParams.set('sortBy', params.sortBy);
   if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+  if (params.partnerId) searchParams.set('partnerId', params.partnerId);
 
   const queryString = searchParams.toString();
   const url = `${getApiBaseUrl()}/user${queryString ? `?${queryString}` : ''}`;

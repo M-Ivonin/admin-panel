@@ -108,6 +108,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedRetentionStage, setSelectedRetentionStage] = useState<RetentionStage | null>(null);
+  const [partnerFilter, setPartnerFilter] = useState('');
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string | null>(null);
@@ -147,6 +148,7 @@ export default function UsersPage() {
         retentionStage: selectedRetentionStage || undefined,
         sortBy: sortBy || undefined,
         sortOrder: sortBy ? sortOrder : undefined,
+        partnerId: partnerFilter.trim() || undefined,
       });
       setUsers(response.users || []);
       setTotal(response.total || 0);
@@ -156,7 +158,7 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, selectedRetentionStage, sortBy, sortOrder]);
+  }, [page, rowsPerPage, debouncedSearch, selectedRetentionStage, sortBy, sortOrder, partnerFilter]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -267,6 +269,13 @@ export default function UsersPage() {
                   },
                 }}
               />
+              <TextField
+                size="small"
+                placeholder="Filter by partner ID..."
+                value={partnerFilter}
+                onChange={(e) => { setPartnerFilter(e.target.value); setPage(0); }}
+                sx={{ width: { xs: '100%', sm: 220 } }}
+              />
               <IconButton onClick={fetchUsers} disabled={isLoading} color="primary">
                 <Refresh sx={{ animation: isLoading ? 'spin 1s linear infinite' : 'none', '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } } }} />
               </IconButton>
@@ -369,6 +378,7 @@ export default function UsersPage() {
                           Language
                         </TableSortLabel>
                       </TableCell>
+                      <TableCell>Partner</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -440,6 +450,20 @@ export default function UsersPage() {
                           </Typography>
                         </TableCell>
                         <TableCell>
+                          {user.partnerId ? (
+                            <Chip
+                              label={user.partnerId}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              onClick={() => { setPartnerFilter(user.partnerId!); setPage(0); }}
+                              title="Click to filter by this partner"
+                            />
+                          ) : (
+                            <Typography variant="body2" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Link href={`/${lang}/dashboard/bot-chat?userId=${user.id}`}>
                             <Button variant="outlined" size="small" startIcon={<Chat />}>
                               Chat
@@ -450,7 +474,7 @@ export default function UsersPage() {
                     ))}
                     {users.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                           <Typography color="text.secondary">
                             {debouncedSearch || selectedRetentionStage
                               ? 'No users found matching your filters'
