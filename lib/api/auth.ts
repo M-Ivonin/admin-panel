@@ -1,14 +1,12 @@
-import { getApiBaseUrl } from '@/lib/auth';
+import { publicApiFetch } from '@/modules/http/public-client';
 
 /**
  * Request magic link to be sent to email
  */
 export async function requestMagicLink(email: string): Promise<void> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/magic-link`, {
+  const response = await publicApiFetch({
+    path: '/auth/magic-link',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({
       email: email.toLowerCase().trim(),
       locale: 'en-us',
@@ -29,11 +27,9 @@ export async function exchangeMagicLinkToken(token: string): Promise<{
   refreshToken: string;
   user: { id: string; email: string; name: string };
 }> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/magic-link/exchange`, {
+  const response = await publicApiFetch({
+    path: '/auth/magic-link/exchange',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ token }),
   });
 
@@ -52,16 +48,11 @@ export async function exchangeMagicLinkForApp(token: string): Promise<{
   refreshToken: string;
   user: { id: string; email: string; name: string };
 }> {
-  const response = await fetch(
-    `${getApiBaseUrl()}/auth/magic-link/exchange-app`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    },
-  );
+  const response = await publicApiFetch({
+    path: '/auth/magic-link/exchange-app',
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
 
   if (!response.ok) {
     throw new Error('Invalid or expired magic link');

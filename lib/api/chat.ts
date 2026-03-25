@@ -2,7 +2,7 @@
  * Chat API utilities
  */
 
-import { getAccessToken, getApiBaseUrl } from '@/lib/auth';
+import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 
 export interface ChatMessage {
   id: number;
@@ -24,17 +24,9 @@ export interface ChatResponse {
  * Get chat history for a specific user
  */
 export async function getChatHistory(userId: string): Promise<ChatResponse> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/chat/history/${userId}`, {
+  const response = await adminAuthFetch({
+    path: `/chat/history/${userId}`,
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
 
   if (!response.ok) {
@@ -53,17 +45,9 @@ export async function getChatHistory(userId: string): Promise<ChatResponse> {
 export async function getAllUsers(): Promise<
   Array<{ id: string; email: string; name: string }>
 > {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/user`, {
+  const response = await adminAuthFetch({
+    path: '/user',
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
 
   if (!response.ok) {
@@ -84,17 +68,9 @@ export async function getUser(userId: string): Promise<{
   email: string;
   name: string;
 }> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/user/${userId}`, {
+  const response = await adminAuthFetch({
+    path: `/user/${userId}`,
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
 
   if (!response.ok) {

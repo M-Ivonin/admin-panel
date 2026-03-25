@@ -32,7 +32,7 @@ export function LoginForm() {
       await loginWithMagicLink(magicLinkToken);
       setSuccessMessage('Successfully logged in! Redirecting...');
       setTimeout(() => {
-        router.push('/');
+        router.push('/dashboard');
       }, 1000);
     } catch (err) {
       console.error('Magic link login failed:', err);
