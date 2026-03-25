@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { AppStoreButtons } from '@/components/AppStoreButtons';
 import type { ClientDeepLinkConfig } from '@/modules/config/contracts';
 import { DEEPLINK_FALLBACK_MS } from '@/modules/deeplink/constants';
 import { createSafeLogData, redactToken } from '@/modules/deeplink/utils/redact';
@@ -82,17 +82,6 @@ export function DeepLinkHandler({
     window.location.href = deepLinkUrl;
   };
 
-  const handleDownloadApp = (targetPlatform: 'ios' | 'android') => {
-    const storeUrl = getAppStoreUrl(
-      targetPlatform,
-      config.iosAppStoreUrl,
-      config.androidPlayUrl
-    );
-    if (storeUrl) {
-      window.open(storeUrl, '_blank');
-    }
-  };
-
   if (platform !== 'desktop' && !showFallback) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -134,39 +123,7 @@ export function DeepLinkHandler({
 
           <div className="text-sm text-gray-500 mb-4">{translations.deepLink.dontHaveApp}</div>
 
-          <div className="space-y-3">
-            {config.iosAppStoreUrl && (
-              <button
-                onClick={() => handleDownloadApp('ios')}
-                className="w-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
-                aria-label="Download TipsterBro from App Store"
-              >
-                <Image
-                  src="/assets/appstore-badge.svg"
-                  alt="Download on the App Store"
-                  width={180}
-                  height={54}
-                  className="h-12 w-auto mx-auto"
-                />
-              </button>
-            )}
-
-            {config.androidPlayUrl && (
-              <button
-                onClick={() => handleDownloadApp('android')}
-                className="w-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded-lg"
-                aria-label="Download TipsterBro from Google Play"
-              >
-                <Image
-                  src="/assets/playstore-badge.svg"
-                  alt="Get it on Google Play"
-                  width={180}
-                  height={54}
-                  className="h-12 w-auto mx-auto"
-                />
-              </button>
-            )}
-          </div>
+          <AppStoreButtons />
         </div>
 
         <div className="mt-6 text-xs text-gray-400">
