@@ -10,7 +10,6 @@ import {
   isTokenExpired,
   decodeToken,
   AuthUser,
-  AuthTokens,
 } from '@/lib/auth';
 
 export interface UseAuthReturn {

@@ -1,4 +1,6 @@
 import Cookies from 'js-cookie';
+import { getAdminAppConfig } from '@/modules/config/runtime';
+import { publicApiFetch } from '@/modules/http/public-client';
 /**
  * Authentication utilities
  */
@@ -23,28 +25,16 @@ export interface AuthResponse {
  * Get API base URL from environment
  */
 export function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const isLocalhost =
-      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-
-    if (isLocalhost) {
-      return 'http://localhost:3001/v1';
-    }
-  }
-
-  return 'https://api.tipsterbro.com/v1';
+  return getAdminAppConfig().apiBaseUrl;
 }
 
 /**
  * Exchange magic link token for JWT
  */
 export async function exchangeMagicLink(token: string): Promise<AuthResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/exchange-magic-link`, {
+  const response = await publicApiFetch({
+    path: '/auth/exchange-magic-link',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ token }),
   });
 
@@ -61,11 +51,9 @@ export async function exchangeMagicLink(token: string): Promise<AuthResponse> {
 export async function authenticateWithGoogle(
   idToken: string
 ): Promise<AuthResponse> {
-  const response = await fetch(`${getApiBaseUrl()}/auth/google`, {
+  const response = await publicApiFetch({
+    path: '/auth/google',
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify({ idToken }),
   });
 
@@ -130,7 +118,15 @@ export function isAuthenticated(): boolean {
 /**
  * Decode JWT token (basic implementation)
  */
-export function decodeToken(token: string): any {
+interface DecodedAuthToken {
+  exp?: number;
+  email?: string;
+  name?: string;
+  appUserId?: string;
+  sub?: string;
+}
+
+export function decodeToken(token: string): DecodedAuthToken | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {

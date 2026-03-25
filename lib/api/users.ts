@@ -2,7 +2,7 @@
  * Users API utilities
  */
 
-import { getAccessToken, getApiBaseUrl } from '@/lib/auth';
+import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 
 export interface UserSubscription {
   id: string;
@@ -103,11 +103,6 @@ export interface PaginatedUsersResponse {
  * Get paginated list of users with optional filters
  */
 export async function getUsers(params: GetUsersParams = {}): Promise<PaginatedUsersResponse> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set('page', params.page.toString());
   if (params.limit) searchParams.set('limit', params.limit.toString());
@@ -118,14 +113,9 @@ export async function getUsers(params: GetUsersParams = {}): Promise<PaginatedUs
   if (params.partnerId) searchParams.set('partnerId', params.partnerId);
 
   const queryString = searchParams.toString();
-  const url = `${getApiBaseUrl()}/user${queryString ? `?${queryString}` : ''}`;
-
-  const response = await fetch(url, {
+  const response = await adminAuthFetch({
+    path: `/user${queryString ? `?${queryString}` : ''}`,
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
 
   if (!response.ok) {
@@ -151,17 +141,9 @@ export async function getAllUsers(): Promise<User[]> {
  * Get user details
  */
 export async function getUser(userId: string): Promise<User> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/user/${userId}`, {
+  const response = await adminAuthFetch({
+    path: `/user/${userId}`,
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
   });
 
   if (!response.ok) {
