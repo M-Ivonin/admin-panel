@@ -2,35 +2,70 @@
 
 ## Purpose
 
-This document is the direct Figma build brief for `Stage 2` from `SEO_LANDING_REVIEW_AND_ROADMAP.md`.
+This document is the direct build brief for the revised `Stage 2` homepage.
 
-It translates the approved IA and the SirBro app visual DNA into a concrete homepage design structure for:
+It replaces the earlier "full SEO hub on the homepage" interpretation with a simpler `CTA-first` structure:
 
-- desktop homepage concept
-- mobile homepage concept
-- section order
-- visual tokens
-- content density rules
-- Figma build scope
+- explain SirBro fast
+- keep install/open-app intent dominant
+- surface trust early
+- support SEO through selective internal links
+- avoid turning the homepage into a crowded index of every site section
+
+## Core Decision
+
+The homepage is not the full content hub.
+
+It is the front door to the product, with SEO support.
+
+That means:
+
+- the primary job is still `install / open app`
+- the homepage should introduce content and entities without trying to fully contain them
+- deeper discovery should happen through linked hubs, not through many competing homepage sections
+
+## Homepage Jobs In Priority Order
+
+1. explain what SirBro does in one screen
+2. drive users to `Open App`, `App Store`, and `Google Play`
+3. prove that the product is credible
+4. show one clear path into insights and topic/entity exploration
+5. support SEO with strong wording and internal links
+
+If a section does not help one of these jobs, it should not be on the homepage.
+
+## Simplification Rules
+
+- Limit the homepage to `6-7` primary content sections plus footer.
+- Keep only `one` major editorial/discovery section.
+- Keep only `one` trust section outside the hero.
+- Do not use separate homepage sections for:
+  - quizzes
+  - top teams rail
+  - top players rail
+  - leagues rail
+  - about preview cards
+  - methodology preview cards
+- Route those needs through compact links or trust pages instead.
+- The page should feel focused, not exhaustive.
 
 ## Design Direction
 
-The homepage should not look like a generic soft marketing SaaS page.
+The homepage should still feel like SirBro:
 
-It should feel like:
+- dark-first
+- structured
+- product-led
+- analytical
+- editorial without looking like a newspaper
 
-- a modern sports intelligence product
-- a dark-first editorial dashboard
-- a product-led SEO hub
-- a structured and analytical surface with clear hierarchy
+But the new target mood is:
 
-The target mood is:
-
-- dense but readable
-- credible
-- sharp
-- not noisy
-- modern without becoming flashy
+- clearer
+- lighter in cognitive load
+- more decisive
+- less fragmented
+- easier to scan in under 10 seconds
 
 ## Core Visual Rules
 
@@ -56,42 +91,30 @@ Accent color should be used for:
 
 - primary actions
 - states
-- highlights
-- visual anchors
+- small emphasis
+- key numbers or routes
 
-Accent color should not be used as a large decorative wash across the full page.
+Accent color should not be used to create multiple decorative focal points across the page.
 
 ### Typography
 
 - Typeface: `Roboto`
-- Hero display: `56/64`, bold
-- H1 mobile / large title: `40/48`, bold
+- Hero display: `52/58`, bold
+- Mobile hero: `36/42`, bold
 - Section title: `28/36`, medium
-- Card title: `20/28`, medium
+- Card title: `18/26`, medium
 - Body: `16/24`, regular
 - Small body: `14/20`, regular
-- Overline / section eyebrow: `12/18`, medium, `+1px` tracking
+- Overline / eyebrow: `12/18`, medium, `+1px` tracking
 
 ### Spacing
 
 - Use a `4/8` rhythm
-- Section spacing on desktop: `64-96px`
+- Section spacing on desktop: `56-80px`
 - Container width: `1200-1280px`
-- Card radius: `16-24px`
+- Card radius: `16-22px`
 - Chip radius: full pill
-- Primary content gutters: `24px`
-
-## Homepage Role
-
-The homepage must serve all of these roles at once:
-
-1. explain what SirBro does
-2. send users to the app
-3. provide strong internal links
-4. introduce trust signals early
-5. expose fresh insight content
-6. route users into entity hubs
-7. support SEO with richer content blocks
+- Primary gutters: `24px`
 
 ## Required Desktop Structure
 
@@ -103,17 +126,15 @@ Structure:
 - Home
 - Insights
 - Explore
-- Quizzes
 - About
 - locale switcher
-- Open App CTA
+- `Open App` CTA
 
-Visual direction:
+Rules:
 
-- compact top bar
-- dark panel container
-- moderate radius
-- no oversized hero-nav spacing
+- compact height
+- no extra promo row
+- CTA must remain visible and not compete with other header items
 
 ### 2. Hero
 
@@ -121,204 +142,149 @@ Two-column layout.
 
 #### Left column
 
-- topic chips:
-  - Injury Impact
-  - Match Outlook
-  - Lineup Changes
-- headline with strong search/product wording
-- supporting paragraph
-- primary and secondary CTA
+- `1-2` topic chips only
+- headline with strong football-intent wording
+- short supporting paragraph
+- primary CTA: `Open App`
+- secondary CTA: `Explore Insights`
 - App Store and Google Play badges
-- 2 compact metric/trust cards
+- one concise proof line or proof card
 
 #### Right column
 
-- large product-style preview panel
-- supporting mini-panels:
-  - Latest Insights
-  - Trending Topics
-  - SEO Home Role
+- one large product-style preview
+- optionally `1-2` small supporting cards only
+- no miniature dashboard gallery
 
-Hero content goal:
+Hero goal:
 
-- explain the product
-- introduce search-intent language
-- preserve app/product visual DNA
+- make the product understandable fast
+- keep install intent obvious
+- make the product feel real, not conceptual
 
-### 3. Product Explainer
+### 3. What You Get
 
-Section title plus three cards:
+One section with three concise cards:
 
 - Player Form
 - Injury Impact
 - Tactical Analysis
 
-This block should answer:
+Each card should answer:
 
-- what users actually get
-- how SirBro differs from generic sports content
+- what signal users get
+- why it matters before or around matches
 
-### 4. How It Works
+This replaces a heavier explainer approach.
 
-Three-step grid:
+### 4. How It Works + Trust
+
+This should be a combined section, not two separate homepage chapters.
+
+Left side:
 
 1. Track the signal
-2. Add interpretation
-3. Route deeper
+2. Add football context
+3. Decide or explore deeper
 
-This block should feel product-led, not abstract.
+Right side:
 
-### 5. Trust Strip
-
-Four compact cards:
-
-- Methodology
-- Editorial Policy
-- AI Transparency
-- FAQ + Contact
-
-This section should appear before the deep content rails.
-
-### 6. Latest Insights
-
-Three editorial cards with:
-
-- topical tag
-- strong title
-- short summary
-- metadata line
-- strong visual media block
-
-The cards should look like premium editorial modules, not blog tiles.
-
-### 7. Trending Topics
-
-This section should combine:
-
-- topic chips
-- short explanation of why topic hubs matter
-- two supporting cards about UX and search role
-
-Suggested topics:
-
-- Injury News
-- Team Form
-- Lineup Changes
-- Tactical Shifts
-- Match Outlook
-- Suspensions
-- Transfers
-- Player Usage
-
-### 8. Top Teams / Players / Leagues
-
-Three entity cards or rails:
-
-- Top Teams
-- Top Players
-- Leagues
+- compact trust stack or trust chips:
+  - Methodology
+  - Editorial policy
+  - AI + human review
 
 Goal:
 
-- make the entity layer visible on the homepage
-- signal evergreen discoverability
+- show process and credibility together
+- reduce section count
+- avoid repeating trust later in the page
 
-### 9. FAQ
+### 5. Discovery Section
 
-Left: section heading and purpose.
+This is the only large SEO/discovery block on the homepage.
 
-Right: stacked FAQ cards.
+Structure:
+
+- one featured insight card
+- `4-6` topic chips or text links
+- one compact entity row:
+  - Teams
+  - Players
+  - Leagues
+
+This section should prove that the site has depth without forcing three separate homepage modules.
+
+Required behavior:
+
+- users understand where to go next
+- internal links are visible
+- content stays secondary to the main app CTA
+
+### 6. FAQ
+
+Short and quiet.
+
+- `3` core questions
+- compact stacked answers/cards
+- trust-focused tone
 
 Initial questions:
 
 - What kind of football insights does SirBro provide?
 - How is SirBro different from a generic sports news feed?
-- How do you handle AI-generated content?
+- How do you handle AI-assisted content?
 
-### 10. About / Methodology Preview
+### 7. Final CTA
 
-Three trust-preview cards:
+Strong focused CTA band with:
 
-- About SirBro
-- Methodology
-- Editorial System
-
-This block should visually prepare the user for trust pages, not bury them in the footer.
-
-### 11. Final CTA
-
-Strong indigo panel with:
-
-- headline
+- short headline
 - short body
-- Download App CTA
-- Explore Insights CTA
+- `Download App` CTA
+- secondary `Explore Insights` CTA
 
-### 12. Footer
+This section should feel conclusive, not like another content block.
 
-Columns:
+### 8. Footer
+
+Compact columns:
 
 - Product
 - Insights
+- Explore
 - Company
 - Legal
+- Stores / Social
 
-Footer should reinforce crawl depth and trust.
+Footer should carry the secondary depth that was removed from the homepage body.
 
 ## Required Mobile Structure
 
-Mobile should preserve the same narrative order:
+Mobile keeps the same story in the same order:
 
 1. Header
 2. Hero
-3. How It Works
-4. Latest Insights
-5. Trust
-6. Explore entities/topics
-7. FAQ
-8. Final CTA
+3. What You Get
+4. How It Works + Trust
+5. Discovery
+6. FAQ
+7. Final CTA
+8. Footer
 
 Rules:
 
 - single-column stack
-- dense cards
-- no giant empty spacing
-- CTA visible early
-- trust visible above the fold or soon after
+- CTA visible inside the first screen
+- store badges immediately accessible
+- no duplicated content blocks
+- discovery links should stay compact
 
-## Component Inventory For The First Figma Pass
+## SEO And Copy Rules
 
-Create or simulate these components in the Figma file:
+The homepage should still contain real search language, but in a controlled way.
 
-- top navigation bar
-- primary button
-- secondary button
-- ghost button
-- store badge
-- topic chip
-- metric card
-- insight card
-- mini feature card
-- FAQ card
-- footer column
-
-## Content Tone Rules
-
-The homepage copy should sound:
-
-- informative
-- product-aware
-- search-aware
-- credible
-
-Avoid:
-
-- generic startup slogans
-- vague hype
-- oversized emotional language
-- empty “AI powered sports future” phrasing
-
-Use explicit football language where useful:
+Use naturally:
 
 - football insights
 - player form
@@ -328,34 +294,45 @@ Use explicit football language where useful:
 - match outlook
 - stats breakdowns
 
+Avoid:
+
+- generic startup slogans
+- large vague claims
+- repeated keyword stuffing
+- long descriptive paragraphs
+
+## Component Inventory For The Figma Pass
+
+- top navigation bar
+- primary button
+- secondary button
+- store badge
+- topic chip
+- proof chip or proof card
+- feature card
+- process step card
+- trust chip/card
+- featured insight card
+- compact link rail
+- FAQ card
+- footer column
+
 ## Figma Build Scope
 
-The first Figma pass should contain:
+The revised pass should contain:
 
 - one page: `Stage 2 - SEO Hub`
-- one frame: `Desktop Home v1`
-- one frame: `Mobile Home v1`
-
-Optional support blocks if needed:
-
-- quick token strip
-- section labels
-- component mini-shelf
+- one frame: `Desktop Home v2 - Simplified CTA-first`
+- one frame: `Mobile Home v2 - Simplified CTA-first`
 
 ## Acceptance Criteria
 
-The first design pass is considered valid if:
+The design pass is valid if:
 
-- all mandatory Stage 2 homepage sections are present
-- the page clearly follows dark-first SirBro DNA
-- the layout feels like a product/editorial surface, not generic SaaS marketing
-- trust pages are surfaced before the footer
-- entity and topic discovery are visible on the homepage
-- mobile preserves the same content hierarchy
-- CTA and internal-link architecture are visually obvious
-
-## Current Blocker
-
-The Figma MCP currently has a Starter plan rate-limit/paywall block after a few tool calls.
-
-As soon as MCP access is available again, this document should be used as the direct build script for the first homepage design pass.
+- the homepage is clearly simpler than the first concept
+- `Open App` / install intent is visually dominant
+- the page explains SirBro in one screen
+- trust appears early without becoming a full standalone content area
+- only one discovery section carries the SEO/internal-link role
+- the removed sections are represented through links, not duplicate modules
+- mobile preserves the same priorities

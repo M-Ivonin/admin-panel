@@ -254,6 +254,30 @@ When designing the website later:
   - narrow list stacks -> grid or split-column layouts
   - single-column rails -> wider featured content blocks and clustered sections
 
+## Homepage Guardrails
+
+The app's density should guide the homepage, but not overload it.
+
+For the homepage specifically:
+
+- keep one dominant CTA cluster:
+  - header `Open App`
+  - hero primary CTA
+  - final CTA
+- keep one dominant product scene in the hero
+- keep one combined `How it works + Trust` section
+- keep one combined discovery section for insights, topics, and entities
+- prefer compact link rows and chips over multiple homepage mini-hubs
+- do not translate every app pattern into its own homepage block
+
+Avoid on the homepage:
+
+- multiple dashboard-like surfaces competing for attention
+- separate sections for every content type
+- decorative glows that create extra focal points
+- duplicated trust messaging in multiple blocks
+- secondary growth modules that distract from install intent
+
 ## Recommended Website Foundation Based On The App
 
 - Background: `#121212`
