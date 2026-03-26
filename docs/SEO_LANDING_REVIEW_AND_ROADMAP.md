@@ -292,7 +292,7 @@
 Ее главная задача:
 
 - быстро объяснить продукт;
-- удержать фокус на `Open App` и установке приложения;
+- удержать фокус на установке приложения и store CTA;
 - поддержать SEO через сильные формулировки и внутренние ссылки;
 - рано показать доверие;
 - отправить пользователя в более глубокие разделы, а не заменять их.
@@ -301,12 +301,14 @@
 
 - сильный hero;
 - ссылки на сторы (App Store и Google Play);
+- hero-copy, которая сразу продает SirBro как sports analyst in your pocket;
 - короткое объяснение, что делает SirBro;
 - объединенный блок `How it works + Trust`;
 - один discovery-блок вместо нескольких SEO-rail секций:
   - featured insight;
-  - topic links;
-  - compact links to teams / players / leagues;
+  - FC26-style teams/players module with crawlable entity links;
+  - compact topic links;
+  - secondary featured quiz card;
 - FAQ;
 - заметные внутренние ссылки на ключевые SEO-разделы.
 
@@ -315,22 +317,70 @@
 - отдельный блок `Trending Topics`;
 - отдельный блок `Top Teams / Players / Leagues`;
 - отдельный preview `About / Methodology`;
-- quiz/growth-секцию;
 - повторяющиеся trust-блоки в нескольких местах страницы.
 
-Все это можно оставить в IA сайта, но на главной оно должно жить в виде компактных ссылок или уйти на отдельные страницы.
+Все это можно оставить в IA сайта, но на главной оно должно жить в более компактном виде:
+
+- `Top Teams / Players / Leagues` -> один FC26-style slider/module;
+- quiz -> вторичная карточка внутри discovery-zone, а не отдельная большая секция;
+- about/methodology preview -> в trust layer или на отдельных страницах.
 
 ### Что важно по стилю
 
 Текст должен остаться понятным и живым, но в нем должны появиться реальные поисковые сигналы:
 
 - football insights;
+- proprietary sports AI model;
+- match volatility;
 - player form;
 - injury impact;
 - tactical analysis;
 - match outlook;
 - lineup changes;
 - stats breakdowns.
+
+### Что важно по конверсии
+
+Hero должен вести прежде всего к установке приложения.
+
+Рекомендуемый приоритет CTA:
+
+1. `Download for iOS`
+2. `Download for Android`
+3. `Open App` для returning users
+
+### What to codify in the trust layer
+
+Нужен более конкретный explanation-block, а не общий marketing trust copy.
+
+Базовая формулировка:
+
+`SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.`
+
+### What to codify in the SEO engine
+
+Для homepage важен один сильный crawlable entity-module:
+
+- league tabs;
+- standings / top goalscorers / assists toggle;
+- hard-coded links на team и player pages;
+- `SirBro Outlook` indicator.
+
+Это важнее, чем несколько разрозненных homepage-секций.
+
+### FAQ capture
+
+FAQ нужно проектировать не только как UX-блок, но и как search-capture слой.
+
+Обязательно:
+
+- accordion UI;
+- `FAQPage` JSON-LD;
+- вопросы про:
+  - AI match volatility;
+  - covered leagues;
+  - Spanish and Portuguese chat;
+  - Fan Arena competition with friends.
 
 ### Правило приоритета
 

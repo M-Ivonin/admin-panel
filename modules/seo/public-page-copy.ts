@@ -124,10 +124,28 @@ export function getPublicPageSeoCopy(
   const t = getDictionary(locale);
 
   if (pageKey === 'home') {
-    return {
-      title: 'Football Predictions App',
-      description: t.hero.subtitle,
+    const homeCopy: Record<Locale, PublicSeoCopy> = {
+      en: {
+        title:
+          'SirBro | Football Insights App for Match Volatility, Injury Impact, and Player Form',
+        description:
+          'Explore football insights, player form, injury impact, lineup changes, and match volatility with SirBro’s Proprietary Sports AI Model.',
+      },
+      es: {
+        title:
+          'SirBro | App de insights de fútbol para volatilidad, lesiones y forma del jugador',
+        description:
+          'Explora insights de fútbol, forma del jugador, impacto de lesiones, cambios de alineación y volatilidad del partido con el modelo deportivo de SirBro.',
+      },
+      pt: {
+        title:
+          'SirBro | App de insights de futebol para volatilidade, lesoes e forma do jogador',
+        description:
+          'Explore insights de futebol, forma do jogador, impacto de lesoes, mudancas de escalação e volatilidade da partida com o modelo esportivo do SirBro.',
+      },
     };
+
+    return homeCopy[locale];
   }
 
   if (isTrustPageKey(pageKey)) {

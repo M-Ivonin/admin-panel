@@ -262,13 +262,21 @@ For the homepage specifically:
 
 - keep one dominant CTA cluster:
   - header `Open App`
-  - hero primary CTA
+  - hero store/download CTAs
   - final CTA
 - keep one dominant product scene in the hero
 - keep one combined `How it works + Trust` section
-- keep one combined discovery section for insights, topics, and entities
+- keep one combined discovery section for insights, FC26-style entities, and secondary engagement
 - prefer compact link rows and chips over multiple homepage mini-hubs
 - do not translate every app pattern into its own homepage block
+
+Homepage-specific additions that fit the product DNA:
+
+- app mockups on indigo-tinted panels such as `#1F2937`
+- store-first hero conversion buttons using `#4F46E5`
+- a clean 3-step `Signal-to-Action` methodology flow
+- one FC26-like horizontal slider for leagues/teams/players
+- one secondary quiz/engagement card, not a whole quiz section
 
 Avoid on the homepage:
 
@@ -277,6 +285,7 @@ Avoid on the homepage:
 - decorative glows that create extra focal points
 - duplicated trust messaging in multiple blocks
 - secondary growth modules that distract from install intent
+- app screenshots that feel generic or fake instead of showing real product surfaces
 
 ## Recommended Website Foundation Based On The App
 

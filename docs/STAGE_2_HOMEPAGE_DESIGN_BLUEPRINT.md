@@ -11,6 +11,7 @@ It replaces the earlier "full SEO hub on the homepage" interpretation with a sim
 - surface trust early
 - support SEO through selective internal links
 - avoid turning the homepage into a crowded index of every site section
+- give the user one clear reason to install the app now
 
 ## Core Decision
 
@@ -40,14 +41,16 @@ If a section does not help one of these jobs, it should not be on the homepage.
 - Keep only `one` major editorial/discovery section.
 - Keep only `one` trust section outside the hero.
 - Do not use separate homepage sections for:
-  - quizzes
-  - top teams rail
-  - top players rail
-  - leagues rail
   - about preview cards
   - methodology preview cards
 - Route those needs through compact links or trust pages instead.
 - The page should feel focused, not exhaustive.
+
+Clarification:
+
+- `Top Teams / Players / Leagues` can exist, but only as one combined `FC26-style SEO engine` module inside the main discovery section.
+- `Featured Quiz` can exist, but only as a secondary engagement card inside the same discovery zone.
+- Neither of these should become a full standalone homepage chapter.
 
 ## Design Direction
 
@@ -135,6 +138,7 @@ Rules:
 - compact height
 - no extra promo row
 - CTA must remain visible and not compete with other header items
+- header CTA remains for returning users, but the hero should prioritize install/download actions
 
 ### 2. Hero
 
@@ -143,16 +147,18 @@ Two-column layout.
 #### Left column
 
 - `1-2` topic chips only
-- headline with strong football-intent wording
+- headline with strong football-intent and mobile-app wording
 - short supporting paragraph
-- primary CTA: `Open App`
-- secondary CTA: `Explore Insights`
-- App Store and Google Play badges
+- primary CTAs:
+  - `Download for iOS`
+  - `Download for Android`
+- secondary CTA:
+  - `Open App`
 - one concise proof line or proof card
 
 #### Right column
 
-- one large product-style preview
+- one large app/product preview
 - optionally `1-2` small supporting cards only
 - no miniature dashboard gallery
 
@@ -161,21 +167,46 @@ Hero goal:
 - make the product understandable fast
 - keep install intent obvious
 - make the product feel real, not conceptual
+- immediately communicate that SirBro is an always-available sports analyst in the user's pocket
 
-### 3. What You Get
+Suggested hero copy variants:
 
-One section with three concise cards:
+- EN:
+  - `The Smartest Sports Analyst in Your Pocket. Real-time signals. Pro-level insights. No noise.`
+- ES:
+  - `El analista deportivo más inteligente en tu bolsillo. Senales en tiempo real. Analisis profesional. Sin distracciones.`
+- PT:
+  - `O analista esportivo mais inteligente no seu bolso. Sinais em tempo real. Insights profissionais. Sem ruido.`
 
-- Player Form
-- Injury Impact
-- Tactical Analysis
+Hero CTA rules:
 
-Each card should answer:
+- show store-first conversion buttons in the hero
+- keep App Store and Google Play visually prominent
+- `Open App` should remain available, but secondary to install/download
+- use `#4F46E5` for the main download actions on the dark `#121212` / `#1F2937` surface system
 
-- what signal users get
-- why it matters before or around matches
+### 3. Product Showcase
 
-This replaces a heavier explainer approach.
+One section with high-fidelity app mockups on indigo-tinted panels.
+
+Required screenshots/modules:
+
+- `Insight Feed`
+  - show an injury impact card
+- `Chat Widget`
+  - show an active conversation such as `Who has the edge in the 2nd half?`
+- `Fan Arena`
+  - show a leaderboard view with friends/community
+
+Core section message:
+
+- `Insights that change decisions. Chat with the analyst. Compete with the community.`
+
+Goal:
+
+- move from abstract value props to recognizable app features
+- make the app feel install-worthy
+- show that SirBro is not only content, but also utility and interaction
 
 ### 4. How It Works + Trust
 
@@ -193,12 +224,28 @@ Right side:
   - Methodology
   - Editorial policy
   - AI + human review
+  - Proprietary Sports AI Model
 
 Goal:
 
 - show process and credibility together
 - reduce section count
 - avoid repeating trust later in the page
+- make the "why it works" layer concrete, not generic
+
+Required trust/methodology copy:
+
+- `SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.`
+
+SEO rule:
+
+- include the phrase `Proprietary Sports AI Model` naturally in this section to build authority
+- do not spam the phrase more than necessary
+
+Visual rule:
+
+- use a clean `Signal-to-Action` 3-step flow
+- this section should feel like methodology and proof, not marketing fluff
 
 ### 5. Discovery Section
 
@@ -207,11 +254,9 @@ This is the only large SEO/discovery block on the homepage.
 Structure:
 
 - one featured insight card
-- `4-6` topic chips or text links
-- one compact entity row:
-  - Teams
-  - Players
-  - Leagues
+- one secondary `Featured Quiz` card
+- one `FC26-style SEO engine` module for teams and players
+- optional `4-6` topic chips or text links above or beside the module
 
 This section should prove that the site has depth without forcing three separate homepage modules.
 
@@ -221,19 +266,81 @@ Required behavior:
 - internal links are visible
 - content stays secondary to the main app CTA
 
+#### 5A. Featured Quiz
+
+This should be a secondary engagement card, not a full standalone section.
+
+Featured quiz:
+
+- `Tactical Identity: What kind of football thinker are you?`
+
+Rules:
+
+- use the `Quiz Hub` card style direction
+- CTA: `Start Quiz`
+- the quiz should keep the user on the site and increase engagement/time on page
+- quiz must remain visually secondary to app-install CTAs
+
+#### 5B. FC26-Style SEO Engine
+
+This module replaces separate homepage sections for top teams, top players, and leagues.
+
+Structure:
+
+- horizontal card slider
+- league tabs:
+  - EPL
+  - La Liga
+  - Serie A
+  - Ligue 1
+  - Brasileirao
+  - Liga MX
+  - MLS
+- stat toggle:
+  - `Standings`
+  - `Top Goalscorers`
+  - `Assists`
+
+Card content:
+
+- team badge or player avatar
+- name
+- points or relevant stat
+- `SirBro Outlook` indicator such as `Trending Up`
+
+Technical rule:
+
+- clicking a league updates the slider content
+- every visible team and player name must be a hard-coded crawlable link
+- example:
+  - `/en/teams/real-madrid`
+  - `/en/players/jude-bellingham`
+
+SEO goal:
+
+- this is the homepage mechanism for ranking across many team/player long-tail queries
+- keep it powerful for crawlability, but contained inside one module so the page stays simple
+
 ### 6. FAQ
 
-Short and quiet.
+Short, useful, and search-aware.
 
-- `3` core questions
-- compact stacked answers/cards
+- accordion format
+- `4` core questions
 - trust-focused tone
+- should support FAQPage schema markup
 
 Initial questions:
 
-- What kind of football insights does SirBro provide?
-- How is SirBro different from a generic sports news feed?
-- How do you handle AI-assisted content?
+- `How does SirBro's AI predict match volatility?`
+- `Which football leagues are covered?`
+- `Is the SirBro chat available in Spanish and Portuguese?`
+- `How can I compete with friends in the Fan Arena?`
+
+Implementation note:
+
+- use `FAQPage` JSON-LD so these questions can surface directly in search results
+- the leagues answer should list all supported leagues explicitly
 
 ### 7. Final CTA
 
@@ -245,6 +352,11 @@ Strong focused CTA band with:
 - secondary `Explore Insights` CTA
 
 This section should feel conclusive, not like another content block.
+
+CTA direction:
+
+- keep the install/download action visually stronger than the secondary link
+- carry the same store/app-install logic introduced in the hero
 
 ### 8. Footer
 
@@ -258,6 +370,31 @@ Compact columns:
 - Stores / Social
 
 Footer should carry the secondary depth that was removed from the homepage body.
+
+## Copy And SEO Notes
+
+The homepage should now combine:
+
+- app-install conversion language
+- sports-intelligence authority language
+- crawlable entity links
+- structured FAQ capture
+
+Priority keyword themes:
+
+- football insights
+- proprietary sports AI model
+- match volatility
+- injury impact
+- lineup shifts
+- momentum
+- team pages
+- player pages
+
+Important restraint:
+
+- even with stronger SEO blocks, the page must still read like a focused app homepage first
+- if any addition weakens the download/install hierarchy, simplify it
 
 ## Required Mobile Structure
 

@@ -1,8 +1,16 @@
 import type { Locale } from '@/lib/i18n/config';
 
-export interface HomepageStat {
-  value: string;
+export interface HomepageLinkItem {
   label: string;
+  href: string;
+}
+
+export interface HomepageFeaturePreview {
+  title: string;
+  description: string;
+  accentLabel: string;
+  accentValue: string;
+  lines: string[];
 }
 
 export interface HomepageStep {
@@ -11,30 +19,33 @@ export interface HomepageStep {
   description: string;
 }
 
-export interface HomepageInsightCard {
-  category: string;
+export interface HomepageTrustItem {
   title: string;
   description: string;
   href: string;
 }
 
-export interface HomepageTopicCard {
+export interface HomepageActionCard {
+  eyebrow: string;
   title: string;
   description: string;
   href: string;
+  ctaLabel: string;
 }
 
-export interface HomepageEntityCard {
+export interface HomepageSeoEngineEntry {
+  badge: string;
+  name: string;
+  value: string;
+  outlook: string;
+  href: string;
+}
+
+export interface HomepageSeoEngineLeague {
   label: string;
-  title: string;
-  description: string;
-  href: string;
-}
-
-export interface HomepageTrustCard {
-  title: string;
-  description: string;
-  href: string;
+  standings: HomepageSeoEngineEntry[];
+  topGoalscorers: HomepageSeoEngineEntry[];
+  assists: HomepageSeoEngineEntry[];
 }
 
 export interface HomepageFaqItem {
@@ -44,67 +55,56 @@ export interface HomepageFaqItem {
 
 export interface HomepageContent {
   hero: {
-    eyebrow: string;
+    chips: string[];
     title: string;
     description: string;
-    supportingLabel: string;
-    supportingText: string;
-    stats: HomepageStat[];
-    secondaryCtaLabel: string;
+    proof: string;
+    openAppLabel: string;
+    previewTitle: string;
+    previewSubtitle: string;
+    previewHighlights: Array<{ label: string; value: string }>;
+    chatPrompt: string;
+    fanArenaTitle: string;
+    fanArenaCopy: string;
   };
-  howItWorks: {
+  showcase: {
     eyebrow: string;
     title: string;
     description: string;
+    items: HomepageFeaturePreview[];
+  };
+  methodology: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    requiredCopy: string;
     steps: HomepageStep[];
+    trustItems: HomepageTrustItem[];
   };
-  trust: {
+  discovery: {
     eyebrow: string;
     title: string;
     description: string;
-    cards: HomepageTrustCard[];
-  };
-  insights: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    featured: HomepageInsightCard;
-    items: HomepageInsightCard[];
-    ctaLabel: string;
-  };
-  topics: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: HomepageTopicCard[];
-  };
-  entities: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    items: HomepageEntityCard[];
-  };
-  quiz: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    cardTitle: string;
-    cardDescription: string;
-    href: string;
-    ctaLabel: string;
+    topicLinks: HomepageLinkItem[];
+    featuredInsight: HomepageActionCard;
+    quiz: HomepageActionCard;
+    seoEngine: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      metricLabels: {
+        standings: string;
+        topGoalscorers: string;
+        assists: string;
+      };
+      leagues: HomepageSeoEngineLeague[];
+    };
   };
   faq: {
     eyebrow: string;
     title: string;
     description: string;
     items: HomepageFaqItem[];
-  };
-  methodology: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    primaryCtaLabel: string;
-    secondaryCtaLabel: string;
   };
   finalCta: {
     eyebrow: string;
@@ -115,665 +115,997 @@ export interface HomepageContent {
   };
 }
 
+const requiredMethodologyCopyEn =
+  "SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.";
+
 const homepageContent: Record<Locale, HomepageContent> = {
   en: {
     hero: {
-      eyebrow: 'Football intelligence, not noise',
-      title: 'Football insights shaped for match outlook, player form, and sharper decisions.',
+      chips: ['Football insights', 'Match volatility'],
+      title: 'The smartest football analyst in your pocket.',
       description:
-        'SirBro turns injury impact, lineup changes, tactical analysis, and stats breakdowns into a clearer football workflow. Follow the signal, understand why it matters, and move from scattered takes to structured insight.',
-      supportingLabel: 'What you get',
-      supportingText:
-        'A dark, data-first app experience with explainable football signals, trust pages, and entity hubs that connect insights to teams, players, leagues, and topics.',
-      stats: [
-        { value: 'Injury impact', label: 'Track what lineup absences really change' },
-        { value: 'Player form', label: 'Read short-term momentum without guesswork' },
-        { value: 'Tactical analysis', label: 'See shape, role shifts, and matchup edges' },
+        'SirBro turns live match-state, injury impact, lineup shifts, player form, and tactical analysis into faster football decisions without the noise.',
+      proof:
+        'Proprietary Sports AI Model with live context, editorial controls, and instant mobile access.',
+      openAppLabel: 'Open App',
+      previewTitle: 'Live match outlook',
+      previewSubtitle: 'Arsenal vs Liverpool',
+      previewHighlights: [
+        { label: 'Volatility', value: 'High' },
+        { label: 'Lineup swing', value: '+12%' },
+        { label: 'Momentum', value: 'Arsenal up' },
       ],
-      secondaryCtaLabel: 'See methodology',
+      chatPrompt: 'Who has the edge in the 2nd half?',
+      fanArenaTitle: 'Fan Arena',
+      fanArenaCopy:
+        'Compete with friends, compare picks, and move up private leaderboards built around football signals.',
     },
-    howItWorks: {
-      eyebrow: 'How it works',
-      title: 'A compact flow built around evidence, interpretation, and action.',
+    showcase: {
+      eyebrow: 'Product showcase',
+      title:
+        'Insights that change decisions. Chat with the analyst. Compete with the community.',
       description:
-        'The homepage now works as a real SEO hub: it introduces the product, explains the analysis model, and routes users into the exact content layer they need next.',
+        'The homepage moves from promise to product fast, showing recognisable app surfaces instead of abstract marketing claims.',
+      items: [
+        {
+          title: 'Insight Feed',
+          description:
+            'Track injury impact, momentum swings, and match outlook changes in a clean signal feed.',
+          accentLabel: 'Injury impact',
+          accentValue: 'Starter doubtful',
+          lines: ['Expected swing: +9%', 'Pressing drop risk', 'Late-market alert'],
+        },
+        {
+          title: 'Chat Widget',
+          description:
+            'Ask quick football questions and get a sharp answer that keeps match context in view.',
+          accentLabel: 'Live prompt',
+          accentValue: '2nd half edge',
+          lines: ['Lineup fatigue', 'Wide overloads', 'Transition risk'],
+        },
+        {
+          title: 'Fan Arena',
+          description:
+            'Turn football intelligence into social competition with streaks, ranks, and friends-only boards.',
+          accentLabel: 'Leaderboard',
+          accentValue: '#2 this week',
+          lines: ['+18 confidence', '3 picks won', 'Friends league'],
+        },
+      ],
+    },
+    methodology: {
+      eyebrow: 'Signal to action',
+      title: 'How SirBro tracks the signal, adds football context, and helps you act faster.',
+      description:
+        'This section combines process and trust early, so the page feels credible without becoming a separate trust chapter.',
+      requiredCopy: requiredMethodologyCopyEn,
       steps: [
         {
           step: '01',
-          title: 'Spot the match signal',
+          title: 'Track the signal',
           description:
-            'Open the latest football insights around player form, lineup changes, match outlook, and statistical context.',
+            'Read live match-state, player form, lineup changes, and volatility before they become obvious.',
         },
         {
           step: '02',
-          title: 'Understand why it matters',
+          title: 'Add football context',
           description:
-            'Each insight frames the football angle clearly, so the reader sees context instead of isolated data points.',
+            'Translate the raw data into tactical analysis, momentum, and role-level football consequences.',
         },
         {
           step: '03',
-          title: 'Jump deeper by entity',
+          title: 'Decide or explore deeper',
           description:
-            'Move from a single insight into related teams, players, leagues, and topics through the site’s internal linking layer.',
+            'Open the app, follow the insight trail, or jump into team, player, league, and topic pages.',
         },
       ],
-    },
-    trust: {
-      eyebrow: 'Trust layer',
-      title: 'The public site is supported by methodology, editorial rules, and AI transparency.',
-      description:
-        'This section builds the trust stack from the roadmap and gives search engines stronger quality signals for a football-analysis product.',
-      cards: [
-        {
-          title: 'About SirBro',
-          description: 'What the product covers, who it is for, and where football intelligence fits inside the experience.',
-          href: '/about',
-        },
+      trustItems: [
         {
           title: 'Methodology',
-          description: 'How the product turns signals, evidence, and interpretation into structured football analysis.',
+          description: 'See how the model turns match-state and history into explainable football insights.',
           href: '/methodology',
         },
         {
           title: 'Editorial policy',
-          description: 'Source handling, updates, and quality rules for future insights and evergreen content.',
+          description: 'Understand the review rules behind public insights and updates.',
           href: '/editorial-policy',
         },
         {
-          title: 'AI transparency',
-          description: 'A clear explanation of where automation helps and where human review matters.',
+          title: 'AI + human review',
+          description: 'Learn where automation helps and where human judgment stays in the loop.',
           href: '/ai-transparency',
         },
-      ],
-    },
-    insights: {
-      eyebrow: 'Latest insights',
-      title: 'Fresh angles on form, match state, and the details that shift expected outcomes.',
-      description:
-        'The layout leads with one featured insight, then supports it with compact secondary cards to mimic a modern editorial rail instead of a generic blog grid.',
-      featured: {
-        category: 'Featured insight',
-        title: 'How a late lineup change can reshape ball progression before kickoff',
-        description:
-          'A practical read on injury impact, replacement profiles, and the tactical ripple effects that change the match outlook.',
-        href: '/insights',
-      },
-      items: [
         {
-          category: 'Player form',
-          title: 'When hot finishing hides a declining chance profile',
-          description: 'Use form with the right caveats instead of following headline numbers alone.',
-          href: '/insights',
-        },
-        {
-          category: 'Match outlook',
-          title: 'What away pressing fatigue means for second-half control',
-          description: 'A short scenario read combining schedule load, tactical shape, and state changes.',
-          href: '/insights',
-        },
-        {
-          category: 'Lineup changes',
-          title: 'Which absences matter more than raw name value',
-          description: 'Not every missing player changes the same layer of a team’s structure.',
-          href: '/insights',
-        },
-        {
-          category: 'Stats breakdown',
-          title: 'How to read volume, quality, and game state together',
-          description: 'A more useful lens for football analysis than one-metric snapshots.',
-          href: '/insights',
-        },
-      ],
-      ctaLabel: 'Explore all insights',
-    },
-    topics: {
-      eyebrow: 'Trending topics',
-      title: 'Entry points for evergreen discovery',
-      description:
-        'Topic hubs are designed to become strong internal-linking surfaces for recurring football intents, not thin archive pages.',
-      items: [
-        {
-          title: 'Injury impact',
-          description: 'Availability, replacements, and role-level consequences.',
-          href: '/topics',
-        },
-        {
-          title: 'Lineup changes',
-          description: 'Projected elevens, rotation pressure, and tactical reshaping.',
-          href: '/topics',
-        },
-        {
-          title: 'Tactical analysis',
-          description: 'Pressing triggers, spacing, role use, and matchup dynamics.',
-          href: '/topics',
-        },
-        {
-          title: 'Match outlook',
-          description: 'Short-form reads on what is likely to decide the game.',
-          href: '/topics',
-        },
-      ],
-    },
-    entities: {
-      eyebrow: 'Teams, players, leagues',
-      title: 'A compact entity rail that points users into the future evergreen layer.',
-      description:
-        'These cards are positioned as bridges between editorial content and upcoming entity hubs, supporting deeper crawl paths from the homepage.',
-      items: [
-        {
-          label: 'Teams',
-          title: 'Top team pages',
-          description: 'Navigate into club-level context, recent signals, and connected insights.',
-          href: '/teams',
-        },
-        {
-          label: 'Players',
-          title: 'Player form pages',
-          description: 'Track momentum, role, availability, and why the change matters.',
-          href: '/players',
-        },
-        {
-          label: 'Leagues',
-          title: 'League trend hubs',
-          description: 'See recurring patterns, tempo shifts, and competition-level context.',
-          href: '/leagues',
-        },
-      ],
-    },
-    quiz: {
-      eyebrow: 'Featured quiz',
-      title: 'A growth surface that supports discovery without overpowering the SEO core.',
-      description:
-        'Quizzes sit after the main editorial and entity sections so the homepage stays useful for search intent first and engagement second.',
-      cardTitle: 'Which football signal do you actually trust before kickoff?',
-      cardDescription:
-        'A quick interactive route into injury reads, lineup signals, form, and tactical context.',
-      href: '/quizzes',
-      ctaLabel: 'Browse quizzes',
-    },
-    faq: {
-      eyebrow: 'FAQ',
-      title: 'Clear answers for product, analysis, and trust-related questions.',
-      description:
-        'This block supports both users and structured data, turning homepage FAQs into a clearer trust and SEO surface.',
-      items: [
-        {
-          question: 'What kind of football insights does SirBro focus on?',
-          answer:
-            'SirBro focuses on football insights around player form, injury impact, lineup changes, tactical analysis, match outlook, and stats breakdowns that help explain what is changing and why it matters.',
-        },
-        {
-          question: 'Is SirBro only about match picks?',
-          answer:
-            'No. The product is designed to connect match picks with the reasoning behind them, so readers can move from raw tips into context, signals, and interpretation.',
-        },
-        {
-          question: 'How does the site build trust around its analysis?',
-          answer:
-            'The public experience is tied to an explicit trust stack that includes About, Methodology, Editorial Policy, AI Transparency, and FAQ surfaces.',
-        },
-        {
-          question: 'Can I explore content by teams, players, leagues, and topics?',
-          answer:
-            'Yes. The homepage is structured to lead users from featured insights into topic hubs and entity layers that connect related football content together.',
-        },
-      ],
-    },
-    methodology: {
-      eyebrow: 'About the method',
-      title: 'Designed as a premium product surface, backed by a usable analysis model.',
-      description:
-        'The design direction stays close to the SirBro app: dark surfaces, indigo accents, compact density, and strong editorial hierarchy. The content direction mirrors the roadmap: trust first, then insights, then discovery.',
-      primaryCtaLabel: 'Read about SirBro',
-      secondaryCtaLabel: 'Open methodology',
-    },
-    finalCta: {
-      eyebrow: 'Ready to explore the product',
-      title: 'Move from scattered football takes to a cleaner signal-first workflow.',
-      description:
-        'Use the homepage as a hub, open the app for deeper exploration, and keep following related insights, topics, teams, players, and leagues from one structure.',
-      primaryCtaLabel: 'Download the app',
-      secondaryCtaLabel: 'Open insights hub',
-    },
-  },
-  pt: {
-    hero: {
-      eyebrow: 'Inteligência de futebol, sem ruído',
-      title: 'Insights de futebol pensados para match outlook, forma de jogadores e decisões mais claras.',
-      description:
-        'O SirBro transforma injury impact, lineup changes, tactical analysis e stats breakdowns em um fluxo de leitura mais claro. Você acompanha o sinal, entende por que ele importa e sai de opiniões soltas para uma análise estruturada.',
-      supportingLabel: 'O que você encontra',
-      supportingText:
-        'Uma experiência dark e orientada por dados, com sinais explicáveis de futebol, páginas de confiança e hubs de entidades que conectam insights a times, jogadores, ligas e tópicos.',
-      stats: [
-        { value: 'Injury impact', label: 'Entenda o que as ausências realmente mudam' },
-        { value: 'Player form', label: 'Leia o momento do jogador com mais contexto' },
-        { value: 'Tactical analysis', label: 'Veja funções, ajustes e vantagens de matchup' },
-      ],
-      secondaryCtaLabel: 'Ver metodologia',
-    },
-    howItWorks: {
-      eyebrow: 'Como funciona',
-      title: 'Um fluxo compacto construído sobre evidência, interpretação e ação.',
-      description:
-        'A homepage agora funciona como um SEO hub real: apresenta o produto, explica o modelo de análise e leva o usuário para a próxima camada de conteúdo certa.',
-      steps: [
-        {
-          step: '01',
-          title: 'Identifique o sinal do jogo',
-          description:
-            'Abra os últimos football insights sobre player form, lineup changes, match outlook e contexto estatístico.',
-        },
-        {
-          step: '02',
-          title: 'Entenda por que isso importa',
-          description:
-            'Cada insight enquadra o ângulo do futebol com clareza, para que o leitor veja contexto em vez de dados isolados.',
-        },
-        {
-          step: '03',
-          title: 'Aprofunde por entidade',
-          description:
-            'Saia de um insight isolado para times, jogadores, ligas e tópicos relacionados pela camada de internal linking do site.',
-        },
-      ],
-    },
-    trust: {
-      eyebrow: 'Camada de confiança',
-      title: 'O site público é sustentado por metodologia, regras editoriais e transparência de IA.',
-      description:
-        'Esta seção constrói a trust stack definida no roadmap e reforça sinais de qualidade para um produto de análise de futebol.',
-      cards: [
-        {
-          title: 'Sobre o SirBro',
-          description: 'O que o produto cobre, para quem ele foi feito e como a inteligência de futebol entra na experiência.',
+          title: 'About SirBro',
+          description: 'Get the product story, trust position, and product mission in one place.',
           href: '/about',
         },
-        {
-          title: 'Metodologia',
-          description: 'Como o produto transforma sinais, evidência e interpretação em análise estruturada.',
-          href: '/methodology',
-        },
-        {
-          title: 'Política editorial',
-          description: 'Regras de fontes, atualização e qualidade para futuros insights e conteúdo evergreen.',
-          href: '/editorial-policy',
-        },
-        {
-          title: 'Transparência de IA',
-          description: 'Uma explicação clara sobre onde a automação ajuda e onde a revisão humana é essencial.',
-          href: '/ai-transparency',
-        },
       ],
     },
-    insights: {
-      eyebrow: 'Últimos insights',
-      title: 'Novos ângulos sobre forma, estado do jogo e detalhes que mudam o resultado esperado.',
+    discovery: {
+      eyebrow: 'Discover deeper',
+      title: 'One discovery zone that keeps SEO depth visible without stealing attention from the app.',
       description:
-        'O layout abre com um insight em destaque e o apoia com cartões compactos, imitando uma rail editorial moderna em vez de um grid de blog genérico.',
-      featured: {
-        category: 'Insight em destaque',
-        title: 'Como uma mudança tardia na escalação pode alterar a progressão da bola antes do jogo',
+        'Featured insight, quiz engagement, and crawlable team-player routes live together so the homepage stays focused and still feels deep.',
+      topicLinks: [
+        { label: 'Injury impact', href: '/topics/injury-impact' },
+        { label: 'Lineup changes', href: '/topics/lineup-changes' },
+        { label: 'Player form', href: '/topics/player-form' },
+        { label: 'Tactical analysis', href: '/topics/tactical-analysis' },
+        { label: 'Stats breakdowns', href: '/topics/stats-breakdowns' },
+      ],
+      featuredInsight: {
+        eyebrow: 'Featured insight',
+        title: 'How lineup shifts change match volatility before kickoff',
         description:
-          'Uma leitura prática sobre injury impact, perfis de reposição e os efeitos táticos que mudam o match outlook.',
-        href: '/insights',
+          'A fast read on injury impact, role replacements, and momentum scenarios that reshape the football outlook.',
+        href: '/insights/lineup-shifts-change-match-volatility',
+        ctaLabel: 'Read insight',
       },
-      items: [
-        {
-          category: 'Player form',
-          title: 'Quando uma fase goleadora esconde queda na qualidade das chances',
-          description: 'Use a forma recente com os filtros certos, em vez de seguir só o número final.',
-          href: '/insights',
+      quiz: {
+        eyebrow: 'Featured quiz',
+        title: 'Tactical Identity: What kind of football thinker are you?',
+        description:
+          'A compact engagement card that keeps users on site and introduces the product tone with a lighter interaction.',
+        href: '/quizzes/tactical-identity-football-thinker',
+        ctaLabel: 'Start Quiz',
+      },
+      seoEngine: {
+        eyebrow: 'FC26-style SEO engine',
+        title: 'Browse live entity routes by league, then pivot between standings, scorers, and creators.',
+        description:
+          'Each visible name stays crawlable and linked so the homepage supports team pages, player pages, and long-tail football intent.',
+        metricLabels: {
+          standings: 'Standings',
+          topGoalscorers: 'Top Goalscorers',
+          assists: 'Assists',
         },
-        {
-          category: 'Match outlook',
-          title: 'O que a fadiga de pressão fora de casa muda no controle do segundo tempo',
-          description: 'Uma leitura curta que combina calendário, forma tática e estado do jogo.',
-          href: '/insights',
-        },
-        {
-          category: 'Lineup changes',
-          title: 'Quais ausências importam mais do que o peso do nome',
-          description: 'Nem toda baixa mexe com a mesma camada da estrutura de uma equipe.',
-          href: '/insights',
-        },
-        {
-          category: 'Stats breakdown',
-          title: 'Como ler volume, qualidade e game state ao mesmo tempo',
-          description: 'Uma lente mais útil para análise de futebol do que recortes por uma métrica só.',
-          href: '/insights',
-        },
-      ],
-      ctaLabel: 'Explorar todos os insights',
-    },
-    topics: {
-      eyebrow: 'Tópicos em alta',
-      title: 'Pontos de entrada para descoberta evergreen',
-      description:
-        'Os hubs de tópicos foram pensados para virar superfícies fortes de internal linking para intenções recorrentes de futebol.',
-      items: [
-        {
-          title: 'Injury impact',
-          description: 'Disponibilidade, reposição e consequências por função.',
-          href: '/topics',
-        },
-        {
-          title: 'Lineup changes',
-          description: 'Prováveis escalações, rotação e reorganização tática.',
-          href: '/topics',
-        },
-        {
-          title: 'Tactical analysis',
-          description: 'Pressão, ocupação de espaço, função e dinâmicas de matchup.',
-          href: '/topics',
-        },
-        {
-          title: 'Match outlook',
-          description: 'Leituras curtas do que tende a decidir o jogo.',
-          href: '/topics',
-        },
-      ],
-    },
-    entities: {
-      eyebrow: 'Times, jogadores, ligas',
-      title: 'Uma rail compacta de entidades que aponta para a futura camada evergreen.',
-      description:
-        'Esses cartões funcionam como pontes entre o conteúdo editorial e os hubs de entidades, apoiando caminhos mais profundos de navegação a partir da home.',
-      items: [
-        {
-          label: 'Times',
-          title: 'Páginas de times',
-          description: 'Entre em contexto de clube, sinais recentes e insights conectados.',
-          href: '/teams',
-        },
-        {
-          label: 'Jogadores',
-          title: 'Páginas de forma',
-          description: 'Acompanhe momento, função, disponibilidade e por que a mudança importa.',
-          href: '/players',
-        },
-        {
-          label: 'Ligas',
-          title: 'Hubs de tendências',
-          description: 'Veja padrões recorrentes, ritmo e contexto em nível de competição.',
-          href: '/leagues',
-        },
-      ],
-    },
-    quiz: {
-      eyebrow: 'Quiz em destaque',
-      title: 'Uma superfície de growth que ajuda na descoberta sem dominar o núcleo de SEO.',
-      description:
-        'Os quizzes aparecem depois das áreas editoriais e de entidades para manter a home útil primeiro para busca e depois para engajamento.',
-      cardTitle: 'Em qual sinal de futebol você realmente confia antes do kickoff?',
-      cardDescription:
-        'Uma rota rápida para injury reads, sinais de escalação, forma recente e contexto tático.',
-      href: '/quizzes',
-      ctaLabel: 'Explorar quizzes',
+        leagues: [
+          {
+            label: 'EPL',
+            standings: [
+              { badge: 'LIV', name: 'Liverpool', value: '74 pts', outlook: 'Trending Up', href: '/teams/liverpool' },
+              { badge: 'ARS', name: 'Arsenal', value: '71 pts', outlook: 'Stable', href: '/teams/arsenal' },
+              { badge: 'MCI', name: 'Manchester City', value: '69 pts', outlook: 'Late Push', href: '/teams/manchester-city' },
+              { badge: 'AVL', name: 'Aston Villa', value: '60 pts', outlook: 'Pressure On', href: '/teams/aston-villa' },
+            ],
+            topGoalscorers: [
+              { badge: 'HAA', name: 'Erling Haaland', value: '23 goals', outlook: 'Hot Finishing', href: '/players/erling-haaland' },
+              { badge: 'SAL', name: 'Mohamed Salah', value: '21 goals', outlook: 'Reliable Edge', href: '/players/mohamed-salah' },
+              { badge: 'SON', name: 'Son Heung-min', value: '17 goals', outlook: 'Fast Break Threat', href: '/players/son-heung-min' },
+              { badge: 'ISA', name: 'Alexander Isak', value: '16 goals', outlook: 'Trending Up', href: '/players/alexander-isak' },
+            ],
+            assists: [
+              { badge: 'KDB', name: 'Kevin De Bruyne', value: '11 assists', outlook: 'Chance Engine', href: '/players/kevin-de-bruyne' },
+              { badge: 'SAK', name: 'Bukayo Saka', value: '10 assists', outlook: 'Stable Supply', href: '/players/bukayo-saka' },
+              { badge: 'TRA', name: 'Trent Alexander-Arnold', value: '9 assists', outlook: 'Crossing Surge', href: '/players/trent-alexander-arnold' },
+              { badge: 'PAL', name: 'Cole Palmer', value: '8 assists', outlook: 'Creative Rise', href: '/players/cole-palmer' },
+            ],
+          },
+          {
+            label: 'La Liga',
+            standings: [
+              { badge: 'RMA', name: 'Real Madrid', value: '78 pts', outlook: 'Trending Up', href: '/teams/real-madrid' },
+              { badge: 'BAR', name: 'Barcelona', value: '73 pts', outlook: 'Chasing Hard', href: '/teams/barcelona' },
+              { badge: 'GIR', name: 'Girona', value: '67 pts', outlook: 'Holding Strong', href: '/teams/girona' },
+              { badge: 'ATM', name: 'Atletico Madrid', value: '63 pts', outlook: 'Volatile', href: '/teams/atletico-madrid' },
+            ],
+            topGoalscorers: [
+              { badge: 'BEL', name: 'Jude Bellingham', value: '18 goals', outlook: 'Late Runs', href: '/players/jude-bellingham' },
+              { badge: 'LEW', name: 'Robert Lewandowski', value: '17 goals', outlook: 'Box Threat', href: '/players/robert-lewandowski' },
+              { badge: 'DOV', name: 'Artem Dovbyk', value: '16 goals', outlook: 'Trending Up', href: '/players/artem-dovbyk' },
+              { badge: 'MOR', name: 'Alvaro Morata', value: '15 goals', outlook: 'Stable', href: '/players/alvaro-morata' },
+            ],
+            assists: [
+              { badge: 'GUN', name: 'Ilkay Gundogan', value: '9 assists', outlook: 'Control Layer', href: '/players/ilkay-gundogan' },
+              { badge: 'VIN', name: 'Vinicius Junior', value: '8 assists', outlook: 'Transition Threat', href: '/players/vinicius-junior' },
+              { badge: 'SAV', name: 'Aleix Garcia', value: '8 assists', outlook: 'Build-up Boost', href: '/players/aleix-garcia' },
+              { badge: 'GRI', name: 'Antoine Griezmann', value: '7 assists', outlook: 'Stable Supply', href: '/players/antoine-griezmann' },
+            ],
+          },
+          {
+            label: 'Serie A',
+            standings: [
+              { badge: 'INT', name: 'Inter', value: '82 pts', outlook: 'Dominant', href: '/teams/inter' },
+              { badge: 'MIL', name: 'Milan', value: '68 pts', outlook: 'Chasing Hard', href: '/teams/milan' },
+              { badge: 'JUV', name: 'Juventus', value: '66 pts', outlook: 'Stable', href: '/teams/juventus' },
+              { badge: 'BOL', name: 'Bologna', value: '60 pts', outlook: 'Trending Up', href: '/teams/bologna' },
+            ],
+            topGoalscorers: [
+              { badge: 'MRT', name: 'Lautaro Martinez', value: '24 goals', outlook: 'Elite Form', href: '/players/lautaro-martinez' },
+              { badge: 'VLA', name: 'Dusan Vlahovic', value: '17 goals', outlook: 'Box Threat', href: '/players/dusan-vlahovic' },
+              { badge: 'GIR', name: 'Olivier Giroud', value: '14 goals', outlook: 'Reliable Edge', href: '/players/olivier-giroud' },
+              { badge: 'OSA', name: 'Victor Osimhen', value: '13 goals', outlook: 'Volatile Return', href: '/players/victor-osimhen' },
+            ],
+            assists: [
+              { badge: 'CAL', name: 'Hakan Calhanoglu', value: '9 assists', outlook: 'Set-Piece Edge', href: '/players/hakan-calhanoglu' },
+              { badge: 'LEA', name: 'Rafael Leao', value: '8 assists', outlook: 'Wide Threat', href: '/players/rafael-leao' },
+              { badge: 'DIM', name: 'Federico Dimarco', value: '7 assists', outlook: 'Crossing Surge', href: '/players/federico-dimarco' },
+              { badge: 'KVA', name: 'Khvicha Kvaratskhelia', value: '7 assists', outlook: 'Trending Up', href: '/players/khvicha-kvaratskhelia' },
+            ],
+          },
+          {
+            label: 'Ligue 1',
+            standings: [
+              { badge: 'PSG', name: 'Paris Saint-Germain', value: '76 pts', outlook: 'Stable', href: '/teams/paris-saint-germain' },
+              { badge: 'MON', name: 'Monaco', value: '63 pts', outlook: 'Trending Up', href: '/teams/monaco' },
+              { badge: 'BRE', name: 'Brest', value: '60 pts', outlook: 'Holding Strong', href: '/teams/brest' },
+              { badge: 'LIL', name: 'Lille', value: '58 pts', outlook: 'Pressure On', href: '/teams/lille' },
+            ],
+            topGoalscorers: [
+              { badge: 'MBA', name: 'Kylian Mbappe', value: '27 goals', outlook: 'Elite Form', href: '/players/kylian-mbappe' },
+              { badge: 'LAC', name: 'Alexandre Lacazette', value: '15 goals', outlook: 'Reliable Edge', href: '/players/alexandre-lacazette' },
+              { badge: 'DAV', name: 'Jonathan David', value: '14 goals', outlook: 'Stable', href: '/players/jonathan-david' },
+              { badge: 'BAL', name: 'Ben Yedder', value: '13 goals', outlook: 'Late Burst', href: '/players/wissam-ben-yedder' },
+            ],
+            assists: [
+              { badge: 'DEM', name: 'Ousmane Dembele', value: '11 assists', outlook: 'Chance Engine', href: '/players/ousmane-dembele' },
+              { badge: 'CHR', name: 'Pierre Lees-Melou', value: '8 assists', outlook: 'Build-up Boost', href: '/players/pierre-lees-melou' },
+              { badge: 'GOL', name: 'Golovin', value: '8 assists', outlook: 'Stable Supply', href: '/players/aleksandr-golovin' },
+              { badge: 'ZHE', name: 'Rayan Cherki', value: '7 assists', outlook: 'Creative Rise', href: '/players/rayan-cherki' },
+            ],
+          },
+          {
+            label: 'Brasileirao',
+            standings: [
+              { badge: 'PAL', name: 'Palmeiras', value: '68 pts', outlook: 'Trending Up', href: '/teams/palmeiras' },
+              { badge: 'FLA', name: 'Flamengo', value: '66 pts', outlook: 'Late Push', href: '/teams/flamengo' },
+              { badge: 'BOT', name: 'Botafogo', value: '64 pts', outlook: 'Stable', href: '/teams/botafogo' },
+              { badge: 'GRE', name: 'Gremio', value: '59 pts', outlook: 'Pressure On', href: '/teams/gremio' },
+            ],
+            topGoalscorers: [
+              { badge: 'PED', name: 'Pedro', value: '19 goals', outlook: 'Box Threat', href: '/players/pedro' },
+              { badge: 'VEG', name: 'Raphael Veiga', value: '16 goals', outlook: 'Trending Up', href: '/players/raphael-veiga' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '15 goals', outlook: 'Reliable Edge', href: '/players/luis-suarez' },
+              { badge: 'HUL', name: 'Hulk', value: '14 goals', outlook: 'Power Threat', href: '/players/hulk' },
+            ],
+            assists: [
+              { badge: 'DEA', name: 'De Arrascaeta', value: '12 assists', outlook: 'Chance Engine', href: '/players/giorgian-de-arrascaeta' },
+              { badge: 'ARI', name: 'Arias', value: '9 assists', outlook: 'Stable Supply', href: '/players/jhon-arias' },
+              { badge: 'PAY', name: 'Payet', value: '8 assists', outlook: 'Creative Rise', href: '/players/dimitri-payet' },
+              { badge: 'PAU', name: 'Paulinho', value: '8 assists', outlook: 'Wide Threat', href: '/players/paulinho' },
+            ],
+          },
+          {
+            label: 'Liga MX',
+            standings: [
+              { badge: 'AME', name: 'Club America', value: '37 pts', outlook: 'Trending Up', href: '/teams/club-america' },
+              { badge: 'TIG', name: 'Tigres', value: '33 pts', outlook: 'Stable', href: '/teams/tigres' },
+              { badge: 'MON', name: 'Monterrey', value: '32 pts', outlook: 'Late Push', href: '/teams/monterrey' },
+              { badge: 'TOL', name: 'Toluca', value: '30 pts', outlook: 'Volatile', href: '/teams/toluca' },
+            ],
+            topGoalscorers: [
+              { badge: 'QUI', name: 'Quiñones', value: '13 goals', outlook: 'Hot Finishing', href: '/players/julian-quinones' },
+              { badge: 'GIG', name: 'Gignac', value: '12 goals', outlook: 'Reliable Edge', href: '/players/andre-pierre-gignac' },
+              { badge: 'CAN', name: 'Brandon Vazquez', value: '11 goals', outlook: 'Box Threat', href: '/players/brandon-vazquez' },
+              { badge: 'MEN', name: 'Mendez', value: '10 goals', outlook: 'Trending Up', href: '/players/alan-mendez' },
+            ],
+            assists: [
+              { badge: 'VAL', name: 'Diego Valdes', value: '9 assists', outlook: 'Chance Engine', href: '/players/diego-valdes' },
+              { badge: 'CORD', name: 'Sebastian Cordova', value: '8 assists', outlook: 'Creative Rise', href: '/players/sebastian-cordova' },
+              { badge: 'ROM', name: 'Luis Romo', value: '7 assists', outlook: 'Stable Supply', href: '/players/luis-romo' },
+              { badge: 'AQU', name: 'Aquino', value: '7 assists', outlook: 'Wide Threat', href: '/players/javier-aquino' },
+            ],
+          },
+          {
+            label: 'MLS',
+            standings: [
+              { badge: 'MIA', name: 'Inter Miami', value: '34 pts', outlook: 'Trending Up', href: '/teams/inter-miami' },
+              { badge: 'CIN', name: 'FC Cincinnati', value: '31 pts', outlook: 'Stable', href: '/teams/fc-cincinnati' },
+              { badge: 'LAG', name: 'LA Galaxy', value: '29 pts', outlook: 'Late Push', href: '/teams/la-galaxy' },
+              { badge: 'CLB', name: 'Columbus Crew', value: '28 pts', outlook: 'Creative Rise', href: '/teams/columbus-crew' },
+            ],
+            topGoalscorers: [
+              { badge: 'MES', name: 'Lionel Messi', value: '12 goals', outlook: 'Elite Form', href: '/players/lionel-messi' },
+              { badge: 'BEN', name: 'Christian Benteke', value: '11 goals', outlook: 'Box Threat', href: '/players/christian-benteke' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '10 goals', outlook: 'Reliable Edge', href: '/players/luis-suarez' },
+              { badge: 'CUC', name: 'Cucho Hernandez', value: '9 goals', outlook: 'Trending Up', href: '/players/cucho-hernandez' },
+            ],
+            assists: [
+              { badge: 'ALB', name: 'Jordi Alba', value: '8 assists', outlook: 'Chance Engine', href: '/players/jordi-alba' },
+              { badge: 'MES', name: 'Lionel Messi', value: '7 assists', outlook: 'Stable Supply', href: '/players/lionel-messi' },
+              { badge: 'RUS', name: 'Diego Rossi', value: '7 assists', outlook: 'Creative Rise', href: '/players/diego-rossi' },
+              { badge: 'ACO', name: 'Luciano Acosta', value: '6 assists', outlook: 'Control Layer', href: '/players/luciano-acosta' },
+            ],
+          },
+        ],
+      },
     },
     faq: {
       eyebrow: 'FAQ',
-      title: 'Respostas claras para perguntas sobre produto, análise e confiança.',
+      title: 'Short answers for the biggest questions users and searchers ask first.',
       description:
-        'Este bloco atende o usuário e também a structured data, transformando o FAQ da home em uma superfície mais forte de trust e SEO.',
+        'These answers support trust, clarify coverage, and prepare the page for FAQPage structured data.',
       items: [
         {
-          question: 'Que tipo de football insights o SirBro prioriza?',
+          question: "How does SirBro's AI predict match volatility?",
           answer:
-            'O SirBro prioriza football insights sobre player form, injury impact, lineup changes, tactical analysis, match outlook e stats breakdowns para explicar o que está mudando e por que isso importa.',
+            'SirBro combines historical patterns, lineup shifts, player availability, and live match-state changes to detect volatility before it becomes obvious in the market or conversation.',
         },
         {
-          question: 'O SirBro fala só de match picks?',
+          question: 'Which football leagues are covered?',
           answer:
-            'Não. O produto foi desenhado para conectar match picks ao raciocínio por trás deles, levando o leitor de dicas soltas para contexto, sinais e interpretação.',
+            'The homepage currently highlights the EPL, La Liga, Serie A, Ligue 1, Brasileirao, Liga MX, and MLS, while the broader product language also supports deeper team, player, and topic exploration.',
         },
         {
-          question: 'Como o site constrói confiança na análise?',
+          question: 'Is the SirBro chat available in Spanish and Portuguese?',
           answer:
-            'A experiência pública está ligada a uma trust stack explícita com páginas de About, Methodology, Editorial Policy, AI Transparency e FAQ.',
+            'Yes. The public experience supports English, Spanish, and Portuguese, and the chat direction follows the same multilingual product path.',
         },
         {
-          question: 'Posso explorar conteúdo por times, jogadores, ligas e tópicos?',
+          question: 'How can I compete with friends in the Fan Arena?',
           answer:
-            'Sim. A homepage foi estruturada para levar o usuário de insights em destaque até hubs temáticos e camadas de entidades que conectam o conteúdo relacionado.',
+            'Open the app, join your community leaderboard, and compare streaks, picks, and football calls with friends inside the Fan Arena flow.',
         },
       ],
     },
-    methodology: {
-      eyebrow: 'Sobre o método',
-      title: 'Pensado como uma superfície premium de produto, sustentada por um modelo de análise utilizável.',
-      description:
-        'A direção visual continua próxima do app SirBro: superfícies escuras, acentos em índigo, densidade compacta e hierarquia editorial forte. A direção de conteúdo segue o roadmap: confiança primeiro, depois insights, depois descoberta.',
-      primaryCtaLabel: 'Ler sobre o SirBro',
-      secondaryCtaLabel: 'Abrir metodologia',
-    },
     finalCta: {
-      eyebrow: 'Pronto para explorar',
-      title: 'Saia de opiniões dispersas sobre futebol para um fluxo mais limpo e orientado por sinais.',
+      eyebrow: 'Install SirBro',
+      title: 'Download the app, keep the signal close, and move faster from match noise to football insight.',
       description:
-        'Use a homepage como hub, abra o app para ir mais fundo e continue navegando por insights, tópicos, times, jogadores e ligas em uma única estrutura.',
-      primaryCtaLabel: 'Baixar o app',
-      secondaryCtaLabel: 'Abrir hub de insights',
+        'Store-first CTAs stay primary, while insights remain one tap away for users who want to explore before they install.',
+      primaryCtaLabel: 'Download App',
+      secondaryCtaLabel: 'Explore Insights',
     },
   },
   es: {
     hero: {
-      eyebrow: 'Inteligencia de fútbol, sin ruido',
-      title: 'Insights de fútbol pensados para match outlook, forma de jugadores y decisiones más claras.',
+      chips: ['Insights de fútbol', 'Volatilidad del partido'],
+      title: 'El analista de fútbol más inteligente en tu bolsillo.',
       description:
-        'SirBro convierte injury impact, lineup changes, tactical analysis y stats breakdowns en un flujo mucho más claro. Sigues la señal, entiendes por qué importa y pasas de opiniones dispersas a una lectura estructurada.',
-      supportingLabel: 'Qué obtienes',
-      supportingText:
-        'Una experiencia dark y orientada por datos, con señales explicables de fútbol, páginas de confianza y hubs de entidades que conectan insights con equipos, jugadores, ligas y temas.',
-      stats: [
-        { value: 'Injury impact', label: 'Entiende qué cambian realmente las ausencias' },
-        { value: 'Player form', label: 'Lee el momento del jugador con mejor contexto' },
-        { value: 'Tactical analysis', label: 'Observa funciones, ajustes y ventajas de matchup' },
+        'SirBro convierte el estado en vivo del partido, el impacto de lesiones, los cambios de alineación, la forma del jugador y el análisis táctico en decisiones más rápidas y con menos ruido.',
+      proof:
+        'Modelo deportivo propietario con contexto en vivo, controles editoriales y acceso móvil inmediato.',
+      openAppLabel: 'Abrir app',
+      previewTitle: 'Panorama en vivo',
+      previewSubtitle: 'Arsenal vs Liverpool',
+      previewHighlights: [
+        { label: 'Volatilidad', value: 'Alta' },
+        { label: 'Cambio por alineación', value: '+12%' },
+        { label: 'Momento', value: 'Arsenal arriba' },
       ],
-      secondaryCtaLabel: 'Ver metodología',
+      chatPrompt: '¿Quién tiene ventaja en la 2ª parte?',
+      fanArenaTitle: 'Fan Arena',
+      fanArenaCopy:
+        'Compite con amigos, compara picks y sube en rankings privados construidos alrededor de señales de fútbol.',
     },
-    howItWorks: {
-      eyebrow: 'Cómo funciona',
-      title: 'Un flujo compacto construido sobre evidencia, interpretación y acción.',
+    showcase: {
+      eyebrow: 'Producto',
+      title:
+        'Insights que cambian decisiones. Chatea con el analista. Compite con la comunidad.',
       description:
-        'La homepage ahora funciona como un SEO hub real: presenta el producto, explica el modelo de análisis y envía al usuario a la siguiente capa de contenido correcta.',
-      steps: [
+        'La homepage pasa rápido de la promesa al producto mostrando superficies reales de la app en lugar de claims abstractos.',
+      items: [
         {
-          step: '01',
-          title: 'Detecta la señal del partido',
+          title: 'Feed de insights',
           description:
-            'Abre los últimos football insights sobre player form, lineup changes, match outlook y contexto estadístico.',
+            'Sigue impacto de lesiones, giros de momentum y cambios del panorama del partido en un feed claro.',
+          accentLabel: 'Impacto de lesión',
+          accentValue: 'Titular en duda',
+          lines: ['Cambio esperado: +9%', 'Riesgo de presión', 'Alerta tardía'],
         },
         {
-          step: '02',
-          title: 'Entiende por qué importa',
+          title: 'Widget de chat',
           description:
-            'Cada insight encuadra el ángulo futbolístico con claridad, para que el lector vea contexto en lugar de datos aislados.',
+            'Haz preguntas rápidas de fútbol y recibe respuestas directas sin perder el contexto del partido.',
+          accentLabel: 'Prompt en vivo',
+          accentValue: 'Ventaja en 2ª parte',
+          lines: ['Fatiga de alineación', 'Sobrecarga por banda', 'Riesgo de transición'],
         },
         {
-          step: '03',
-          title: 'Profundiza por entidad',
+          title: 'Fan Arena',
           description:
-            'Pasa de un insight concreto a equipos, jugadores, ligas y temas relacionados gracias a la capa de internal linking del sitio.',
-        },
-      ],
-    },
-    trust: {
-      eyebrow: 'Capa de confianza',
-      title: 'El sitio público se apoya en metodología, reglas editoriales y transparencia de IA.',
-      description:
-        'Esta sección construye la trust stack del roadmap y refuerza señales de calidad para un producto de análisis de fútbol.',
-      cards: [
-        {
-          title: 'Sobre SirBro',
-          description: 'Qué cubre el producto, para quién está pensado y cómo encaja la inteligencia futbolística.',
-          href: '/about',
-        },
-        {
-          title: 'Metodología',
-          description: 'Cómo el producto convierte señales, evidencia e interpretación en análisis estructurado.',
-          href: '/methodology',
-        },
-        {
-          title: 'Política editorial',
-          description: 'Reglas de fuentes, actualizaciones y calidad para futuros insights y contenido evergreen.',
-          href: '/editorial-policy',
-        },
-        {
-          title: 'Transparencia de IA',
-          description: 'Una explicación clara de dónde ayuda la automatización y dónde importa la revisión humana.',
-          href: '/ai-transparency',
-        },
-      ],
-    },
-    insights: {
-      eyebrow: 'Últimos insights',
-      title: 'Nuevos ángulos sobre forma, estado del partido y detalles que cambian el resultado esperado.',
-      description:
-        'La composición abre con un insight destacado y lo acompaña con tarjetas compactas, más cerca de una rail editorial moderna que de un blog genérico.',
-      featured: {
-        category: 'Insight destacado',
-        title: 'Cómo un cambio tardío en la alineación puede alterar la progresión del balón antes del partido',
-        description:
-          'Una lectura práctica sobre injury impact, perfiles de reemplazo y los efectos tácticos que modifican el match outlook.',
-        href: '/insights',
-      },
-      items: [
-        {
-          category: 'Player form',
-          title: 'Cuando la racha goleadora oculta una caída en la calidad de las ocasiones',
-          description: 'Usa la forma reciente con los filtros correctos en vez de seguir solo el dato final.',
-          href: '/insights',
-        },
-        {
-          category: 'Match outlook',
-          title: 'Qué cambia la fatiga de presión visitante en el control del segundo tiempo',
-          description: 'Una lectura breve que combina calendario, estructura táctica y game state.',
-          href: '/insights',
-        },
-        {
-          category: 'Lineup changes',
-          title: 'Qué ausencias pesan más que el valor puro del nombre',
-          description: 'No todas las bajas alteran la misma capa de la estructura del equipo.',
-          href: '/insights',
-        },
-        {
-          category: 'Stats breakdown',
-          title: 'Cómo leer volumen, calidad y game state a la vez',
-          description: 'Una lente más útil para el análisis de fútbol que los snapshots de una sola métrica.',
-          href: '/insights',
-        },
-      ],
-      ctaLabel: 'Explorar todos los insights',
-    },
-    topics: {
-      eyebrow: 'Temas en tendencia',
-      title: 'Puntos de entrada para descubrimiento evergreen',
-      description:
-        'Los topic hubs están diseñados para convertirse en superficies fuertes de internal linking para intenciones recurrentes de fútbol.',
-      items: [
-        {
-          title: 'Injury impact',
-          description: 'Disponibilidad, reemplazos y consecuencias por rol.',
-          href: '/topics',
-        },
-        {
-          title: 'Lineup changes',
-          description: 'Posibles onces, rotación y reconfiguración táctica.',
-          href: '/topics',
-        },
-        {
-          title: 'Tactical analysis',
-          description: 'Presión, espacios, roles y dinámicas de matchup.',
-          href: '/topics',
-        },
-        {
-          title: 'Match outlook',
-          description: 'Lecturas breves sobre lo que probablemente decidirá el partido.',
-          href: '/topics',
-        },
-      ],
-    },
-    entities: {
-      eyebrow: 'Equipos, jugadores, ligas',
-      title: 'Una rail compacta de entidades que apunta a la futura capa evergreen.',
-      description:
-        'Estas tarjetas funcionan como puentes entre el contenido editorial y los hubs de entidades, ayudando a crear rutas más profundas desde la homepage.',
-      items: [
-        {
-          label: 'Equipos',
-          title: 'Páginas de equipos',
-          description: 'Entra en contexto de club, señales recientes e insights conectados.',
-          href: '/teams',
-        },
-        {
-          label: 'Jugadores',
-          title: 'Páginas de forma',
-          description: 'Sigue momento, rol, disponibilidad y por qué el cambio importa.',
-          href: '/players',
-        },
-        {
-          label: 'Ligas',
-          title: 'Hubs de tendencia',
-          description: 'Observa patrones recurrentes, ritmo y contexto a nivel de competición.',
-          href: '/leagues',
-        },
-      ],
-    },
-    quiz: {
-      eyebrow: 'Quiz destacado',
-      title: 'Una superficie de growth que ayuda al descubrimiento sin desplazar el núcleo SEO.',
-      description:
-        'Los quizzes aparecen después de las secciones editoriales y de entidades para que la homepage siga siendo útil primero para búsqueda y después para engagement.',
-      cardTitle: '¿En qué señal de fútbol confías realmente antes del kickoff?',
-      cardDescription:
-        'Una ruta rápida hacia injury reads, señales de alineación, forma reciente y contexto táctico.',
-      href: '/quizzes',
-      ctaLabel: 'Explorar quizzes',
-    },
-    faq: {
-      eyebrow: 'FAQ',
-      title: 'Respuestas claras para preguntas de producto, análisis y confianza.',
-      description:
-        'Este bloque ayuda al usuario y también a la structured data, convirtiendo el FAQ de la homepage en una superficie más fuerte de trust y SEO.',
-      items: [
-        {
-          question: '¿Qué tipo de football insights prioriza SirBro?',
-          answer:
-            'SirBro prioriza football insights sobre player form, injury impact, lineup changes, tactical analysis, match outlook y stats breakdowns para explicar qué está cambiando y por qué importa.',
-        },
-        {
-          question: '¿SirBro solo trata de match picks?',
-          answer:
-            'No. El producto está diseñado para conectar los match picks con el razonamiento que hay detrás, llevando al lector desde tips aislados hacia contexto, señales e interpretación.',
-        },
-        {
-          question: '¿Cómo construye confianza el sitio alrededor del análisis?',
-          answer:
-            'La experiencia pública está conectada a una trust stack explícita con páginas de About, Methodology, Editorial Policy, AI Transparency y FAQ.',
-        },
-        {
-          question: '¿Puedo explorar contenido por equipos, jugadores, ligas y temas?',
-          answer:
-            'Sí. La homepage está estructurada para llevar al usuario desde insights destacados hacia topic hubs y capas de entidades que conectan contenido relacionado.',
+            'Convierte inteligencia futbolística en competencia social con rachas, rangos y ligas privadas.',
+          accentLabel: 'Leaderboard',
+          accentValue: '#2 esta semana',
+          lines: ['+18 confianza', '3 picks ganados', 'Liga de amigos'],
         },
       ],
     },
     methodology: {
-      eyebrow: 'Sobre el método',
-      title: 'Pensado como una superficie premium de producto, respaldada por un modelo de análisis útil.',
+      eyebrow: 'De señal a acción',
+      title: 'Cómo SirBro detecta la señal, añade contexto futbolístico y te ayuda a actuar más rápido.',
       description:
-        'La dirección visual se mantiene cerca de la app SirBro: superficies oscuras, acentos índigo, densidad compacta y jerarquía editorial fuerte. La dirección de contenido sigue el roadmap: confianza primero, luego insights y después descubrimiento.',
-      primaryCtaLabel: 'Leer sobre SirBro',
-      secondaryCtaLabel: 'Abrir metodología',
+        'Esta sección combina proceso y confianza desde temprano para que la página sea creíble sin convertirse en otro capítulo de confianza.',
+      requiredCopy:
+        'SirBro procesa millones de patrones históricos y datos de partido en vivo a través de nuestra capa de inteligencia propietaria. No solo mostramos estadísticas; analizamos volatilidad, cambios de alineación y momentum para identificar la señal dentro del ruido.',
+      steps: [
+        {
+          step: '01',
+          title: 'Detecta la señal',
+          description:
+            'Lee estado del partido, forma del jugador, cambios de alineación y volatilidad antes de que sean obvios.',
+        },
+        {
+          step: '02',
+          title: 'Añade contexto',
+          description:
+            'Traduce datos crudos en análisis táctico, momentum y consecuencias futbolísticas por rol.',
+        },
+        {
+          step: '03',
+          title: 'Decide o profundiza',
+          description:
+            'Abre la app, sigue la cadena del insight o salta a páginas de equipos, jugadores, ligas y temas.',
+        },
+      ],
+      trustItems: [
+        {
+          title: 'Metodología',
+          description: 'Mira cómo el modelo convierte estado del partido e historia en insights explicables.',
+          href: '/methodology',
+        },
+        {
+          title: 'Política editorial',
+          description: 'Entiende las reglas de revisión detrás de insights y actualizaciones públicas.',
+          href: '/editorial-policy',
+        },
+        {
+          title: 'IA + revisión humana',
+          description: 'Aprende dónde ayuda la automatización y dónde entra el juicio humano.',
+          href: '/ai-transparency',
+        },
+        {
+          title: 'Sobre SirBro',
+          description: 'Conoce la historia del producto, la capa de confianza y la misión.',
+          href: '/about',
+        },
+      ],
+    },
+    discovery: {
+      eyebrow: 'Explora más',
+      title: 'Una sola zona de descubrimiento que mantiene profundidad SEO sin quitar foco a la app.',
+      description:
+        'Insight destacado, quiz y rutas crawlables de equipos y jugadores viven juntos para que la homepage siga concentrada.',
+      topicLinks: [
+        { label: 'Impacto de lesiones', href: '/topics/injury-impact' },
+        { label: 'Cambios de alineación', href: '/topics/lineup-changes' },
+        { label: 'Forma del jugador', href: '/topics/player-form' },
+        { label: 'Análisis táctico', href: '/topics/tactical-analysis' },
+        { label: 'Desglose estadístico', href: '/topics/stats-breakdowns' },
+      ],
+      featuredInsight: {
+        eyebrow: 'Insight destacado',
+        title: 'Cómo los cambios de alineación alteran la volatilidad antes del inicio',
+        description:
+          'Una lectura rápida sobre impacto de lesiones, reemplazos por rol y escenarios de momentum que cambian el panorama.',
+        href: '/insights/lineup-shifts-change-match-volatility',
+        ctaLabel: 'Leer insight',
+      },
+      quiz: {
+        eyebrow: 'Quiz destacado',
+        title: 'Identidad táctica: ¿qué tipo de pensador futbolístico eres?',
+        description:
+          'Una tarjeta ligera que mejora el engagement y presenta el tono del producto sin competir con la instalación.',
+        href: '/quizzes/tactical-identity-football-thinker',
+        ctaLabel: 'Empezar quiz',
+      },
+      seoEngine: {
+        eyebrow: 'Motor SEO estilo FC26',
+        title: 'Explora rutas por liga y cambia entre tabla, goleadores y asistentes.',
+        description:
+          'Cada nombre visible mantiene un enlace crawlable para apoyar páginas de equipos, jugadores e intención long-tail.',
+        metricLabels: {
+          standings: 'Tabla',
+          topGoalscorers: 'Goleadores',
+          assists: 'Asistencias',
+        },
+        leagues: [
+          {
+            label: 'EPL',
+            standings: [
+              { badge: 'LIV', name: 'Liverpool', value: '74 pts', outlook: 'En alza', href: '/teams/liverpool' },
+              { badge: 'ARS', name: 'Arsenal', value: '71 pts', outlook: 'Estable', href: '/teams/arsenal' },
+              { badge: 'MCI', name: 'Manchester City', value: '69 pts', outlook: 'Empuje final', href: '/teams/manchester-city' },
+              { badge: 'AVL', name: 'Aston Villa', value: '60 pts', outlook: 'Bajo presión', href: '/teams/aston-villa' },
+            ],
+            topGoalscorers: [
+              { badge: 'HAA', name: 'Erling Haaland', value: '23 goles', outlook: 'Racha fuerte', href: '/players/erling-haaland' },
+              { badge: 'SAL', name: 'Mohamed Salah', value: '21 goles', outlook: 'Ventaja estable', href: '/players/mohamed-salah' },
+              { badge: 'SON', name: 'Son Heung-min', value: '17 goles', outlook: 'Amenaza en transición', href: '/players/son-heung-min' },
+              { badge: 'ISA', name: 'Alexander Isak', value: '16 goles', outlook: 'En alza', href: '/players/alexander-isak' },
+            ],
+            assists: [
+              { badge: 'KDB', name: 'Kevin De Bruyne', value: '11 asist.', outlook: 'Motor creativo', href: '/players/kevin-de-bruyne' },
+              { badge: 'SAK', name: 'Bukayo Saka', value: '10 asist.', outlook: 'Suministro estable', href: '/players/bukayo-saka' },
+              { badge: 'TRA', name: 'Trent Alexander-Arnold', value: '9 asist.', outlook: 'Centro en alza', href: '/players/trent-alexander-arnold' },
+              { badge: 'PAL', name: 'Cole Palmer', value: '8 asist.', outlook: 'Creatividad creciente', href: '/players/cole-palmer' },
+            ],
+          },
+          {
+            label: 'La Liga',
+            standings: [
+              { badge: 'RMA', name: 'Real Madrid', value: '78 pts', outlook: 'En alza', href: '/teams/real-madrid' },
+              { badge: 'BAR', name: 'Barcelona', value: '73 pts', outlook: 'Persiguiendo', href: '/teams/barcelona' },
+              { badge: 'GIR', name: 'Girona', value: '67 pts', outlook: 'Sosteniéndose', href: '/teams/girona' },
+              { badge: 'ATM', name: 'Atletico Madrid', value: '63 pts', outlook: 'Volátil', href: '/teams/atletico-madrid' },
+            ],
+            topGoalscorers: [
+              { badge: 'BEL', name: 'Jude Bellingham', value: '18 goles', outlook: 'Llegadas tardías', href: '/players/jude-bellingham' },
+              { badge: 'LEW', name: 'Robert Lewandowski', value: '17 goles', outlook: 'Amenaza en área', href: '/players/robert-lewandowski' },
+              { badge: 'DOV', name: 'Artem Dovbyk', value: '16 goles', outlook: 'En alza', href: '/players/artem-dovbyk' },
+              { badge: 'MOR', name: 'Alvaro Morata', value: '15 goles', outlook: 'Estable', href: '/players/alvaro-morata' },
+            ],
+            assists: [
+              { badge: 'GUN', name: 'Ilkay Gundogan', value: '9 asist.', outlook: 'Control del ritmo', href: '/players/ilkay-gundogan' },
+              { badge: 'VIN', name: 'Vinicius Junior', value: '8 asist.', outlook: 'Amenaza al espacio', href: '/players/vinicius-junior' },
+              { badge: 'SAV', name: 'Aleix Garcia', value: '8 asist.', outlook: 'Salida reforzada', href: '/players/aleix-garcia' },
+              { badge: 'GRI', name: 'Antoine Griezmann', value: '7 asist.', outlook: 'Suministro estable', href: '/players/antoine-griezmann' },
+            ],
+          },
+          {
+            label: 'Serie A',
+            standings: [
+              { badge: 'INT', name: 'Inter', value: '82 pts', outlook: 'Dominante', href: '/teams/inter' },
+              { badge: 'MIL', name: 'Milan', value: '68 pts', outlook: 'Persiguiendo', href: '/teams/milan' },
+              { badge: 'JUV', name: 'Juventus', value: '66 pts', outlook: 'Estable', href: '/teams/juventus' },
+              { badge: 'BOL', name: 'Bologna', value: '60 pts', outlook: 'En alza', href: '/teams/bologna' },
+            ],
+            topGoalscorers: [
+              { badge: 'MRT', name: 'Lautaro Martinez', value: '24 goles', outlook: 'Forma elite', href: '/players/lautaro-martinez' },
+              { badge: 'VLA', name: 'Dusan Vlahovic', value: '17 goles', outlook: 'Amenaza en área', href: '/players/dusan-vlahovic' },
+              { badge: 'GIR', name: 'Olivier Giroud', value: '14 goles', outlook: 'Ventaja estable', href: '/players/olivier-giroud' },
+              { badge: 'OSA', name: 'Victor Osimhen', value: '13 goles', outlook: 'Regreso volátil', href: '/players/victor-osimhen' },
+            ],
+            assists: [
+              { badge: 'CAL', name: 'Hakan Calhanoglu', value: '9 asist.', outlook: 'Balón parado', href: '/players/hakan-calhanoglu' },
+              { badge: 'LEA', name: 'Rafael Leao', value: '8 asist.', outlook: 'Amenaza exterior', href: '/players/rafael-leao' },
+              { badge: 'DIM', name: 'Federico Dimarco', value: '7 asist.', outlook: 'Centros en alza', href: '/players/federico-dimarco' },
+              { badge: 'KVA', name: 'Khvicha Kvaratskhelia', value: '7 asist.', outlook: 'En alza', href: '/players/khvicha-kvaratskhelia' },
+            ],
+          },
+          {
+            label: 'Ligue 1',
+            standings: [
+              { badge: 'PSG', name: 'Paris Saint-Germain', value: '76 pts', outlook: 'Estable', href: '/teams/paris-saint-germain' },
+              { badge: 'MON', name: 'Monaco', value: '63 pts', outlook: 'En alza', href: '/teams/monaco' },
+              { badge: 'BRE', name: 'Brest', value: '60 pts', outlook: 'Sosteniéndose', href: '/teams/brest' },
+              { badge: 'LIL', name: 'Lille', value: '58 pts', outlook: 'Bajo presión', href: '/teams/lille' },
+            ],
+            topGoalscorers: [
+              { badge: 'MBA', name: 'Kylian Mbappe', value: '27 goles', outlook: 'Forma elite', href: '/players/kylian-mbappe' },
+              { badge: 'LAC', name: 'Alexandre Lacazette', value: '15 goles', outlook: 'Ventaja estable', href: '/players/alexandre-lacazette' },
+              { badge: 'DAV', name: 'Jonathan David', value: '14 goles', outlook: 'Estable', href: '/players/jonathan-david' },
+              { badge: 'BAL', name: 'Ben Yedder', value: '13 goles', outlook: 'Empuje final', href: '/players/wissam-ben-yedder' },
+            ],
+            assists: [
+              { badge: 'DEM', name: 'Ousmane Dembele', value: '11 asist.', outlook: 'Motor creativo', href: '/players/ousmane-dembele' },
+              { badge: 'CHR', name: 'Pierre Lees-Melou', value: '8 asist.', outlook: 'Salida reforzada', href: '/players/pierre-lees-melou' },
+              { badge: 'GOL', name: 'Golovin', value: '8 asist.', outlook: 'Suministro estable', href: '/players/aleksandr-golovin' },
+              { badge: 'ZHE', name: 'Rayan Cherki', value: '7 asist.', outlook: 'Creatividad creciente', href: '/players/rayan-cherki' },
+            ],
+          },
+          {
+            label: 'Brasileirao',
+            standings: [
+              { badge: 'PAL', name: 'Palmeiras', value: '68 pts', outlook: 'En alza', href: '/teams/palmeiras' },
+              { badge: 'FLA', name: 'Flamengo', value: '66 pts', outlook: 'Empuje final', href: '/teams/flamengo' },
+              { badge: 'BOT', name: 'Botafogo', value: '64 pts', outlook: 'Estable', href: '/teams/botafogo' },
+              { badge: 'GRE', name: 'Gremio', value: '59 pts', outlook: 'Bajo presión', href: '/teams/gremio' },
+            ],
+            topGoalscorers: [
+              { badge: 'PED', name: 'Pedro', value: '19 goles', outlook: 'Amenaza en área', href: '/players/pedro' },
+              { badge: 'VEG', name: 'Raphael Veiga', value: '16 goles', outlook: 'En alza', href: '/players/raphael-veiga' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '15 goles', outlook: 'Ventaja estable', href: '/players/luis-suarez' },
+              { badge: 'HUL', name: 'Hulk', value: '14 goles', outlook: 'Amenaza física', href: '/players/hulk' },
+            ],
+            assists: [
+              { badge: 'DEA', name: 'De Arrascaeta', value: '12 asist.', outlook: 'Motor creativo', href: '/players/giorgian-de-arrascaeta' },
+              { badge: 'ARI', name: 'Arias', value: '9 asist.', outlook: 'Suministro estable', href: '/players/jhon-arias' },
+              { badge: 'PAY', name: 'Payet', value: '8 asist.', outlook: 'Creatividad creciente', href: '/players/dimitri-payet' },
+              { badge: 'PAU', name: 'Paulinho', value: '8 asist.', outlook: 'Amenaza exterior', href: '/players/paulinho' },
+            ],
+          },
+          {
+            label: 'Liga MX',
+            standings: [
+              { badge: 'AME', name: 'Club America', value: '37 pts', outlook: 'En alza', href: '/teams/club-america' },
+              { badge: 'TIG', name: 'Tigres', value: '33 pts', outlook: 'Estable', href: '/teams/tigres' },
+              { badge: 'MON', name: 'Monterrey', value: '32 pts', outlook: 'Empuje final', href: '/teams/monterrey' },
+              { badge: 'TOL', name: 'Toluca', value: '30 pts', outlook: 'Volátil', href: '/teams/toluca' },
+            ],
+            topGoalscorers: [
+              { badge: 'QUI', name: 'Quiñones', value: '13 goles', outlook: 'Racha fuerte', href: '/players/julian-quinones' },
+              { badge: 'GIG', name: 'Gignac', value: '12 goles', outlook: 'Ventaja estable', href: '/players/andre-pierre-gignac' },
+              { badge: 'CAN', name: 'Brandon Vazquez', value: '11 goles', outlook: 'Amenaza en área', href: '/players/brandon-vazquez' },
+              { badge: 'MEN', name: 'Mendez', value: '10 goles', outlook: 'En alza', href: '/players/alan-mendez' },
+            ],
+            assists: [
+              { badge: 'VAL', name: 'Diego Valdes', value: '9 asist.', outlook: 'Motor creativo', href: '/players/diego-valdes' },
+              { badge: 'CORD', name: 'Sebastian Cordova', value: '8 asist.', outlook: 'Creatividad creciente', href: '/players/sebastian-cordova' },
+              { badge: 'ROM', name: 'Luis Romo', value: '7 asist.', outlook: 'Suministro estable', href: '/players/luis-romo' },
+              { badge: 'AQU', name: 'Aquino', value: '7 asist.', outlook: 'Amenaza exterior', href: '/players/javier-aquino' },
+            ],
+          },
+          {
+            label: 'MLS',
+            standings: [
+              { badge: 'MIA', name: 'Inter Miami', value: '34 pts', outlook: 'En alza', href: '/teams/inter-miami' },
+              { badge: 'CIN', name: 'FC Cincinnati', value: '31 pts', outlook: 'Estable', href: '/teams/fc-cincinnati' },
+              { badge: 'LAG', name: 'LA Galaxy', value: '29 pts', outlook: 'Empuje final', href: '/teams/la-galaxy' },
+              { badge: 'CLB', name: 'Columbus Crew', value: '28 pts', outlook: 'Creatividad creciente', href: '/teams/columbus-crew' },
+            ],
+            topGoalscorers: [
+              { badge: 'MES', name: 'Lionel Messi', value: '12 goles', outlook: 'Forma elite', href: '/players/lionel-messi' },
+              { badge: 'BEN', name: 'Christian Benteke', value: '11 goles', outlook: 'Amenaza en área', href: '/players/christian-benteke' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '10 goles', outlook: 'Ventaja estable', href: '/players/luis-suarez' },
+              { badge: 'CUC', name: 'Cucho Hernandez', value: '9 goles', outlook: 'En alza', href: '/players/cucho-hernandez' },
+            ],
+            assists: [
+              { badge: 'ALB', name: 'Jordi Alba', value: '8 asist.', outlook: 'Motor creativo', href: '/players/jordi-alba' },
+              { badge: 'MES', name: 'Lionel Messi', value: '7 asist.', outlook: 'Suministro estable', href: '/players/lionel-messi' },
+              { badge: 'RUS', name: 'Diego Rossi', value: '7 asist.', outlook: 'Creatividad creciente', href: '/players/diego-rossi' },
+              { badge: 'ACO', name: 'Luciano Acosta', value: '6 asist.', outlook: 'Capa de control', href: '/players/luciano-acosta' },
+            ],
+          },
+        ],
+      },
+    },
+    faq: {
+      eyebrow: 'FAQ',
+      title: 'Respuestas cortas para las preguntas clave que llegan primero.',
+      description:
+        'Estas respuestas refuerzan confianza, aclaran cobertura y preparan la página para FAQPage.',
+      items: [
+        {
+          question: '¿Cómo predice SirBro la volatilidad del partido?',
+          answer:
+            'SirBro combina patrones históricos, cambios de alineación, disponibilidad de jugadores y variaciones del estado del partido para detectar volatilidad antes de que sea evidente.',
+        },
+        {
+          question: '¿Qué ligas de fútbol cubre?',
+          answer:
+            'La homepage destaca EPL, La Liga, Serie A, Ligue 1, Brasileirao, Liga MX y MLS, mientras el producto también abre rutas más profundas por equipos, jugadores y temas.',
+        },
+        {
+          question: '¿El chat de SirBro está disponible en español y portugués?',
+          answer:
+            'Sí. La experiencia pública soporta inglés, español y portugués, y la dirección del chat sigue ese mismo camino multilingüe.',
+        },
+        {
+          question: '¿Cómo compito con amigos en Fan Arena?',
+          answer:
+            'Abre la app, entra en tu leaderboard de comunidad y compara rachas, picks y lecturas de fútbol con tus amigos dentro de Fan Arena.',
+        },
+      ],
     },
     finalCta: {
-      eyebrow: 'Listo para explorar',
-      title: 'Pasa de opiniones dispersas sobre fútbol a un flujo más limpio y guiado por señales.',
+      eyebrow: 'Instala SirBro',
+      title: 'Descarga la app, mantén la señal cerca y pasa más rápido del ruido a un insight de fútbol.',
       description:
-        'Usa la homepage como hub, abre la app para profundizar y sigue navegando por insights, temas, equipos, jugadores y ligas desde una sola estructura.',
-      primaryCtaLabel: 'Descargar la app',
-      secondaryCtaLabel: 'Abrir hub de insights',
+        'Las CTAs de instalación siguen siendo primarias, mientras los insights quedan a un toque para quien quiera explorar antes.',
+      primaryCtaLabel: 'Descargar app',
+      secondaryCtaLabel: 'Explorar insights',
+    },
+  },
+  pt: {
+    hero: {
+      chips: ['Insights de futebol', 'Volatilidade da partida'],
+      title: 'O analista de futebol mais inteligente no seu bolso.',
+      description:
+        'SirBro transforma estado ao vivo da partida, impacto de lesoes, mudancas de escalação, forma do jogador e analise tatica em decisoes mais rapidas e sem ruido.',
+      proof:
+        'Modelo esportivo proprietario com contexto ao vivo, controles editoriais e acesso movel imediato.',
+      openAppLabel: 'Abrir app',
+      previewTitle: 'Panorama ao vivo',
+      previewSubtitle: 'Arsenal vs Liverpool',
+      previewHighlights: [
+        { label: 'Volatilidade', value: 'Alta' },
+        { label: 'Mudanca por escalação', value: '+12%' },
+        { label: 'Momento', value: 'Arsenal em alta' },
+      ],
+      chatPrompt: 'Quem tem vantagem no 2º tempo?',
+      fanArenaTitle: 'Fan Arena',
+      fanArenaCopy:
+        'Compita com amigos, compare picks e suba em rankings privados construidos sobre sinais de futebol.',
+    },
+    showcase: {
+      eyebrow: 'Produto',
+      title:
+        'Insights que mudam decisoes. Converse com o analista. Compita com a comunidade.',
+      description:
+        'A homepage vai rapido da promessa ao produto mostrando superficies reais do app em vez de claims abstratos.',
+      items: [
+        {
+          title: 'Feed de insights',
+          description:
+            'Acompanhe impacto de lesoes, viradas de momentum e mudancas no panorama do jogo em um feed claro.',
+          accentLabel: 'Impacto de lesao',
+          accentValue: 'Titular em duvida',
+          lines: ['Mudanca esperada: +9%', 'Risco de pressao', 'Alerta tardio'],
+        },
+        {
+          title: 'Widget de chat',
+          description:
+            'Faça perguntas rapidas sobre futebol e receba respostas objetivas sem perder o contexto da partida.',
+          accentLabel: 'Prompt ao vivo',
+          accentValue: 'Vantagem no 2º tempo',
+          lines: ['Fadiga da escalação', 'Sobrecarga pelos lados', 'Risco de transição'],
+        },
+        {
+          title: 'Fan Arena',
+          description:
+            'Transforme inteligencia de futebol em competicao social com sequencias, ranking e ligas privadas.',
+          accentLabel: 'Leaderboard',
+          accentValue: '#2 nesta semana',
+          lines: ['+18 confianca', '3 picks vencidos', 'Liga de amigos'],
+        },
+      ],
+    },
+    methodology: {
+      eyebrow: 'Do sinal a acao',
+      title: 'Como o SirBro encontra o sinal, adiciona contexto de futebol e ajuda voce a agir mais rapido.',
+      description:
+        'Esta secao combina processo e confianca cedo para que a pagina pareca crivel sem virar mais um capitulo isolado.',
+      requiredCopy:
+        'O SirBro processa milhoes de padroes historicos e dados de match-state ao vivo por meio da nossa camada proprietaria de inteligencia. Nao entregamos apenas estatisticas; analisamos volatilidade, mudancas de escalação e momentum para identificar o sinal dentro do ruido.',
+      steps: [
+        {
+          step: '01',
+          title: 'Encontre o sinal',
+          description:
+            'Leia estado da partida, forma do jogador, mudancas de escalação e volatilidade antes que fiquem obvios.',
+        },
+        {
+          step: '02',
+          title: 'Adicione contexto',
+          description:
+            'Transforme dados crus em analise tatica, momentum e consequencias de futebol por funcao.',
+        },
+        {
+          step: '03',
+          title: 'Decida ou aprofunde',
+          description:
+            'Abra o app, siga a trilha do insight ou navegue por paginas de times, jogadores, ligas e topicos.',
+        },
+      ],
+      trustItems: [
+        {
+          title: 'Metodologia',
+          description: 'Veja como o modelo transforma estado do jogo e historico em insights explicaveis.',
+          href: '/methodology',
+        },
+        {
+          title: 'Politica editorial',
+          description: 'Entenda as regras de revisao por tras dos insights e das atualizacoes publicas.',
+          href: '/editorial-policy',
+        },
+        {
+          title: 'IA + revisao humana',
+          description: 'Saiba onde a automacao ajuda e onde o julgamento humano segue no circuito.',
+          href: '/ai-transparency',
+        },
+        {
+          title: 'Sobre o SirBro',
+          description: 'Conheca a historia do produto, a camada de confianca e a missao.',
+          href: '/about',
+        },
+      ],
+    },
+    discovery: {
+      eyebrow: 'Explore mais',
+      title: 'Uma unica zona de descoberta que mantém profundidade SEO sem tirar foco do app.',
+      description:
+        'Insight em destaque, quiz e rotas crawlaveis de times e jogadores convivem juntos para manter a homepage concentrada.',
+      topicLinks: [
+        { label: 'Impacto de lesoes', href: '/topics/injury-impact' },
+        { label: 'Mudancas de escalação', href: '/topics/lineup-changes' },
+        { label: 'Forma do jogador', href: '/topics/player-form' },
+        { label: 'Analise tatica', href: '/topics/tactical-analysis' },
+        { label: 'Leitura estatistica', href: '/topics/stats-breakdowns' },
+      ],
+      featuredInsight: {
+        eyebrow: 'Insight em destaque',
+        title: 'Como mudancas de escalação alteram a volatilidade antes do apito inicial',
+        description:
+          'Uma leitura rapida sobre impacto de lesoes, substituicoes por funcao e cenarios de momentum que mudam o panorama.',
+        href: '/insights/lineup-shifts-change-match-volatility',
+        ctaLabel: 'Ler insight',
+      },
+      quiz: {
+        eyebrow: 'Quiz em destaque',
+        title: 'Identidade tatica: que tipo de pensador de futebol voce e?',
+        description:
+          'Um card leve que aumenta engajamento e apresenta o tom do produto sem competir com a instalacao.',
+        href: '/quizzes/tactical-identity-football-thinker',
+        ctaLabel: 'Comecar quiz',
+      },
+      seoEngine: {
+        eyebrow: 'Motor SEO estilo FC26',
+        title: 'Navegue por liga e alterne entre tabela, artilharia e assistencias.',
+        description:
+          'Cada nome visivel continua com link crawlable para apoiar paginas de times, jogadores e intencao long-tail.',
+        metricLabels: {
+          standings: 'Tabela',
+          topGoalscorers: 'Artilheiros',
+          assists: 'Assistencias',
+        },
+        leagues: [
+          {
+            label: 'EPL',
+            standings: [
+              { badge: 'LIV', name: 'Liverpool', value: '74 pts', outlook: 'Em alta', href: '/teams/liverpool' },
+              { badge: 'ARS', name: 'Arsenal', value: '71 pts', outlook: 'Estavel', href: '/teams/arsenal' },
+              { badge: 'MCI', name: 'Manchester City', value: '69 pts', outlook: 'Arrancada final', href: '/teams/manchester-city' },
+              { badge: 'AVL', name: 'Aston Villa', value: '60 pts', outlook: 'Sob pressao', href: '/teams/aston-villa' },
+            ],
+            topGoalscorers: [
+              { badge: 'HAA', name: 'Erling Haaland', value: '23 gols', outlook: 'Finalizacao forte', href: '/players/erling-haaland' },
+              { badge: 'SAL', name: 'Mohamed Salah', value: '21 gols', outlook: 'Vantagem estavel', href: '/players/mohamed-salah' },
+              { badge: 'SON', name: 'Son Heung-min', value: '17 gols', outlook: 'Ameaca em transicao', href: '/players/son-heung-min' },
+              { badge: 'ISA', name: 'Alexander Isak', value: '16 gols', outlook: 'Em alta', href: '/players/alexander-isak' },
+            ],
+            assists: [
+              { badge: 'KDB', name: 'Kevin De Bruyne', value: '11 assist.', outlook: 'Motor criativo', href: '/players/kevin-de-bruyne' },
+              { badge: 'SAK', name: 'Bukayo Saka', value: '10 assist.', outlook: 'Fornecimento estavel', href: '/players/bukayo-saka' },
+              { badge: 'TRA', name: 'Trent Alexander-Arnold', value: '9 assist.', outlook: 'Cruzamentos em alta', href: '/players/trent-alexander-arnold' },
+              { badge: 'PAL', name: 'Cole Palmer', value: '8 assist.', outlook: 'Criatividade crescente', href: '/players/cole-palmer' },
+            ],
+          },
+          {
+            label: 'La Liga',
+            standings: [
+              { badge: 'RMA', name: 'Real Madrid', value: '78 pts', outlook: 'Em alta', href: '/teams/real-madrid' },
+              { badge: 'BAR', name: 'Barcelona', value: '73 pts', outlook: 'Perseguindo', href: '/teams/barcelona' },
+              { badge: 'GIR', name: 'Girona', value: '67 pts', outlook: 'Sustentando', href: '/teams/girona' },
+              { badge: 'ATM', name: 'Atletico Madrid', value: '63 pts', outlook: 'Volatil', href: '/teams/atletico-madrid' },
+            ],
+            topGoalscorers: [
+              { badge: 'BEL', name: 'Jude Bellingham', value: '18 gols', outlook: 'Entradas tardias', href: '/players/jude-bellingham' },
+              { badge: 'LEW', name: 'Robert Lewandowski', value: '17 gols', outlook: 'Ameaca na area', href: '/players/robert-lewandowski' },
+              { badge: 'DOV', name: 'Artem Dovbyk', value: '16 gols', outlook: 'Em alta', href: '/players/artem-dovbyk' },
+              { badge: 'MOR', name: 'Alvaro Morata', value: '15 gols', outlook: 'Estavel', href: '/players/alvaro-morata' },
+            ],
+            assists: [
+              { badge: 'GUN', name: 'Ilkay Gundogan', value: '9 assist.', outlook: 'Controle de ritmo', href: '/players/ilkay-gundogan' },
+              { badge: 'VIN', name: 'Vinicius Junior', value: '8 assist.', outlook: 'Ameaca ao espaco', href: '/players/vinicius-junior' },
+              { badge: 'SAV', name: 'Aleix Garcia', value: '8 assist.', outlook: 'Saida reforcada', href: '/players/aleix-garcia' },
+              { badge: 'GRI', name: 'Antoine Griezmann', value: '7 assist.', outlook: 'Fornecimento estavel', href: '/players/antoine-griezmann' },
+            ],
+          },
+          {
+            label: 'Serie A',
+            standings: [
+              { badge: 'INT', name: 'Inter', value: '82 pts', outlook: 'Dominante', href: '/teams/inter' },
+              { badge: 'MIL', name: 'Milan', value: '68 pts', outlook: 'Perseguindo', href: '/teams/milan' },
+              { badge: 'JUV', name: 'Juventus', value: '66 pts', outlook: 'Estavel', href: '/teams/juventus' },
+              { badge: 'BOL', name: 'Bologna', value: '60 pts', outlook: 'Em alta', href: '/teams/bologna' },
+            ],
+            topGoalscorers: [
+              { badge: 'MRT', name: 'Lautaro Martinez', value: '24 gols', outlook: 'Forma elite', href: '/players/lautaro-martinez' },
+              { badge: 'VLA', name: 'Dusan Vlahovic', value: '17 gols', outlook: 'Ameaca na area', href: '/players/dusan-vlahovic' },
+              { badge: 'GIR', name: 'Olivier Giroud', value: '14 gols', outlook: 'Vantagem estavel', href: '/players/olivier-giroud' },
+              { badge: 'OSA', name: 'Victor Osimhen', value: '13 gols', outlook: 'Retorno volatil', href: '/players/victor-osimhen' },
+            ],
+            assists: [
+              { badge: 'CAL', name: 'Hakan Calhanoglu', value: '9 assist.', outlook: 'Bola parada', href: '/players/hakan-calhanoglu' },
+              { badge: 'LEA', name: 'Rafael Leao', value: '8 assist.', outlook: 'Ameaca pelos lados', href: '/players/rafael-leao' },
+              { badge: 'DIM', name: 'Federico Dimarco', value: '7 assist.', outlook: 'Cruzamentos em alta', href: '/players/federico-dimarco' },
+              { badge: 'KVA', name: 'Khvicha Kvaratskhelia', value: '7 assist.', outlook: 'Em alta', href: '/players/khvicha-kvaratskhelia' },
+            ],
+          },
+          {
+            label: 'Ligue 1',
+            standings: [
+              { badge: 'PSG', name: 'Paris Saint-Germain', value: '76 pts', outlook: 'Estavel', href: '/teams/paris-saint-germain' },
+              { badge: 'MON', name: 'Monaco', value: '63 pts', outlook: 'Em alta', href: '/teams/monaco' },
+              { badge: 'BRE', name: 'Brest', value: '60 pts', outlook: 'Sustentando', href: '/teams/brest' },
+              { badge: 'LIL', name: 'Lille', value: '58 pts', outlook: 'Sob pressao', href: '/teams/lille' },
+            ],
+            topGoalscorers: [
+              { badge: 'MBA', name: 'Kylian Mbappe', value: '27 gols', outlook: 'Forma elite', href: '/players/kylian-mbappe' },
+              { badge: 'LAC', name: 'Alexandre Lacazette', value: '15 gols', outlook: 'Vantagem estavel', href: '/players/alexandre-lacazette' },
+              { badge: 'DAV', name: 'Jonathan David', value: '14 gols', outlook: 'Estavel', href: '/players/jonathan-david' },
+              { badge: 'BAL', name: 'Ben Yedder', value: '13 gols', outlook: 'Arrancada final', href: '/players/wissam-ben-yedder' },
+            ],
+            assists: [
+              { badge: 'DEM', name: 'Ousmane Dembele', value: '11 assist.', outlook: 'Motor criativo', href: '/players/ousmane-dembele' },
+              { badge: 'CHR', name: 'Pierre Lees-Melou', value: '8 assist.', outlook: 'Saida reforcada', href: '/players/pierre-lees-melou' },
+              { badge: 'GOL', name: 'Golovin', value: '8 assist.', outlook: 'Fornecimento estavel', href: '/players/aleksandr-golovin' },
+              { badge: 'ZHE', name: 'Rayan Cherki', value: '7 assist.', outlook: 'Criatividade crescente', href: '/players/rayan-cherki' },
+            ],
+          },
+          {
+            label: 'Brasileirao',
+            standings: [
+              { badge: 'PAL', name: 'Palmeiras', value: '68 pts', outlook: 'Em alta', href: '/teams/palmeiras' },
+              { badge: 'FLA', name: 'Flamengo', value: '66 pts', outlook: 'Arrancada final', href: '/teams/flamengo' },
+              { badge: 'BOT', name: 'Botafogo', value: '64 pts', outlook: 'Estavel', href: '/teams/botafogo' },
+              { badge: 'GRE', name: 'Gremio', value: '59 pts', outlook: 'Sob pressao', href: '/teams/gremio' },
+            ],
+            topGoalscorers: [
+              { badge: 'PED', name: 'Pedro', value: '19 gols', outlook: 'Ameaca na area', href: '/players/pedro' },
+              { badge: 'VEG', name: 'Raphael Veiga', value: '16 gols', outlook: 'Em alta', href: '/players/raphael-veiga' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '15 gols', outlook: 'Vantagem estavel', href: '/players/luis-suarez' },
+              { badge: 'HUL', name: 'Hulk', value: '14 gols', outlook: 'Ameaca fisica', href: '/players/hulk' },
+            ],
+            assists: [
+              { badge: 'DEA', name: 'De Arrascaeta', value: '12 assist.', outlook: 'Motor criativo', href: '/players/giorgian-de-arrascaeta' },
+              { badge: 'ARI', name: 'Arias', value: '9 assist.', outlook: 'Fornecimento estavel', href: '/players/jhon-arias' },
+              { badge: 'PAY', name: 'Payet', value: '8 assist.', outlook: 'Criatividade crescente', href: '/players/dimitri-payet' },
+              { badge: 'PAU', name: 'Paulinho', value: '8 assist.', outlook: 'Ameaca pelos lados', href: '/players/paulinho' },
+            ],
+          },
+          {
+            label: 'Liga MX',
+            standings: [
+              { badge: 'AME', name: 'Club America', value: '37 pts', outlook: 'Em alta', href: '/teams/club-america' },
+              { badge: 'TIG', name: 'Tigres', value: '33 pts', outlook: 'Estavel', href: '/teams/tigres' },
+              { badge: 'MON', name: 'Monterrey', value: '32 pts', outlook: 'Arrancada final', href: '/teams/monterrey' },
+              { badge: 'TOL', name: 'Toluca', value: '30 pts', outlook: 'Volatil', href: '/teams/toluca' },
+            ],
+            topGoalscorers: [
+              { badge: 'QUI', name: 'Quiñones', value: '13 gols', outlook: 'Finalizacao forte', href: '/players/julian-quinones' },
+              { badge: 'GIG', name: 'Gignac', value: '12 gols', outlook: 'Vantagem estavel', href: '/players/andre-pierre-gignac' },
+              { badge: 'CAN', name: 'Brandon Vazquez', value: '11 gols', outlook: 'Ameaca na area', href: '/players/brandon-vazquez' },
+              { badge: 'MEN', name: 'Mendez', value: '10 gols', outlook: 'Em alta', href: '/players/alan-mendez' },
+            ],
+            assists: [
+              { badge: 'VAL', name: 'Diego Valdes', value: '9 assist.', outlook: 'Motor criativo', href: '/players/diego-valdes' },
+              { badge: 'CORD', name: 'Sebastian Cordova', value: '8 assist.', outlook: 'Criatividade crescente', href: '/players/sebastian-cordova' },
+              { badge: 'ROM', name: 'Luis Romo', value: '7 assist.', outlook: 'Fornecimento estavel', href: '/players/luis-romo' },
+              { badge: 'AQU', name: 'Aquino', value: '7 assist.', outlook: 'Ameaca pelos lados', href: '/players/javier-aquino' },
+            ],
+          },
+          {
+            label: 'MLS',
+            standings: [
+              { badge: 'MIA', name: 'Inter Miami', value: '34 pts', outlook: 'Em alta', href: '/teams/inter-miami' },
+              { badge: 'CIN', name: 'FC Cincinnati', value: '31 pts', outlook: 'Estavel', href: '/teams/fc-cincinnati' },
+              { badge: 'LAG', name: 'LA Galaxy', value: '29 pts', outlook: 'Arrancada final', href: '/teams/la-galaxy' },
+              { badge: 'CLB', name: 'Columbus Crew', value: '28 pts', outlook: 'Criatividade crescente', href: '/teams/columbus-crew' },
+            ],
+            topGoalscorers: [
+              { badge: 'MES', name: 'Lionel Messi', value: '12 gols', outlook: 'Forma elite', href: '/players/lionel-messi' },
+              { badge: 'BEN', name: 'Christian Benteke', value: '11 gols', outlook: 'Ameaca na area', href: '/players/christian-benteke' },
+              { badge: 'SUA', name: 'Luis Suarez', value: '10 gols', outlook: 'Vantagem estavel', href: '/players/luis-suarez' },
+              { badge: 'CUC', name: 'Cucho Hernandez', value: '9 gols', outlook: 'Em alta', href: '/players/cucho-hernandez' },
+            ],
+            assists: [
+              { badge: 'ALB', name: 'Jordi Alba', value: '8 assist.', outlook: 'Motor criativo', href: '/players/jordi-alba' },
+              { badge: 'MES', name: 'Lionel Messi', value: '7 assist.', outlook: 'Fornecimento estavel', href: '/players/lionel-messi' },
+              { badge: 'RUS', name: 'Diego Rossi', value: '7 assist.', outlook: 'Criatividade crescente', href: '/players/diego-rossi' },
+              { badge: 'ACO', name: 'Luciano Acosta', value: '6 assist.', outlook: 'Camada de controle', href: '/players/luciano-acosta' },
+            ],
+          },
+        ],
+      },
+    },
+    faq: {
+      eyebrow: 'FAQ',
+      title: 'Respostas curtas para as perguntas que surgem primeiro.',
+      description:
+        'Essas respostas reforcam confianca, esclarecem cobertura e preparam a pagina para FAQPage.',
+      items: [
+        {
+          question: 'Como o SirBro preve a volatilidade da partida?',
+          answer:
+            'O SirBro combina padroes historicos, mudancas de escalação, disponibilidade de jogadores e variacoes de match-state para detectar volatilidade antes que ela fique evidente.',
+        },
+        {
+          question: 'Quais ligas de futebol sao cobertas?',
+          answer:
+            'A homepage destaca EPL, La Liga, Serie A, Ligue 1, Brasileirao, Liga MX e MLS, enquanto o produto tambem abre rotas mais profundas por times, jogadores e topicos.',
+        },
+        {
+          question: 'O chat do SirBro esta disponivel em espanhol e portugues?',
+          answer:
+            'Sim. A experiencia publica suporta ingles, espanhol e portugues, e a direcao do chat segue esse mesmo caminho multilingue.',
+        },
+        {
+          question: 'Como posso competir com amigos no Fan Arena?',
+          answer:
+            'Abra o app, entre no leaderboard da sua comunidade e compare sequencias, picks e leituras de futebol com amigos dentro do fluxo do Fan Arena.',
+        },
+      ],
+    },
+    finalCta: {
+      eyebrow: 'Instale o SirBro',
+      title: 'Baixe o app, mantenha o sinal por perto e saia mais rapido do ruido para o insight.',
+      description:
+        'As CTAs de instalacao continuam primarias, enquanto os insights ficam a um toque para quem quer explorar antes.',
+      primaryCtaLabel: 'Baixar app',
+      secondaryCtaLabel: 'Explorar insights',
     },
   },
 };

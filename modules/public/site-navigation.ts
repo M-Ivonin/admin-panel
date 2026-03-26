@@ -157,10 +157,6 @@ export function getPublicHeaderNavigation(locale: Locale) {
         href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
       },
       {
-        label: localizedLabel('quizzes', locale),
-        href: localizedHref(locale, PUBLIC_HUB_PATHS.quizzes),
-      },
-      {
         label: localizedLabel('about', locale),
         href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
       },
@@ -203,8 +199,8 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
           href: `${homeHref(locale)}#download`,
         },
         {
-          label: localizedLabel('chatPreview', locale),
-          href: `${homeHref(locale)}#chat-preview`,
+          label: localizedLabel('openApp', locale),
+          href: `${homeHref(locale)}#download`,
         },
         {
           label: localizedLabel('howItWorks', locale),
@@ -213,7 +209,7 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
       ],
     },
     {
-      title: localizedLabel('explore', locale),
+      title: localizedLabel('insights', locale),
       items: [
         {
           label: localizedLabel('insights', locale),
@@ -223,6 +219,19 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
           label: localizedLabel('trendingTopics', locale),
           href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
         },
+        {
+          label: localizedLabel('quizzes', locale),
+          href: localizedHref(locale, PUBLIC_HUB_PATHS.quizzes),
+        },
+        {
+          label: localizedLabel('faq', locale),
+          href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
+        },
+      ],
+    },
+    {
+      title: localizedLabel('explore', locale),
+      items: [
         {
           label: localizedLabel('teams', locale),
           href: localizedHref(locale, PUBLIC_HUB_PATHS.teams),
@@ -234,6 +243,10 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
         {
           label: localizedLabel('leagues', locale),
           href: localizedHref(locale, PUBLIC_HUB_PATHS.leagues),
+        },
+        {
+          label: localizedLabel('topics', locale),
+          href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
         },
       ],
     },
@@ -255,10 +268,6 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
         {
           label: localizedLabel('aiTransparency', locale),
           href: localizedHref(locale, PUBLIC_PAGE_PATHS['ai-transparency']),
-        },
-        {
-          label: localizedLabel('faq', locale),
-          href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
         },
         {
           label: localizedLabel('contact', locale),

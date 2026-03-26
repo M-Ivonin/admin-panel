@@ -25,7 +25,7 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
         pt: { xs: 2, md: 3 },
       }}
     >
-      <Container maxWidth="lg">
+      <Container maxWidth="xl">
         <Box
           sx={{
             display: 'flex',
@@ -64,26 +64,14 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
               <Image
                 src="/assets/brandmark.png"
                 alt="SirBro"
-                width={40}
+                width={34}
                 height={40}
-                style={{
-                  width: 'auto',
-                  height: 'auto',
-                  maxHeight: 40,
-                  maxWidth: 40,
-                }}
               />
               <Image
                 src="/assets/typemark.png"
                 alt="SirBro"
                 width={120}
-                height={32}
-                style={{
-                  width: 'auto',
-                  height: 'auto',
-                  maxHeight: 32,
-                  maxWidth: 120,
-                }}
+                height={30}
               />
             </Link>
             <Box

@@ -1,4 +1,5 @@
 import { getPublicAppConfig } from '@/modules/config/runtime';
+import type { HomepageFaqItem } from '@/modules/public/homepage-content';
 
 export function buildOrganizationSchema() {
   const { appHost } = getPublicAppConfig();
@@ -21,5 +22,20 @@ export function buildWebsiteSchema() {
     name: 'SirBro',
     url: `https://${appHost}`,
     inLanguage: ['en', 'es', 'pt'],
+  };
+}
+
+export function buildFaqSchema(faqItems: HomepageFaqItem[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
   };
 }

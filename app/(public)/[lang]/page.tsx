@@ -3,8 +3,10 @@ import { Locale } from '@/lib/i18n/config';
 import { PublicHomepage } from '@/components/public/PublicHomepage';
 import { PublicPageShell } from '@/components/public/PublicPageShell';
 import { staticPublicContentRepository } from '@/modules/content/static-public-content-repository';
+import { getHomepageContent } from '@/modules/public/homepage-content';
 import { buildContentPageMetadata } from '@/modules/seo/metadata';
 import {
+  buildFaqSchema,
   buildOrganizationSchema,
   buildWebsiteSchema,
 } from '@/modules/seo/schema';
@@ -31,7 +33,12 @@ export default async function LandingPage({
   params: Promise<{ lang: Locale }>;
 }) {
   const { lang } = await params;
-  const structuredData = [buildWebsiteSchema(), buildOrganizationSchema()];
+  const homepageContent = getHomepageContent(lang);
+  const structuredData = [
+    buildWebsiteSchema(),
+    buildOrganizationSchema(),
+    buildFaqSchema(homepageContent.faq.items),
+  ];
 
   return (
     <>
