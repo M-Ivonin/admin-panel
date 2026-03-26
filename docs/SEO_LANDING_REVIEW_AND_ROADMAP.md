@@ -235,13 +235,62 @@
 
 Иначе любой новый SEO-контент будет строиться на не до конца чистой технической базе.
 
+## Этап 1.5. Зафиксировать структуру сайта
+
+Перед расширением главной и запуском новых SEO-разделов нужно утвердить целевую information architecture сайта.
+
+### Что сделать
+
+- зафиксировать canonical map всех public page types;
+- зафиксировать site map как единый source of truth для public site;
+- определить обязательные разделы верхнего меню и footer navigation;
+- определить основной SEO-слой сайта: `Home`, `Trust`, `Insights`, `Entities`, `Quizzes`;
+- описать, какие страницы являются hub pages, а какие detail pages;
+- определить, какие страницы идут в `index`, а какие по умолчанию должны быть `noindex`;
+- зафиксировать правила breadcrumbs и внутренней перелинковки;
+- согласовать URL-структуру для `insights`, `teams`, `players`, `leagues`, `topics`, `quizzes`;
+- закрепить trust stack: `About`, `Methodology`, `Editorial Policy`, `AI Transparency`, `FAQ`, `Contact`;
+- увязать структуру сайта с текущей архитектурой `admin-panel`, чтобы новые page types добавлялись через content contracts, metadata builders и sitemap registry.
+
+### Что должно получиться
+
+- понятная карта сайта без хаотичного роста новых страниц;
+- готовая схема навигации для desktop и mobile;
+- зафиксированный trust stack;
+- зафиксированная URL map;
+- зафиксированная indexation model;
+- основа для следующих этапов без конфликта с уже сделанным routing и SEO core;
+- предсказуемая модель internal linking для будущих `insights` и `entity pages`.
+
+### Артефакт этапа
+
+В качестве отдельных source of truth используются документы:
+
+- `docs/SITE_STRUCTURE_AND_SEO_IA.md`
+- `docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`
+
+### Gate этапа
+
+`Этап 2` не начинается, пока:
+
+- не утвержден IA source of truth;
+- не зафиксированы trust stack, URL map и indexation model;
+- не синхронизированы roadmap, IA и architecture docs;
+- не оформлен technical handoff по route types и content contracts.
+
+## Этап 1.6 создать дизайн сайта (UI)
+
+
 ## Этап 2. Переделать главную в полноценный SEO hub
+
+Этот этап стартует только после полного закрытия `Этапа 1.5`.
 
 Сейчас главная слишком короткая. Ее нужно расширить без превращения в перегруженную свалку текста.
 
 ### Что добавить на главную
 
 - сильный hero;
+- ссылки на сторы (App Store и Google Play);
 - короткое объяснение, что делает SirBro;
 - блок "How it works";
 - блок доверия;
@@ -425,4 +474,3 @@
 4. Добавить `sitemap.xml`.
 5. Внедрить нормальные metadata и structured data.
 6. Только после этого начинать массово запускать `insights`.
-

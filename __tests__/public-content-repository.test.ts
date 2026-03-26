@@ -23,8 +23,16 @@ describe('staticPublicContentRepository', () => {
     });
   });
 
-  it('returns null for unimplemented page keys', async () => {
-    await expect(staticPublicContentRepository.getPage('about', 'en')).resolves.toBeNull();
+  it('returns scaffolded trust pages as noindex', async () => {
+    const page = await staticPublicContentRepository.getPage('about', 'en');
+
+    expect(page).toMatchObject({
+      locale: 'en',
+      slug: 'about',
+      status: 'published',
+      indexability: 'noindex',
+      canonicalPath: '/en/about',
+    });
   });
 
   it('lists only indexable implemented routes', async () => {

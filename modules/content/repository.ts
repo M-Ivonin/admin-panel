@@ -9,9 +9,26 @@ export type PublicContentPageKey =
   | 'cookies'
   | 'about'
   | 'methodology'
-  | 'faq';
+  | 'editorial-policy'
+  | 'ai-transparency'
+  | 'faq'
+  | 'contact';
 
-export type PublicContentRouteType = 'page' | 'insight' | 'entity' | 'quiz';
+export type PublicContentRouteType =
+  | 'page'
+  | 'insight-hub'
+  | 'insight'
+  | 'team-hub'
+  | 'team'
+  | 'player-hub'
+  | 'player'
+  | 'league-hub'
+  | 'league'
+  | 'topic-hub'
+  | 'topic'
+  | 'quiz-hub'
+  | 'quiz'
+  | 'quiz-result';
 
 export interface PublicContentListParams {
   page?: number;

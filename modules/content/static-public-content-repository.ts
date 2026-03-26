@@ -21,6 +21,20 @@ const HOME_LABEL: Record<Locale, string> = {
   pt: 'Início',
 };
 
+const STATIC_PAGE_INDEXABILITY: Record<ImplementedPublicPageKey, SeoPageBase['indexability']> = {
+  home: 'index',
+  privacy: 'index',
+  terms: 'index',
+  disclaimer: 'index',
+  cookies: 'index',
+  about: 'noindex',
+  methodology: 'noindex',
+  'editorial-policy': 'noindex',
+  'ai-transparency': 'noindex',
+  faq: 'noindex',
+  contact: 'noindex',
+};
+
 function buildBreadcrumbs(pageKey: ImplementedPublicPageKey, locale: Locale): BreadcrumbItem[] {
   if (pageKey === 'home') {
     return [{ label: HOME_LABEL[locale], href: buildLocalizedPath(locale, '') }];
@@ -49,7 +63,7 @@ function buildPageEntity(pageKey: PublicContentPageKey, locale: Locale): SeoPage
     locale,
     slug: path.replace(/^\//, ''),
     status: 'published',
-    indexability: 'index',
+    indexability: STATIC_PAGE_INDEXABILITY[implementedPageKey],
     title: seoCopy.title,
     metaTitle: seoCopy.title,
     metaDescription: seoCopy.description,
