@@ -24,8 +24,8 @@ import {
 import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
 import { buildLocalizedPath } from '@/modules/seo/route-registry';
 
-const pagePx = { xs: 3, sm: 4, md: 6, lg: 10 };
-const sectionGapY = { xs: 5, md: 7 };
+const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
+const sectionGapY = { xs: 4.5, md: 7 };
 const pageMaxWidth = 1440;
 
 const headerLabels = {
@@ -522,6 +522,7 @@ function StoreBadgeLink({
       className={pulse ? 'sb-pulse' : undefined}
       sx={{
         display: 'inline-flex',
+        width: 'auto',
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 3,
@@ -562,9 +563,9 @@ function SectionHeading({
           ...copySafeSx,
           color: '#f8fafc',
           fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-          fontSize: { xs: '2rem', md: '2.35rem' },
+          fontSize: { xs: '1.8rem', sm: '2rem', md: '2.35rem' },
           fontWeight: 600,
-          lineHeight: 1.12,
+          lineHeight: { xs: 1.08, md: 1.12 },
         }}
       >
         {title}
@@ -573,8 +574,8 @@ function SectionHeading({
         sx={{
           ...copySafeSx,
           color: '#94a3b8',
-          fontSize: { xs: '0.98rem', md: '1rem' },
-          lineHeight: 1.58,
+          fontSize: { xs: '0.95rem', md: '1rem' },
+          lineHeight: { xs: 1.55, md: 1.58 },
         }}
       >
         {description}
@@ -596,10 +597,10 @@ function ProductCard({
     <Box
       sx={{
         ...panelSx,
-        borderRadius: 3.5,
+        borderRadius: { xs: 3, md: 3.5 },
         bgcolor: alpha('#111827', 0.58),
-        p: 2.75,
-        flex: '1 1 0',
+        p: { xs: 2, sm: 2.5, md: 2.75 },
+        flex: { xs: '0 0 auto', md: '1 1 0' },
         minWidth: { xs: '100%', md: 0 },
         transition: 'transform 260ms ease, border-color 260ms ease, box-shadow 260ms ease',
         '&:hover': {
@@ -609,12 +610,12 @@ function ProductCard({
         },
       }}
     >
-      <Stack spacing={2.25}>
+      <Stack spacing={{ xs: 2, md: 2.25 }}>
         <Box
           sx={{
             ...panelSx,
-            borderRadius: 3,
-            height: 300,
+            borderRadius: { xs: 2.5, md: 3 },
+            height: { xs: 220, sm: 260, md: 300 },
             bgcolor: alpha('#0b1220', 0.42),
           }}
         >
@@ -636,7 +637,7 @@ function ProductCard({
             sx={{
               ...copySafeSx,
               color: '#f1f5f9',
-              fontSize: '1.375rem',
+              fontSize: { xs: '1.25rem', md: '1.375rem' },
               fontWeight: 600,
             }}
           >
@@ -646,7 +647,7 @@ function ProductCard({
             sx={{
               ...copySafeSx,
               color: '#94a3b8',
-              fontSize: '0.9rem',
+              fontSize: { xs: '0.875rem', md: '0.9rem' },
               lineHeight: 1.55,
             }}
           >
@@ -803,20 +804,25 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               maxWidth: pageMaxWidth,
               mx: 'auto',
               px: pagePx,
-              py: 2.5,
+              py: { xs: 1.5, md: 2.5 },
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: 3,
+              gap: { xs: 1.5, md: 3 },
             }}
           >
-            <Stack direction="row" spacing={4.5} alignItems="center" sx={{ minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={{ xs: 1.75, md: 4.5 }}
+              alignItems="center"
+              sx={{ minWidth: 0 }}
+            >
               <Link
                 href={homeHref}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 12,
+                  gap: 10,
                   textDecoration: 'none',
                 }}
               >
@@ -824,13 +830,17 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   component="img"
                   src="/assets/brandmark.png"
                   alt="SirBro"
-                  sx={{ width: 32, height: 38, display: 'block' }}
+                  sx={{ width: { xs: 28, md: 32 }, height: { xs: 34, md: 38 }, display: 'block' }}
                 />
                 <Box
                   component="img"
                   src="/assets/typemark.png"
                   alt="SirBro"
-                  sx={{ width: 96, height: 24, display: 'block' }}
+                  sx={{
+                    width: { xs: 82, md: 96 },
+                    height: { xs: 20, md: 24 },
+                    display: 'block',
+                  }}
                 />
               </Link>
 
@@ -942,11 +952,11 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                 sx={{
                   minWidth: 'auto',
                   borderRadius: '999px',
-                  px: 2,
-                  py: 1.35,
+                  px: { xs: 1.5, sm: 2 },
+                  py: { xs: 1.05, sm: 1.35 },
                   bgcolor: '#4f46e5',
                   color: '#ffffff',
-                  fontSize: '0.875rem',
+                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
                   fontWeight: 600,
                   boxShadow: 'none',
                   '&:hover': {
@@ -969,7 +979,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
             maxWidth: pageMaxWidth,
             mx: 'auto',
             px: pagePx,
-            py: { xs: 6, md: 7 },
+            py: { xs: 5, md: 7 },
             display: 'flex',
             flexDirection: 'column',
             gap: sectionGapY,
@@ -982,7 +992,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               position: 'relative',
               minHeight: { xs: 'auto', lg: 760 },
               borderRadius: 0,
-              py: { xs: 2, md: 0 },
+              py: { xs: 1, md: 0 },
             }}
           >
             <Box
@@ -1026,23 +1036,23 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', lg: 'row' },
-                gap: { xs: 4, lg: 4.5 },
+                gap: { xs: 3.5, lg: 4.5 },
                 width: '100%',
                 alignItems: { xs: 'center', lg: 'flex-start' },
                 justifyContent: { lg: 'space-between' },
               }}
             >
               <Box sx={{ width: '100%', maxWidth: { lg: 620 }, position: 'relative', zIndex: 1 }}>
-                <Stack spacing={2.75} sx={{ pt: { xs: 0, md: 2, lg: 3 } }}>
+                <Stack spacing={{ xs: 2.25, md: 2.75 }} sx={{ pt: { xs: 0, md: 2, lg: 3 } }}>
                   <Typography
                     sx={{
                       ...copySafeSx,
-                      maxWidth: 620,
+                      maxWidth: { xs: '100%', lg: 620 },
                       fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-                      fontSize: { xs: '2.6rem', sm: '3.4rem', lg: '4.5rem' },
+                      fontSize: { xs: '2.15rem', sm: '3rem', lg: '4.5rem' },
                       fontWeight: 700,
-                      lineHeight: { xs: 0.98, lg: 0.96 },
-                      letterSpacing: '-0.05em',
+                      lineHeight: { xs: 1.02, lg: 0.96 },
+                      letterSpacing: { xs: '-0.04em', lg: '-0.05em' },
                       color: '#f8fafc',
                       ...motionRevealSx(180),
                     }}
@@ -1053,10 +1063,10 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   <Typography
                     sx={{
                       ...copySafeSx,
-                      maxWidth: 560,
+                      maxWidth: { xs: '100%', lg: 560 },
                       color: '#94a3b8',
-                      fontSize: { xs: '1rem', md: '1.1875rem' },
-                      lineHeight: 1.45,
+                      fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1875rem' },
+                      lineHeight: { xs: 1.55, md: 1.45 },
                       ...motionRevealSx(260),
                     }}
                   >
@@ -1068,7 +1078,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     direction="row"
                     spacing={1.5}
                     sx={{
-                      flexWrap: 'wrap',
+                      flexWrap: 'nowrap',
                       alignItems: 'center',
                       ...motionRevealSx(320),
                     }}
@@ -1091,11 +1101,12 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   <Box
                     sx={{
                       ...panelSx,
-                      maxWidth: 560,
-                      borderRadius: '999px',
+                      width: '100%',
+                      maxWidth: { xs: '100%', lg: 560 },
+                      borderRadius: { xs: 3, sm: '999px' },
                       bgcolor: alpha('#0b1220', 0.58),
-                      px: 2,
-                      py: 1.35,
+                      px: { xs: 1.5, sm: 2 },
+                      py: { xs: 1.25, sm: 1.35 },
                       ...motionRevealSx(380),
                     }}
                   >
@@ -1103,7 +1114,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       sx={{
                         ...copySafeSx,
                         color: '#cbd5e1',
-                        fontSize: '0.8125rem',
+                        fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                         fontWeight: 600,
                         lineHeight: 1.4,
                       }}
@@ -1118,9 +1129,9 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                 sx={{
                   position: 'relative',
                   width: '100%',
-                  maxWidth: { xs: 640, lg: 540 },
+                  maxWidth: { xs: 360, sm: 460, lg: 540 },
                   ml: { lg: 'auto' },
-                  minHeight: { xs: 520, lg: 592 },
+                  minHeight: { xs: 452, sm: 500, lg: 592 },
                   ...motionRevealSx(260),
                 }}
               >
@@ -1128,14 +1139,14 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   className="sb-beam"
                   sx={{
                     position: 'absolute',
-                    top: { xs: 0, lg: 38 },
-                    left: { xs: 30, lg: -20 },
-                    width: 250,
-                    height: { xs: 480, lg: 560 },
+                    top: { xs: 10, lg: 38 },
+                    left: { xs: 8, sm: 20, lg: -20 },
+                    width: { xs: 180, sm: 220, lg: 250 },
+                    height: { xs: 340, sm: 420, lg: 560 },
                     borderRadius: '999px',
                     background:
                       'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(165,180,252,0.4) 52%, rgba(255,255,255,0) 100%)',
-                    opacity: 0.36,
+                    opacity: { xs: 0.22, lg: 0.36 },
                     pointerEvents: 'none',
                     filter: 'blur(0px)',
                   }}
@@ -1145,9 +1156,9 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   sx={{
                     ...panelSx,
                     position: 'relative',
-                    borderRadius: 4.5,
+                    borderRadius: { xs: 3.5, md: 4.5 },
                     width: '100%',
-                    minHeight: { xs: 520, lg: 592 },
+                    minHeight: { xs: 452, sm: 500, lg: 592 },
                     background:
                       'linear-gradient(180deg, rgba(15,23,42,0.56) 0%, rgba(17,24,39,0.68) 100%)',
                     borderColor: alpha('#475569', 0.72),
@@ -1156,6 +1167,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   <Box
                     sx={{
                       position: 'absolute',
+                      display: 'block',
                       left: { xs: -42, lg: -26 },
                       bottom: { xs: 44, lg: 32 },
                       width: { xs: 180, lg: 202 },
@@ -1169,6 +1181,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   <Box
                     sx={{
                       position: 'absolute',
+                      display: 'block',
                       left: { xs: 16, lg: 62 },
                       bottom: { xs: 10, lg: -12 },
                       width: { xs: 132, lg: 148 },
@@ -1183,20 +1196,20 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     label={heroPanelChipLabel[locale]}
                     sx={{
                       position: 'absolute',
-                      top: 26,
-                      left: 28,
+                      top: { xs: 18, sm: 26 },
+                      left: { xs: 18, sm: 28 },
                       zIndex: 2,
-                      maxWidth: 220,
+                      maxWidth: { xs: 170, sm: 220 },
                       color: '#cbd5e1',
                       bgcolor: '#0b1220',
                       border: '1px solid',
                       borderColor: alpha('#334155', 0.96),
                       '& .MuiChip-label': {
-                        px: 1.5,
+                        px: { xs: 1, sm: 1.5 },
                         whiteSpace: 'nowrap',
                         lineHeight: 1.2,
                         fontWeight: 600,
-                        fontSize: '0.75rem',
+                        fontSize: { xs: '0.625rem', sm: '0.75rem' },
                       },
                     }}
                   />
@@ -1205,11 +1218,11 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     sx={{
                       ...panelSx,
                       position: 'absolute',
-                      top: { xs: 86, lg: 78 },
+                      top: { xs: 84, sm: 84, lg: 78 },
                       left: { xs: '50%', lg: 142 },
                       transform: { xs: 'translateX(-50%)', lg: 'none' },
-                      width: { xs: 250, lg: 262 },
-                      height: { xs: 474, lg: 494 },
+                      width: { xs: 212, sm: 250, lg: 262 },
+                      height: { xs: 320, sm: 474, lg: 494 },
                       borderRadius: 3.5,
                       bgcolor: alpha('#0d1017', 0.44),
                       overflow: 'hidden',
@@ -1232,25 +1245,26 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   <Box
                     sx={{
                       ...panelSx,
+                      display: 'block',
                       position: 'absolute',
-                      top: { xs: 170, lg: 176 },
+                      top: { xs: 188, sm: 170, lg: 176 },
                       right: { xs: 10, lg: 14 },
-                      width: { xs: 152, lg: 158 },
+                      width: { xs: 126, sm: 152, lg: 158 },
                       borderRadius: 2.25,
                       bgcolor: alpha('#ecfdf3', 0.72),
                       color: '#111827',
-                      px: 1.75,
-                      py: 1.5,
+                      px: { xs: 1.15, sm: 1.75 },
+                      py: { xs: 1, sm: 1.5 },
                       animation: `${heroTopRightFloat} 7s ease-in-out infinite`,
                       willChange: 'transform',
                       boxShadow: `0 12px 28px ${alpha('#0f172a', 0.24)}`,
                     }}
                   >
-                    <Typography
-                      sx={{
-                        ...copySafeSx,
-                        color: '#1d4ed8',
-                        fontSize: '0.8125rem',
+                      <Typography
+                        sx={{
+                          ...copySafeSx,
+                          color: '#1d4ed8',
+                          fontSize: { xs: '0.7rem', sm: '0.8125rem' },
                         fontWeight: 700,
                         lineHeight: 1.35,
                       }}
@@ -1266,15 +1280,15 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     sx={{
                       ...panelSx,
                       position: 'absolute',
-                      left: { xs: 10, lg: 22 },
-                      bottom: { xs: 132, lg: 106 },
-                      width: { xs: 208, lg: 220 },
+                      left: { xs: 12, lg: 22 },
+                      bottom: { xs: 28, sm: 96, lg: 106 },
+                      width: { xs: 172, sm: 208, lg: 220 },
                       borderRadius: 2.5,
-                      px: 1.75,
-                      py: 1.5,
+                      px: { xs: 1.25, sm: 1.75 },
+                      py: { xs: 1.15, sm: 1.5 },
                       background:
                         'linear-gradient(180deg, rgba(109,40,217,0.76) 0%, rgba(76,29,149,0.72) 52%, rgba(36,18,74,0.68) 100%)',
-                      transform: 'rotate(-7deg)',
+                      transform: { xs: 'rotate(-4deg)', lg: 'rotate(-7deg)' },
                       boxShadow: `0 14px 28px ${alpha('#4c1d95', 0.34)}`,
                     }}
                   >
@@ -1283,7 +1297,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         sx={{
                           ...copySafeSx,
                           color: '#ffffff',
-                          fontSize: '0.9375rem',
+                          fontSize: { xs: '0.8125rem', sm: '0.9375rem' },
                           fontWeight: 600,
                           lineHeight: 1.3,
                         }}
@@ -1297,16 +1311,17 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                 <Box
                   sx={{
                     ...panelSx,
+                    display: 'block',
                     position: 'absolute',
-                    top: { xs: 34, lg: 32 },
+                    top: { xs: 18, sm: 34, lg: 32 },
                     right: { xs: 10, lg: 22 },
-                    width: { xs: 208, lg: 212 },
+                    width: { xs: 142, sm: 208, lg: 212 },
                     borderRadius: 2.5,
                     background:
                       'linear-gradient(180deg, rgba(58,36,97,0.72) 0%, rgba(38,25,61,0.68) 100%)',
                     borderColor: alpha('#8b5cf6', 0.56),
-                    px: 1.75,
-                    py: 1.5,
+                    px: { xs: 1.15, sm: 1.75 },
+                    py: { xs: 1, sm: 1.5 },
                     zIndex: 2,
                     animation: `${heroStoryFloat} 7.2s ease-in-out infinite`,
                     willChange: 'transform',
@@ -1317,7 +1332,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     sx={{
                       ...copySafeSx,
                       color: '#e2e8f0',
-                      fontSize: '0.9375rem',
+                      fontSize: { xs: '0.72rem', sm: '0.9375rem' },
                       fontWeight: 600,
                       lineHeight: 1.35,
                     }}
@@ -1398,8 +1413,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       ...panelSx,
                       borderRadius: 3,
                       bgcolor: alpha('#111827', 0.56),
-                      px: 2.5,
-                      py: 2.25,
+                      px: { xs: 2, md: 2.5 },
+                      py: { xs: 2, md: 2.25 },
                       transition: 'transform 220ms ease, border-color 220ms ease',
                       '&:hover': {
                         transform: 'translateY(-4px)',
@@ -1421,7 +1436,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         sx={{
                           ...copySafeSx,
                           color: '#f1f5f9',
-                          fontSize: '1.25rem',
+                          fontSize: { xs: '1.1rem', md: '1.25rem' },
                           fontWeight: 600,
                         }}
                       >
@@ -1449,7 +1464,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   bgcolor: alpha('#0f172a', 0.56),
                   px: { xs: 2.5, md: 3.5 },
                   py: { xs: 2.5, md: 3.5 },
-                  flex: '1 1 0',
+                  flex: { xs: '0 0 auto', lg: '1 1 0' },
                 }}
               >
                 <Stack spacing={2.5}>
@@ -1457,7 +1472,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     <Typography
                       sx={{
                         color: '#f8fafc',
-                        fontSize: '1.75rem',
+                        fontSize: { xs: '1.45rem', md: '1.75rem' },
                         fontWeight: 600,
                         lineHeight: 1.18,
                       }}
@@ -1594,8 +1609,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     flex: '1 1 auto',
                     borderRadius: 3.5,
                     bgcolor: alpha('#111827', 0.56),
-                    px: 3.25,
-                    py: 3.25,
+                    px: { xs: 2.25, md: 3.25 },
+                    py: { xs: 2.25, md: 3.25 },
                     textDecoration: 'none',
                     transition: 'transform 240ms ease, border-color 240ms ease',
                     '&:hover': {
@@ -1613,7 +1628,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         fontSize: { xs: '1.35rem', md: '1.5rem' },
                         fontWeight: 600,
                         lineHeight: 1.24,
-                        maxWidth: 620,
+                        maxWidth: { xs: '100%', md: 620 },
                       }}
                     >
                       {discoveryCopy.featured.title}
@@ -1664,8 +1679,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     width: { xs: '100%', lg: 360 },
                     flexShrink: 0,
                     borderRadius: 3.5,
-                    px: 3,
-                    py: 3,
+                    px: { xs: 2.25, md: 3 },
+                    py: { xs: 2.25, md: 3 },
                     background:
                       'linear-gradient(180deg, rgba(26,26,51,0.74) 0%, rgba(34,34,74,0.68) 100%)',
                     borderColor: '#4f4a7a',
@@ -1686,7 +1701,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         fontSize: { xs: '1.25rem', md: '1.375rem' },
                         fontWeight: 600,
                         lineHeight: 1.24,
-                        maxWidth: 260,
+                        maxWidth: { xs: '100%', md: 260 },
                       }}
                     >
                       {discoveryCopy.quiz.title}
@@ -1698,7 +1713,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
                         fontSize: '0.875rem',
                         lineHeight: 1.5,
-                        maxWidth: 280,
+                        maxWidth: { xs: '100%', md: 280 },
                       }}
                     >
                       {discoveryCopy.quiz.description}
@@ -1904,7 +1919,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     elevation={0}
                     sx={{
                       ...panelSx,
-                      borderRadius: '24px !important',
+                      borderRadius: { xs: '20px !important', md: '24px !important' },
                       bgcolor: alpha('#111827', 0.56),
                       '&::before': { display: 'none' },
                     }}
@@ -1914,28 +1929,30 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         <ExpandMoreRoundedIcon sx={{ color: '#a5b4fc', fontSize: 28 }} />
                       }
                       sx={{
-                        px: 2.75,
-                        py: 0.75,
-                        '& .MuiAccordionSummary-content': { my: 1.25 },
+                        px: { xs: 2, md: 2.75 },
+                        py: { xs: 0.5, md: 0.75 },
+                        '& .MuiAccordionSummary-content': { my: { xs: 1, md: 1.25 } },
                       }}
                     >
                       <Typography
                         sx={{
                           ...copySafeSx,
                           color: '#e2e8f0',
-                          fontSize: '0.9375rem',
+                          fontSize: { xs: '0.9rem', md: '0.9375rem' },
                           fontWeight: 600,
                         }}
                       >
                         {item.question}
                       </Typography>
                     </AccordionSummary>
-                    <AccordionDetails sx={{ px: 2.75, pb: 2.5, pt: 0 }}>
+                    <AccordionDetails
+                      sx={{ px: { xs: 2, md: 2.75 }, pb: { xs: 2, md: 2.5 }, pt: 0 }}
+                    >
                       <Typography
                         sx={{
                           ...copySafeSx,
                           color: '#94a3b8',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.85rem', md: '0.875rem' },
                           lineHeight: 1.6,
                         }}
                       >
@@ -2004,21 +2021,30 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   experience built for every game day.
                 </Typography>
 
-                <Stack direction="row" spacing={1.75} sx={{ flexWrap: 'wrap', rowGap: 1.75 }}>
+                <Stack
+                  direction="row"
+                  spacing={1.75}
+                  sx={{
+                    flexWrap: 'nowrap',
+                    alignItems: 'stretch',
+                  }}
+                >
                   <Button
                     component="a"
                     href="#download"
                     variant="contained"
                     sx={{
-                      minWidth: 'auto',
+                      flex: '1 1 0',
+                      minWidth: 0,
                       borderRadius: '999px',
-                      px: 2.25,
+                      px: { xs: 1.5, sm: 2.25 },
                       py: 1.75,
                       bgcolor: '#4f46e5',
                       color: '#ffffff',
-                      fontSize: '0.875rem',
+                      fontSize: { xs: '0.8125rem', sm: '0.875rem' },
                       fontWeight: 600,
                       lineHeight: 1,
+                      whiteSpace: 'nowrap',
                       boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
                       '&:hover': {
                         bgcolor: '#4f46e5',
@@ -2033,14 +2059,16 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     href={localize(PUBLIC_HUB_PATHS.insights)}
                     variant="outlined"
                     sx={{
-                      minWidth: 'auto',
+                      flex: '1 1 0',
+                      minWidth: 0,
                       borderRadius: '999px',
-                      px: 2.25,
+                      px: { xs: 1.5, sm: 2.25 },
                       py: 1.75,
                       color: '#f9fafb',
-                      fontSize: '0.875rem',
+                      fontSize: { xs: '0.8125rem', sm: '0.875rem' },
                       fontWeight: 600,
                       lineHeight: 1,
+                      whiteSpace: 'nowrap',
                       borderColor: '#8b5cf6',
                       bgcolor: '#221735',
                       '&:hover': {
@@ -2081,7 +2109,14 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               gap: { xs: 4, lg: 7 },
             }}
           >
-            <Stack spacing={2} sx={{ width: '100%', maxWidth: 300, flex: '0 0 300px' }}>
+            <Stack
+              spacing={2}
+              sx={{
+                width: '100%',
+                maxWidth: { xs: '100%', lg: 300 },
+                flex: { xs: '1 1 auto', lg: '0 0 300px' },
+              }}
+            >
               <Link
                 href={homeHref}
                 style={{
