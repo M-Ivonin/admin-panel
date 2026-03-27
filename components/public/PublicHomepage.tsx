@@ -26,6 +26,7 @@ import { buildLocalizedPath } from '@/modules/seo/route-registry';
 
 const pagePx = { xs: 3, sm: 4, md: 6, lg: 10 };
 const sectionGapY = { xs: 5, md: 7 };
+const pageMaxWidth = 1440;
 
 const headerLabels = {
   en: {
@@ -314,8 +315,101 @@ const panelSx = {
   border: '1px solid',
   borderColor: alpha('#334155', 0.92),
   boxShadow: `0 18px 48px ${alpha('#020617', 0.42)}`,
-  backdropFilter: 'blur(18px)',
+  backdropFilter: 'blur(22px)',
+  WebkitBackdropFilter: 'blur(22px)',
 };
+
+function SeoCardVisual({ index }: { index: number }) {
+  if (index === 0) {
+    return (
+      <Box
+        sx={{
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          display: 'grid',
+          placeItems: 'center',
+          background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18) 0%, rgba(15,23,42,0.5) 100%)',
+          border: '1px solid',
+          borderColor: alpha('#f8e7b0', 0.28),
+          boxShadow: `0 10px 24px ${alpha('#020617', 0.24)}`,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          component="img"
+          src="/assets/homepage/seo-cards/real-madrid-logo.png"
+          alt="Real Madrid crest"
+          sx={{
+            width: 42,
+            height: 42,
+            objectFit: 'contain',
+            display: 'block',
+          }}
+        />
+      </Box>
+    );
+  }
+
+  if (index === 1) {
+    return (
+      <Box
+        sx={{
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 32% 28%, rgba(95,75,57,0.35) 0%, rgba(19,23,34,0.96) 100%)',
+          border: '1px solid',
+          borderColor: alpha('#64748b', 0.4),
+          boxShadow: `0 10px 24px ${alpha('#020617', 0.26)}`,
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          component="img"
+          src="/assets/homepage/seo-cards/mbappe.jpg"
+          alt="Kylian Mbappe"
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        width: 56,
+        height: 56,
+        borderRadius: 2.25,
+        display: 'grid',
+        placeItems: 'center',
+        background:
+          'linear-gradient(180deg, rgba(95,111,255,0.22) 0%, rgba(36,50,101,0.32) 100%)',
+        border: '1px solid',
+        borderColor: alpha('#7c8cff', 0.34),
+        boxShadow: `0 10px 24px ${alpha('#020617', 0.24)}`,
+      }}
+    >
+      <Box
+        component="img"
+        src="/assets/homepage/seo-cards/premier-league.svg"
+        alt="Premier League logo"
+        sx={{
+          width: 34,
+          height: 34,
+          objectFit: 'contain',
+          display: 'block',
+          filter: 'brightness(1.15)',
+        }}
+      />
+    </Box>
+  );
+}
 
 function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
   const pathname = usePathname();
@@ -337,7 +431,7 @@ function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
         borderRadius: '999px',
         px: 1.75,
         py: 1.1,
-        bgcolor: '#0f172a',
+        bgcolor: alpha('#0f172a', 0.56),
       }}
     >
       {languages.map((lang, index) => (
@@ -483,7 +577,7 @@ function ProductCard({
       sx={{
         ...panelSx,
         borderRadius: 3.5,
-        bgcolor: '#111827',
+        bgcolor: alpha('#111827', 0.58),
         p: 2.75,
         flex: '1 1 0',
         minWidth: { xs: '100%', md: 0 },
@@ -501,7 +595,7 @@ function ProductCard({
             ...panelSx,
             borderRadius: 3,
             height: 300,
-            bgcolor: '#0b1220',
+            bgcolor: alpha('#0b1220', 0.42),
           }}
         >
           <Box
@@ -664,7 +758,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
         component="main"
         sx={{
           minHeight: '100vh',
-          bgcolor: '#07090f',
+          background:
+            'linear-gradient(90deg, #0b2d45 0%, #0a1730 34%, #07091d 68%, #140c2f 100%)',
           color: '#f8fafc',
           overflowX: 'clip',
         }}
@@ -677,13 +772,16 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
             top: 0,
             zIndex: 30,
             borderBottom: '1px solid',
-            borderColor: alpha('#20293a', 0.96),
-            bgcolor: alpha('#090d16', 0.9),
+            borderColor: alpha('#20293a', 0.38),
+            bgcolor: alpha('#090d16', 0.4),
             backdropFilter: 'blur(18px)',
           }}
         >
           <Box
             sx={{
+              width: '100%',
+              maxWidth: pageMaxWidth,
+              mx: 'auto',
               px: pagePx,
               py: 2.5,
               display: 'flex',
@@ -761,7 +859,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                               left: -18,
                               width: 224,
                               borderRadius: 2.5,
-                              bgcolor: '#0f172a',
+                              bgcolor: alpha('#0f172a', 0.72),
                               px: 2.25,
                               py: 1.75,
                               zIndex: 40,
@@ -847,6 +945,9 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
         <Box
           sx={{
             position: 'relative',
+            width: '100%',
+            maxWidth: pageMaxWidth,
+            mx: 'auto',
             px: pagePx,
             py: { xs: 6, md: 7 },
             display: 'flex',
@@ -906,7 +1007,9 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                 display: 'flex',
                 flexDirection: { xs: 'column', lg: 'row' },
                 gap: { xs: 4, lg: 4.5 },
+                width: '100%',
                 alignItems: { xs: 'center', lg: 'flex-start' },
+                justifyContent: { lg: 'space-between' },
               }}
             >
               <Box sx={{ width: '100%', maxWidth: { lg: 620 }, position: 'relative', zIndex: 1 }}>
@@ -970,7 +1073,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       ...panelSx,
                       maxWidth: 560,
                       borderRadius: '999px',
-                      bgcolor: '#0b1220',
+                      bgcolor: alpha('#0b1220', 0.58),
                       px: 2,
                       py: 1.35,
                       ...motionRevealSx(380),
@@ -996,6 +1099,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   position: 'relative',
                   width: '100%',
                   maxWidth: { xs: 640, lg: 540 },
+                  ml: { lg: 'auto' },
                   minHeight: { xs: 520, lg: 592 },
                   ...motionRevealSx(260),
                 }}
@@ -1025,7 +1129,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     width: '100%',
                     minHeight: { xs: 520, lg: 592 },
                     background:
-                      'linear-gradient(180deg, rgba(15,23,42,0.74) 0%, rgba(17,24,39,0.86) 100%)',
+                      'linear-gradient(180deg, rgba(15,23,42,0.56) 0%, rgba(17,24,39,0.68) 100%)',
                     borderColor: alpha('#475569', 0.72),
                   }}
                 >
@@ -1087,7 +1191,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       width: { xs: 250, lg: 262 },
                       height: { xs: 474, lg: 494 },
                       borderRadius: 3.5,
-                      bgcolor: '#0d1017',
+                      bgcolor: alpha('#0d1017', 0.44),
                       overflow: 'hidden',
                       borderColor: alpha('#475569', 0.36),
                     }}
@@ -1114,7 +1218,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       right: { xs: 10, lg: 14 },
                       width: { xs: 152, lg: 158 },
                       borderRadius: 2.25,
-                      bgcolor: '#ecfdf3',
+                      bgcolor: alpha('#ecfdf3', 0.72),
                       color: '#111827',
                       px: 1.75,
                       py: 1.5,
@@ -1149,7 +1253,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       px: 1.75,
                       py: 1.5,
                       background:
-                        'linear-gradient(180deg, rgba(109,40,217,1) 0%, rgba(76,29,149,1) 52%, rgba(36,18,74,1) 100%)',
+                        'linear-gradient(180deg, rgba(109,40,217,0.76) 0%, rgba(76,29,149,0.72) 52%, rgba(36,18,74,0.68) 100%)',
                       transform: 'rotate(-7deg)',
                       boxShadow: `0 14px 28px ${alpha('#4c1d95', 0.34)}`,
                     }}
@@ -1179,7 +1283,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     width: { xs: 208, lg: 212 },
                     borderRadius: 2.5,
                     background:
-                      'linear-gradient(180deg, rgba(58,36,97,0.96) 0%, rgba(38,25,61,0.96) 100%)',
+                      'linear-gradient(180deg, rgba(58,36,97,0.72) 0%, rgba(38,25,61,0.68) 100%)',
                     borderColor: alpha('#8b5cf6', 0.56),
                     px: 1.75,
                     py: 1.5,
@@ -1271,7 +1375,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     sx={{
                       ...panelSx,
                       borderRadius: 3,
-                      bgcolor: '#111827',
+                      bgcolor: alpha('#111827', 0.56),
                       px: 2.5,
                       py: 2.25,
                       transition: 'transform 220ms ease, border-color 220ms ease',
@@ -1320,7 +1424,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                 sx={{
                   ...panelSx,
                   borderRadius: 3.5,
-                  bgcolor: '#0f172a',
+                  bgcolor: alpha('#0f172a', 0.56),
                   px: { xs: 2.5, md: 3.5 },
                   py: { xs: 2.5, md: 3.5 },
                   flex: '1 1 0',
@@ -1377,7 +1481,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                           ...panelSx,
                           display: 'block',
                           borderRadius: 2.5,
-                          bgcolor: '#0b1220',
+                          bgcolor: alpha('#0b1220', 0.54),
                           px: 2,
                           py: 1.9,
                           textDecoration: 'none',
@@ -1421,7 +1525,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       ...panelSx,
                       display: 'block',
                       borderRadius: 2.25,
-                      bgcolor: '#111827',
+                      bgcolor: alpha('#111827', 0.56),
                       px: 2,
                       py: 1.75,
                       color: '#e2e8f0',
@@ -1467,7 +1571,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     display: 'block',
                     flex: '1 1 auto',
                     borderRadius: 3.5,
-                    bgcolor: '#111827',
+                    bgcolor: alpha('#111827', 0.56),
                     px: 3.25,
                     py: 3.25,
                     textDecoration: 'none',
@@ -1541,7 +1645,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     px: 3,
                     py: 3,
                     background:
-                      'linear-gradient(180deg, rgba(26,26,51,1) 0%, rgba(34,34,74,1) 100%)',
+                      'linear-gradient(180deg, rgba(26,26,51,0.74) 0%, rgba(34,34,74,0.68) 100%)',
                     borderColor: '#4f4a7a',
                     textDecoration: 'none',
                     transition: 'transform 240ms ease, border-color 240ms ease',
@@ -1607,7 +1711,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   px: { xs: 3, md: 3.5 },
                   py: { xs: 3, md: 3.5 },
                   background:
-                    'linear-gradient(180deg, rgba(15,23,42,1) 0%, rgba(19,32,52,1) 100%)',
+                    'linear-gradient(180deg, rgba(15,23,42,0.72) 0%, rgba(19,32,52,0.64) 100%)',
                 }}
               >
                 <Stack spacing={2.5}>
@@ -1681,7 +1785,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                           ...panelSx,
                           display: 'block',
                           borderRadius: 2.75,
-                          bgcolor: '#111827',
+                          bgcolor: alpha('#111827', 0.56),
                           px: 2.25,
                           py: 2.25,
                           textDecoration: 'none',
@@ -1693,30 +1797,33 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                         }}
                       >
                         <Stack spacing={1.5}>
-                          <Typography
-                            sx={{
-                              color: '#6b7280',
-                              fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              letterSpacing: '0.01em',
-                              lineHeight: 1.1,
-                            }}
-                          >
-                            {item.eyebrow}
-                          </Typography>
-                          <Typography
-                            sx={{
-                              ...copySafeSx,
-                              color: '#e2e8f0',
-                              fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-                              fontSize: '1.125rem',
-                              fontWeight: 600,
-                              lineHeight: 1.22,
-                            }}
-                          >
-                            {item.title}
-                          </Typography>
+                          <SeoCardVisual index={index} />
+                          <Stack spacing={0.9}>
+                            <Typography
+                              sx={{
+                                color: '#6b7280',
+                                fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                letterSpacing: '0.01em',
+                                lineHeight: 1.1,
+                              }}
+                            >
+                              {item.eyebrow}
+                            </Typography>
+                            <Typography
+                              sx={{
+                                ...copySafeSx,
+                                color: '#e2e8f0',
+                                fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                                fontSize: '1.125rem',
+                                fontWeight: 600,
+                                lineHeight: 1.22,
+                              }}
+                            >
+                              {item.title}
+                            </Typography>
+                          </Stack>
                           <Typography
                             sx={{
                               ...copySafeSx,
@@ -1776,7 +1883,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     sx={{
                       ...panelSx,
                       borderRadius: '24px !important',
-                      bgcolor: '#111827',
+                      bgcolor: alpha('#111827', 0.56),
                       '&::before': { display: 'none' },
                     }}
                   >
@@ -1841,89 +1948,90 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               overflow: 'hidden',
               background:
                 'linear-gradient(90deg, #0a1228 0%, #11162a 52%, #2b2760 82%, #3a2f73 100%)',
-              px: { xs: 3, sm: 5, md: 10 },
               pt: { xs: 6, md: 11 },
               pb: { xs: 6, md: 9 },
             }}
           >
-            <Stack spacing={2.75}>
-              <Typography
-                sx={{
-                  ...copySafeSx,
-                  color: '#f9fafb',
-                  fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-                  fontSize: { xs: '2rem', sm: '2.35rem', md: '2.625rem' },
-                  fontWeight: 600,
-                  lineHeight: 1.02,
-                  maxWidth: '100%',
-                }}
-              >
-                Download SirBro and stay one step ahead of the match.
-              </Typography>
-
-              <Typography
-                sx={{
-                  ...copySafeSx,
-                  color: '#ddd6fe',
-                  fontSize: { xs: '1rem', md: '1.0625rem' },
-                  fontWeight: 400,
-                  lineHeight: 1.45,
-                  maxWidth: 760,
-                }}
-              >
-                Get live football insight, AI chat and match context in one fast mobile
-                experience built for every game day.
-              </Typography>
-
-              <Stack direction="row" spacing={1.75} sx={{ flexWrap: 'wrap', rowGap: 1.75 }}>
-                <Button
-                  component="a"
-                  href="#download"
-                  variant="contained"
+            <Box sx={{ width: '100%', maxWidth: pageMaxWidth, mx: 'auto', px: pagePx }}>
+              <Stack spacing={2.75}>
+                <Typography
                   sx={{
-                    minWidth: 'auto',
-                    borderRadius: '999px',
-                    px: 2.25,
-                    py: 1.75,
-                    bgcolor: '#4f46e5',
-                    color: '#ffffff',
-                    fontSize: '0.875rem',
+                    ...copySafeSx,
+                    color: '#f9fafb',
+                    fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                    fontSize: { xs: '2rem', sm: '2.35rem', md: '2.625rem' },
                     fontWeight: 600,
-                    lineHeight: 1,
-                    boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
-                    '&:hover': {
-                      bgcolor: '#4f46e5',
-                      boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
-                    },
+                    lineHeight: 1.02,
+                    maxWidth: '100%',
                   }}
                 >
-                  {content.finalCta.primaryCtaLabel}
-                </Button>
-                <Button
-                  component={Link}
-                  href={localize(PUBLIC_HUB_PATHS.insights)}
-                  variant="outlined"
+                  Download SirBro and stay one step ahead of the match.
+                </Typography>
+
+                <Typography
                   sx={{
-                    minWidth: 'auto',
-                    borderRadius: '999px',
-                    px: 2.25,
-                    py: 1.75,
-                    color: '#f9fafb',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    lineHeight: 1,
-                    borderColor: '#8b5cf6',
-                    bgcolor: '#221735',
-                    '&:hover': {
+                    ...copySafeSx,
+                    color: '#ddd6fe',
+                    fontSize: { xs: '1rem', md: '1.0625rem' },
+                    fontWeight: 400,
+                    lineHeight: 1.45,
+                    maxWidth: 760,
+                  }}
+                >
+                  Get live football insight, AI chat and match context in one fast mobile
+                  experience built for every game day.
+                </Typography>
+
+                <Stack direction="row" spacing={1.75} sx={{ flexWrap: 'wrap', rowGap: 1.75 }}>
+                  <Button
+                    component="a"
+                    href="#download"
+                    variant="contained"
+                    sx={{
+                      minWidth: 'auto',
+                      borderRadius: '999px',
+                      px: 2.25,
+                      py: 1.75,
+                      bgcolor: '#4f46e5',
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
+                      '&:hover': {
+                        bgcolor: '#4f46e5',
+                        boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
+                      },
+                    }}
+                  >
+                    {content.finalCta.primaryCtaLabel}
+                  </Button>
+                  <Button
+                    component={Link}
+                    href={localize(PUBLIC_HUB_PATHS.insights)}
+                    variant="outlined"
+                    sx={{
+                      minWidth: 'auto',
+                      borderRadius: '999px',
+                      px: 2.25,
+                      py: 1.75,
+                      color: '#f9fafb',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      lineHeight: 1,
                       borderColor: '#8b5cf6',
                       bgcolor: '#221735',
-                    },
-                  }}
-                >
-                  {content.finalCta.secondaryCtaLabel}
-                </Button>
+                      '&:hover': {
+                        borderColor: '#8b5cf6',
+                        bgcolor: '#221735',
+                      },
+                    }}
+                  >
+                    {content.finalCta.secondaryCtaLabel}
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
+            </Box>
           </Box>
         </Box>
 
@@ -1931,7 +2039,6 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
           component="footer"
           sx={{
             ...motionRevealSx(420),
-            px: pagePx,
             pt: { xs: 5, md: 4.5 },
             pb: { xs: 6, md: 8 },
             borderTop: '1px solid',
@@ -1941,6 +2048,10 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
         >
           <Box
             sx={{
+              width: '100%',
+              maxWidth: pageMaxWidth,
+              mx: 'auto',
+              px: pagePx,
               display: 'flex',
               flexDirection: { xs: 'column', lg: 'row' },
               alignItems: { xs: 'stretch', lg: 'flex-start' },
