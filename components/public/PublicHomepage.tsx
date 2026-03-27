@@ -713,6 +713,10 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
             '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
             '50%': { transform: 'translate3d(0, -12px, 0)' },
           },
+          '@keyframes sbFloatATilted': {
+            '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(8deg)' },
+            '50%': { transform: 'translate3d(0, -12px, 0) rotate(8deg)' },
+          },
           '@keyframes sbFloatB': {
             '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(-4deg)' },
             '50%': { transform: 'translate3d(0, 10px, 0) rotate(-2deg)' },
@@ -741,6 +745,9 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
           },
           '.sb-float-a': {
             animation: 'sbFloatA 7s ease-in-out infinite',
+          },
+          '.sb-float-a-tilted': {
+            animation: 'sbFloatATilted 7s ease-in-out infinite',
           },
           '.sb-float-b': {
             animation: 'sbFloatB 8.5s ease-in-out infinite',
@@ -1210,7 +1217,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   </Box>
 
                   <Box
-                    className="sb-float-a"
+                    className="sb-float-a-tilted"
                     sx={{
                       ...panelSx,
                       position: 'absolute',
@@ -1222,7 +1229,6 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       color: '#111827',
                       px: 1.75,
                       py: 1.5,
-                      transform: 'rotate(8deg)',
                       boxShadow: `0 12px 28px ${alpha('#0f172a', 0.24)}`,
                     }}
                   >
@@ -1318,7 +1324,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               <SectionHeading
                 title="See the match board. Ask the analyst. Follow the game state live."
                 description="SirBro turns football noise into a real mobile product: a fast matches overview, actionable AI chat and a live timeline that keeps context visible."
-                maxWidth={920}
+                maxWidth={pageMaxWidth}
               />
 
               <Box
@@ -1867,7 +1873,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
               <SectionHeading
                 title="Quick answers about how SirBro works, what it covers and what you can do inside the app."
                 description={content.faq.description}
-                maxWidth={820}
+                maxWidth={pageMaxWidth}
               />
 
               <Stack spacing={1.5}>
