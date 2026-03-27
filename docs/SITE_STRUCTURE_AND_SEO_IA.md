@@ -111,7 +111,7 @@ Explore
 Quizzes
 About
 Locale Switcher
-Open App / Download App CTA
+Download App CTA
 ```
 
 ### Наполнение пунктов меню

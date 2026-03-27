@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Locale } from '@/lib/i18n/config';
 import { PublicHomepage } from '@/components/public/PublicHomepage';
-import { PublicPageShell } from '@/components/public/PublicPageShell';
 import { staticPublicContentRepository } from '@/modules/content/static-public-content-repository';
 import { getHomepageContent } from '@/modules/public/homepage-content';
 import { buildContentPageMetadata } from '@/modules/seo/metadata';
@@ -58,9 +57,7 @@ export default async function LandingPage({
         {JSON.stringify(structuredData)}
       </Script>
 
-      <PublicPageShell locale={lang} maxWidth="xl">
-        <PublicHomepage locale={lang} />
-      </PublicPageShell>
+      <PublicHomepage locale={lang} />
     </>
   );
 }

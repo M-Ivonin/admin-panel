@@ -1,5 +1,26 @@
 # Stage 2 Homepage Design Blueprint
 
+## Implementation Note
+
+As of `2026-03-27`, the public homepage implementation in
+`/admin-panel/components/public/PublicHomepage.tsx` follows the Pencil source
+node `Q0YlO` (`Desktop Home v3 - LanderX-inspired Motion`) as the primary
+visual reference.
+
+The live implementation uses the exported landing assets stored in:
+
+- `/admin-panel/public/assets/homepage/hero-app-shot.jpg`
+- `/admin-panel/public/assets/homepage/showcase-feed.jpg`
+- `/admin-panel/public/assets/homepage/showcase-chat.jpg`
+- `/admin-panel/public/assets/homepage/showcase-timeline.jpg`
+
+Additional motion was intentionally layered onto the Pencil reference for:
+
+- hero glow and floating card motion
+- CTA pulse emphasis
+- card hover lift
+- staggered page-load reveal
+
 ## Purpose
 
 This document is the direct build brief for the revised `Stage 2` homepage.
@@ -21,14 +42,14 @@ It is the front door to the product, with SEO support.
 
 That means:
 
-- the primary job is still `install / open app`
+- the primary job is still `download / install app`
 - the homepage should introduce content and entities without trying to fully contain them
 - deeper discovery should happen through linked hubs, not through many competing homepage sections
 
 ## Homepage Jobs In Priority Order
 
 1. explain what SirBro does in one screen
-2. drive users to `Open App`, `App Store`, and `Google Play`
+2. drive users to `Download App`, `App Store`, and `Google Play`
 3. prove that the product is credible
 4. show one clear path into insights and topic/entity exploration
 5. support SEO with strong wording and internal links
@@ -129,16 +150,17 @@ Structure:
 - Home
 - Insights
 - Explore
+- Quizzes
 - About
 - locale switcher
-- `Open App` CTA
+- `Download App` CTA
 
 Rules:
 
 - compact height
 - no extra promo row
 - CTA must remain visible and not compete with other header items
-- header CTA remains for returning users, but the hero should prioritize install/download actions
+- header CTA should reinforce install intent without competing with the hero store buttons
 
 ### 2. Hero
 
@@ -152,8 +174,6 @@ Two-column layout.
 - primary CTAs:
   - `Download for iOS`
   - `Download for Android`
-- secondary CTA:
-  - `Open App`
 - one concise proof line or proof card
 
 #### Right column
@@ -172,17 +192,17 @@ Hero goal:
 Suggested hero copy variants:
 
 - EN:
-  - `The Smartest Sports Analyst in Your Pocket. Real-time signals. Pro-level insights. No noise.`
+  - `The Smartest Football Analyst in Your Pocket. Download SirBro for real-time signals, injury impact, lineup shifts and match-winning insight.`
 - ES:
-  - `El analista deportivo más inteligente en tu bolsillo. Senales en tiempo real. Analisis profesional. Sin distracciones.`
+  - `El analista de futbol mas inteligente en tu bolsillo. Descarga SirBro para recibir senales en tiempo real, impacto de lesiones, cambios de alineacion e insights que importan.`
 - PT:
-  - `O analista esportivo mais inteligente no seu bolso. Sinais em tempo real. Insights profissionais. Sem ruido.`
+  - `O analista de futebol mais inteligente no seu bolso. Baixe o SirBro para sinais em tempo real, impacto de lesoes, mudancas na escalação e insights que ajudam a decidir melhor.`
 
 Hero CTA rules:
 
 - show store-first conversion buttons in the hero
 - keep App Store and Google Play visually prominent
-- `Open App` should remain available, but secondary to install/download
+- do not introduce a competing secondary CTA on the public homepage
 - use `#4F46E5` for the main download actions on the dark `#121212` / `#1F2937` surface system
 
 ### 3. Product Showcase
@@ -467,7 +487,7 @@ The revised pass should contain:
 The design pass is valid if:
 
 - the homepage is clearly simpler than the first concept
-- `Open App` / install intent is visually dominant
+- download / install intent is visually dominant
 - the page explains SirBro in one screen
 - trust appears early without becoming a full standalone content area
 - only one discovery section carries the SEO/internal-link role

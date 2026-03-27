@@ -261,7 +261,7 @@ The app's density should guide the homepage, but not overload it.
 For the homepage specifically:
 
 - keep one dominant CTA cluster:
-  - header `Open App`
+  - header `Download App`
   - hero store/download CTAs
   - final CTA
 - keep one dominant product scene in the hero
