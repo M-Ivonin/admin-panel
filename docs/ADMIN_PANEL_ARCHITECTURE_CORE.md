@@ -5,6 +5,18 @@
 Этот документ фиксирует текущую архитектурную базу `admin-panel` после рефактора public/admin/deeplink контуров.  
 Он не описывает дизайн, composition страниц или контентную стратегию. Его задача: закрепить границы модулей и правила, по которым дальше наращивается функционал.
 
+## Current Public Status
+
+По состоянию на `2026-03-27` публичная homepage SirBro уже:
+
+- реализована в [`/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
+- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/[lang]/page.tsx)
+- синхронизирована с актуальным Pencil-источником `Q0YlO` из `/Users/serhiimytakii/Downloads/sirbro.pen`
+- задеплоена как текущая production homepage
+
+Нижеописанная архитектура не является планом для homepage "с нуля".  
+Для homepage речь теперь идет только о поддержке, polish и последующих public SEO/content слоях.
+
 Над этим core-слоем теперь зафиксирован отдельный information architecture layer:
 
 - [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)

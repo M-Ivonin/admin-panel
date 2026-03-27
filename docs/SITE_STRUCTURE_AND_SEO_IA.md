@@ -4,7 +4,6 @@
 
 Этот документ собирает в одну систему выводы из:
 
-- `docs/SEO_LANDING_REVIEW_AND_ROADMAP.md`
 - `docs/refactor-plan.pdf`
 - `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`
 
@@ -17,6 +16,18 @@
 - не создавала хаотичный набор страниц и thin-content маршрутов.
 
 Для `Этапа 1.5` этот документ считается primary source of truth по structure, navigation, indexation и internal linking public site.
+
+## Current Status
+
+По состоянию на `2026-03-27` homepage уже:
+
+- реализована;
+- синхронизирована с текущим Pencil-макетом `Q0YlO`;
+- задеплоена.
+
+Этот IA-документ больше не трактуется как homepage redesign brief.
+Он остается актуальным как структура для следующего расширения public SEO surface:
+trust pages, insights, entities, topics и quizzes поверх уже shipped homepage.
 
 ## Базовые ограничения и опоры из того, что уже сделано
 

@@ -15,10 +15,15 @@
 Связанные документы:
 
 - `docs/SITE_STRUCTURE_AND_SEO_IA.md`
-- `docs/SEO_LANDING_REVIEW_AND_ROADMAP.md`
 - `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`
 
 ## Текущее состояние
+
+Важно:
+
+- homepage уже реализована и задеплоена;
+- этот backlog больше не описывает homepage redesign;
+- он нужен только для оставшегося public content / SEO expansion поверх уже shipped public home.
 
 Сейчас в проекте уже есть:
 
@@ -26,23 +31,31 @@
 - базовый `PublicContentRepository`;
 - `SeoPageBase`;
 - `route-registry`, `metadata`, `schema`, `sitemap`, `robots`;
-- static repository adapter для `home` и legal pages.
+- static repository adapter для `home`, trust pages и legal pages.
 
-Сейчас реально покрыты только:
+Сейчас уже покрыты:
 
 - `home`
+- `about`
+- `methodology`
+- `editorial-policy`
+- `ai-transparency`
+- `faq`
+- `contact`
 - `privacy`
 - `terms`
 - `disclaimer`
 - `cookies`
 
-В `repository.ts` уже предусмотрены будущие page keys:
+В следующих этапах backlog фокусируется уже не на homepage и trust layer, а на:
 
-- `about`
-- `methodology`
-- `faq`
-
-Но фактической реализации для trust, insights, entities и quizzes еще нет.
+- `insights`
+- `teams`
+- `players`
+- `leagues`
+- `topics`
+- `quizzes`
+- `quiz results`
 
 ## Главный технический принцип
 
