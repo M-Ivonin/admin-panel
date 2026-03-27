@@ -13,7 +13,7 @@ import GlobalStyles from '@mui/material/GlobalStyles';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-import { alpha } from '@mui/material/styles';
+import { alpha, keyframes } from '@mui/material/styles';
 import { getClientConfig } from '@/lib/config';
 import type { Locale } from '@/lib/i18n/config';
 import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
@@ -318,6 +318,26 @@ const panelSx = {
   backdropFilter: 'blur(22px)',
   WebkitBackdropFilter: 'blur(22px)',
 };
+
+const heroTopRightFloat = keyframes`
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(8deg);
+  }
+
+  50% {
+    transform: translate3d(-4px, -16px, 0) rotate(10deg);
+  }
+`;
+
+const heroStoryFloat = keyframes`
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+`;
 
 function SeoCardVisual({ index }: { index: number }) {
   if (index === 0) {
@@ -713,10 +733,6 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
             '0%, 100%': { transform: 'translate3d(0, 0, 0)' },
             '50%': { transform: 'translate3d(0, -12px, 0)' },
           },
-          '@keyframes sbFloatATilted': {
-            '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(8deg)' },
-            '50%': { transform: 'translate3d(0, -12px, 0) rotate(8deg)' },
-          },
           '@keyframes sbFloatB': {
             '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(-4deg)' },
             '50%': { transform: 'translate3d(0, 10px, 0) rotate(-2deg)' },
@@ -745,9 +761,6 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
           },
           '.sb-float-a': {
             animation: 'sbFloatA 7s ease-in-out infinite',
-          },
-          '.sb-float-a-tilted': {
-            animation: 'sbFloatATilted 7s ease-in-out infinite',
           },
           '.sb-float-b': {
             animation: 'sbFloatB 8.5s ease-in-out infinite',
@@ -1217,7 +1230,6 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                   </Box>
 
                   <Box
-                    className="sb-float-a-tilted"
                     sx={{
                       ...panelSx,
                       position: 'absolute',
@@ -1229,6 +1241,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                       color: '#111827',
                       px: 1.75,
                       py: 1.5,
+                      animation: `${heroTopRightFloat} 7s ease-in-out infinite`,
+                      willChange: 'transform',
                       boxShadow: `0 12px 28px ${alpha('#0f172a', 0.24)}`,
                     }}
                   >
@@ -1294,6 +1308,8 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
                     px: 1.75,
                     py: 1.5,
                     zIndex: 2,
+                    animation: `${heroStoryFloat} 7.2s ease-in-out infinite`,
+                    willChange: 'transform',
                     boxShadow: `0 12px 28px ${alpha('#4c1d95', 0.28)}`,
                   }}
                 >
