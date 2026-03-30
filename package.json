@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern .next --ignore-pattern node_modules",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --ignore-pattern .next --ignore-pattern node_modules --ignore-pattern 'Tactical Identity Plot/**'",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify:stage": "npm run lint && npm test -- --runInBand && rm -rf .next && npm run build && npm run typecheck",
     "smoke:routes": "node ./scripts/smoke-routes.mjs",

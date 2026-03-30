@@ -1,0 +1,553 @@
+# SEO Review Of The Plan And Practical Roadmap
+
+## Что видно по текущей лендинговой странице
+
+Ниже выводы по текущей реализации `admin-panel/app/[lang]/page.tsx`.
+
+### 1. Главная сейчас слишком короткая для SEO
+
+Сейчас страница в основном состоит из:
+
+- hero;
+- короткого subtitle;
+- кнопок App Store;
+- футера;
+- встроенного чата.
+
+Для SEO этого мало. Страница почти не раскрывает тему, не покрывает интенты и слабо помогает внутренней перелинковке.
+
+### 2. Заголовок и текст больше брендовые, чем поисковые
+
+Текущий текст хорошо работает как рекламный слоган, но слабее работает как SEO-контент.
+
+Он почти не отвечает на типовые пользовательские запросы вроде:
+
+- что делает SirBro;
+- для кого он;
+- чем отличается;
+- какие именно футбольные инсайты он дает;
+- почему стоит доверять сервису.
+
+### 3. На главной нет SEO-блоков, которые уже предлагает сам план
+
+Сейчас отсутствуют:
+
+- `Latest Insights`;
+- `Trending Quizzes`;
+- FAQ;
+- блок доверия;
+- preview About page;
+- объяснение продукта;
+- блоки под команды, игроков, лиги или темы.
+
+То есть даже базовый "SEO hub" на главной пока не собран.
+
+### 4. Page-level metadata пока слишком общие
+
+В проекте есть общие metadata на уровне layout, но для SEO этого мало.
+
+Нужны отдельные metadata для:
+
+- главной страницы;
+- каждой локали;
+- insights;
+- quizzes;
+- about;
+- legal pages там, где это уместно.
+
+### 5. Есть проблема с языком документа
+
+Сейчас в корневом layout HTML выставлен как `lang="en"`.
+
+Для испанской и португальской версий это неверно.
+
+Это не катастрофа, но это реальная техническая SEO-недоработка.
+
+### 6. Sitemap заявлен, но по коду его нет
+
+В `robots.txt` есть ссылка на `sitemap.xml`, но отдельного sitemap-файла в `app` не найдено.
+
+Это нужно исправить в первую очередь.
+
+### 7. Structured data сейчас не реализованы
+
+По текущему коду не видно:
+
+- `Organization`;
+- `WebSite`;
+- `AboutPage`;
+- `Article`;
+- `BreadcrumbList`;
+- `FAQPage`;
+- `Quiz`.
+
+Для плана, который делает ставку на контентный SEO-рост, это заметный пробел.
+
+### 8. На главной есть следы тестовой конфигурации
+
+Во встроенном чате сейчас видны тестовые значения вроде:
+
+- `TEST_PARTNER`;
+- `localhost` в `faq-link`;
+- тестовые affiliate links.
+
+Это плохо не только с продуктовой стороны, но и с точки зрения качества production-страницы.
+
+---
+
+## Что обязательно нужно добавить в SEO-план
+
+### 1. Нужна четкая SEO-архитектура сайта
+
+Надо заранее определить основные типы страниц:
+
+- Home;
+- About;
+- Insights hub;
+- Insight article;
+- Quiz hub;
+- Quiz result pages;
+- Team pages;
+- Player pages;
+- League pages;
+- FAQ;
+- Methodology / Editorial Policy / Transparency pages.
+
+Если этого не сделать сразу, дальше структура будет расти хаотично.
+
+### 2. Нужна стратегия индексации
+
+Для каждого типа страницы надо решить:
+
+- index / noindex;
+- canonical;
+- допустимы ли pagination pages;
+- допустимы ли filter pages;
+- когда страница считается слишком слабой для индексации.
+
+Это особенно важно, если часть контента будет генерироваться автоматически.
+
+### 3. Нужен quality gate для AI или programmatic content
+
+Нельзя публиковать в индекс все подряд.
+
+Для каждой SEO-страницы должны быть минимальные требования:
+
+- уникальный заголовок;
+- уникальный summary;
+- фактический источник;
+- дата обновления;
+- собственный аналитический блок;
+- полезные внутренние ссылки;
+- отсутствие пустых разделов.
+
+Если страница этого не проходит, ее лучше не индексировать.
+
+### 4. Нужна editorial system
+
+Для insights нужен не только шаблон статьи, но и рабочий процесс:
+
+- кто создает страницу;
+- кто проверяет фактологию;
+- как часто она обновляется;
+- что происходит, если новость изменилась;
+- как помечается устаревший материал.
+
+Для спортивного SEO это очень важно.
+
+### 5. Нужна система internal linking
+
+Внутренняя перелинковка должна быть не случайной, а продуманной.
+
+Пример:
+
+- Home -> latest insights;
+- Home -> category hubs;
+- Team page -> related players;
+- Player page -> latest injury / outlook articles;
+- Article -> related article / related team / related player / app CTA.
+
+Это даст и лучший crawl path, и более сильную семантическую связность.
+
+### 6. Нужен evergreen-контент
+
+Помимо новостных материалов нужны страницы, которые сохраняют ценность дольше:
+
+- страницы игроков;
+- страницы команд;
+- объясняющие материалы;
+- comparison pages;
+- glossary / educational pages;
+- FAQ по продукту и по типам анализа.
+
+Это помогает стабилизировать органический трафик.
+
+### 7. Нужен trust stack
+
+Отдельно стоит добавить:
+
+- About page;
+- Editorial Policy;
+- Methodology;
+- AI Transparency;
+- Contact page;
+- Responsible Gambling / Entertainment disclaimer;
+- organization details;
+- author / reviewer entities.
+
+Это особенно важно для тематики, связанной с прогнозами и ставками.
+
+### 8. Нужна search measurement system
+
+Минимальный набор:
+
+- Google Search Console;
+- Bing Webmaster Tools;
+- отслеживание индексации;
+- отслеживание CTR;
+- отслеживание queries по локалям;
+- отчеты по шаблонам страниц;
+- список страниц, которые не попали в индекс;
+- список страниц с падением трафика.
+
+---
+
+## Практический roadmap для этого проекта
+
+Ниже порядок шагов, который выглядит самым разумным именно для текущего состояния проекта.
+
+## Этап 1. Починить базовую техническую основу
+
+Это надо сделать раньше любых новых SEO-страниц.
+
+### Что сделать
+
+- сделать server-side redirect с `/` на дефолтную локаль;
+- исправить `html lang` под текущую локаль страницы;
+- добавить нормальный `sitemap.xml`;
+- проверить `canonical` и `alternates.languages` для каждой локализованной страницы;
+- добавить page-level metadata для home page;
+- убрать тестовые значения из чата на главной странице;
+- проверить robots rules;
+- убедиться, что все индексируемые страницы отдают корректный status code.
+
+### Почему это важно
+
+Иначе любой новый SEO-контент будет строиться на не до конца чистой технической базе.
+
+## Этап 1.5. Зафиксировать структуру сайта
+
+Перед расширением главной и запуском новых SEO-разделов нужно утвердить целевую information architecture сайта.
+
+### Что сделать
+
+- зафиксировать canonical map всех public page types;
+- зафиксировать site map как единый source of truth для public site;
+- определить обязательные разделы верхнего меню и footer navigation;
+- определить основной SEO-слой сайта: `Home`, `Trust`, `Insights`, `Entities`, `Quizzes`;
+- описать, какие страницы являются hub pages, а какие detail pages;
+- определить, какие страницы идут в `index`, а какие по умолчанию должны быть `noindex`;
+- зафиксировать правила breadcrumbs и внутренней перелинковки;
+- согласовать URL-структуру для `insights`, `teams`, `players`, `leagues`, `topics`, `quizzes`;
+- закрепить trust stack: `About`, `Methodology`, `Editorial Policy`, `AI Transparency`, `FAQ`, `Contact`;
+- увязать структуру сайта с текущей архитектурой `admin-panel`, чтобы новые page types добавлялись через content contracts, metadata builders и sitemap registry.
+
+### Что должно получиться
+
+- понятная карта сайта без хаотичного роста новых страниц;
+- готовая схема навигации для desktop и mobile;
+- зафиксированный trust stack;
+- зафиксированная URL map;
+- зафиксированная indexation model;
+- основа для следующих этапов без конфликта с уже сделанным routing и SEO core;
+- предсказуемая модель internal linking для будущих `insights` и `entity pages`.
+
+### Артефакт этапа
+
+В качестве отдельных source of truth используются документы:
+
+- `docs/SITE_STRUCTURE_AND_SEO_IA.md`
+- `docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`
+
+### Gate этапа
+
+`Этап 2` не начинается, пока:
+
+- не утвержден IA source of truth;
+- не зафиксированы trust stack, URL map и indexation model;
+- не синхронизированы roadmap, IA и architecture docs;
+- не оформлен technical handoff по route types и content contracts.
+
+## Этап 1.6 создать дизайн сайта (UI)
+
+
+## Этап 2. Переделать главную в CTA-first home page с SEO-support
+
+Этот этап стартует только после полного закрытия `Этапа 1.5`.
+
+Сейчас главная слишком короткая, но первая попытка расширения легко уводит ее в перегруженный mini-hub.
+
+Главная не должна пытаться показать весь сайт сразу.
+
+Ее главная задача:
+
+- быстро объяснить продукт;
+- удержать фокус на установке приложения и store CTA;
+- поддержать SEO через сильные формулировки и внутренние ссылки;
+- рано показать доверие;
+- отправить пользователя в более глубокие разделы, а не заменять их.
+
+### Что добавить на главную
+
+- сильный hero;
+- ссылки на сторы (App Store и Google Play);
+- hero-copy, которая сразу продает SirBro как sports analyst in your pocket;
+- короткое объяснение, что делает SirBro;
+- объединенный блок `How it works + Trust`;
+- один discovery-блок вместо нескольких SEO-rail секций:
+  - featured insight;
+  - FC26-style teams/players module with crawlable entity links;
+  - compact topic links;
+  - secondary featured quiz card;
+- FAQ;
+- заметные внутренние ссылки на ключевые SEO-разделы.
+
+### Что убрать с главной как отдельные секции
+
+- отдельный блок `Trending Topics`;
+- отдельный блок `Top Teams / Players / Leagues`;
+- отдельный preview `About / Methodology`;
+- повторяющиеся trust-блоки в нескольких местах страницы.
+
+Все это можно оставить в IA сайта, но на главной оно должно жить в более компактном виде:
+
+- `Top Teams / Players / Leagues` -> один FC26-style slider/module;
+- quiz -> вторичная карточка внутри discovery-zone, а не отдельная большая секция;
+- about/methodology preview -> в trust layer или на отдельных страницах.
+
+### Что важно по стилю
+
+Текст должен остаться понятным и живым, но в нем должны появиться реальные поисковые сигналы:
+
+- football insights;
+- proprietary sports AI model;
+- match volatility;
+- player form;
+- injury impact;
+- tactical analysis;
+- match outlook;
+- lineup changes;
+- stats breakdowns.
+
+### Что важно по конверсии
+
+Hero должен вести прежде всего к установке приложения.
+
+Рекомендуемый приоритет CTA:
+
+1. `Download for iOS`
+2. `Download for Android`
+3. `Download App` как единый fallback CTA вне store badges
+
+### What to codify in the trust layer
+
+Нужен более конкретный explanation-block, а не общий marketing trust copy.
+
+Базовая формулировка:
+
+`SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.`
+
+### What to codify in the SEO engine
+
+Для homepage важен один сильный crawlable entity-module:
+
+- league tabs;
+- standings / top goalscorers / assists toggle;
+- hard-coded links на team и player pages;
+- `SirBro Outlook` indicator.
+
+Это важнее, чем несколько разрозненных homepage-секций.
+
+### FAQ capture
+
+FAQ нужно проектировать не только как UX-блок, но и как search-capture слой.
+
+Обязательно:
+
+- accordion UI;
+- `FAQPage` JSON-LD;
+- вопросы про:
+  - AI match volatility;
+  - covered leagues;
+  - Spanish and Portuguese chat;
+  - Fan Arena competition with friends.
+
+### Правило приоритета
+
+Если любой новый блок начинает конкурировать с hero CTA или делает страницу визуально "о нескольких главных вещах сразу", его нужно:
+
+- либо объединять с соседним блоком;
+- либо убирать с home page;
+- либо переносить глубже в структуру сайта.
+
+## Этап 3. Запустить content model для insights
+
+Перед созданием раздела `Insights` нужно описать сущность статьи.
+
+### Что должно быть у каждой insight page
+
+- slug;
+- locale;
+- title;
+- meta title;
+- meta description;
+- canonical;
+- source URL;
+- source name;
+- publishedAt;
+- updatedAt;
+- author;
+- reviewer;
+- player/team/league entities;
+- factual summary;
+- why it matters;
+- SirBro insight;
+- long-term outlook;
+- related links.
+
+### Что важно
+
+Нельзя делать статьи только из одного AI-summary. Нужен явный слой собственной полезной интерпретации.
+
+## Этап 4. Собрать шаблон insight article
+
+Шаблон должен быть единообразным и удобным и для пользователя, и для поисковика.
+
+### Рекомендуемая структура
+
+1. H1
+2. Короткий factual summary
+3. Ссылка на первоисточник
+4. Why it matters
+5. SirBro insight
+6. Long-term outlook
+7. Related insights
+8. CTA в приложение
+
+### Дополнительно
+
+Нужно добавить:
+
+- `Article` или `NewsArticle` schema;
+- breadcrumbs;
+- блок автора;
+- дату публикации и обновления;
+- ссылки на связанные сущности.
+
+## Этап 5. Ввести quality gate перед индексацией
+
+Нужно формально определить, какие страницы можно пускать в индекс.
+
+### Пример минимальных требований
+
+- у страницы есть уникальный title и description;
+- есть как минимум один внешний источник;
+- есть хотя бы один блок собственного анализа;
+- есть внутренние ссылки;
+- нет пустых секций;
+- страница не выглядит как шаблонная болванка.
+
+Если это не выполнено, страницу лучше оставить вне индекса.
+
+## Этап 6. Добавить trust pages
+
+План правильно говорит про `About`, но этого недостаточно.
+
+### Какие страницы нужны
+
+- About;
+- Editorial Policy;
+- Methodology;
+- AI Transparency;
+- Contact;
+- Responsible Gambling / Disclaimer;
+- Privacy / Terms / Cookies уже есть, но их можно лучше связать с основным сайтом.
+
+### Что это даст
+
+- больше доверия;
+- понятнее бренд;
+- лучше сигнал для YMYL-подобной тематики;
+- выше качество сайта в целом.
+
+## Этап 7. Осторожно подключить quizzes
+
+Квизы можно делать, но не как первый SEO-приоритет.
+
+### Как лучше
+
+- сначала поднять home + insights + trust pages;
+- потом запускать quiz hub;
+- индексировать только действительно содержательные страницы;
+- не плодить сотни слабых result pages;
+- делать хорошие social cards и metadata для шаринга.
+
+## Этап 8. Добавить evergreen entity pages
+
+Это очень важный слой, которого нет в исходном плане.
+
+### Какие страницы можно сделать
+
+- player pages;
+- team pages;
+- league pages;
+- topic hubs;
+- educational pages.
+
+### Почему это важно
+
+Они могут стабильно собирать спрос даже тогда, когда новостной поток проседает.
+
+## Этап 9. Настроить measurement и контроль
+
+Без этого SEO превратится в работу вслепую.
+
+### Минимальный набор
+
+- Google Search Console;
+- Bing Webmaster Tools;
+- sitemap submission;
+- index coverage monitoring;
+- CTR и position tracking;
+- разрез по локалям;
+- список страниц с падением трафика;
+- список страниц, которые не индексируются.
+
+---
+
+## Приоритеты по очередности
+
+Если совсем коротко, порядок должен быть таким:
+
+1. Техническая база.
+2. Главная как SEO hub.
+3. Trust pages.
+4. Insights architecture.
+5. Insight templates + schema.
+6. Quality gate.
+7. Evergreen entity pages.
+8. Quizzes как дополнительный слой.
+9. Measurement и постоянная оптимизация.
+
+---
+
+## Что стоит делать прямо сейчас
+
+Самые полезные ближайшие шаги для этого репозитория:
+
+1. Исправить технические SEO-недочеты на текущем сайте.
+2. Расширить главную страницу и добавить internal-linking блоки.
+3. Сделать `About` страницу и trust stack.
+4. Добавить `sitemap.xml`.
+5. Внедрить нормальные metadata и structured data.
+6. Только после этого начинать массово запускать `insights`.

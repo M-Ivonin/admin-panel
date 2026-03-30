@@ -43,6 +43,7 @@
 - header content, main content и footer content живут внутри одного контейнера `maxWidth: 1440` + `pagePx`
 - только final CTA background intentionally full-bleed
 - даже у full-bleed CTA текст и кнопки выровнены по той же внутренней сетке
+- для quizzes и других public routes full-bleed background должен жить на уровне page shell; ограничивать нужно только inner content, не сам фон секции
 
 ## Background System
 
@@ -177,12 +178,36 @@ Additional accent use:
 - compact mobile padding:
   - `xs py`: `1.5`
   - `md py`: `2.5`
+- без отдельной rounded outer-shell панели вокруг navigation блока
+- navigation order фиксированный:
+  - `Home`
+  - `Insights`
+  - `Explore`
+  - `Quizzes`
+  - `About`
+- language switcher это compact pill c inline separators `EN | ES | PT`, а не segmented control с иконкой
+- primary CTA справа это homepage-style indigo pill `Download App`
+- этот header считается standard public navigation block для homepage, hub pages и quizzes-экранов
 
 Header content always sits inside:
 
 - `maxWidth: 1440`
 - `mx: auto`
 - `px: pagePx`
+
+## Footer Rules
+
+Public footer standard такой же, как на homepage:
+
+- верхняя граница `#1f2937`
+- фон footer bar: `#090d16`
+- та же сетка `maxWidth: 1440` + `pagePx`
+- left brand column:
+  - brandmark `32x38`
+  - typemark `96x24`
+  - support copy: `Football insights, proprietary sports AI analysis, chat and Fan Arena competition in one pocket-sized product.`
+- right side это компактные текстовые колонки без отдельной карточки/рамки
+- quizzes и другие public pages не должны использовать альтернативный footer layout
 
 ## Hero Rules
 

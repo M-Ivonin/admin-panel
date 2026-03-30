@@ -8,29 +8,36 @@ export function PublicPageShell({
   locale,
   children,
   maxWidth = 'lg',
+  fullBleedMain = false,
 }: {
   locale: Locale;
   children: React.ReactNode;
   maxWidth?: 'md' | 'lg' | 'xl';
+  fullBleedMain?: boolean;
 }) {
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#0b1020',
+        bgcolor: '#07091d',
         color: 'text.primary',
-        backgroundImage:
-          'radial-gradient(circle at top, rgba(79, 70, 229, 0.16), transparent 28%), radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.08), transparent 20%)',
+        background:
+          'linear-gradient(90deg, #0b2d45 0%, #0a1730 34%, #07091d 68%, #140c2f 100%)',
+        overflowX: 'clip',
       }}
     >
       <PublicSiteHeader locale={locale} />
-      <Container
-        maxWidth={maxWidth}
-        component="main"
-        sx={{ px: { xs: 2, sm: 3 } }}
-      >
-        {children}
-      </Container>
+      {fullBleedMain ? (
+        <Box component="main">{children}</Box>
+      ) : (
+        <Container
+          maxWidth={maxWidth}
+          component="main"
+          sx={{ px: { xs: 2, sm: 3 } }}
+        >
+          {children}
+        </Container>
+      )}
       <PublicSiteFooter locale={locale} />
     </Box>
   );

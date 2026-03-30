@@ -510,22 +510,45 @@ interface QuizResultPage extends SeoPageBase {
 ```ts
 interface PublicContentRepository {
   getHome(locale: Locale): Promise<SeoPageBase | null>;
-  getPage(pageKey: PublicContentPageKey, locale: Locale): Promise<TrustPage | SeoPageBase | null>;
+  getPage(
+    pageKey: PublicContentPageKey,
+    locale: Locale
+  ): Promise<TrustPage | SeoPageBase | null>;
 
   getInsightHub(locale: Locale): Promise<InsightHubPage | null>;
   getInsight(locale: Locale, slug: string): Promise<InsightPage | null>;
-  listInsights(locale: Locale, pagination?: PublicContentListParams): Promise<InsightListItem[]>;
+  listInsights(
+    locale: Locale,
+    pagination?: PublicContentListParams
+  ): Promise<InsightListItem[]>;
 
   getEntityHub(kind: EntityKind, locale: Locale): Promise<EntityHubPage | null>;
-  getEntity(kind: EntityKind, locale: Locale, slug: string): Promise<EntityPage | null>;
-  listEntities(kind: EntityKind, locale: Locale, pagination?: PublicContentListParams): Promise<EntityListItem[]>;
+  getEntity(
+    kind: EntityKind,
+    locale: Locale,
+    slug: string
+  ): Promise<EntityPage | null>;
+  listEntities(
+    kind: EntityKind,
+    locale: Locale,
+    pagination?: PublicContentListParams
+  ): Promise<EntityListItem[]>;
 
   getQuizHub(locale: Locale): Promise<QuizHubPage | null>;
   getQuiz(locale: Locale, slug: string): Promise<QuizPage | null>;
-  getQuizResult(locale: Locale, quizSlug: string, resultSlug: string): Promise<QuizResultPage | null>;
-  listQuizzes(locale: Locale, pagination?: PublicContentListParams): Promise<QuizListItem[]>;
+  getQuizResult(
+    locale: Locale,
+    quizSlug: string,
+    resultSlug: string
+  ): Promise<QuizResultPage | null>;
+  listQuizzes(
+    locale: Locale,
+    pagination?: PublicContentListParams
+  ): Promise<QuizListItem[]>;
 
-  listIndexableRoutes(): Promise<Array<Pick<SeoPageBase, 'locale' | 'canonicalPath' | 'updatedAt'>>>;
+  listIndexableRoutes(): Promise<
+    Array<Pick<SeoPageBase, 'locale' | 'canonicalPath' | 'updatedAt'>>
+  >;
 }
 ```
 
@@ -596,14 +619,14 @@ modules/content/public-content-repository.ts
 Нужно добавить route-aware builders:
 
 ```ts
-buildTrustPageMetadata(page)
-buildInsightHubMetadata(page)
-buildInsightMetadata(page)
-buildEntityHubMetadata(page)
-buildEntityMetadata(page)
-buildQuizHubMetadata(page)
-buildQuizMetadata(page)
-buildQuizResultMetadata(page)
+buildTrustPageMetadata(page);
+buildInsightHubMetadata(page);
+buildInsightMetadata(page);
+buildEntityHubMetadata(page);
+buildEntityMetadata(page);
+buildQuizHubMetadata(page);
+buildQuizMetadata(page);
+buildQuizResultMetadata(page);
 ```
 
 ### Почему не хватит одного `buildContentPageMetadata`
@@ -669,11 +692,11 @@ modules/seo/copy/
 Нужно добавить route-specific helpers:
 
 ```ts
-isIndexableTrustPage(page)
-isIndexableInsight(page)
-isIndexableEntity(page)
-isIndexableQuiz(page)
-isIndexableQuizResult(page)
+isIndexableTrustPage(page);
+isIndexableInsight(page);
+isIndexableEntity(page);
+isIndexableQuiz(page);
+isIndexableQuizResult(page);
 ```
 
 ### Suggested logic
@@ -815,6 +838,14 @@ app/(public)/[lang]/
 - quiz detail;
 - quiz result noindex flow;
 - social metadata.
+
+### Implementation note
+
+Phase D shipped as a static-backed first pass on 2026-03-30.
+
+- `quizzes` now resolves through explicit repository methods and a dedicated `static-quiz-repository.ts` adapter;
+- quiz detail routes are indexable through repository-driven sitemap entries;
+- quiz result routes stay `noindex` and require a deterministic score payload in the URL.
 
 ## Minimal file-level backlog
 

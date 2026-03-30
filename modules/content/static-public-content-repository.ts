@@ -1,5 +1,4 @@
-import type { Locale } from '@/lib/i18n/config';
-import { buildLocalizedPath, getSeoRouteRegistry } from '@/modules/seo/route-registry';
+import { i18n, type Locale } from '@/lib/i18n/config';
 import { getPublicPageSeoCopy } from '@/modules/seo/public-page-copy';
 import {
   IMPLEMENTED_PUBLIC_PAGE_KEYS,
@@ -7,6 +6,11 @@ import {
   PUBLIC_PAGE_PATHS,
 } from '@/modules/content/public-pages';
 import { isIndexableContent } from '@/modules/content/policy';
+import {
+  HOME_LABEL,
+  buildLocalizedContentPath,
+} from '@/modules/content/locale-labels';
+import { staticQuizRepository } from '@/modules/content/static-quiz-repository';
 import type {
   PublicContentListParams,
   PublicContentPageKey,
@@ -15,13 +19,10 @@ import type {
 } from '@/modules/content/repository';
 import type { BreadcrumbItem, SeoPageBase } from '@/modules/content/types';
 
-const HOME_LABEL: Record<Locale, string> = {
-  en: 'Home',
-  es: 'Inicio',
-  pt: 'Início',
-};
-
-const STATIC_PAGE_INDEXABILITY: Record<ImplementedPublicPageKey, SeoPageBase['indexability']> = {
+const STATIC_PAGE_INDEXABILITY: Record<
+  ImplementedPublicPageKey,
+  SeoPageBase['indexability']
+> = {
   home: 'index',
   privacy: 'index',
   terms: 'index',
@@ -35,21 +36,46 @@ const STATIC_PAGE_INDEXABILITY: Record<ImplementedPublicPageKey, SeoPageBase['in
   contact: 'noindex',
 };
 
-function buildBreadcrumbs(pageKey: ImplementedPublicPageKey, locale: Locale): BreadcrumbItem[] {
+/**
+ * Builds breadcrumbs for one implemented static public page.
+ */
+function buildBreadcrumbs(
+  pageKey: ImplementedPublicPageKey,
+  locale: Locale
+): BreadcrumbItem[] {
   if (pageKey === 'home') {
-    return [{ label: HOME_LABEL[locale], href: buildLocalizedPath(locale, '') }];
+    return [
+      {
+        label: HOME_LABEL[locale],
+        href: buildLocalizedContentPath(locale, ''),
+      },
+    ];
   }
 
   const seoCopy = getPublicPageSeoCopy(pageKey, locale);
 
   return [
-    { label: HOME_LABEL[locale], href: buildLocalizedPath(locale, '') },
-    { label: seoCopy.title, href: buildLocalizedPath(locale, PUBLIC_PAGE_PATHS[pageKey]) },
+    {
+      label: HOME_LABEL[locale],
+      href: buildLocalizedContentPath(locale, ''),
+    },
+    {
+      label: seoCopy.title,
+      href: buildLocalizedContentPath(locale, PUBLIC_PAGE_PATHS[pageKey]),
+    },
   ];
 }
 
-function buildPageEntity(pageKey: PublicContentPageKey, locale: Locale): SeoPageBase | null {
-  if (!IMPLEMENTED_PUBLIC_PAGE_KEYS.includes(pageKey as ImplementedPublicPageKey)) {
+/**
+ * Maps one static page key into a localized SEO page DTO.
+ */
+function buildPageEntity(
+  pageKey: PublicContentPageKey,
+  locale: Locale
+): SeoPageBase | null {
+  if (
+    !IMPLEMENTED_PUBLIC_PAGE_KEYS.includes(pageKey as ImplementedPublicPageKey)
+  ) {
     return null;
   }
 
@@ -67,11 +93,14 @@ function buildPageEntity(pageKey: PublicContentPageKey, locale: Locale): SeoPage
     title: seoCopy.title,
     metaTitle: seoCopy.title,
     metaDescription: seoCopy.description,
-    canonicalPath: buildLocalizedPath(locale, path),
+    canonicalPath: buildLocalizedContentPath(locale, path),
     breadcrumbs: buildBreadcrumbs(implementedPageKey, locale),
   };
 }
 
+/**
+ * Resolves one implemented public page key from a route slug.
+ */
 function resolveImplementedPageBySlug(slug: string) {
   return IMPLEMENTED_PUBLIC_PAGE_KEYS.find((pageKey) => {
     const path = PUBLIC_PAGE_PATHS[pageKey];
@@ -84,14 +113,17 @@ function resolveImplementedPageBySlug(slug: string) {
 }
 
 export const staticPublicContentRepository: PublicContentRepository = {
+  /** Returns the localized public homepage entity. */
   async getHome(locale: Locale) {
     return buildPageEntity('home', locale);
   },
 
+  /** Returns one localized static public page entity. */
   async getPage(pageKey: PublicContentPageKey, locale: Locale) {
     return buildPageEntity(pageKey, locale);
   },
 
+  /** Resolves legacy scaffold routes through the static page map only. */
   async getByRoute(type: PublicContentRouteType, locale: Locale, slug: string) {
     if (type !== 'page') {
       return null;
@@ -101,6 +133,7 @@ export const staticPublicContentRepository: PublicContentRepository = {
     return pageKey ? buildPageEntity(pageKey, locale) : null;
   },
 
+  /** Lists legacy scaffold entities for the page route type only. */
   async listByType(
     type: PublicContentRouteType,
     locale: Locale,
@@ -110,8 +143,9 @@ export const staticPublicContentRepository: PublicContentRepository = {
       return [];
     }
 
-    const pages = IMPLEMENTED_PUBLIC_PAGE_KEYS.map((pageKey) => buildPageEntity(pageKey, locale))
-      .filter((page): page is SeoPageBase => page !== null);
+    const pages = IMPLEMENTED_PUBLIC_PAGE_KEYS.map((pageKey) =>
+      buildPageEntity(pageKey, locale)
+    ).filter((page): page is SeoPageBase => page !== null);
 
     if (!pagination?.limit) {
       return pages;
@@ -122,18 +156,49 @@ export const staticPublicContentRepository: PublicContentRepository = {
     return pages.slice(start, start + pagination.limit);
   },
 
+  /** Returns the localized quiz hub entity. */
+  async getQuizHub(locale: Locale) {
+    return staticQuizRepository.getQuizHub(locale);
+  },
+
+  /** Returns one localized quiz detail entity. */
+  async getQuiz(locale: Locale, slug: string) {
+    return staticQuizRepository.getQuiz(locale, slug);
+  },
+
+  /** Returns one localized quiz result entity. */
+  async getQuizResult(locale: Locale, quizSlug: string, resultSlug: string) {
+    return staticQuizRepository.getQuizResult(locale, quizSlug, resultSlug);
+  },
+
+  /** Lists localized quiz hub cards. */
+  async listQuizzes(locale: Locale, pagination?: PublicContentListParams) {
+    return staticQuizRepository.listQuizzes(locale, pagination);
+  },
+
+  /** Lists the full indexable route set exposed by the static repository composition root. */
   async listIndexableRoutes() {
     const now = new Date().toISOString();
 
-    return getSeoRouteRegistry()
-      .flatMap((entry) =>
-        ['en', 'es', 'pt'].map((locale) => buildPageEntity(entry.key, locale as Locale))
+    const staticRoutes = IMPLEMENTED_PUBLIC_PAGE_KEYS.flatMap((pageKey) =>
+      i18n.locales.map((locale) => buildPageEntity(pageKey, locale))
+    )
+      .filter(
+        (page): page is SeoPageBase => page !== null && isIndexableContent(page)
       )
-      .filter((page): page is SeoPageBase => page !== null && isIndexableContent(page))
       .map((page) => ({
         locale: page.locale,
         canonicalPath: page.canonicalPath,
         updatedAt: page.updatedAt ?? now,
       }));
+
+    const quizRoutes = (await staticQuizRepository.listIndexableRoutes()).map(
+      (route) => ({
+        ...route,
+        updatedAt: route.updatedAt ?? now,
+      })
+    );
+
+    return [...staticRoutes, ...quizRoutes];
   },
 };

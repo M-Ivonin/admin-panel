@@ -40,6 +40,11 @@ const labels = {
     es: 'Sobre',
     pt: 'Sobre',
   },
+  aboutSirBro: {
+    en: 'About SirBro',
+    es: 'Sobre SirBro',
+    pt: 'Sobre o SirBro',
+  },
   teams: {
     en: 'Teams',
     es: 'Equipos',
@@ -120,11 +125,6 @@ const labels = {
     es: 'Descargar App',
     pt: 'Baixar App',
   },
-  openApp: {
-    en: 'Open App',
-    es: 'Abrir App',
-    pt: 'Abrir App',
-  },
   storesSocial: {
     en: 'Stores / Social',
     es: 'Tiendas / Social',
@@ -157,8 +157,38 @@ export function getPublicHeaderNavigation(locale: Locale) {
         href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
       },
       {
+        label: localizedLabel('quizzes', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.quizzes),
+      },
+      {
         label: localizedLabel('about', locale),
         href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      },
+    ] satisfies NavigationItem[],
+    aboutMenu: [
+      {
+        label: localizedLabel('aboutSirBro', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      },
+      {
+        label: localizedLabel('methodology', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS.methodology),
+      },
+      {
+        label: localizedLabel('editorialPolicy', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS['editorial-policy']),
+      },
+      {
+        label: localizedLabel('aiTransparency', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS['ai-transparency']),
+      },
+      {
+        label: localizedLabel('faq', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
+      },
+      {
+        label: localizedLabel('contact', locale),
+        href: localizedHref(locale, PUBLIC_PAGE_PATHS.contact),
       },
     ] satisfies NavigationItem[],
     explore: [
@@ -180,7 +210,7 @@ export function getPublicHeaderNavigation(locale: Locale) {
       },
     ] satisfies NavigationItem[],
     cta: {
-      label: localizedLabel('openApp', locale),
+      label: localizedLabel('downloadApp', locale),
       href: `${homeHref(locale)}#download`,
     } satisfies NavigationItem,
   };
@@ -196,10 +226,6 @@ export function getPublicFooterSections(locale: Locale): FooterSection[] {
         { label: localizedLabel('home', locale), href: homeHref(locale) },
         {
           label: localizedLabel('downloadApp', locale),
-          href: `${homeHref(locale)}#download`,
-        },
-        {
-          label: localizedLabel('openApp', locale),
           href: `${homeHref(locale)}#download`,
         },
         {
