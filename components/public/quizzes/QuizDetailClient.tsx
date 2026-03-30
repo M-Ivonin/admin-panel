@@ -311,22 +311,16 @@ function QuizQuestions({
           justifyContent="space-between"
           spacing={2}
         >
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography sx={quizEyebrowSx}>SirBro</Typography>
-            <Box
-              sx={{ width: 1, height: 18, bgcolor: 'rgba(148,163,184,0.35)' }}
-            />
-            <Typography
-              sx={{
-                color: '#cbd5e1',
-                fontFamily: quizHeadlineFontFamily,
-                fontSize: '0.875rem',
-                fontWeight: 600,
-              }}
-            >
-              {page.questionnaireLabel}
-            </Typography>
-          </Stack>
+          <Typography
+            sx={{
+              color: '#cbd5e1',
+              fontFamily: quizHeadlineFontFamily,
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            }}
+          >
+            {page.questionnaireLabel}
+          </Typography>
 
           <Box
             sx={{
