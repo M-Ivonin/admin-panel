@@ -3,13 +3,17 @@ import { publicApiFetch } from '@/modules/http/public-client';
 /**
  * Request magic link to be sent to email
  */
-export async function requestMagicLink(email: string): Promise<void> {
+export async function requestMagicLink(
+  email: string,
+  options?: { adminPanelUrl?: string }
+): Promise<void> {
   const response = await publicApiFetch({
     path: '/auth/magic-link',
     method: 'POST',
     body: JSON.stringify({
       email: email.toLowerCase().trim(),
       locale: 'en-us',
+      adminPanelUrl: options?.adminPanelUrl,
     }),
   });
 

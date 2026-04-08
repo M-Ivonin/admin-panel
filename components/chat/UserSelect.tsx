@@ -266,6 +266,8 @@ export function UserSelect({ onUserSelect, selectedUserId }: UserSelectProps) {
                     }}
                   >
                     <ListItemText
+                      primaryTypographyProps={{ component: 'div' }}
+                      secondaryTypographyProps={{ component: 'div' }}
                       primary={
                         <Box
                           sx={{

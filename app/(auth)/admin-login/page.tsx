@@ -64,7 +64,10 @@ function AdminLoginContent() {
     setSuccess(false);
 
     try {
-      await requestMagicLink(email);
+      await requestMagicLink(email, {
+        adminPanelUrl:
+          typeof window !== 'undefined' ? window.location.origin : undefined,
+      });
       setSuccess(true);
       setEmail('');
     } catch (err) {

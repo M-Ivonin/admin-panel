@@ -205,6 +205,9 @@
 - auth/admin routes не попадают в sitemap;
 - auth/admin root layouts всегда `noindex`;
 - admin logic использует `modules/http/admin-auth-client.ts`.
+- admin magic link всегда должен возвращать пользователя в тот же admin origin,
+  откуда был отправлен запрос;
+- Vercel preview admin deployments по умолчанию используют dev API, а не prod API.
 
 ## Source Of Truth
 

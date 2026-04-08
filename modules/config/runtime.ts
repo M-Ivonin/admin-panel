@@ -6,18 +6,41 @@ import type {
   PublicAppConfig,
 } from './contracts';
 
-function resolveApiBaseUrl() {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    const isLocalhost =
-      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+const LOCAL_API_BASE_URL = 'http://localhost:3001/v1';
+const DEV_API_BASE_URL =
+  process.env.NEXT_PUBLIC_DEV_API_BASE_URL || 'https://api-dev.tipsterbro.com/v1';
+const PROD_API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'https://api.tipsterbro.com/v1';
 
-    if (isLocalhost) {
-      return 'http://localhost:3001/v1';
-    }
+function isLocalhost(hostname: string) {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1'
+  );
+}
+
+export function resolveBrowserApiBaseUrl(hostname: string) {
+  if (isLocalhost(hostname)) {
+    return LOCAL_API_BASE_URL;
   }
 
-  return process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || 'https://api.tipsterbro.com/v1';
+  // Vercel preview deployments should default to dev API instead of prod.
+  if (hostname.endsWith('.vercel.app')) {
+    return DEV_API_BASE_URL;
+  }
+
+  return PROD_API_BASE_URL;
+}
+
+function resolveApiBaseUrl() {
+  if (typeof window !== 'undefined') {
+    return resolveBrowserApiBaseUrl(window.location.hostname);
+  }
+
+  return PROD_API_BASE_URL;
 }
 
 export function getPublicAppConfig(): PublicAppConfig {
