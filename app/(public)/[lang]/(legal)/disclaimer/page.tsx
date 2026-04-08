@@ -11,6 +11,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { Locale } from '@/lib/i18n/config';
 import { getDictionary } from '@/lib/i18n/get-dictionary';
 import { DisclaimerContent } from '@/components/legal/DisclaimerContent';
+import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { buildContentPageMetadata } from '@/modules/seo/metadata';
 import { staticPublicContentRepository } from '@/modules/content/static-public-content-repository';
 
@@ -78,73 +79,7 @@ export default async function DisclaimerPage({ params }: { params: Promise<{ lan
         </Box>
       </Container>
 
-      <Box component="footer" sx={{ borderTop: 1, borderColor: 'divider', mt: 8 }}>
-        <Container maxWidth="lg">
-          <Box sx={{ py: 4 }}>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, md: 3 }, mb: 3 }}>
-              <Link href={`/${lang}/privacy`} passHref legacyBehavior>
-                <Typography 
-                  component="a" 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    textDecoration: 'none',
-                    '&:hover': { color: 'text.primary' },
-                    transition: 'color 0.2s'
-                  }}
-                >
-                  {t.footer.privacy}
-                </Typography>
-              </Link>
-              <Link href={`/${lang}/terms`} passHref legacyBehavior>
-                <Typography 
-                  component="a" 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    textDecoration: 'none',
-                    '&:hover': { color: 'text.primary' },
-                    transition: 'color 0.2s'
-                  }}
-                >
-                  {t.footer.terms}
-                </Typography>
-              </Link>
-              <Link href={`/${lang}/disclaimer`} passHref legacyBehavior>
-                <Typography 
-                  component="a" 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    textDecoration: 'none',
-                    '&:hover': { color: 'text.primary' },
-                    transition: 'color 0.2s'
-                  }}
-                >
-                  {t.footer.disclaimer}
-                </Typography>
-              </Link>
-              <Link href={`/${lang}/cookies`} passHref legacyBehavior>
-                <Typography 
-                  component="a" 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    textDecoration: 'none',
-                    '&:hover': { color: 'text.primary' },
-                    transition: 'color 0.2s'
-                  }}
-                >
-                  {t.footer.cookies}
-                </Typography>
-              </Link>
-            </Box>
-            <Typography variant="body2" color="text.secondary">
-              {t.footer.copyright}
-            </Typography>
-          </Box>
-        </Container>
-      </Box>
+      <PublicSiteFooter locale={lang} />
     </Box>
   );
 }
