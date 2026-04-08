@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { RootProviders } from '@/components/providers/RootProviders';
+import { AppDocumentShell } from '@/components/providers/AppDocumentShell';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -14,11 +14,5 @@ export default function AdminRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="en">
-      <body className="antialiased">
-        <RootProviders>{children}</RootProviders>
-      </body>
-    </html>
-  );
+  return <AppDocumentShell lang="en">{children}</AppDocumentShell>;
 }

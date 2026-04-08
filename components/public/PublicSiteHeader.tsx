@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import type { Locale } from '@/lib/i18n/config';
+import { PublicStorePickerDialog } from '@/components/public/PublicStorePickerDialog';
 import { getPublicHeaderNavigation } from '@/modules/public/site-navigation';
 import {
   publicSiteChromePanelSx,
@@ -90,9 +91,11 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
   const navigation = getPublicHeaderNavigation(locale);
   const aboutMenuRef = useRef<HTMLDivElement | null>(null);
   const [isAboutMenuOpen, setIsAboutMenuOpen] = useState(false);
+  const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
 
   useEffect(() => {
     setIsAboutMenuOpen(false);
+    setIsStorePickerOpen(false);
   }, [locale, pathname]);
 
   useEffect(() => {
@@ -285,8 +288,7 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
             <LandingLocaleSwitcher currentLocale={locale} />
           </Box>
           <Button
-            component={Link}
-            href={navigation.cta.href}
+            onClick={() => setIsStorePickerOpen(true)}
             sx={{
               minWidth: 'auto',
               borderRadius: '999px',
@@ -309,6 +311,12 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
           </Button>
         </Stack>
       </Box>
+
+      <PublicStorePickerDialog
+        locale={locale}
+        open={isStorePickerOpen}
+        onClose={() => setIsStorePickerOpen(false)}
+      />
     </Box>
   );
 }

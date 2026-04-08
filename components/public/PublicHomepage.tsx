@@ -13,7 +13,7 @@ import {
   HomepageHeroSection,
   HomepageMethodologySection,
   HomepageShowcaseSection,
-} from '@/components/public/homepage/HomepageSections';
+} from '@/components/public/homepage';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import {

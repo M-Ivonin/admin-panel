@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { Locale } from '@/lib/i18n/config';
+import { PublicStorePickerDialog } from '@/components/public/PublicStorePickerDialog';
 import { buildLocalizedPath } from '@/modules/seo/route-registry';
 import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
@@ -294,6 +297,7 @@ function resolveFooterItemHref(locale: Locale, item: string): FooterLinkTarget {
 
 export function PublicSiteFooter({ locale }: { locale: Locale }) {
   const homeHref = buildLocalizedPath(locale, PUBLIC_PAGE_PATHS.home);
+  const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
 
   return (
     <Box
@@ -390,6 +394,25 @@ export function PublicSiteFooter({ locale }: { locale: Locale }) {
                   </Typography>
                 );
 
+                if (['Download App', 'Descargar App', 'Baixar App'].includes(item)) {
+                  return (
+                    <ButtonBase
+                      key={`${section.title}-${item}`}
+                      onClick={() => setIsStorePickerOpen(true)}
+                      sx={{
+                        display: 'inline-flex',
+                        width: 'fit-content',
+                        textAlign: 'left',
+                        '&:hover span': {
+                          color: '#f8fafc',
+                        },
+                      }}
+                    >
+                      {label}
+                    </ButtonBase>
+                  );
+                }
+
                 if (target.external) {
                   return (
                     <Box
@@ -439,6 +462,12 @@ export function PublicSiteFooter({ locale }: { locale: Locale }) {
           ))}
         </Box>
       </Box>
+
+      <PublicStorePickerDialog
+        locale={locale}
+        open={isStorePickerOpen}
+        onClose={() => setIsStorePickerOpen(false)}
+      />
     </Box>
   );
 }

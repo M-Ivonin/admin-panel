@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { RootProviders } from '@/components/providers/RootProviders';
+import { AppDocumentShell } from '@/components/providers/AppDocumentShell';
 import { PublicLocaleSync } from '@/components/providers/PublicLocaleSync';
 import { i18n } from '@/lib/i18n/config';
 import '../globals.css';
@@ -16,11 +16,8 @@ export default async function PublicRootLayout({
     : i18n.defaultLocale;
 
   return (
-    <html lang={locale}>
-      <body className="antialiased">
-        <RootProviders>{children}</RootProviders>
-        <PublicLocaleSync />
-      </body>
-    </html>
+    <AppDocumentShell lang={locale} bodySuffix={<PublicLocaleSync />}>
+      {children}
+    </AppDocumentShell>
   );
 }
