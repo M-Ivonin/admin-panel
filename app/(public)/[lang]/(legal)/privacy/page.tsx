@@ -74,7 +74,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
             {t.legal.lastUpdated}
           </Typography>
           
-          <PrivacyContent />
+          <PrivacyContent locale={lang} />
         </Box>
       </Container>
 
