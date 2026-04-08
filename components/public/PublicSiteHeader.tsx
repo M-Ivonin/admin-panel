@@ -10,19 +10,13 @@ import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import type { Locale } from '@/lib/i18n/config';
 import { getPublicHeaderNavigation } from '@/modules/public/site-navigation';
-
-const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
-const pageMaxWidth = 1440;
-
-const headerPanelSx = {
-  position: 'relative',
-  overflow: 'hidden',
-  border: '1px solid',
-  borderColor: alpha('#334155', 0.92),
-  boxShadow: `0 18px 48px ${alpha('#020617', 0.42)}`,
-  backdropFilter: 'blur(22px)',
-  WebkitBackdropFilter: 'blur(22px)',
-};
+import {
+  publicSiteChromePanelSx,
+  publicSiteHeaderBrandmarkSx,
+  publicSiteHeaderInnerSx,
+  publicSiteHeaderRootSx,
+  publicSiteHeaderTypemarkSx,
+} from '@/components/public/public-site.styles';
 
 function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
   const pathname = usePathname();
@@ -37,7 +31,7 @@ function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
   return (
     <Box
       sx={{
-        ...headerPanelSx,
+        ...publicSiteChromePanelSx,
         display: 'inline-flex',
         alignItems: 'center',
         gap: 1,
@@ -147,29 +141,9 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
   return (
     <Box
       component="header"
-      sx={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        borderBottom: '1px solid',
-        borderColor: alpha('#20293a', 0.38),
-        bgcolor: alpha('#090d16', 0.4),
-        backdropFilter: 'blur(18px)',
-      }}
+      sx={publicSiteHeaderRootSx}
     >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: pageMaxWidth,
-          mx: 'auto',
-          px: pagePx,
-          py: { xs: 1.5, md: 2.5 },
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: { xs: 1.5, md: 3 },
-        }}
-      >
+      <Box sx={publicSiteHeaderInnerSx}>
         <Stack
           direction="row"
           spacing={{ xs: 1.75, md: 4.5 }}
@@ -189,21 +163,13 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
               component="img"
               src="/assets/brandmark.png"
               alt="SirBro"
-              sx={{
-                width: { xs: 28, md: 32 },
-                height: { xs: 34, md: 38 },
-                display: 'block',
-              }}
+              sx={publicSiteHeaderBrandmarkSx}
             />
             <Box
               component="img"
               src="/assets/typemark.png"
               alt="SirBro"
-              sx={{
-                width: { xs: 82, md: 96 },
-                height: { xs: 20, md: 24 },
-                display: 'block',
-              }}
+              sx={publicSiteHeaderTypemarkSx}
             />
           </Link>
 
@@ -251,7 +217,7 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
                     {isAboutMenuOpen ? (
                       <Box
                         sx={{
-                          ...headerPanelSx,
+                          ...publicSiteChromePanelSx,
                           position: 'absolute',
                           top: 'calc(100% + 16px)',
                           left: -18,

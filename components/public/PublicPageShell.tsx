@@ -3,6 +3,10 @@ import Container from '@mui/material/Container';
 import type { Locale } from '@/lib/i18n/config';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
+import {
+  publicSiteContainedMainSx,
+  publicSiteShellSx,
+} from '@/components/public/public-site.styles';
 
 export function PublicPageShell({
   locale,
@@ -16,25 +20,12 @@ export function PublicPageShell({
   fullBleedMain?: boolean;
 }) {
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        bgcolor: '#07091d',
-        color: 'text.primary',
-        background:
-          'linear-gradient(90deg, #0b2d45 0%, #0a1730 34%, #07091d 68%, #140c2f 100%)',
-        overflowX: 'clip',
-      }}
-    >
+    <Box sx={publicSiteShellSx}>
       <PublicSiteHeader locale={locale} />
       {fullBleedMain ? (
         <Box component="main">{children}</Box>
       ) : (
-        <Container
-          maxWidth={maxWidth}
-          component="main"
-          sx={{ px: { xs: 2, sm: 3 } }}
-        >
+        <Container maxWidth={maxWidth} component="main" sx={publicSiteContainedMainSx}>
           {children}
         </Container>
       )}

@@ -9,9 +9,12 @@ import { buildLocalizedPath } from '@/modules/seo/route-registry';
 import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
 import { getClientConfig } from '@/lib/config';
-
-const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
-const pageMaxWidth = 1440;
+import {
+  publicSiteFooterBrandmarkSx,
+  publicSiteFooterInnerSx,
+  publicSiteFooterRootSx,
+  publicSiteFooterTypemarkSx,
+} from '@/components/public/public-site.styles';
 
 const footerColumns = {
   en: [
@@ -295,27 +298,9 @@ export function PublicSiteFooter({ locale }: { locale: Locale }) {
   return (
     <Box
       component="footer"
-      sx={{
-        pt: { xs: 5, md: 4.5 },
-        pb: { xs: 6, md: 8 },
-        borderTop: '1px solid',
-        borderColor: '#1f2937',
-        bgcolor: '#090d16',
-      }}
+      sx={publicSiteFooterRootSx}
     >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: pageMaxWidth,
-          mx: 'auto',
-          px: pagePx,
-          display: 'flex',
-          flexDirection: { xs: 'column', lg: 'row' },
-          alignItems: { xs: 'stretch', lg: 'flex-start' },
-          justifyContent: 'space-between',
-          gap: { xs: 4, lg: 7 },
-        }}
-      >
+      <Box sx={publicSiteFooterInnerSx}>
         <Stack
           spacing={2}
           sx={{
@@ -337,13 +322,13 @@ export function PublicSiteFooter({ locale }: { locale: Locale }) {
               component="img"
               src="/assets/brandmark.png"
               alt="SirBro"
-              sx={{ width: 32, height: 38, display: 'block' }}
+              sx={publicSiteFooterBrandmarkSx}
             />
             <Box
               component="img"
               src="/assets/typemark.png"
               alt="SirBro"
-              sx={{ width: 96, height: 24, display: 'block' }}
+              sx={publicSiteFooterTypemarkSx}
             />
           </Link>
 

@@ -17,6 +17,28 @@ import { getClientConfig } from '@/lib/config';
 import type { Locale } from '@/lib/i18n/config';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
+import {
+  publicSitePageMaxWidth,
+  publicSitePagePx,
+  publicSiteSectionGapY,
+} from '@/components/public/public-site.styles';
+import {
+  copySafeSx,
+  homepageContentSx,
+  homepageProductCardDescriptionSx,
+  homepageProductCardMediaFrameSx,
+  homepageProductCardMediaSx,
+  homepageProductCardRootSx,
+  homepageProductCardTitleSx,
+  homepageRootSx,
+  homepageSectionHeadingDescriptionSx,
+  homepageSectionHeadingStackSx,
+  homepageSectionHeadingTitleSx,
+  homepageStoreBadgeImageSx,
+  homepageStoreBadgeLinkSx,
+  motionRevealSx,
+  panelSx,
+} from '@/components/public/public-homepage.styles';
 import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import {
   getHomepageContent,
@@ -25,9 +47,9 @@ import {
 import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
 import { buildLocalizedPath } from '@/modules/seo/route-registry';
 
-const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
-const sectionGapY = { xs: 4.5, md: 7 };
-const pageMaxWidth = 1440;
+const pagePx = publicSitePagePx;
+const sectionGapY = publicSiteSectionGapY;
+const pageMaxWidth = publicSitePageMaxWidth;
 
 const trustLinkLabels = {
   en: ['About SirBro', 'Methodology', 'Editorial Policy', 'AI Transparency', 'FAQ', 'Contact'],
@@ -190,28 +212,6 @@ const discoverySectionCopy = {
   },
 } as const;
 
-const copySafeSx = {
-  minWidth: 0,
-  overflowWrap: 'anywhere',
-  wordBreak: 'break-word',
-};
-
-const motionRevealSx = (delay = 0) => ({
-  opacity: 0,
-  animation: 'sbReveal 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-  animationDelay: `${delay}ms`,
-});
-
-const panelSx = {
-  position: 'relative',
-  overflow: 'hidden',
-  border: '1px solid',
-  borderColor: alpha('#334155', 0.92),
-  boxShadow: `0 18px 48px ${alpha('#020617', 0.42)}`,
-  backdropFilter: 'blur(22px)',
-  WebkitBackdropFilter: 'blur(22px)',
-};
-
 const heroTopRightFloat = keyframes`
   0%, 100% {
     transform: translate3d(0, 0, 0) rotate(8deg);
@@ -348,28 +348,13 @@ function StoreBadgeLink({
       target="_blank"
       rel="noopener noreferrer"
       className={pulse ? 'sb-pulse' : undefined}
-      sx={{
-        display: 'inline-flex',
-        width: 'auto',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 3,
-        transition: 'transform 220ms ease, filter 220ms ease',
-        '&:hover': {
-          transform: 'translateY(-2px) scale(1.02)',
-          filter: 'brightness(1.06)',
-        },
-      }}
+      sx={homepageStoreBadgeLinkSx}
     >
       <Box
         component="img"
         src={src}
         alt={alt}
-        sx={{
-          width: { xs: width - 8, sm: width },
-          height: 'auto',
-          display: 'block',
-        }}
+        sx={homepageStoreBadgeImageSx(width)}
       />
     </Box>
   );
@@ -385,27 +370,13 @@ function SectionHeading({
   maxWidth?: number;
 }) {
   return (
-    <Stack spacing={1.25} sx={{ maxWidth }}>
+    <Stack spacing={1.25} sx={homepageSectionHeadingStackSx(maxWidth)}>
       <Typography
-        sx={{
-          ...copySafeSx,
-          color: '#f8fafc',
-          fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-          fontSize: { xs: '1.8rem', sm: '2rem', md: '2.35rem' },
-          fontWeight: 600,
-          lineHeight: { xs: 1.08, md: 1.12 },
-        }}
+        sx={homepageSectionHeadingTitleSx}
       >
         {title}
       </Typography>
-      <Typography
-        sx={{
-          ...copySafeSx,
-          color: '#94a3b8',
-          fontSize: { xs: '0.95rem', md: '1rem' },
-          lineHeight: { xs: 1.55, md: 1.58 },
-        }}
-      >
+      <Typography sx={homepageSectionHeadingDescriptionSx}>
         {description}
       </Typography>
     </Stack>
@@ -422,63 +393,22 @@ function ProductCard({
   accentColor: string;
 }) {
   return (
-    <Box
-      sx={{
-        ...panelSx,
-        borderRadius: { xs: 3, md: 3.5 },
-        bgcolor: alpha('#111827', 0.58),
-        p: { xs: 2, sm: 2.5, md: 2.75 },
-        flex: { xs: '0 0 auto', md: '1 1 0' },
-        minWidth: { xs: '100%', md: 0 },
-        transition: 'transform 260ms ease, border-color 260ms ease, box-shadow 260ms ease',
-        '&:hover': {
-          transform: 'translateY(-6px)',
-          borderColor: alpha(accentColor, 0.54),
-          boxShadow: `0 26px 56px ${alpha(accentColor, 0.16)}`,
-        },
-      }}
-    >
+    <Box sx={homepageProductCardRootSx(accentColor)}>
       <Stack spacing={{ xs: 2, md: 2.25 }}>
-        <Box
-          sx={{
-            ...panelSx,
-            borderRadius: { xs: 2.5, md: 3 },
-            height: { xs: 220, sm: 260, md: 300 },
-            bgcolor: alpha('#0b1220', 0.42),
-          }}
-        >
+        <Box sx={homepageProductCardMediaFrameSx}>
           <Box
             component="img"
             src={imageSrc}
             alt={item.title}
-            sx={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
+            sx={homepageProductCardMediaSx}
           />
         </Box>
 
         <Stack spacing={1}>
-          <Typography
-            sx={{
-              ...copySafeSx,
-              color: '#f1f5f9',
-              fontSize: { xs: '1.25rem', md: '1.375rem' },
-              fontWeight: 600,
-            }}
-          >
+          <Typography sx={homepageProductCardTitleSx}>
             {item.title}
           </Typography>
-          <Typography
-            sx={{
-              ...copySafeSx,
-              color: '#94a3b8',
-              fontSize: { xs: '0.875rem', md: '0.9rem' },
-              lineHeight: 1.55,
-            }}
-          >
+          <Typography sx={homepageProductCardDescriptionSx}>
             {item.description}
           </Typography>
         </Stack>
@@ -557,29 +487,11 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
 
       <Box
         component="main"
-        sx={{
-          minHeight: '100vh',
-          background:
-            'linear-gradient(90deg, #0b2d45 0%, #0a1730 34%, #07091d 68%, #140c2f 100%)',
-          color: '#f8fafc',
-          overflowX: 'clip',
-        }}
+        sx={homepageRootSx}
       >
         <PublicSiteHeader locale={locale} />
 
-        <Box
-          sx={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: pageMaxWidth,
-            mx: 'auto',
-            px: pagePx,
-            py: { xs: 5, md: 7 },
-            display: 'flex',
-            flexDirection: 'column',
-            gap: sectionGapY,
-          }}
-        >
+        <Box sx={homepageContentSx}>
           <Box
             component="section"
             sx={{
