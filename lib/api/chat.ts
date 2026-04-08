@@ -20,6 +20,30 @@ export interface ChatResponse {
   dailyRequests: number;
 }
 
+export interface ChatUserSummary {
+  id: string;
+  email: string | null;
+  nameApp: string | null;
+  nameTg: string | null;
+  telegramUsername: string | null;
+  lastMessageAt: string | null;
+}
+
+export interface GetChatUsersParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: 'date_desc' | 'date_asc' | 'user_asc' | 'user_desc';
+}
+
+export interface PaginatedChatUsersResponse {
+  users: ChatUserSummary[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 /**
  * Get chat history for a specific user
  */
@@ -40,13 +64,20 @@ export async function getChatHistory(userId: string): Promise<ChatResponse> {
 }
 
 /**
- * Get list of all users (for admin)
+ * Get paginated list of users that have bot chat history
  */
-export async function getAllUsers(): Promise<
-  Array<{ id: string; email: string; name: string }>
-> {
+export async function getChatUsers(
+  params: GetChatUsersParams = {}
+): Promise<PaginatedChatUsersResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set('page', params.page.toString());
+  if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (params.search) searchParams.set('search', params.search);
+  if (params.sort) searchParams.set('sort', params.sort);
+
+  const queryString = searchParams.toString();
   const response = await adminAuthFetch({
-    path: '/user',
+    path: `/chat/users${queryString ? `?${queryString}` : ''}`,
     method: 'GET',
   });
 
@@ -54,33 +85,10 @@ export async function getAllUsers(): Promise<
     if (response.status === 401) {
       throw new Error('Unauthorized');
     }
-    throw new Error(`Failed to fetch users: ${response.statusText}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Get user details
- */
-export async function getUser(userId: string): Promise<{
-  id: string;
-  email: string;
-  name: string;
-}> {
-  const response = await adminAuthFetch({
-    path: `/user/${userId}`,
-    method: 'GET',
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('Unauthorized');
+    if (response.status === 403) {
+      throw new Error('Forbidden');
     }
-    if (response.status === 404) {
-      throw new Error('User not found');
-    }
-    throw new Error(`Failed to fetch user: ${response.statusText}`);
+    throw new Error(`Failed to fetch chat users: ${response.statusText}`);
   }
 
   return response.json();
