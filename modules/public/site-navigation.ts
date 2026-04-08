@@ -82,8 +82,8 @@ const labels = {
   },
   faq: {
     en: 'FAQ',
-    es: 'Preguntas Frecuentes',
-    pt: 'Perguntas Frequentes',
+    es: 'FAQ',
+    pt: 'FAQ',
   },
   contact: {
     en: 'Contact',

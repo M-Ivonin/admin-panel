@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import Accordion from '@mui/material/Accordion';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
@@ -17,6 +16,7 @@ import { alpha, keyframes } from '@mui/material/styles';
 import { getClientConfig } from '@/lib/config';
 import type { Locale } from '@/lib/i18n/config';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
+import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import {
   getHomepageContent,
@@ -28,33 +28,6 @@ import { buildLocalizedPath } from '@/modules/seo/route-registry';
 const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
 const sectionGapY = { xs: 4.5, md: 7 };
 const pageMaxWidth = 1440;
-
-const headerLabels = {
-  en: {
-    home: 'Home',
-    insights: 'Insights',
-    explore: 'Explore',
-    quizzes: 'Quizzes',
-    about: 'About',
-    download: 'Download App',
-  },
-  es: {
-    home: 'Inicio',
-    insights: 'Insights',
-    explore: 'Explorar',
-    quizzes: 'Quizzes',
-    about: 'Sobre',
-    download: 'Descargar App',
-  },
-  pt: {
-    home: 'Início',
-    insights: 'Insights',
-    explore: 'Explorar',
-    quizzes: 'Quizzes',
-    about: 'Sobre',
-    download: 'Baixar App',
-  },
-} as const;
 
 const trustLinkLabels = {
   en: ['About SirBro', 'Methodology', 'Editorial Policy', 'AI Transparency', 'FAQ', 'Contact'],
@@ -351,71 +324,6 @@ function SeoCardVisual({ index }: { index: number }) {
   );
 }
 
-function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const languages = [
-    { code: 'en' as const, label: 'EN' },
-    { code: 'es' as const, label: 'ES' },
-    { code: 'pt' as const, label: 'PT' },
-  ];
-
-  return (
-    <Box
-      sx={{
-        ...panelSx,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        borderRadius: '999px',
-        px: 1.75,
-        py: 1.1,
-        bgcolor: alpha('#0f172a', 0.56),
-      }}
-    >
-      {languages.map((lang, index) => (
-        <Box
-          key={lang.code}
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Button
-            onClick={() => {
-              const segments = pathname.split('/');
-              segments[1] = lang.code;
-              router.push(segments.join('/'));
-            }}
-            sx={{
-              minWidth: 'auto',
-              p: 0,
-              borderRadius: 0,
-              color: currentLocale === lang.code ? '#f8fafc' : '#cbd5e1',
-              fontSize: '0.75rem',
-              fontWeight: currentLocale === lang.code ? 700 : 600,
-              lineHeight: 1,
-              '&:hover': {
-                bgcolor: 'transparent',
-                color: '#ffffff',
-              },
-            }}
-          >
-            {lang.label}
-          </Button>
-          {index < languages.length - 1 ? (
-            <Typography sx={{ color: alpha('#64748b', 0.95), fontSize: '0.75rem' }}>
-              |
-            </Typography>
-          ) : null}
-        </Box>
-      ))}
-    </Box>
-  );
-}
-
 function StoreBadgeLink({
   href,
   src,
@@ -582,65 +490,17 @@ function ProductCard({
 export function PublicHomepage({ locale }: { locale: Locale }) {
   const content = getHomepageContent(locale);
   const clientConfig = getClientConfig();
-  const labels = headerLabels[locale];
   const discoveryCopy = discoverySectionCopy[locale];
 
   const [expandedFaq, setExpandedFaq] = useState<string | false>(
     content.faq.items[0]?.question ?? false
   );
-  const [isAboutMenuOpen, setIsAboutMenuOpen] = useState(false);
-  const aboutMenuRef = useRef<HTMLDivElement | null>(null);
 
   const localize = (path: string) => buildLocalizedPath(locale, path);
-  const homeHref = localize(PUBLIC_PAGE_PATHS.home);
-
-  const headerNavigation = [
-    { label: labels.home, href: homeHref },
-    { label: labels.insights, href: localize(PUBLIC_HUB_PATHS.insights) },
-    { label: labels.explore, href: localize(PUBLIC_HUB_PATHS.topics) },
-    { label: labels.quizzes, href: localize(PUBLIC_HUB_PATHS.quizzes) },
-    { label: labels.about, href: localize(PUBLIC_PAGE_PATHS.about) },
-  ];
-
-  const aboutMenuLinks = [
-    localize(PUBLIC_PAGE_PATHS.about),
-    localize(PUBLIC_PAGE_PATHS.methodology),
-    localize(PUBLIC_PAGE_PATHS['editorial-policy']),
-    localize(PUBLIC_PAGE_PATHS['ai-transparency']),
-    localize(PUBLIC_PAGE_PATHS.faq),
-    localize(PUBLIC_PAGE_PATHS.contact),
-  ];
 
   useEffect(() => {
     setExpandedFaq(content.faq.items[0]?.question ?? false);
-    setIsAboutMenuOpen(false);
   }, [content.faq.items, locale]);
-
-  useEffect(() => {
-    if (!isAboutMenuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!aboutMenuRef.current?.contains(event.target as Node)) {
-        setIsAboutMenuOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsAboutMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isAboutMenuOpen]);
 
   return (
     <>
@@ -705,192 +565,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
           overflowX: 'clip',
         }}
       >
-        <Box
-          component="header"
-          sx={{
-            ...motionRevealSx(0),
-            position: 'sticky',
-            top: 0,
-            zIndex: 30,
-            borderBottom: '1px solid',
-            borderColor: alpha('#20293a', 0.38),
-            bgcolor: alpha('#090d16', 0.4),
-            backdropFilter: 'blur(18px)',
-          }}
-        >
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: pageMaxWidth,
-              mx: 'auto',
-              px: pagePx,
-              py: { xs: 1.5, md: 2.5 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: { xs: 1.5, md: 3 },
-            }}
-          >
-            <Stack
-              direction="row"
-              spacing={{ xs: 1.75, md: 4.5 }}
-              alignItems="center"
-              sx={{ minWidth: 0 }}
-            >
-              <Link
-                href={homeHref}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  textDecoration: 'none',
-                }}
-              >
-                <Box
-                  component="img"
-                  src="/assets/brandmark.png"
-                  alt="SirBro"
-                  sx={{ width: { xs: 28, md: 32 }, height: { xs: 34, md: 38 }, display: 'block' }}
-                />
-                <Box
-                  component="img"
-                  src="/assets/typemark.png"
-                  alt="SirBro"
-                  sx={{
-                    width: { xs: 82, md: 96 },
-                    height: { xs: 20, md: 24 },
-                    display: 'block',
-                  }}
-                />
-              </Link>
-
-              <Stack
-                direction="row"
-                spacing={3.5}
-                sx={{ display: { xs: 'none', md: 'flex' } }}
-              >
-                {headerNavigation.map((item, index) => {
-                  const isAboutItem = index === headerNavigation.length - 1;
-
-                  if (isAboutItem) {
-                    return (
-                      <Box
-                        key={item.href}
-                        ref={aboutMenuRef}
-                        sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}
-                      >
-                        <Button
-                          onClick={() => setIsAboutMenuOpen((current) => !current)}
-                          aria-expanded={isAboutMenuOpen}
-                          aria-haspopup="menu"
-                          sx={{
-                            minWidth: 'auto',
-                            p: 0,
-                            color: '#f8fafc',
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            transition: 'color 180ms ease',
-                            '&:hover': {
-                              bgcolor: 'transparent',
-                              color: '#ffffff',
-                            },
-                          }}
-                        >
-                          {item.label}
-                        </Button>
-
-                        {isAboutMenuOpen ? (
-                          <Box
-                            sx={{
-                              ...panelSx,
-                              position: 'absolute',
-                              top: 'calc(100% + 16px)',
-                              left: -18,
-                              width: 224,
-                              borderRadius: 2.5,
-                              bgcolor: alpha('#0f172a', 0.72),
-                              px: 2.25,
-                              py: 1.75,
-                              zIndex: 40,
-                            }}
-                          >
-                            <Stack spacing={0.8} role="menu" aria-label={labels.about}>
-                              {trustLinkLabels[locale].map((label, menuIndex) => (
-                                <Typography
-                                  key={label}
-                                  component={Link}
-                                  href={aboutMenuLinks[menuIndex]}
-                                  onClick={() => setIsAboutMenuOpen(false)}
-                                  sx={{
-                                    color: '#e2e8f0',
-                                    fontSize: '0.875rem',
-                                    fontWeight: 500,
-                                    lineHeight: 1.75,
-                                    textDecoration: 'none',
-                                    '&:hover': { color: '#ffffff' },
-                                  }}
-                                >
-                                  {label}
-                                </Typography>
-                              ))}
-                            </Stack>
-                          </Box>
-                        ) : null}
-                      </Box>
-                    );
-                  }
-
-                  return (
-                    <Typography
-                      key={item.href}
-                      component={Link}
-                      href={item.href}
-                      sx={{
-                        color: index === 0 ? '#f8fafc' : '#94a3b8',
-                        fontSize: '0.875rem',
-                        fontWeight: index === 0 ? 600 : 500,
-                        textDecoration: 'none',
-                        transition: 'color 180ms ease',
-                        '&:hover': { color: '#ffffff' },
-                      }}
-                    >
-                      {item.label}
-                    </Typography>
-                  );
-                })}
-              </Stack>
-            </Stack>
-
-            <Stack direction="row" spacing={1.75} alignItems="center">
-              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-                <LandingLocaleSwitcher currentLocale={locale} />
-              </Box>
-              <Button
-                component="a"
-                href="#download"
-                sx={{
-                  minWidth: 'auto',
-                  borderRadius: '999px',
-                  px: { xs: 1.5, sm: 2 },
-                  py: { xs: 1.05, sm: 1.35 },
-                  bgcolor: '#4f46e5',
-                  color: '#ffffff',
-                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                  fontWeight: 600,
-                  boxShadow: 'none',
-                  '&:hover': {
-                    bgcolor: '#5b54ff',
-                    boxShadow: 'none',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                {labels.download}
-              </Button>
-            </Stack>
-          </Box>
-        </Box>
+        <PublicSiteHeader locale={locale} />
 
         <Box
           sx={{

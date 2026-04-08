@@ -15,10 +15,13 @@ const pagePx = { xs: 2.5, sm: 4, md: 6, lg: 10 };
 const pageMaxWidth = 1440;
 
 const headerPanelSx = {
+  position: 'relative',
+  overflow: 'hidden',
   border: '1px solid',
-  borderColor: alpha('#334155', 0.42),
-  boxShadow: `0 18px 48px ${alpha('#020617', 0.22)}`,
-  backdropFilter: 'blur(18px)',
+  borderColor: alpha('#334155', 0.92),
+  boxShadow: `0 18px 48px ${alpha('#020617', 0.42)}`,
+  backdropFilter: 'blur(22px)',
+  WebkitBackdropFilter: 'blur(22px)',
 };
 
 function LandingLocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
