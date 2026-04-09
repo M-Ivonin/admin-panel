@@ -23,8 +23,19 @@ describe('getPredictionEvaluationGroups', () => {
           correct: 0,
           accuracy: null,
           pending: 0,
+          notFound: 0,
           unsupported: 0,
           failed: 0,
+          safe: {
+            evaluated: 0,
+            correct: 0,
+            accuracy: null,
+          },
+          risky: {
+            evaluated: 0,
+            correct: 0,
+            accuracy: null,
+          },
         },
       }),
     });

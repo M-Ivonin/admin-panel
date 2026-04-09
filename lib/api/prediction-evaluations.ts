@@ -3,6 +3,7 @@ import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 export type PredictionEvaluationStatus =
   | 'pending'
   | 'evaluated'
+  | 'not_found'
   | 'unsupported'
   | 'failed';
 
@@ -21,6 +22,7 @@ export type PredictionEvaluationGroupSortField =
   | 'correct'
   | 'accuracy'
   | 'pending'
+  | 'not_found'
   | 'unsupported'
   | 'failed';
 
@@ -32,8 +34,17 @@ export interface PredictionEvaluationStats {
   correct: number;
   accuracy: number | null;
   pending: number;
+  notFound: number;
   unsupported: number;
   failed: number;
+  safe: PredictionEvaluationAccuracyBreakdown;
+  risky: PredictionEvaluationAccuracyBreakdown;
+}
+
+export interface PredictionEvaluationAccuracyBreakdown {
+  evaluated: number;
+  correct: number;
+  accuracy: number | null;
 }
 
 export interface PredictionEvaluationSummary extends PredictionEvaluationStats {

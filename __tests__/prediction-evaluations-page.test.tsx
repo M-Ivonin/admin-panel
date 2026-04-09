@@ -35,8 +35,19 @@ const populatedResponse = {
         correct: 1,
         accuracy: 100,
         pending: 1,
+        notFound: 0,
         unsupported: 0,
         failed: 0,
+        safe: {
+          evaluated: 1,
+          correct: 1,
+          accuracy: 100,
+        },
+        risky: {
+          evaluated: 0,
+          correct: 0,
+          accuracy: null,
+        },
       },
       predictions: [
         {
@@ -70,8 +81,19 @@ const populatedResponse = {
     correct: 18,
     accuracy: 60,
     pending: 10,
+    notFound: 0,
     unsupported: 2,
     failed: 2,
+    safe: {
+      evaluated: 20,
+      correct: 14,
+      accuracy: 70,
+    },
+    risky: {
+      evaluated: 10,
+      correct: 4,
+      accuracy: 40,
+    },
   },
 };
 
@@ -89,6 +111,8 @@ describe('PredictionEvaluationsPage', () => {
 
     expect(await screen.findByText('Prediction Evaluation')).toBeTruthy();
     expect(await screen.findByText('Alpha FC vs Beta FC')).toBeTruthy();
+    expect(await screen.findAllByText('Safe Accuracy')).toHaveLength(2);
+    expect(await screen.findAllByText('Risky Accuracy')).toHaveLength(2);
 
     fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
 
@@ -118,8 +142,19 @@ describe('PredictionEvaluationsPage', () => {
           correct: 0,
           accuracy: null,
           pending: 0,
+          notFound: 0,
           unsupported: 0,
           failed: 0,
+          safe: {
+            evaluated: 0,
+            correct: 0,
+            accuracy: null,
+          },
+          risky: {
+            evaluated: 0,
+            correct: 0,
+            accuracy: null,
+          },
         },
       });
 

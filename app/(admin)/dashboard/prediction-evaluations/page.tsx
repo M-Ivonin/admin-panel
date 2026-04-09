@@ -51,6 +51,7 @@ const STATUS_OPTIONS: Array<{
   label: string;
 }> = [
   { value: 'evaluated', label: 'Evaluated' },
+  { value: 'not_found', label: 'Not Found' },
   { value: 'unsupported', label: 'Unsupported' },
   { value: 'failed', label: 'Failed' },
   { value: 'pending', label: 'Pending' },
@@ -72,6 +73,7 @@ const SORT_FIELD_OPTIONS: Array<{
   { value: 'correct', label: 'Correct' },
   { value: 'accuracy', label: 'Accuracy' },
   { value: 'pending', label: 'Pending' },
+  { value: 'not_found', label: 'Not Found' },
   { value: 'unsupported', label: 'Unsupported' },
   { value: 'failed', label: 'Failed' },
 ];
@@ -101,8 +103,19 @@ const EMPTY_SUMMARY: PredictionEvaluationSummary = {
   correct: 0,
   accuracy: null,
   pending: 0,
+  notFound: 0,
   unsupported: 0,
   failed: 0,
+  safe: {
+    evaluated: 0,
+    correct: 0,
+    accuracy: null,
+  },
+  risky: {
+    evaluated: 0,
+    correct: 0,
+    accuracy: null,
+  },
 };
 
 function formatDateTime(dateString: string | null): string {
@@ -154,11 +167,32 @@ function getStatusChipColor(
     return 'success';
   }
 
+  if (status === 'not_found') {
+    return 'error';
+  }
+
   if (status === 'failed') {
     return 'error';
   }
 
   return 'default';
+}
+
+function getStatusLabel(status: PredictionEvaluationStatus): string {
+  switch (status) {
+    case 'pending':
+      return 'Pending';
+    case 'evaluated':
+      return 'Evaluated';
+    case 'not_found':
+      return 'Not Found';
+    case 'unsupported':
+      return 'Unsupported';
+    case 'failed':
+      return 'Failed';
+    default:
+      return status;
+  }
 }
 
 function getSourceChipColor(
@@ -372,7 +406,8 @@ export default function PredictionEvaluationsPage() {
               gridTemplateColumns: {
                 xs: '1fr',
                 sm: 'repeat(2, 1fr)',
-                lg: 'repeat(4, 1fr)',
+                lg: 'repeat(3, 1fr)',
+                xl: 'repeat(6, 1fr)',
               },
               gap: 2,
               mb: 3,
@@ -392,13 +427,27 @@ export default function PredictionEvaluationsPage() {
 
             <Paper sx={{ p: 2.5 }}>
               <Typography variant="body2" color="text.secondary">
-                Accuracy
+                Safe Accuracy
               </Typography>
               <Typography variant="h4" fontWeight={700}>
-                {formatPercentage(summary.accuracy)}
+                {formatPercentage(summary.safe.accuracy)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {summary.correct} correct out of {summary.evaluated} evaluated
+                {summary.safe.correct} correct out of {summary.safe.evaluated}{' '}
+                evaluated
+              </Typography>
+            </Paper>
+
+            <Paper sx={{ p: 2.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Risky Accuracy
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {formatPercentage(summary.risky.accuracy)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {summary.risky.correct} correct out of {summary.risky.evaluated}{' '}
+                evaluated
               </Typography>
             </Paper>
 
@@ -411,6 +460,18 @@ export default function PredictionEvaluationsPage() {
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Awaiting evaluation
+              </Typography>
+            </Paper>
+
+            <Paper sx={{ p: 2.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Not Found
+              </Typography>
+              <Typography variant="h4" fontWeight={700}>
+                {summary.notFound}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Result missing after the settlement grace window
               </Typography>
             </Paper>
 
@@ -784,7 +845,7 @@ export default function PredictionEvaluationsPage() {
                           display: 'grid',
                           gridTemplateColumns: {
                             xs: 'repeat(2, minmax(0, 1fr))',
-                            md: 'repeat(5, minmax(0, 1fr))',
+                            md: 'repeat(7, minmax(0, 1fr))',
                           },
                           gap: 1,
                         }}
@@ -815,10 +876,32 @@ export default function PredictionEvaluationsPage() {
                         </Paper>
                         <Paper variant="outlined" sx={{ p: 1.25 }}>
                           <Typography variant="caption" color="text.secondary">
-                            Accuracy
+                            Safe Accuracy
                           </Typography>
                           <Typography fontWeight={700}>
-                            {formatPercentage(group.stats.accuracy)}
+                            {formatPercentage(group.stats.safe.accuracy)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {group.stats.safe.correct}/{group.stats.safe.evaluated}
+                          </Typography>
+                        </Paper>
+                        <Paper variant="outlined" sx={{ p: 1.25 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Risky Accuracy
+                          </Typography>
+                          <Typography fontWeight={700}>
+                            {formatPercentage(group.stats.risky.accuracy)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {group.stats.risky.correct}/{group.stats.risky.evaluated}
+                          </Typography>
+                        </Paper>
+                        <Paper variant="outlined" sx={{ p: 1.25 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Pending / Not Found
+                          </Typography>
+                          <Typography fontWeight={700}>
+                            {group.stats.pending} / {group.stats.notFound}
                           </Typography>
                         </Paper>
                         <Paper variant="outlined" sx={{ p: 1.25 }}>
@@ -866,7 +949,7 @@ export default function PredictionEvaluationsPage() {
                                 variant="outlined"
                               />
                               <Chip
-                                label={prediction.status}
+                                label={getStatusLabel(prediction.status)}
                                 color={getStatusChipColor(prediction.status)}
                                 size="small"
                                 variant={
