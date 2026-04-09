@@ -21,7 +21,6 @@ import {
   panelSx,
 } from '@/components/public/public-homepage.styles';
 import type { HomepageContent } from '@/modules/public/homepage-content';
-import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
 
 const leagueCardMeta: Record<string, { src: string; alt: string }> = {
   'Premier League': {
@@ -76,6 +75,7 @@ export function HomepageDiscoverySection({
   localize: (path: string) => string;
 }) {
   const sectionCopy = discoverySectionCopy[locale];
+  void localize;
   const hasStructuredDiscovery =
     Boolean(content.discovery.features?.length) &&
     Boolean(content.discovery.useCases?.length) &&
@@ -237,8 +237,8 @@ export function HomepageDiscoverySection({
                 {content.discovery.seoEngine.leagueLabels?.map((league) => (
                   <Box
                     key={league}
-                    component={Link}
-                    href={localize(PUBLIC_HUB_PATHS.leagues)}
+                    // component={Link}
+                    // href={localize(PUBLIC_HUB_PATHS.leagues)}
                     sx={{
                       ...panelSx,
                       display: 'block',
@@ -348,8 +348,8 @@ export function HomepageDiscoverySection({
           }}
         >
           <Box
-            component={Link}
-            href={localize(content.discovery.featuredInsight.href)}
+            // component={Link}
+            // href={localize(content.discovery.featuredInsight.href)}
             sx={{
               ...panelSx,
               display: 'block',
@@ -533,14 +533,14 @@ export function HomepageDiscoverySection({
               {seoSummaryCards[locale].map((item, index) => (
                 <Box
                   key={item.title}
-                  component={Link}
-                  href={
-                    index === 0
-                      ? localize(PUBLIC_HUB_PATHS.teams)
-                      : index === 1
-                        ? localize(PUBLIC_HUB_PATHS.players)
-                        : localize(PUBLIC_HUB_PATHS.leagues)
-                  }
+                  // component={Link}
+                  // href={
+                  //   index === 0
+                  //     ? localize(PUBLIC_HUB_PATHS.teams)
+                  //     : index === 1
+                  //       ? localize(PUBLIC_HUB_PATHS.players)
+                  //       : localize(PUBLIC_HUB_PATHS.leagues)
+                  // }
                   sx={{
                     ...panelSx,
                     display: 'block',

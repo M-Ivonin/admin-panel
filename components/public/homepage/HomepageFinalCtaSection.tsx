@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
@@ -20,7 +19,6 @@ import {
   publicSitePagePx,
 } from '@/components/public/public-site.styles';
 import type { HomepageContent } from '@/modules/public/homepage-content';
-import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
 
 const pagePx = publicSitePagePx;
 const pageMaxWidth = publicSitePageMaxWidth;
@@ -39,6 +37,7 @@ export function HomepageFinalCtaSection({
   androidPlayUrl?: string;
 }) {
   const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
+  void localize;
   const hasDirectStoreButtons = Boolean(
     iosAppStoreUrl && androidPlayUrl && content.finalCta.secondaryStoreCtaLabel
   );
@@ -62,13 +61,17 @@ export function HomepageFinalCtaSection({
         rel: 'noopener noreferrer',
         label: content.finalCta.secondaryStoreCtaLabel,
       }
-    : {
-        component: Link,
-        href: localize(PUBLIC_HUB_PATHS.insights),
-        label: content.finalCta.secondaryCtaLabel,
-      };
+    : null;
   const { label: primaryButtonLabel, ...primaryButtonProps } = primaryButtonConfig;
-  const { label: secondaryButtonLabel, ...secondaryButtonProps } = secondaryButtonConfig;
+  const secondaryButtonLabel = secondaryButtonConfig?.label;
+  const secondaryButtonProps = secondaryButtonConfig
+    ? {
+        component: secondaryButtonConfig.component,
+        href: secondaryButtonConfig.href,
+        target: secondaryButtonConfig.target,
+        rel: secondaryButtonConfig.rel,
+      }
+    : null;
 
   return (
     <Box
@@ -139,13 +142,15 @@ export function HomepageFinalCtaSection({
               >
                 {primaryButtonLabel}
               </Button>
-              <Button
-                {...secondaryButtonProps}
-                variant="outlined"
-                sx={homepageFinalCtaSecondaryButtonSx}
-              >
-                {secondaryButtonLabel}
-              </Button>
+              {secondaryButtonProps ? (
+                <Button
+                  {...secondaryButtonProps}
+                  variant="outlined"
+                  sx={homepageFinalCtaSecondaryButtonSx}
+                >
+                  {secondaryButtonLabel}
+                </Button>
+              ) : null}
             </Stack>
           </Stack>
         </Box>

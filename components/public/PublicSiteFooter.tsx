@@ -25,31 +25,35 @@ const footerColumns = {
       title: 'Product',
       items: ['Home', 'Download App', 'Chat Preview', 'How It Works'],
     },
-    {
-      title: 'Insights',
-      items: [
-        'Latest Insights',
-        'Injury Impact',
-        'Match Outlook',
-        'Lineup Changes',
-        'Tactical Analysis',
-      ],
-    },
+    // {
+    //   title: 'Insights',
+    //   items: [
+    //     'Latest Insights',
+    //     'Injury Impact',
+    //     'Match Outlook',
+    //     'Lineup Changes',
+    //     'Tactical Analysis',
+    //   ],
+    // },
+    // {
+    //   title: 'Explore',
+    //   items: ['Teams', 'Players', 'Leagues', 'Topics', 'Quizzes'],
+    // },
     {
       title: 'Explore',
-      items: ['Teams', 'Players', 'Leagues', 'Topics', 'Quizzes'],
+      items: ['Quizzes'],
     },
-    {
-      title: 'Trust',
-      items: [
-        'About SirBro',
-        'Methodology',
-        'Editorial Policy',
-        'AI Transparency',
-        'FAQ',
-        'Contact',
-      ],
-    },
+    // {
+    //   title: 'Trust',
+    //   items: [
+    //     'About SirBro',
+    //     'Methodology',
+    //     'Editorial Policy',
+    //     'AI Transparency',
+    //     'FAQ',
+    //     'Contact',
+    //   ],
+    // },
     {
       title: 'Legal',
       items: ['Privacy', 'Terms', 'Disclaimer', 'Cookies'],
@@ -64,31 +68,35 @@ const footerColumns = {
       title: 'Producto',
       items: ['Inicio', 'Descargar App', 'Vista del chat', 'Cómo funciona'],
     },
-    {
-      title: 'Insights',
-      items: [
-        'Últimos insights',
-        'Impacto de lesiones',
-        'Panorama del partido',
-        'Cambios de alineación',
-        'Análisis táctico',
-      ],
-    },
+    // {
+    //   title: 'Insights',
+    //   items: [
+    //     'Últimos insights',
+    //     'Impacto de lesiones',
+    //     'Panorama del partido',
+    //     'Cambios de alineación',
+    //     'Análisis táctico',
+    //   ],
+    // },
+    // {
+    //   title: 'Explorar',
+    //   items: ['Equipos', 'Jugadores', 'Ligas', 'Temas', 'Quizzes'],
+    // },
     {
       title: 'Explorar',
-      items: ['Equipos', 'Jugadores', 'Ligas', 'Temas', 'Quizzes'],
+      items: ['Quizzes'],
     },
-    {
-      title: 'Confianza',
-      items: [
-        'Sobre SirBro',
-        'Metodología',
-        'Política Editorial',
-        'Transparencia de IA',
-        'FAQ',
-        'Contacto',
-      ],
-    },
+    // {
+    //   title: 'Confianza',
+    //   items: [
+    //     'Sobre SirBro',
+    //     'Metodología',
+    //     'Política Editorial',
+    //     'Transparencia de IA',
+    //     'FAQ',
+    //     'Contacto',
+    //   ],
+    // },
     {
       title: 'Legal',
       items: ['Privacidad', 'Términos', 'Descargo', 'Cookies'],
@@ -103,31 +111,35 @@ const footerColumns = {
       title: 'Produto',
       items: ['Início', 'Baixar App', 'Prévia do chat', 'Como funciona'],
     },
-    {
-      title: 'Insights',
-      items: [
-        'Últimos insights',
-        'Impacto de lesão',
-        'Panorama da partida',
-        'Mudanças na escalação',
-        'Análise tática',
-      ],
-    },
+    // {
+    //   title: 'Insights',
+    //   items: [
+    //     'Últimos insights',
+    //     'Impacto de lesão',
+    //     'Panorama da partida',
+    //     'Mudanças na escalação',
+    //     'Análise tática',
+    //   ],
+    // },
+    // {
+    //   title: 'Explorar',
+    //   items: ['Times', 'Jogadores', 'Ligas', 'Tópicos', 'Quizzes'],
+    // },
     {
       title: 'Explorar',
-      items: ['Times', 'Jogadores', 'Ligas', 'Tópicos', 'Quizzes'],
+      items: ['Quizzes'],
     },
-    {
-      title: 'Confiança',
-      items: [
-        'Sobre o SirBro',
-        'Metodologia',
-        'Política Editorial',
-        'Transparência de IA',
-        'FAQ',
-        'Contato',
-      ],
-    },
+    // {
+    //   title: 'Confiança',
+    //   items: [
+    //     'Sobre o SirBro',
+    //     'Metodologia',
+    //     'Política Editorial',
+    //     'Transparência de IA',
+    //     'FAQ',
+    //     'Contato',
+    //   ],
+    // },
     {
       title: 'Legal',
       items: ['Privacidade', 'Termos', 'Isenção', 'Cookies'],

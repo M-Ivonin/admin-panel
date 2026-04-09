@@ -1,15 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
-import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import type { Locale } from '@/lib/i18n/config';
 import {
   credibilityPanelCopy,
-  trustContactRowLabel,
 } from '@/components/public/homepage/homepage-copy';
 import { SectionHeading } from '@/components/public/homepage/HomepageShared';
 import {
@@ -29,6 +26,7 @@ export function HomepageMethodologySection({
   localize: (path: string) => string;
 }) {
   const panelCopy = credibilityPanelCopy[locale];
+  void localize;
 
   return (
     <Box
@@ -160,8 +158,8 @@ export function HomepageMethodologySection({
               {content.methodology.trustItems.map((item) => (
                 <Box
                   key={item.title}
-                  component={Link}
-                  href={localize(item.href)}
+                  // component={Link}
+                  // href={localize(item.href)}
                   sx={{
                     ...panelSx,
                     display: 'block',
@@ -203,7 +201,7 @@ export function HomepageMethodologySection({
               ))}
             </Box>
 
-            <Box
+            {/* <Box
               component={Link}
               href={localize(PUBLIC_PAGE_PATHS.contact)}
               sx={{
@@ -220,7 +218,7 @@ export function HomepageMethodologySection({
               }}
             >
               {trustContactRowLabel[locale]}
-            </Box>
+            </Box> */}
           </Stack>
         </Box>
       </Box>

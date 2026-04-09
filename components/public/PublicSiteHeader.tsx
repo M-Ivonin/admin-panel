@@ -125,6 +125,10 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
   }, [isAboutMenuOpen]);
 
   const homeHref = navigation.primary[0]?.href ?? `/${locale}`;
+  const aboutTriggerHref =
+    navigation.aboutMenu.length > 0
+      ? navigation.primary[navigation.primary.length - 1]?.href
+      : undefined;
   const isAboutRoute = navigation.aboutMenu.some(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
   );
@@ -134,7 +138,7 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
       return pathname === href;
     }
 
-    if (href === navigation.primary[navigation.primary.length - 1]?.href) {
+    if (aboutTriggerHref && href === aboutTriggerHref) {
       return isAboutRoute;
     }
 
@@ -181,8 +185,8 @@ export function PublicSiteHeader({ locale }: { locale: Locale }) {
             spacing={3.5}
             sx={{ display: { xs: 'none', md: 'flex' } }}
           >
-            {navigation.primary.map((item, index) => {
-              const isAboutItem = index === navigation.primary.length - 1;
+            {navigation.primary.map((item) => {
+              const isAboutItem = Boolean(aboutTriggerHref) && item.href === aboutTriggerHref;
               const isActive = isItemActive(item.href);
 
               if (isAboutItem) {

@@ -107,49 +107,49 @@ export function getPublicHeaderNavigation(locale: Locale) {
   return {
     primary: [
       { label: localizedLabel('home', locale), href: homeHref(locale) },
-      {
-        label: localizedLabel('insights', locale),
-        href: localizedHref(locale, PUBLIC_HUB_PATHS.insights),
-      },
-      {
-        label: localizedLabel('explore', locale),
-        href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
-      },
+      // {
+      //   label: localizedLabel('insights', locale),
+      //   href: localizedHref(locale, PUBLIC_HUB_PATHS.insights),
+      // },
+      // {
+      //   label: localizedLabel('explore', locale),
+      //   href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
+      // },
       {
         label: localizedLabel('quizzes', locale),
         href: localizedHref(locale, PUBLIC_HUB_PATHS.quizzes),
       },
-      {
-        label: localizedLabel('about', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
-      },
+      // {
+      //   label: localizedLabel('about', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      // },
     ] satisfies NavigationItem[],
     aboutMenu: [
-      {
-        label: localizedLabel('aboutSirBro', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
-      },
-      {
-        label: localizedLabel('methodology', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS.methodology),
-      },
-      {
-        label: localizedLabel('editorialPolicy', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS['editorial-policy']),
-      },
-      {
-        label: localizedLabel('aiTransparency', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS['ai-transparency']),
-      },
-      {
-        label: localizedLabel('faq', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
-      },
-      {
-        label: localizedLabel('contact', locale),
-        href: localizedHref(locale, PUBLIC_PAGE_PATHS.contact),
-      },
-    ] satisfies NavigationItem[],
+      // {
+      //   label: localizedLabel('aboutSirBro', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      // },
+      // {
+      //   label: localizedLabel('methodology', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.methodology),
+      // },
+      // {
+      //   label: localizedLabel('editorialPolicy', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS['editorial-policy']),
+      // },
+      // {
+      //   label: localizedLabel('aiTransparency', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS['ai-transparency']),
+      // },
+      // {
+      //   label: localizedLabel('faq', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
+      // },
+      // {
+      //   label: localizedLabel('contact', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.contact),
+      // },
+    ] as NavigationItem[],
     explore: [
       {
         label: localizedLabel('teams', locale),
