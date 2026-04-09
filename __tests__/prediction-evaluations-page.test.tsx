@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PredictionEvaluationsPage from '@/app/(admin)/dashboard/prediction-evaluations/page';
 import { getPredictionEvaluationGroups } from '@/lib/api/prediction-evaluations';
-
+import { toIsoTimestampFromLocalDateTime } from '@/app/(admin)/dashboard/prediction-evaluations/period-filter';
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -99,14 +99,19 @@ const populatedResponse = {
 
 describe('PredictionEvaluationsPage', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-04-09T12:34:45.678Z'));
     (getPredictionEvaluationGroups as jest.Mock).mockReset();
-  });
-
-  it('renders grouped results and reveals prediction details on accordion expand', async () => {
     (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue(
       populatedResponse,
     );
+  });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('renders grouped results and reveals prediction details on accordion expand', async () => {
     render(<PredictionEvaluationsPage />);
 
     expect(await screen.findByText('Prediction Evaluation')).toBeTruthy();
@@ -214,5 +219,47 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.getByLabelText('Sort by')).toBeTruthy();
     expect(screen.getByLabelText('Order')).toBeTruthy();
     expect(screen.queryByText('21 fixture groups found')).toBeNull();
+  });
+
+  it('applies quick period presets and keeps manual dates in custom range mode', async () => {
+    render(<PredictionEvaluationsPage />);
+
+    await screen.findByText('Alpha FC vs Beta FC');
+
+    fireEvent.mouseDown(screen.getByLabelText('Period'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Last 7 days' }));
+
+    await waitFor(() => {
+      const lastCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls.at(
+        -1,
+      )?.[0];
+
+      expect(lastCall?.dateFrom).toBeTruthy();
+      expect(lastCall?.dateTo).toBeTruthy();
+      expect(
+        new Date(lastCall.dateTo).getTime() -
+          new Date(lastCall.dateFrom).getTime(),
+      ).toBe(7 * 24 * 60 * 60 * 1000);
+      expect(lastCall.dateTo).toMatch(
+        /^2026-04-09T12:34:45\.\d{3}Z$/,
+      );
+    });
+
+    fireEvent.change(screen.getByLabelText('From'), {
+      target: { value: '2026-04-01T08:00' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Custom range')).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          dateFrom: toIsoTimestampFromLocalDateTime('2026-04-01T08:00'),
+          dateTo: expect.stringMatching(/^2026-04-09T12:34:45\.\d{3}Z$/),
+        }),
+      );
+    });
   });
 });
