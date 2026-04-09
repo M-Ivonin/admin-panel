@@ -8,9 +8,11 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import type { Locale } from '@/lib/i18n/config';
 import { PublicStorePickerDialog } from '@/components/public/PublicStorePickerDialog';
-import { finalCtaCopy } from '@/components/public/homepage/homepage-copy';
 import {
   copySafeSx,
+  homepageFinalCtaPrimaryButtonSx,
+  homepageFinalCtaSecondaryButtonSx,
+  homepagePalette,
   motionRevealSx,
 } from '@/components/public/public-homepage.styles';
 import {
@@ -27,13 +29,46 @@ export function HomepageFinalCtaSection({
   content,
   locale,
   localize,
+  iosAppStoreUrl,
+  androidPlayUrl,
 }: {
   content: HomepageContent;
   locale: Locale;
   localize: (path: string) => string;
+  iosAppStoreUrl?: string;
+  androidPlayUrl?: string;
 }) {
-  const sectionCopy = finalCtaCopy[locale];
   const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
+  const hasDirectStoreButtons = Boolean(
+    iosAppStoreUrl && androidPlayUrl && content.finalCta.secondaryStoreCtaLabel
+  );
+  const primaryButtonConfig = hasDirectStoreButtons
+    ? {
+        component: 'a' as const,
+        href: iosAppStoreUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        label: content.finalCta.primaryCtaLabel,
+      }
+    : {
+        onClick: () => setIsStorePickerOpen(true),
+        label: content.hero.openAppLabel,
+      };
+  const secondaryButtonConfig = hasDirectStoreButtons
+    ? {
+        component: 'a' as const,
+        href: androidPlayUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        label: content.finalCta.secondaryStoreCtaLabel,
+      }
+    : {
+        component: Link,
+        href: localize(PUBLIC_HUB_PATHS.insights),
+        label: content.finalCta.secondaryCtaLabel,
+      };
+  const { label: primaryButtonLabel, ...primaryButtonProps } = primaryButtonConfig;
+  const { label: secondaryButtonLabel, ...secondaryButtonProps } = secondaryButtonConfig;
 
   return (
     <Box
@@ -52,11 +87,10 @@ export function HomepageFinalCtaSection({
           width: '100%',
           minHeight: { md: 325 },
           borderTop: '1px solid',
-          borderColor: '#334155',
+          borderColor: homepagePalette.sectionBorder,
           borderRadius: { xs: '28px 28px 0 0', md: '36px 36px 0 0' },
           overflow: 'hidden',
-          background:
-            'linear-gradient(90deg, #0a1228 0%, #11162a 52%, #2b2760 82%, #3a2f73 100%)',
+          background: homepagePalette.finalCtaBackground,
           pt: { xs: 6, md: 11 },
           pb: { xs: 6, md: 9 },
         }}
@@ -66,7 +100,7 @@ export function HomepageFinalCtaSection({
             <Typography
               sx={{
                 ...copySafeSx,
-                color: '#f9fafb',
+                color: homepagePalette.textCta,
                 fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
                 fontSize: { xs: '2rem', sm: '2.35rem', md: '2.625rem' },
                 fontWeight: 600,
@@ -74,20 +108,20 @@ export function HomepageFinalCtaSection({
                 maxWidth: '100%',
               }}
             >
-              {sectionCopy.title}
+              {content.finalCta.title}
             </Typography>
 
             <Typography
               sx={{
                 ...copySafeSx,
-                color: '#ddd6fe',
+                color: homepagePalette.textCtaSubtle,
                 fontSize: { xs: '1rem', md: '1.0625rem' },
                 fontWeight: 400,
                 lineHeight: 1.45,
                 maxWidth: 760,
               }}
             >
-              {sectionCopy.description}
+              {content.finalCta.description}
             </Typography>
 
             <Stack
@@ -99,53 +133,18 @@ export function HomepageFinalCtaSection({
               }}
             >
               <Button
-                onClick={() => setIsStorePickerOpen(true)}
+                {...primaryButtonProps}
                 variant="contained"
-                sx={{
-                  flex: '1 1 0',
-                  minWidth: 0,
-                  borderRadius: '999px',
-                  px: { xs: 1.5, sm: 2.25 },
-                  py: 1.75,
-                  bgcolor: '#4f46e5',
-                  color: '#ffffff',
-                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                  fontWeight: 600,
-                  lineHeight: 1,
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
-                  '&:hover': {
-                    bgcolor: '#4f46e5',
-                    boxShadow: '0 10px 28px rgba(139, 92, 246, 0.33)',
-                  },
-                }}
+                sx={homepageFinalCtaPrimaryButtonSx}
               >
-                {content.finalCta.primaryCtaLabel}
+                {primaryButtonLabel}
               </Button>
               <Button
-                component={Link}
-                href={localize(PUBLIC_HUB_PATHS.insights)}
+                {...secondaryButtonProps}
                 variant="outlined"
-                sx={{
-                  flex: '1 1 0',
-                  minWidth: 0,
-                  borderRadius: '999px',
-                  px: { xs: 1.5, sm: 2.25 },
-                  py: 1.75,
-                  color: '#f9fafb',
-                  fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-                  fontWeight: 600,
-                  lineHeight: 1,
-                  whiteSpace: 'nowrap',
-                  borderColor: '#8b5cf6',
-                  bgcolor: '#221735',
-                  '&:hover': {
-                    borderColor: '#8b5cf6',
-                    bgcolor: '#221735',
-                  },
-                }}
+                sx={homepageFinalCtaSecondaryButtonSx}
               >
-                {content.finalCta.secondaryCtaLabel}
+                {secondaryButtonLabel}
               </Button>
             </Stack>
           </Stack>

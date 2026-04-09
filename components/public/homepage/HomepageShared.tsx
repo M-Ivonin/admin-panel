@@ -149,13 +149,15 @@ export function SectionHeading({
   maxWidth = 760,
 }: {
   title: string;
-  description: string;
+  description?: string;
   maxWidth?: number;
 }) {
   return (
     <Stack spacing={1.25} sx={homepageSectionHeadingStackSx(maxWidth)}>
       <Typography sx={homepageSectionHeadingTitleSx}>{title}</Typography>
-      <Typography sx={homepageSectionHeadingDescriptionSx}>{description}</Typography>
+      {description ? (
+        <Typography sx={homepageSectionHeadingDescriptionSx}>{description}</Typography>
+      ) : null}
     </Stack>
   );
 }

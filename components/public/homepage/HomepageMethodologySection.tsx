@@ -9,7 +9,6 @@ import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
 import type { Locale } from '@/lib/i18n/config';
 import {
   credibilityPanelCopy,
-  methodologySectionTitle,
   trustContactRowLabel,
 } from '@/components/public/homepage/homepage-copy';
 import { SectionHeading } from '@/components/public/homepage/HomepageShared';
@@ -50,7 +49,7 @@ export function HomepageMethodologySection({
       >
         <Stack spacing={2.5} sx={{ width: '100%', maxWidth: { lg: 640 } }}>
           <SectionHeading
-            title={methodologySectionTitle[locale]}
+            title={content.methodology.title}
             description={content.methodology.description}
           />
 
@@ -137,16 +136,18 @@ export function HomepageMethodologySection({
               >
                 {panelCopy.description}
               </Typography>
-              <Typography
-                sx={{
-                  ...copySafeSx,
-                  color: '#d1d5db',
-                  fontSize: '0.9375rem',
-                  lineHeight: 1.65,
-                }}
-              >
-                {content.methodology.requiredCopy}
-              </Typography>
+              {content.methodology.requiredCopy ? (
+                <Typography
+                  sx={{
+                    ...copySafeSx,
+                    color: '#d1d5db',
+                    fontSize: '0.9375rem',
+                    lineHeight: 1.65,
+                  }}
+                >
+                  {content.methodology.requiredCopy}
+                </Typography>
+              ) : null}
             </Stack>
 
             <Box

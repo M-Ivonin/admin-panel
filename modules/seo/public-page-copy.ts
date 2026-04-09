@@ -126,10 +126,9 @@ export function getPublicPageSeoCopy(
   if (pageKey === 'home') {
     const homeCopy: Record<Locale, PublicSeoCopy> = {
       en: {
-        title:
-          'SirBro | Football Insights App for Match Volatility, Injury Impact, and Player Form',
+        title: 'AI Football Predictions & Match Insights',
         description:
-          'Explore football insights, player form, injury impact, lineup changes, and match volatility with SirBro’s Proprietary Sports AI Model.',
+          'Get AI-powered football and soccer predictions, match analysis, and real-time insights. Track teams, players, and matches with SirBro.',
       },
       es: {
         title:

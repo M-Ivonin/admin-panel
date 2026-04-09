@@ -33,9 +33,9 @@ export const credibilityPanelCopy: Record<
   { title: string; description: string }
 > = {
   en: {
-    title: 'Why SirBro is credible',
+    title: 'Why SirBro is trusted',
     description:
-      'See how our analysis works, how content is reviewed and where AI helps turn live football data into clear decisions.',
+      'Everyone has opinions. We focus on clarity.',
   },
   es: {
     title: 'Por qué SirBro es creíble',

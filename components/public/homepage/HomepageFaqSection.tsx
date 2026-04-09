@@ -8,8 +8,6 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import { alpha } from '@mui/material/styles';
-import type { Locale } from '@/lib/i18n/config';
-import { faqSectionTitle } from '@/components/public/homepage/homepage-copy';
 import { SectionHeading } from '@/components/public/homepage/HomepageShared';
 import {
   copySafeSx,
@@ -23,12 +21,10 @@ const pageMaxWidth = publicSitePageMaxWidth;
 
 export function HomepageFaqSection({
   content,
-  locale,
   expandedFaq,
   onExpandedFaqChange,
 }: {
   content: HomepageContent;
-  locale: Locale;
   expandedFaq: string | false;
   onExpandedFaqChange: (value: string | false) => void;
 }) {
@@ -42,7 +38,7 @@ export function HomepageFaqSection({
     >
       <Stack spacing={2.5}>
         <SectionHeading
-          title={faqSectionTitle[locale]}
+          title={content.faq.title}
           description={content.faq.description}
           maxWidth={pageMaxWidth}
         />

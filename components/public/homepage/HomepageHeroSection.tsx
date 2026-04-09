@@ -119,6 +119,19 @@ export function HomepageHeroSection({
               {content.hero.description}
             </Typography>
 
+            <Typography
+              sx={{
+                ...copySafeSx,
+                maxWidth: { xs: '100%', lg: 620 },
+                color: '#cbd5e1',
+                fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
+                lineHeight: 1.6,
+                ...motionRevealSx(300),
+              }}
+            >
+              {content.hero.proof}
+            </Typography>
+
             <Stack
               id="download"
               direction="row"
@@ -165,7 +178,7 @@ export function HomepageHeroSection({
                   lineHeight: 1.4,
                 }}
               >
-                {trustLinkLabels[locale].join('  ·  ')}
+                {content.hero.trustLine ?? trustLinkLabels[locale].join('  ·  ')}
               </Typography>
             </Box>
           </Stack>

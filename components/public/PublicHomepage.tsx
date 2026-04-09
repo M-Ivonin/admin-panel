@@ -123,7 +123,7 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
             androidPlayUrl={clientConfig.androidPlayUrl}
           />
 
-          <HomepageShowcaseSection content={content} locale={locale} />
+          <HomepageShowcaseSection content={content} />
 
           <HomepageMethodologySection
             content={content}
@@ -139,13 +139,18 @@ export function PublicHomepage({ locale }: { locale: Locale }) {
 
           <HomepageFaqSection
             content={content}
-            locale={locale}
             expandedFaq={expandedFaq}
             onExpandedFaqChange={setExpandedFaq}
           />
         </Box>
 
-        <HomepageFinalCtaSection content={content} locale={locale} localize={localize} />
+        <HomepageFinalCtaSection
+          content={content}
+          locale={locale}
+          localize={localize}
+          iosAppStoreUrl={clientConfig.iosAppStoreUrl}
+          androidPlayUrl={clientConfig.androidPlayUrl}
+        />
 
         <PublicSiteFooter locale={locale} />
       </Box>

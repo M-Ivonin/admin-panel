@@ -298,6 +298,16 @@ function resolveFooterItemHref(locale: Locale, item: string): FooterLinkTarget {
 export function PublicSiteFooter({ locale }: { locale: Locale }) {
   const homeHref = buildLocalizedPath(locale, PUBLIC_PAGE_PATHS.home);
   const [isStorePickerOpen, setIsStorePickerOpen] = useState(false);
+  const footerMicrocopy =
+    locale === 'en'
+      ? [
+          'SirBro provides sports insights for entertainment purposes only.',
+          'We do not operate betting services or accept wagers.',
+          'All content is informational and should not be considered financial advice.',
+        ]
+      : [
+          'Football insights, proprietary sports AI analysis, chat and Fan Arena competition in one pocket-sized product.',
+        ];
 
   return (
     <Box
@@ -343,8 +353,15 @@ export function PublicSiteFooter({ locale }: { locale: Locale }) {
               lineHeight: 1.45,
             }}
           >
-            Football insights, proprietary sports AI analysis, chat and Fan
-            Arena competition in one pocket-sized product.
+            {footerMicrocopy.map((line, index) => (
+              <Box
+                key={line}
+                component="span"
+                sx={{ display: 'block', mt: index === 0 ? 0 : 0.65 }}
+              >
+                {line}
+              </Box>
+            ))}
           </Typography>
         </Stack>
 

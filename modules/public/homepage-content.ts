@@ -58,7 +58,9 @@ export interface HomepageContent {
     chips: string[];
     title: string;
     description: string;
+    supportingText?: string;
     proof: string;
+    trustLine?: string;
     openAppLabel: string;
     previewTitle: string;
     previewSubtitle: string;
@@ -77,14 +79,17 @@ export interface HomepageContent {
     eyebrow: string;
     title: string;
     description: string;
-    requiredCopy: string;
+    requiredCopy?: string;
     steps: HomepageStep[];
     trustItems: HomepageTrustItem[];
   };
   discovery: {
     eyebrow: string;
     title: string;
-    description: string;
+    description?: string;
+    features?: string[];
+    useCasesTitle?: string;
+    useCases?: string[];
     topicLinks: HomepageLinkItem[];
     featuredInsight: HomepageActionCard;
     quiz: HomepageActionCard;
@@ -92,6 +97,8 @@ export interface HomepageContent {
       eyebrow: string;
       title: string;
       description: string;
+      leagueLabels?: string[];
+      note?: string;
       metricLabels: {
         standings: string;
         topGoalscorers: string;
@@ -103,7 +110,7 @@ export interface HomepageContent {
   faq: {
     eyebrow: string;
     title: string;
-    description: string;
+    description?: string;
     items: HomepageFaqItem[];
   };
   finalCta: {
@@ -112,21 +119,21 @@ export interface HomepageContent {
     description: string;
     primaryCtaLabel: string;
     secondaryCtaLabel: string;
+    secondaryStoreCtaLabel?: string;
   };
 }
-
-const requiredMethodologyCopyEn =
-  "SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.";
 
 const homepageContent: Record<Locale, HomepageContent> = {
   en: {
     hero: {
-      chips: ['Football insights', 'Match volatility'],
-      title: 'The smartest football analyst in your pocket.',
+      chips: ['AI football insights', 'Live match analysis'],
+      title: 'AI Football Predictions, Insights & Match Analysis — Without the Noise',
       description:
-        'SirBro turns live match-state, injury impact, lineup shifts, player form, and tactical analysis into faster football decisions without the noise.',
+        'Most people follow games. Few understand them. SirBro turns live match data, player form, and tactical context into clear, fast football insights.',
       proof:
-        'Proprietary Sports AI Model with live context, editorial controls, and instant mobile access.',
+        'Get AI-powered football and soccer predictions, match analysis, team stats, and real-time insights across top leagues including Premier League, La Liga, Serie A, Bundesliga, MLS, and more — all in one app.',
+      trustLine:
+        'For entertainment purposes only. We don’t take bets. We analyze the game.',
       openAppLabel: 'Open App',
       previewTitle: 'Live match outlook',
       previewSubtitle: 'Arsenal vs Liverpool',
@@ -141,27 +148,26 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'Compete with friends, compare picks, and move up private leaderboards built around football signals.',
     },
     showcase: {
-      eyebrow: 'Product showcase',
-      title:
-        'Insights that change decisions. Chat with the analyst. Compete with the community.',
+      eyebrow: 'What SirBro does',
+      title: 'See the game before it unfolds',
       description:
-        'The homepage moves from promise to product fast, showing recognisable app surfaces instead of abstract marketing claims.',
+        'Football is not random. It only looks that way if you don’t see the signals.',
       items: [
         {
-          title: 'Insight Feed',
+          title: 'AI Football Predictions',
           description:
-            'Track injury impact, momentum swings, and match outlook changes in a clean signal feed.',
-          accentLabel: 'Injury impact',
-          accentValue: 'Starter doubtful',
-          lines: ['Expected swing: +9%', 'Pressing drop risk', 'Late-market alert'],
+            'Get structured predictions based on data, not opinion — from safe scenarios to higher-risk outcomes.',
+          accentLabel: 'Prediction engine',
+          accentValue: 'Data-first',
+          lines: ['Structured outcomes', 'Scenario-based reads', 'Opinion-free analysis'],
         },
         {
-          title: 'Chat Widget',
+          title: 'Team & Player Analysis',
           description:
-            'Ask quick football questions and get a sharp answer that keeps match context in view.',
-          accentLabel: 'Live prompt',
-          accentValue: '2nd half edge',
-          lines: ['Lineup fatigue', 'Wide overloads', 'Transition risk'],
+            'Understand form, performance trends, and tactical patterns across leagues and competitions.',
+          accentLabel: 'Analysis layer',
+          accentValue: 'Form + context',
+          lines: ['Performance trends', 'Role context', 'Tactical patterns'],
         },
         {
           title: 'Fan Arena',
@@ -174,59 +180,75 @@ const homepageContent: Record<Locale, HomepageContent> = {
       ],
     },
     methodology: {
-      eyebrow: 'Signal to action',
-      title: 'How SirBro tracks the signal, adds football context, and helps you act faster.',
+      eyebrow: 'How it works',
+      title: 'How SirBro analyzes football matches',
       description:
-        'This section combines process and trust early, so the page feels credible without becoming a separate trust chapter.',
-      requiredCopy: requiredMethodologyCopyEn,
+        'We don’t guess. We process.',
       steps: [
         {
           step: '01',
-          title: 'Track the signal',
+          title: 'Detect the signal',
           description:
-            'Read live match-state, player form, lineup changes, and volatility before they become obvious.',
+            'SirBro tracks match data, player form, lineup changes, and volatility patterns to identify what actually matters.',
         },
         {
           step: '02',
           title: 'Add football context',
           description:
-            'Translate the raw data into tactical analysis, momentum, and role-level football consequences.',
+            'Raw stats don’t win games. Context does. We translate data into tactical meaning and real match impact.',
         },
         {
           step: '03',
-          title: 'Decide or explore deeper',
+          title: 'Deliver clear insights',
           description:
-            'Open the app, follow the insight trail, or jump into team, player, league, and topic pages.',
+            'You get structured, actionable insights — without scrolling through noise.',
         },
       ],
       trustItems: [
         {
           title: 'Methodology',
-          description: 'See how the model turns match-state and history into explainable football insights.',
+          description:
+            'Our analysis combines historical data, live match signals, and structured modeling to detect patterns early.',
           href: '/methodology',
         },
         {
-          title: 'Editorial policy',
-          description: 'Understand the review rules behind public insights and updates.',
+          title: 'Editorial Oversight',
+          description:
+            'Insights are reviewed and structured to remain consistent, clear, and useful.',
           href: '/editorial-policy',
         },
         {
-          title: 'AI + human review',
-          description: 'Learn where automation helps and where human judgment stays in the loop.',
+          title: 'AI + Human Layer',
+          description: 'AI processes scale. Human logic keeps it grounded.',
           href: '/ai-transparency',
         },
         {
-          title: 'About SirBro',
-          description: 'Get the product story, trust position, and product mission in one place.',
-          href: '/about',
+          title: 'Transparency',
+          description: 'No guarantees. No promises. Just analysis.',
+          href: '/disclaimer',
         },
       ],
     },
     discovery: {
-      eyebrow: 'Discover deeper',
-      title: 'One discovery zone that keeps SEO depth visible without stealing attention from the app.',
-      description:
-        'Featured insight, quiz engagement, and crawlable team-player routes live together so the homepage stays focused and still feels deep.',
+      eyebrow: 'Features',
+      title: 'Everything you need for football insights in one place',
+      features: [
+        'AI-powered football predictions',
+        'Live match tracking and timeline',
+        'Team and player performance stats',
+        'Tactical analysis and momentum indicators',
+        'Daily match insights across top leagues',
+        'Interactive chat for instant football questions',
+        'Community discussions and match challenges',
+      ],
+      useCasesTitle: 'Who SirBro is for',
+      useCases: [
+        'Football fans who want deeper understanding',
+        'Users looking for structured match insights',
+        'Data-driven sports enthusiasts',
+        'Casual fans who want faster answers',
+        'Communities discussing matches in real time',
+      ],
       topicLinks: [
         { label: 'Injury impact', href: '/topics/injury-impact' },
         { label: 'Lineup changes', href: '/topics/lineup-changes' },
@@ -251,10 +273,23 @@ const homepageContent: Record<Locale, HomepageContent> = {
         ctaLabel: 'Start Quiz',
       },
       seoEngine: {
-        eyebrow: 'FC26-style SEO engine',
-        title: 'Browse live entity routes by league, then pivot between standings, scorers, and creators.',
+        eyebrow: 'Leagues',
+        title: 'Coverage across the world’s top football and soccer leagues',
         description:
-          'Each visible name stays crawlable and linked so the homepage supports team pages, player pages, and long-tail football intent.',
+          'SirBro provides insights and analysis for:',
+        note: 'And more — updated daily.',
+        leagueLabels: [
+          'Premier League',
+          'La Liga',
+          'Serie A',
+          'Bundesliga',
+          'Ligue 1',
+          'Brasileirão',
+          'Liga MX',
+          'MLS',
+          'UEFA competitions',
+          'FIFA World Cup 2026',
+        ],
         metricLabels: {
           standings: 'Standings',
           topGoalscorers: 'Top Goalscorers',
@@ -413,39 +448,43 @@ const homepageContent: Record<Locale, HomepageContent> = {
     },
     faq: {
       eyebrow: 'FAQ',
-      title: 'Short answers for the biggest questions users and searchers ask first.',
-      description:
-        'These answers support trust, clarify coverage, and prepare the page for FAQPage structured data.',
+      title: 'Football insights — explained simply',
       items: [
         {
-          question: "How does SirBro's AI predict match volatility?",
+          question: 'How does SirBro generate football predictions?',
           answer:
-            'SirBro combines historical patterns, lineup shifts, player availability, and live match-state changes to detect volatility before it becomes obvious in the market or conversation.',
+            'SirBro analyzes historical data, live match events, player performance, and tactical patterns to identify likely outcomes.',
         },
         {
-          question: 'Which football leagues are covered?',
+          question: 'Are these betting tips?',
           answer:
-            'The homepage currently highlights the EPL, La Liga, Serie A, Ligue 1, Brasileirao, Liga MX, and MLS, while the broader product language also supports deeper team, player, and topic exploration.',
+            'No. SirBro provides football insights for informational and entertainment purposes only.',
         },
         {
-          question: 'Is the SirBro chat available in Spanish and Portuguese?',
+          question: 'Which leagues are covered?',
           answer:
-            'Yes. The public experience supports English, Spanish, and Portuguese, and the chat direction follows the same multilingual product path.',
+            'Top global leagues including Premier League, La Liga, Serie A, Bundesliga, and more.',
         },
         {
-          question: 'How can I compete with friends in the Fan Arena?',
+          question: 'Is SirBro free?',
           answer:
-            'Open the app, join your community leaderboard, and compare streaks, picks, and football calls with friends inside the Fan Arena flow.',
+            'A free version is available with optional premium features for deeper insights.',
+        },
+        {
+          question: 'Can I ask questions about matches?',
+          answer:
+            'Yes. SirBro includes an AI chat that answers football-related questions instantly.',
         },
       ],
     },
     finalCta: {
       eyebrow: 'Install SirBro',
-      title: 'Download the app, keep the signal close, and move faster from match noise to football insight.',
+      title: 'Stop guessing. Understand the game.',
       description:
-        'Store-first CTAs stay primary, while insights remain one tap away for users who want to explore before they install.',
-      primaryCtaLabel: 'Download App',
+        'Download SirBro and get faster, clearer football insights — every day.',
+      primaryCtaLabel: 'App Store',
       secondaryCtaLabel: 'Explore Insights',
+      secondaryStoreCtaLabel: 'Google Play',
     },
   },
   es: {
@@ -456,6 +495,8 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'SirBro convierte el estado en vivo del partido, el impacto de lesiones, los cambios de alineación, la forma del jugador y el análisis táctico en decisiones más rápidas y con menos ruido.',
       proof:
         'Modelo deportivo propietario con contexto en vivo, controles editoriales y acceso móvil inmediato.',
+      trustLine:
+        'Solo para fines de entretenimiento. No aceptamos apuestas. Analizamos el juego.',
       openAppLabel: 'Abrir app',
       previewTitle: 'Panorama en vivo',
       previewSubtitle: 'Arsenal vs Liverpool',
@@ -553,10 +594,25 @@ const homepageContent: Record<Locale, HomepageContent> = {
       ],
     },
     discovery: {
-      eyebrow: 'Explora más',
-      title: 'Una sola zona de descubrimiento que mantiene profundidad SEO sin quitar foco a la app.',
-      description:
-        'Insight destacado, quiz y rutas crawlables de equipos y jugadores viven juntos para que la homepage siga concentrada.',
+      eyebrow: 'Funciones',
+      title: 'Todo lo que necesitas para obtener insights de fútbol en un solo lugar',
+      features: [
+        'Predicciones de fútbol impulsadas por IA',
+        'Seguimiento en vivo del partido y su timeline',
+        'Estadísticas de rendimiento de equipos y jugadores',
+        'Análisis táctico e indicadores de momentum',
+        'Insights diarios de partidos en las principales ligas',
+        'Chat interactivo para preguntas de fútbol al instante',
+        'Discusiones de la comunidad y desafíos de partido',
+      ],
+      useCasesTitle: 'Para quién es SirBro',
+      useCases: [
+        'Aficionados al fútbol que quieren entender más a fondo el juego',
+        'Usuarios que buscan insights de partido estructurados',
+        'Entusiastas del deporte guiados por datos',
+        'Fans casuales que quieren respuestas más rápidas',
+        'Comunidades que comentan partidos en tiempo real',
+      ],
       topicLinks: [
         { label: 'Impacto de lesiones', href: '/topics/injury-impact' },
         { label: 'Cambios de alineación', href: '/topics/lineup-changes' },
@@ -581,10 +637,23 @@ const homepageContent: Record<Locale, HomepageContent> = {
         ctaLabel: 'Empezar quiz',
       },
       seoEngine: {
-        eyebrow: 'Motor SEO estilo FC26',
-        title: 'Explora rutas por liga y cambia entre tabla, goleadores y asistentes.',
+        eyebrow: 'Ligas',
+        title: 'Cobertura de las principales ligas de fútbol y soccer del mundo',
         description:
-          'Cada nombre visible mantiene un enlace crawlable para apoyar páginas de equipos, jugadores e intención long-tail.',
+          'SirBro ofrece insights y análisis para:',
+        note: 'Y más, con actualización diaria.',
+        leagueLabels: [
+          'Premier League',
+          'La Liga',
+          'Serie A',
+          'Bundesliga',
+          'Ligue 1',
+          'Brasileirão',
+          'Liga MX',
+          'MLS',
+          'UEFA competitions',
+          'FIFA World Cup 2026',
+        ],
         metricLabels: {
           standings: 'Tabla',
           topGoalscorers: 'Goleadores',
@@ -743,7 +812,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
     },
     faq: {
       eyebrow: 'FAQ',
-      title: 'Respuestas cortas para las preguntas clave que llegan primero.',
+      title: 'Insights de fútbol, explicados con claridad',
       description:
         'Estas respuestas refuerzan confianza, aclaran cobertura y preparan la página para FAQPage.',
       items: [
@@ -774,8 +843,9 @@ const homepageContent: Record<Locale, HomepageContent> = {
       title: 'Descarga la app, mantén la señal cerca y pasa más rápido del ruido a un insight de fútbol.',
       description:
         'Las CTAs de instalación siguen siendo primarias, mientras los insights quedan a un toque para quien quiera explorar antes.',
-      primaryCtaLabel: 'Descargar app',
+      primaryCtaLabel: 'App Store',
       secondaryCtaLabel: 'Explorar insights',
+      secondaryStoreCtaLabel: 'Google Play',
     },
   },
   pt: {
@@ -786,6 +856,8 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'SirBro transforma estado ao vivo da partida, impacto de lesoes, mudancas de escalação, forma do jogador e analise tatica em decisoes mais rapidas e sem ruido.',
       proof:
         'Modelo esportivo proprietario com contexto ao vivo, controles editoriais e acesso movel imediato.',
+      trustLine:
+        'Apenas para fins de entretenimento. Nao aceitamos apostas. Analisamos o jogo.',
       openAppLabel: 'Abrir app',
       previewTitle: 'Panorama ao vivo',
       previewSubtitle: 'Arsenal vs Liverpool',
@@ -883,10 +955,25 @@ const homepageContent: Record<Locale, HomepageContent> = {
       ],
     },
     discovery: {
-      eyebrow: 'Explore mais',
-      title: 'Uma unica zona de descoberta que mantém profundidade SEO sem tirar foco do app.',
-      description:
-        'Insight em destaque, quiz e rotas crawlaveis de times e jogadores convivem juntos para manter a homepage concentrada.',
+      eyebrow: 'Recursos',
+      title: 'Tudo o que voce precisa para ter insights de futebol em um so lugar',
+      features: [
+        'Predicoes de futebol com IA',
+        'Acompanhamento ao vivo da partida e timeline',
+        'Estatisticas de desempenho de times e jogadores',
+        'Analise tatica e indicadores de momentum',
+        'Insights diarios de partidas nas principais ligas',
+        'Chat interativo para perguntas de futebol em tempo real',
+        'Discussoes da comunidade e desafios de partida',
+      ],
+      useCasesTitle: 'Para quem o SirBro foi feito',
+      useCases: [
+        'Torcedores que querem entender o jogo com mais profundidade',
+        'Usuarios que buscam insights estruturados sobre as partidas',
+        'Entusiastas de esporte orientados por dados',
+        'Fans casuais que querem respostas mais rapidas',
+        'Comunidades que discutem partidas em tempo real',
+      ],
       topicLinks: [
         { label: 'Impacto de lesoes', href: '/topics/injury-impact' },
         { label: 'Mudancas de escalação', href: '/topics/lineup-changes' },
@@ -911,10 +998,23 @@ const homepageContent: Record<Locale, HomepageContent> = {
         ctaLabel: 'Comecar quiz',
       },
       seoEngine: {
-        eyebrow: 'Motor SEO estilo FC26',
-        title: 'Navegue por liga e alterne entre tabela, artilharia e assistencias.',
+        eyebrow: 'Ligas',
+        title: 'Cobertura das principais ligas de futebol do mundo',
         description:
-          'Cada nome visivel continua com link crawlable para apoiar paginas de times, jogadores e intencao long-tail.',
+          'O SirBro oferece insights e analises para:',
+        note: 'E muito mais, com atualizacao diaria.',
+        leagueLabels: [
+          'Premier League',
+          'La Liga',
+          'Serie A',
+          'Bundesliga',
+          'Ligue 1',
+          'Brasileirão',
+          'Liga MX',
+          'MLS',
+          'UEFA competitions',
+          'FIFA World Cup 2026',
+        ],
         metricLabels: {
           standings: 'Tabela',
           topGoalscorers: 'Artilheiros',
@@ -1073,7 +1173,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
     },
     faq: {
       eyebrow: 'FAQ',
-      title: 'Respostas curtas para as perguntas que surgem primeiro.',
+      title: 'Insights de futebol, explicados com clareza',
       description:
         'Essas respostas reforcam confianca, esclarecem cobertura e preparam a pagina para FAQPage.',
       items: [
@@ -1104,8 +1204,9 @@ const homepageContent: Record<Locale, HomepageContent> = {
       title: 'Baixe o app, mantenha o sinal por perto e saia mais rapido do ruido para o insight.',
       description:
         'As CTAs de instalacao continuam primarias, enquanto os insights ficam a um toque para quem quer explorar antes.',
-      primaryCtaLabel: 'Baixar app',
+      primaryCtaLabel: 'App Store',
       secondaryCtaLabel: 'Explorar insights',
+      secondaryStoreCtaLabel: 'Google Play',
     },
   },
 };

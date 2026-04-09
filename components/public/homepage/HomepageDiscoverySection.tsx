@@ -16,11 +16,55 @@ import {
 } from '@/components/public/homepage/HomepageShared';
 import {
   copySafeSx,
+  homepagePalette,
   motionRevealSx,
   panelSx,
 } from '@/components/public/public-homepage.styles';
 import type { HomepageContent } from '@/modules/public/homepage-content';
 import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
+
+const leagueCardMeta: Record<string, { src: string; alt: string }> = {
+  'Premier League': {
+    src: '/assets/homepage/leagues/premier-league.svg',
+    alt: 'Premier League logo',
+  },
+  'La Liga': {
+    src: '/assets/homepage/leagues/laliga.svg',
+    alt: 'La Liga logo',
+  },
+  'Serie A': {
+    src: '/assets/homepage/leagues/serie-a.svg',
+    alt: 'Serie A logo',
+  },
+  Bundesliga: {
+    src: '/assets/homepage/leagues/bundesliga.svg',
+    alt: 'Bundesliga logo',
+  },
+  'Ligue 1': {
+    src: '/assets/homepage/leagues/ligue-1.svg',
+    alt: 'Ligue 1 logo',
+  },
+  Brasileirão: {
+    src: '/assets/homepage/leagues/brasileirao.svg',
+    alt: 'Brasileirão Série A logo',
+  },
+  'Liga MX': {
+    src: '/assets/homepage/leagues/liga-mx.svg',
+    alt: 'Liga MX logo',
+  },
+  MLS: {
+    src: '/assets/homepage/leagues/mls.svg',
+    alt: 'MLS logo',
+  },
+  'UEFA competitions': {
+    src: '/assets/homepage/leagues/uefa.svg',
+    alt: 'UEFA logo',
+  },
+  'FIFA World Cup 2026': {
+    src: '/assets/homepage/leagues/fifa-world-cup-2026.svg',
+    alt: 'FIFA World Cup 2026 emblem',
+  },
+};
 
 export function HomepageDiscoverySection({
   content,
@@ -32,6 +76,253 @@ export function HomepageDiscoverySection({
   localize: (path: string) => string;
 }) {
   const sectionCopy = discoverySectionCopy[locale];
+  const hasStructuredDiscovery =
+    Boolean(content.discovery.features?.length) &&
+    Boolean(content.discovery.useCases?.length) &&
+    Boolean(content.discovery.seoEngine.leagueLabels?.length);
+
+  if (hasStructuredDiscovery) {
+    return (
+      <Box
+        component="section"
+        sx={{
+          ...motionRevealSx(260),
+          py: { xs: 1, md: 0 },
+        }}
+      >
+        <Stack spacing={3} sx={{ width: '100%' }}>
+          <SectionHeading
+            title={content.discovery.title}
+            description={content.discovery.description}
+            maxWidth={980}
+          />
+
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', lg: 'row' },
+              gap: 2.5,
+              alignItems: 'stretch',
+            }}
+          >
+            <Box
+              sx={{
+                ...panelSx,
+                flex: '1 1 auto',
+                borderRadius: 3.5,
+                bgcolor: alpha(homepagePalette.surface, 0.56),
+                px: { xs: 2.25, md: 3.25 },
+                py: { xs: 2.25, md: 3.25 },
+              }}
+            >
+              <Stack spacing={1.4}>
+                {content.discovery.features?.map((feature) => (
+                  <Typography
+                    key={feature}
+                    sx={{
+                      ...copySafeSx,
+                      color: homepagePalette.textBody,
+                      fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                      fontSize: '0.95rem',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {feature}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box
+              sx={{
+                ...panelSx,
+                width: { xs: '100%', lg: 360 },
+                flexShrink: 0,
+                borderRadius: 3.5,
+                px: { xs: 2.25, md: 3 },
+                py: { xs: 2.25, md: 3 },
+                background: homepagePalette.discoveryPanelBackground,
+                borderColor: homepagePalette.accentBorder,
+              }}
+            >
+              <Stack spacing={1.5} sx={{ minHeight: '100%' }}>
+                <Typography
+                  sx={{
+                    ...copySafeSx,
+                    color: homepagePalette.textStrong,
+                    fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                    fontSize: { xs: '1.25rem', md: '1.375rem' },
+                    fontWeight: 600,
+                    lineHeight: 1.24,
+                    maxWidth: { xs: '100%', md: 280 },
+                  }}
+                >
+                  {content.discovery.useCasesTitle}
+                </Typography>
+                <Stack spacing={1.1}>
+                  {content.discovery.useCases?.map((useCase) => (
+                    <Typography
+                      key={useCase}
+                      sx={{
+                        ...copySafeSx,
+                        color: homepagePalette.textSoft,
+                        fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                        fontSize: '0.875rem',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {useCase}
+                    </Typography>
+                  ))}
+                </Stack>
+              </Stack>
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              ...panelSx,
+              borderRadius: 3.5,
+              px: { xs: 3, md: 3.5 },
+              py: { xs: 3, md: 3.5 },
+              background: homepagePalette.discoverySeoBackground,
+            }}
+          >
+            <Stack spacing={2.5}>
+              <Typography
+                sx={{
+                  color: homepagePalette.textStrong,
+                  fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                  fontSize: { xs: '1.55rem', md: '1.75rem' },
+                  fontWeight: 600,
+                  lineHeight: 1.2,
+                }}
+              >
+                {content.discovery.seoEngine.title}
+              </Typography>
+              <Typography
+                sx={{
+                  ...copySafeSx,
+                  color: homepagePalette.textSoft,
+                  fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                  fontSize: '0.875rem',
+                  lineHeight: 1.5,
+                  maxWidth: 900,
+                }}
+              >
+                {content.discovery.seoEngine.description}
+              </Typography>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  overflowX: 'auto',
+                  gap: 1.5,
+                  pt: 0.75,
+                  pb: 0.6,
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                  '&::-webkit-scrollbar': {
+                    height: 8,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: alpha(homepagePalette.surfaceBorder, 0.72),
+                    borderRadius: 999,
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: alpha(homepagePalette.surfaceDeep, 0.3),
+                  },
+                }}
+              >
+                {content.discovery.seoEngine.leagueLabels?.map((league) => (
+                  <Box
+                    key={league}
+                    component={Link}
+                    href={localize(PUBLIC_HUB_PATHS.leagues)}
+                    sx={{
+                      ...panelSx,
+                      display: 'block',
+                      minWidth: { xs: 210, md: 240 },
+                      maxWidth: { xs: 210, md: 240 },
+                      borderRadius: 2.75,
+                      px: 2.25,
+                      py: 1.8,
+                      bgcolor: alpha(homepagePalette.surface, 0.56),
+                      textDecoration: 'none',
+                      scrollSnapAlign: 'start',
+                      transition: 'transform 220ms ease, border-color 220ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-3px)',
+                        borderColor: alpha(homepagePalette.accent, 0.48),
+                      },
+                    }}
+                  >
+                    <Stack spacing={1.2}>
+                      <Box
+                        sx={{
+                          width: 72,
+                          height: 72,
+                          borderRadius: 2.25,
+                          display: 'grid',
+                          placeItems: 'center',
+                          background: alpha(homepagePalette.surfaceAlt, 0.72),
+                          border: '1px solid',
+                          borderColor: alpha(homepagePalette.surfaceBorder, 0.42),
+                          boxShadow: `0 10px 24px ${alpha(homepagePalette.shadow, 0.24)}`,
+                          px: 1,
+                          py: 1,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={leagueCardMeta[league]?.src}
+                          alt={leagueCardMeta[league]?.alt ?? `${league} logo`}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            display: 'block',
+                          }}
+                        />
+                      </Box>
+
+                      <Typography
+                        sx={{
+                          ...copySafeSx,
+                          color: homepagePalette.textBody,
+                          fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                          fontSize: '1.125rem',
+                          fontWeight: 600,
+                          lineHeight: 1.22,
+                        }}
+                      >
+                        {league}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                ))}
+              </Box>
+
+              {content.discovery.seoEngine.note ? (
+                <Typography
+                  sx={{
+                    ...copySafeSx,
+                    color: homepagePalette.textMuted,
+                    fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+                    fontSize: '0.8125rem',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {content.discovery.seoEngine.note}
+                </Typography>
+              ) : null}
+            </Stack>
+          </Box>
+        </Stack>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -43,8 +334,8 @@ export function HomepageDiscoverySection({
     >
       <Stack spacing={3} sx={{ width: '100%' }}>
         <SectionHeading
-          title={sectionCopy.title}
-          description={sectionCopy.description}
+          title={content.discovery.title || sectionCopy.title}
+          description={content.discovery.description || sectionCopy.description}
           maxWidth={980}
         />
 
