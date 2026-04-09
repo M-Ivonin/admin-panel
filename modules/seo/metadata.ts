@@ -1,8 +1,16 @@
 import type { Metadata } from 'next';
 import { i18n, type Locale } from '@/lib/i18n/config';
-import type { SeoPageBase } from '@/modules/content/types';
+import type {
+  QuizHubPage,
+  QuizPage,
+  QuizResultPage,
+  SeoPageBase,
+} from '@/modules/content/types';
 import { getPublicAppConfig } from '@/modules/config/runtime';
-import { buildLocalizedAlternates, buildLocalizedPath } from '@/modules/seo/route-registry';
+import {
+  buildLocalizedAlternates,
+  buildLocalizedPath,
+} from '@/modules/seo/route-registry';
 
 interface BuildPageMetadataInput {
   locale: Locale;
@@ -18,6 +26,9 @@ const ogLocales: Record<Locale, string> = {
   pt: 'pt_PT',
 };
 
+/**
+ * Builds one normalized metadata object for a public route.
+ */
 export function buildPageMetadata({
   locale,
   path,
@@ -68,11 +79,15 @@ export function buildPageMetadata({
   };
 }
 
+/**
+ * Builds metadata for static public page entities.
+ */
 export function buildContentPageMetadata(page: SeoPageBase): Metadata {
   const localizedPrefix = `/${page.locale}`;
-  const path = page.canonicalPath === localizedPrefix
-    ? ''
-    : page.canonicalPath.replace(localizedPrefix, '');
+  const path =
+    page.canonicalPath === localizedPrefix
+      ? ''
+      : page.canonicalPath.replace(localizedPrefix, '');
 
   return buildPageMetadata({
     locale: page.locale,
@@ -80,5 +95,35 @@ export function buildContentPageMetadata(page: SeoPageBase): Metadata {
     title: page.metaTitle,
     description: page.metaDescription,
     index: page.indexability === 'index',
+  });
+}
+
+/**
+ * Builds metadata for the quiz hub route.
+ */
+export function buildQuizHubMetadata(page: QuizHubPage): Metadata {
+  return buildContentPageMetadata(page);
+}
+
+/**
+ * Builds metadata for one quiz detail route.
+ */
+export function buildQuizMetadata(page: QuizPage): Metadata {
+  return buildContentPageMetadata(page);
+}
+
+/**
+ * Builds metadata for one quiz result route and always forces noindex.
+ */
+export function buildQuizResultMetadata(page: QuizResultPage): Metadata {
+  const localizedPrefix = `/${page.locale}`;
+  const path = page.canonicalPath.replace(localizedPrefix, '');
+
+  return buildPageMetadata({
+    locale: page.locale,
+    path,
+    title: page.metaTitle,
+    description: page.metaDescription,
+    index: false,
   });
 }

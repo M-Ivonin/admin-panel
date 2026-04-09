@@ -23,7 +23,7 @@ export const translations = {
       cookies: "Cookie Notice",
     },
     legal: {
-      lastUpdated: "Last updated: October 2025",
+      lastUpdated: "Last updated: April 2026",
     },
     deepLink: {
       invalidLink: "Invalid Invitation Link",
@@ -64,7 +64,7 @@ export const translations = {
       cookies: "Aviso de Cookies",
     },
     legal: {
-      lastUpdated: "Última atualização: outubro de 2025",
+      lastUpdated: "Última atualização: abril de 2026",
     },
     deepLink: {
       invalidLink: "Link de Convite Inválido",
@@ -105,7 +105,7 @@ export const translations = {
       cookies: "Aviso de Cookies",
     },
     legal: {
-      lastUpdated: "Última actualización: octubre de 2025",
+      lastUpdated: "Última actualización: abril de 2026",
     },
     deepLink: {
       invalidLink: "Enlace de Invitación Inválido",

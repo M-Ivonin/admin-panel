@@ -5,6 +5,25 @@
 Этот документ фиксирует текущую архитектурную базу `admin-panel` после рефактора public/admin/deeplink контуров.  
 Он не описывает дизайн, composition страниц или контентную стратегию. Его задача: закрепить границы модулей и правила, по которым дальше наращивается функционал.
 
+## Current Public Status
+
+По состоянию на `2026-03-27` публичная homepage SirBro уже:
+
+- реализована в [`/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
+- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/[lang]/page.tsx)
+- синхронизирована с актуальным Pencil-источником `Q0YlO` из `/Users/serhiimytakii/Downloads/sirbro.pen`
+- задеплоена как текущая production homepage
+
+Нижеописанная архитектура не является планом для homepage "с нуля".  
+Для homepage речь теперь идет только о поддержке, polish и последующих public SEO/content слоях.
+
+Над этим core-слоем теперь зафиксирован отдельный information architecture layer:
+
+- [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
+- [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
+
+Эти документы не меняют runtime поведение текущего цикла, но задают утвержденную форму следующего public SEO layer.
+
 ## Статус Выполнения
 
 Ниже отражено, что уже сделано по архитектурному плану.
@@ -98,6 +117,32 @@
 - локализованные embed pages снова получают правильный `html lang`
 - текущая архитектура готова к следующему слою: `trust pages`, `insights`, `entities`, `quizzes`
 
+## Следующий слой поверх core architecture
+
+После закрытия `Этапа 1.5` следующий слой считается архитектурно определенным, но еще не реализованным runtime-wise.
+
+Утвержденные public SEO families:
+
+- `trust pages`
+- `insights`
+- `entities`
+- `quizzes`
+
+Для них уже зафиксированы:
+
+- IA-модель страниц и навигации;
+- URL structure;
+- hub/detail page model;
+- index / noindex decisions;
+- technical backlog по route types и content contracts.
+
+Это значит:
+
+- эти слои больше не считаются абстрактными "будущими идеями";
+- реализация следующих этапов должна соответствовать утвержденной IA;
+- сам этот документ по-прежнему не является местом для дизайна или page composition;
+- runtime реализация новых public routes, DTO и repository methods начинается только на следующих implementation phases.
+
 ## Что Еще Не Сделано
 
 Это сознательно оставлено за пределами текущего цикла:
@@ -160,6 +205,9 @@
 - auth/admin routes не попадают в sitemap;
 - auth/admin root layouts всегда `noindex`;
 - admin logic использует `modules/http/admin-auth-client.ts`.
+- admin magic link всегда должен возвращать пользователя в тот же admin origin,
+  откуда был отправлен запрос;
+- Vercel preview admin deployments по умолчанию используют dev API, а не prod API.
 
 ## Source Of Truth
 
@@ -175,6 +223,8 @@
 - structured data builders: [`modules/seo/schema.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/schema.ts)
 - sitemap route: [`app/(public)/sitemap.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts)
 - robots route: [`app/(public)/robots.txt/route.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/robots.txt/route.ts)
+- approved IA source of truth: [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
+- technical handoff for next public layer: [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
 
 ### Content Contracts
 

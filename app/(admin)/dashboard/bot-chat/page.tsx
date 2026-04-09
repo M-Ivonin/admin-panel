@@ -52,7 +52,7 @@ function BotChatContent() {
             <Box>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="h6" color="text.primary" sx={{ mb: 2 }}>
-                  Select User
+                  Conversations
                 </Typography>
                 <UserSelect onUserSelect={setSelectedUserId} selectedUserId={selectedUserId} />
               </Paper>
@@ -71,7 +71,7 @@ function BotChatContent() {
               ) : (
                 <Paper sx={{ p: 4, textAlign: 'center' }}>
                   <Typography color="text.secondary">
-                    Select a user to view their chat history
+                    Choose a conversation to view the full chat history
                   </Typography>
                 </Paper>
               )}

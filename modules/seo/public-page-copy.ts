@@ -1,7 +1,18 @@
 import type { Locale } from '@/lib/i18n/config';
 import { getDictionary } from '@/lib/i18n/get-dictionary';
 
-export type PublicSeoPageKey = 'home' | 'privacy' | 'terms' | 'disclaimer' | 'cookies';
+export type PublicSeoPageKey =
+  | 'home'
+  | 'privacy'
+  | 'terms'
+  | 'disclaimer'
+  | 'cookies'
+  | 'about'
+  | 'methodology'
+  | 'editorial-policy'
+  | 'ai-transparency'
+  | 'faq'
+  | 'contact';
 
 interface PublicSeoCopy {
   title: string;
@@ -32,7 +43,79 @@ const legalDescriptions: Record<
     es: 'Consulta cómo SirBro usa cookies y tecnologías similares en el sitio web y la app.',
     pt: 'Veja como o SirBro usa cookies e tecnologias semelhantes no site e na experiência do app.',
   },
+  about: {
+    en: 'Learn what SirBro is building, who the product is for, and how the platform approaches football intelligence.',
+    es: 'Descubre qué está construyendo SirBro, para quién es el producto y cómo aborda la inteligencia futbolística.',
+    pt: 'Saiba o que o SirBro está construindo, para quem o produto foi feito e como a plataforma aborda inteligência de futebol.',
+  },
+  methodology: {
+    en: 'See how SirBro structures football analysis, signals, and interpretation before full methodology content is published.',
+    es: 'Consulta cómo SirBro estructura el análisis, las señales y la interpretación futbolística antes de publicar la metodología completa.',
+    pt: 'Veja como o SirBro estrutura análise, sinais e interpretação de futebol antes da publicação completa da metodologia.',
+  },
+  'editorial-policy': {
+    en: 'Review the future editorial standards SirBro will apply to sources, updates, and analysis quality.',
+    es: 'Revisa los futuros estándares editoriales que SirBro aplicará a fuentes, actualizaciones y calidad del análisis.',
+    pt: 'Revise os futuros padrões editoriais que o SirBro aplicará a fontes, atualizações e qualidade da análise.',
+  },
+  'ai-transparency': {
+    en: 'Understand how SirBro plans to use AI, human review, and safeguards for football analysis pages.',
+    es: 'Comprende cómo SirBro planea usar IA, revisión humana y salvaguardas en las páginas de análisis futbolístico.',
+    pt: 'Entenda como o SirBro pretende usar IA, revisão humana e salvaguardas nas páginas de análise de futebol.',
+  },
+  faq: {
+    en: 'See the planned FAQ surface for product, analysis, and trust-related questions across the public site.',
+    es: 'Consulta la superficie FAQ planificada para preguntas de producto, análisis y confianza en todo el sitio público.',
+    pt: 'Veja a área de FAQ planejada para perguntas sobre produto, análise e confiança em todo o site público.',
+  },
+  contact: {
+    en: 'Find the planned contact surface for product, support, legal, and partnership requests.',
+    es: 'Encuentra la futura vía de contacto para producto, soporte, asuntos legales y colaboraciones.',
+    pt: 'Encontre a futura área de contato para produto, suporte, assuntos legais e parcerias.',
+  },
 };
+
+const trustTitles: Record<
+  Exclude<PublicSeoPageKey, 'home' | 'privacy' | 'terms' | 'disclaimer' | 'cookies'>,
+  Record<Locale, string>
+> = {
+  about: {
+    en: 'About SirBro',
+    es: 'Sobre SirBro',
+    pt: 'Sobre o SirBro',
+  },
+  methodology: {
+    en: 'Methodology',
+    es: 'Metodología',
+    pt: 'Metodologia',
+  },
+  'editorial-policy': {
+    en: 'Editorial Policy',
+    es: 'Política Editorial',
+    pt: 'Política Editorial',
+  },
+  'ai-transparency': {
+    en: 'AI Transparency',
+    es: 'Transparencia de IA',
+    pt: 'Transparência de IA',
+  },
+  faq: {
+    en: 'FAQ',
+    es: 'Preguntas Frecuentes',
+    pt: 'Perguntas Frequentes',
+  },
+  contact: {
+    en: 'Contact',
+    es: 'Contacto',
+    pt: 'Contato',
+  },
+};
+
+function isTrustPageKey(
+  pageKey: Exclude<PublicSeoPageKey, 'home'>
+): pageKey is keyof typeof trustTitles {
+  return pageKey in trustTitles;
+}
 
 export function getPublicPageSeoCopy(
   pageKey: PublicSeoPageKey,
@@ -41,9 +124,33 @@ export function getPublicPageSeoCopy(
   const t = getDictionary(locale);
 
   if (pageKey === 'home') {
+    const homeCopy: Record<Locale, PublicSeoCopy> = {
+      en: {
+        title: 'AI Football Predictions & Match Insights',
+        description:
+          'Get AI-powered football and soccer predictions, match analysis, and real-time insights. Track teams, players, and matches with SirBro.',
+      },
+      es: {
+        title:
+          'SirBro | App de insights de fútbol para volatilidad, lesiones y forma del jugador',
+        description:
+          'Explora insights de fútbol, forma del jugador, impacto de lesiones, cambios de alineación y volatilidad del partido con el modelo deportivo de SirBro.',
+      },
+      pt: {
+        title:
+          'SirBro | App de insights de futebol para volatilidade, lesoes e forma do jogador',
+        description:
+          'Explore insights de futebol, forma do jogador, impacto de lesoes, mudancas de escalação e volatilidade da partida com o modelo esportivo do SirBro.',
+      },
+    };
+
+    return homeCopy[locale];
+  }
+
+  if (isTrustPageKey(pageKey)) {
     return {
-      title: 'Football Predictions App',
-      description: t.hero.subtitle,
+      title: trustTitles[pageKey][locale],
+      description: legalDescriptions[pageKey][locale],
     };
   }
 

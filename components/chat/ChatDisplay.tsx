@@ -27,12 +27,173 @@ export function ChatDisplay({
   onRefresh,
   dailyRequests,
 }: ChatDisplayProps) {
-  const formatContent = (content: Record<string, unknown> | null): string => {
-    if (!content) return '';
-    if (typeof content === 'string') return content;
-    if (content.text && typeof content.text === 'string') return content.text;
-    if (content.message && typeof content.message === 'string') return content.message;
-    return JSON.stringify(content, null, 2);
+  const readString = (value: unknown): string | null => {
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  const toLabel = (key: string): string =>
+    key
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/_/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/^./, (char) => char.toUpperCase());
+
+  const formatValue = (value: unknown): string | null => {
+    const text = readString(value);
+    if (text) {
+      return text;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      const items = value
+        .map((entry) => formatValue(entry))
+        .filter((entry): entry is string => Boolean(entry));
+
+      return items.length > 0 ? items.join(', ') : null;
+    }
+
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      const preferredKeys = ['label', 'value', 'name', 'title', 'text'];
+
+      for (const key of preferredKeys) {
+        const formatted = formatValue(record[key]);
+        if (formatted) {
+          return formatted;
+        }
+      }
+
+      const entries = Object.entries(record)
+        .map(([key, nestedValue]) => {
+          const formatted = formatValue(nestedValue);
+          return formatted ? `${toLabel(key)}: ${formatted}` : null;
+        })
+        .filter((entry): entry is string => Boolean(entry));
+
+      return entries.length > 0 ? entries.join('; ') : null;
+    }
+
+    return null;
+  };
+
+  const formatContent = (
+    content: Record<string, unknown> | null
+  ): { primary: string[]; secondary: string[] } => {
+    if (!content) {
+      return { primary: [], secondary: [] };
+    }
+
+    const primaryLines: string[] = [];
+    const secondaryLines: string[] = [];
+    const consumedKeys = new Set<string>();
+
+    const pushPrimary = (value: unknown) => {
+      const text = formatValue(value);
+      if (text) {
+        primaryLines.push(text);
+      }
+    };
+
+    const pushSecondary = (label: string, value: unknown) => {
+      const text = formatValue(value);
+      if (text) {
+        secondaryLines.push(`${label}: ${text}`);
+      }
+    };
+
+    pushPrimary(content.text);
+    consumedKeys.add('text');
+
+    if (!primaryLines.length) {
+      pushPrimary(content.message);
+    } else {
+      pushSecondary('Message', content.message);
+    }
+    consumedKeys.add('message');
+
+    pushSecondary('Title', content.title);
+    consumedKeys.add('title');
+
+    const homeTeam = readString(content.homeTeam);
+    const awayTeam = readString(content.awayTeam);
+    if (homeTeam && awayTeam) {
+      secondaryLines.push(`Match: ${homeTeam} vs ${awayTeam}`);
+      consumedKeys.add('homeTeam');
+      consumedKeys.add('awayTeam');
+    }
+
+    pushSecondary('Event', content.eventName);
+    consumedKeys.add('eventName');
+
+    const predictionType = readString(content.predictionType);
+    const predictionValue = readString(content.predictionValue);
+    if (predictionType || predictionValue) {
+      secondaryLines.push(
+        `Prediction: ${[predictionType, predictionValue]
+          .filter(Boolean)
+          .join(' - ')}`
+      );
+      consumedKeys.add('predictionType');
+      consumedKeys.add('predictionValue');
+    }
+
+    pushSecondary('Confidence', content.confidence);
+    consumedKeys.add('confidence');
+    pushSecondary('Odds', content.odds);
+    consumedKeys.add('odds');
+    pushSecondary('League', content.leagueName);
+    consumedKeys.add('leagueName');
+    pushSecondary('Bookmaker', content.bookmaker);
+    consumedKeys.add('bookmaker');
+    pushSecondary('Question', content.question);
+    consumedKeys.add('question');
+    pushSecondary('Analysis', content.analysis);
+    consumedKeys.add('analysis');
+
+    if (Array.isArray(content.options) && content.options.length > 0) {
+      const options = content.options
+        .map((option) => readString(option))
+        .filter((option): option is string => Boolean(option));
+
+      if (options.length > 0) {
+        secondaryLines.push(`Options: ${options.join(', ')}`);
+      }
+      consumedKeys.add('options');
+    }
+
+    if (typeof content.isRisky === 'boolean') {
+      secondaryLines.push(`Risk profile: ${content.isRisky ? 'Risky' : 'Safe'}`);
+      consumedKeys.add('isRisky');
+    }
+
+    Object.entries(content).forEach(([key, value]) => {
+      if (consumedKeys.has(key)) {
+        return;
+      }
+
+      const formatted = formatValue(value);
+      if (!formatted) {
+        return;
+      }
+
+      secondaryLines.push(`${toLabel(key)}: ${formatted}`);
+    });
+
+    if (!primaryLines.length && !secondaryLines.length) {
+      secondaryLines.push('Structured message');
+    }
+
+    return { primary: primaryLines, secondary: secondaryLines };
   };
 
   const getMessageType = (message: ChatMessage): 'user' | 'bot' | 'system' => {
@@ -102,6 +263,7 @@ export function ChatDisplay({
             const type = getMessageType(message);
             const isUserMessage = type === 'user';
             const isBotMessage = type === 'bot';
+            const formattedContent = formatContent(message.content);
 
             return (
               <Box
@@ -133,9 +295,29 @@ export function ChatDisplay({
                           }),
                   }}
                 >
-                  <Typography variant="body2" sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-                    {formatContent(message.content)}
-                  </Typography>
+                  {formattedContent.primary.map((line, index) => (
+                    <Typography
+                      key={`primary-${message.id}-${index}`}
+                      variant="body2"
+                      sx={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                    >
+                      {line}
+                    </Typography>
+                  ))}
+                  {formattedContent.secondary.map((line, index) => (
+                    <Typography
+                      key={`secondary-${message.id}-${index}`}
+                      variant="body2"
+                      sx={{
+                        mt: index === 0 && formattedContent.primary.length === 0 ? 0 : 0.75,
+                        opacity: 0.9,
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {line}
+                    </Typography>
+                  ))}
                   <Typography
                     variant="caption"
                     sx={{

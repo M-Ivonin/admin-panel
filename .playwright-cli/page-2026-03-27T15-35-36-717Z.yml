@@ -1,0 +1,247 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "SirBro SirBro" [ref=e6] [cursor=pointer]:
+          - /url: /en
+          - img "SirBro" [ref=e7]
+          - img "SirBro" [ref=e8]
+        - generic [ref=e9]:
+          - link "Home" [ref=e10] [cursor=pointer]:
+            - /url: /en
+          - link "Insights" [ref=e11] [cursor=pointer]:
+            - /url: /en/insights
+          - link "Explore" [ref=e12] [cursor=pointer]:
+            - /url: /en/topics
+          - link "Quizzes" [ref=e13] [cursor=pointer]:
+            - /url: /en/quizzes
+          - button "About" [ref=e15] [cursor=pointer]
+      - generic [ref=e16]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - button "EN" [ref=e20] [cursor=pointer]
+            - paragraph [ref=e21]: "|"
+          - generic [ref=e22]:
+            - button "ES" [ref=e23] [cursor=pointer]
+            - paragraph [ref=e24]: "|"
+          - button "PT" [ref=e26] [cursor=pointer]
+        - link "Download App" [ref=e27] [cursor=pointer]:
+          - /url: "#download"
+    - generic [ref=e28]:
+      - generic [ref=e30]:
+        - generic [ref=e32]:
+          - paragraph [ref=e33]: The smartest football analyst in your pocket.
+          - paragraph [ref=e34]: SirBro turns live match-state, injury impact, lineup shifts, player form, and tactical analysis into faster football decisions without the noise.
+          - generic [ref=e35]:
+            - link "App Store" [ref=e36] [cursor=pointer]:
+              - /url: https://apps.apple.com/us/app/sirbro/id6753070536
+              - img "App Store" [ref=e37]
+            - link "Google Play" [ref=e38] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=ai.levantem.sirbro
+              - img "Google Play" [ref=e39]
+          - paragraph [ref=e41]: About SirBro · Methodology · Editorial Policy · AI Transparency · FAQ · Contact
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: Proprietary Sports AI Model
+            - img "SirBro app screenshot" [ref=e47]
+            - paragraph [ref=e49]:
+              - text: Momentum swing
+              - text: 63% pressure after 55'
+            - paragraph [ref=e53]: Who has the edge in the 2nd half?
+          - paragraph [ref=e55]: Live match updates, summarized in seconds.
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - paragraph [ref=e59]: See the match board. Ask the analyst. Follow the game state live.
+          - paragraph [ref=e60]: "SirBro turns football noise into a real mobile product: a fast matches overview, actionable AI chat and a live timeline that keeps context visible."
+        - generic [ref=e61]:
+          - generic [ref=e63]:
+            - img "Insight Feed" [ref=e65]
+            - generic [ref=e66]:
+              - paragraph [ref=e67]: Insight Feed
+              - paragraph [ref=e68]: Track injury impact, momentum swings, and match outlook changes in a clean signal feed.
+          - generic [ref=e70]:
+            - img "Chat Widget" [ref=e72]
+            - generic [ref=e73]:
+              - paragraph [ref=e74]: Chat Widget
+              - paragraph [ref=e75]: Ask quick football questions and get a sharp answer that keeps match context in view.
+          - generic [ref=e77]:
+            - img "Fan Arena" [ref=e79]
+            - generic [ref=e80]:
+              - paragraph [ref=e81]: Fan Arena
+              - paragraph [ref=e82]: Turn football intelligence into social competition with streaks, ranks, and friends-only boards.
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - paragraph [ref=e87]: How SirBro helps you read the match faster.
+            - paragraph [ref=e88]: This section combines process and trust early, so the page feels credible without becoming a separate trust chapter.
+          - generic [ref=e90]:
+            - paragraph [ref=e91]: "01"
+            - paragraph [ref=e92]: Track the signal
+            - paragraph [ref=e93]: Read live match-state, player form, lineup changes, and volatility before they become obvious.
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: "02"
+            - paragraph [ref=e97]: Add football context
+            - paragraph [ref=e98]: Translate the raw data into tactical analysis, momentum, and role-level football consequences.
+          - generic [ref=e100]:
+            - paragraph [ref=e101]: "03"
+            - paragraph [ref=e102]: Decide or explore deeper
+            - paragraph [ref=e103]: Open the app, follow the insight trail, or jump into team, player, league, and topic pages.
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - paragraph [ref=e107]: Why SirBro is credible
+            - paragraph [ref=e108]: See how our analysis works, how content is reviewed and where AI helps turn live football data into clear decisions.
+            - paragraph [ref=e109]: SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.
+          - generic [ref=e110]:
+            - link "Methodology See how the model turns match-state and history into explainable football insights." [ref=e111] [cursor=pointer]:
+              - /url: /en/methodology
+              - generic [ref=e112]:
+                - paragraph [ref=e113]: Methodology
+                - paragraph [ref=e114]: See how the model turns match-state and history into explainable football insights.
+            - link "Editorial policy Understand the review rules behind public insights and updates." [ref=e115] [cursor=pointer]:
+              - /url: /en/editorial-policy
+              - generic [ref=e116]:
+                - paragraph [ref=e117]: Editorial policy
+                - paragraph [ref=e118]: Understand the review rules behind public insights and updates.
+            - link "AI + human review Learn where automation helps and where human judgment stays in the loop." [ref=e119] [cursor=pointer]:
+              - /url: /en/ai-transparency
+              - generic [ref=e120]:
+                - paragraph [ref=e121]: AI + human review
+                - paragraph [ref=e122]: Learn where automation helps and where human judgment stays in the loop.
+            - link "About SirBro Get the product story, trust position, and product mission in one place." [ref=e123] [cursor=pointer]:
+              - /url: /en/about
+              - generic [ref=e124]:
+                - paragraph [ref=e125]: About SirBro
+                - paragraph [ref=e126]: Get the product story, trust position, and product mission in one place.
+          - link "Contact · Business, support and media inquiries" [ref=e127] [cursor=pointer]:
+            - /url: /en/contact
+      - generic [ref=e129]:
+        - generic [ref=e130]:
+          - paragraph [ref=e131]: Discover more from SirBro
+          - paragraph [ref=e132]: Explore featured insight, try a football quiz and jump into pages for teams, players and leagues without losing the fast app-first feel.
+        - generic [ref=e133]:
+          - link "Why Real Madrid look more dangerous when Bellingham starts higher between the lines. Real Madrid · Jude Bellingham · Tactical analysis · Lineup changes This week’s read" [ref=e134] [cursor=pointer]:
+            - /url: /en/insights/lineup-shifts-change-match-volatility
+            - generic [ref=e135]:
+              - paragraph [ref=e136]: Why Real Madrid look more dangerous when Bellingham starts higher between the lines.
+              - paragraph [ref=e137]: Real Madrid · Jude Bellingham · Tactical analysis · Lineup changes
+              - paragraph [ref=e139]: This week’s read
+          - link "What kind of football thinker are you? Take a quick football quiz, compare your instincts and keep exploring SirBro beyond the first scroll. Start Quiz" [ref=e140] [cursor=pointer]:
+            - /url: /en/quizzes/tactical-identity-football-thinker
+            - generic [ref=e141]:
+              - paragraph [ref=e142]: What kind of football thinker are you?
+              - paragraph [ref=e143]: Take a quick football quiz, compare your instincts and keep exploring SirBro beyond the first scroll.
+              - button "Start Quiz" [ref=e144]
+        - generic [ref=e146]:
+          - paragraph [ref=e147]: Explore teams, players and leagues
+          - paragraph [ref=e148]: EPL · La Liga · Serie A · Ligue 1 · Brasileirao · Liga MX · MLS
+          - paragraph [ref=e149]: Standings · Top scorers · Assists
+          - paragraph [ref=e150]: "Popular now: Real Madrid · Manchester City · Kylian Mbappe · Lamine Yamal"
+          - generic [ref=e151]:
+            - link "Real Madrid crest Team page Real Madrid Latest form, likely edges and the next big talking points around the club." [ref=e152] [cursor=pointer]:
+              - /url: /en/teams
+              - generic [ref=e153]:
+                - img "Real Madrid crest" [ref=e155]
+                - generic [ref=e156]:
+                  - paragraph [ref=e157]: Team page
+                  - paragraph [ref=e158]: Real Madrid
+                - paragraph [ref=e159]: Latest form, likely edges and the next big talking points around the club.
+            - link "Kylian Mbappe Player page Kylian Mbappe Form, role and matchup context around one of the players shaping the game." [ref=e160] [cursor=pointer]:
+              - /url: /en/players
+              - generic [ref=e161]:
+                - img "Kylian Mbappe" [ref=e163]
+                - generic [ref=e164]:
+                  - paragraph [ref=e165]: Player page
+                  - paragraph [ref=e166]: Kylian Mbappe
+                - paragraph [ref=e167]: Form, role and matchup context around one of the players shaping the game.
+            - link "Premier League logo League page Premier League Standings, top scorers and the storylines setting the pace this week." [ref=e168] [cursor=pointer]:
+              - /url: /en/leagues
+              - generic [ref=e169]:
+                - img "Premier League logo" [ref=e171]
+                - generic [ref=e172]:
+                  - paragraph [ref=e173]: League page
+                  - paragraph [ref=e174]: Premier League
+                - paragraph [ref=e175]: Standings, top scorers and the storylines setting the pace this week.
+          - paragraph [ref=e176]: Follow the names, then go deeper into the pages behind them.
+      - generic [ref=e178]:
+        - generic [ref=e179]:
+          - paragraph [ref=e180]: Quick answers about how SirBro works, what it covers and what you can do inside the app.
+          - paragraph [ref=e181]: These answers support trust, clarify coverage, and prepare the page for FAQPage structured data.
+        - generic [ref=e182]:
+          - generic [ref=e183]:
+            - heading "How does SirBro's AI predict match volatility?" [level=3] [ref=e184]:
+              - button "How does SirBro's AI predict match volatility?" [expanded] [ref=e185] [cursor=pointer]:
+                - paragraph [ref=e187]: How does SirBro's AI predict match volatility?
+                - img [ref=e189]
+            - region [ref=e194]:
+              - paragraph [ref=e196]: SirBro combines historical patterns, lineup shifts, player availability, and live match-state changes to detect volatility before it becomes obvious in the market or conversation.
+          - heading "Which football leagues are covered?" [level=3] [ref=e198]:
+            - button "Which football leagues are covered?" [ref=e199] [cursor=pointer]:
+              - paragraph [ref=e201]: Which football leagues are covered?
+              - img [ref=e203]
+          - heading "Is the SirBro chat available in Spanish and Portuguese?" [level=3] [ref=e206]:
+            - button "Is the SirBro chat available in Spanish and Portuguese?" [ref=e207] [cursor=pointer]:
+              - paragraph [ref=e209]: Is the SirBro chat available in Spanish and Portuguese?
+              - img [ref=e211]
+          - heading "How can I compete with friends in the Fan Arena?" [level=3] [ref=e214]:
+            - button "How can I compete with friends in the Fan Arena?" [ref=e215] [cursor=pointer]:
+              - paragraph [ref=e217]: How can I compete with friends in the Fan Arena?
+              - img [ref=e219]
+    - generic [ref=e224]:
+      - paragraph [ref=e225]: Download SirBro and stay one step ahead of the match.
+      - paragraph [ref=e226]: Get live football insight, AI chat and match context in one fast mobile experience built for every game day.
+      - generic [ref=e227]:
+        - link "Download App" [ref=e228] [cursor=pointer]:
+          - /url: "#download"
+        - link "Explore Insights" [ref=e229] [cursor=pointer]:
+          - /url: /en/insights
+    - generic [ref=e231]:
+      - generic [ref=e232]:
+        - link "SirBro SirBro" [ref=e233] [cursor=pointer]:
+          - /url: /en
+          - img "SirBro" [ref=e234]
+          - img "SirBro" [ref=e235]
+        - paragraph [ref=e236]: Football insights, proprietary sports AI analysis, chat and Fan Arena competition in one pocket-sized product.
+      - generic [ref=e237]:
+        - generic [ref=e238]:
+          - paragraph [ref=e239]: Product
+          - generic [ref=e240]: Home
+          - generic [ref=e241]: Download App
+          - generic [ref=e242]: Chat Preview
+          - generic [ref=e243]: How It Works
+        - generic [ref=e244]:
+          - paragraph [ref=e245]: Insights
+          - generic [ref=e246]: Latest Insights
+          - generic [ref=e247]: Injury Impact
+          - generic [ref=e248]: Match Outlook
+          - generic [ref=e249]: Lineup Changes
+          - generic [ref=e250]: Tactical Analysis
+        - generic [ref=e251]:
+          - paragraph [ref=e252]: Explore
+          - generic [ref=e253]: Teams
+          - generic [ref=e254]: Players
+          - generic [ref=e255]: Leagues
+          - generic [ref=e256]: Topics
+          - generic [ref=e257]: Quizzes
+        - generic [ref=e258]:
+          - paragraph [ref=e259]: Trust
+          - generic [ref=e260]: About SirBro
+          - generic [ref=e261]: Methodology
+          - generic [ref=e262]: Editorial Policy
+          - generic [ref=e263]: AI Transparency
+          - generic [ref=e264]: FAQ
+          - generic [ref=e265]: Contact
+        - generic [ref=e266]:
+          - paragraph [ref=e267]: Legal
+          - generic [ref=e268]: Privacy
+          - generic [ref=e269]: Terms
+          - generic [ref=e270]: Disclaimer
+          - generic [ref=e271]: Cookies
+        - generic [ref=e272]:
+          - paragraph [ref=e273]: Social / Stores
+          - generic [ref=e274]: App Store
+          - generic [ref=e275]: Google Play
+          - generic [ref=e276]: X / Twitter
+          - generic [ref=e277]: Instagram
+          - generic [ref=e278]: TikTok
+  - button "Open Next.js Dev Tools" [ref=e284] [cursor=pointer]:
+    - img [ref=e285]

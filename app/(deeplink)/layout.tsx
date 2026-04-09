@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { AppDocumentShell } from '@/components/providers/AppDocumentShell';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -14,8 +15,8 @@ export default function DeepLinkRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="antialiased">{children}</body>
-    </html>
+    <AppDocumentShell lang="en" withProviders={false}>
+      {children}
+    </AppDocumentShell>
   );
 }

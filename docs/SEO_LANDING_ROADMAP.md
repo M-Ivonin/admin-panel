@@ -235,34 +235,160 @@
 
 Иначе любой новый SEO-контент будет строиться на не до конца чистой технической базе.
 
-## Этап 2. Переделать главную в полноценный SEO hub
+## Этап 1.5. Зафиксировать структуру сайта
 
-Сейчас главная слишком короткая. Ее нужно расширить без превращения в перегруженную свалку текста.
+Перед расширением главной и запуском новых SEO-разделов нужно утвердить целевую information architecture сайта.
+
+### Что сделать
+
+- зафиксировать canonical map всех public page types;
+- зафиксировать site map как единый source of truth для public site;
+- определить обязательные разделы верхнего меню и footer navigation;
+- определить основной SEO-слой сайта: `Home`, `Trust`, `Insights`, `Entities`, `Quizzes`;
+- описать, какие страницы являются hub pages, а какие detail pages;
+- определить, какие страницы идут в `index`, а какие по умолчанию должны быть `noindex`;
+- зафиксировать правила breadcrumbs и внутренней перелинковки;
+- согласовать URL-структуру для `insights`, `teams`, `players`, `leagues`, `topics`, `quizzes`;
+- закрепить trust stack: `About`, `Methodology`, `Editorial Policy`, `AI Transparency`, `FAQ`, `Contact`;
+- увязать структуру сайта с текущей архитектурой `admin-panel`, чтобы новые page types добавлялись через content contracts, metadata builders и sitemap registry.
+
+### Что должно получиться
+
+- понятная карта сайта без хаотичного роста новых страниц;
+- готовая схема навигации для desktop и mobile;
+- зафиксированный trust stack;
+- зафиксированная URL map;
+- зафиксированная indexation model;
+- основа для следующих этапов без конфликта с уже сделанным routing и SEO core;
+- предсказуемая модель internal linking для будущих `insights` и `entity pages`.
+
+### Артефакт этапа
+
+В качестве отдельных source of truth используются документы:
+
+- `docs/SITE_STRUCTURE_AND_SEO_IA.md`
+- `docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`
+
+### Gate этапа
+
+`Этап 2` не начинается, пока:
+
+- не утвержден IA source of truth;
+- не зафиксированы trust stack, URL map и indexation model;
+- не синхронизированы roadmap, IA и architecture docs;
+- не оформлен technical handoff по route types и content contracts.
+
+## Этап 1.6 создать дизайн сайта (UI)
+
+
+## Этап 2. Переделать главную в CTA-first home page с SEO-support
+
+Этот этап стартует только после полного закрытия `Этапа 1.5`.
+
+Сейчас главная слишком короткая, но первая попытка расширения легко уводит ее в перегруженный mini-hub.
+
+Главная не должна пытаться показать весь сайт сразу.
+
+Ее главная задача:
+
+- быстро объяснить продукт;
+- удержать фокус на установке приложения и store CTA;
+- поддержать SEO через сильные формулировки и внутренние ссылки;
+- рано показать доверие;
+- отправить пользователя в более глубокие разделы, а не заменять их.
 
 ### Что добавить на главную
 
 - сильный hero;
+- ссылки на сторы (App Store и Google Play);
+- hero-copy, которая сразу продает SirBro как sports analyst in your pocket;
 - короткое объяснение, что делает SirBro;
-- блок "How it works";
-- блок доверия;
-- `Latest Insights`;
-- `Trending Topics`;
-- `Top Teams / Players / Leagues`;
+- объединенный блок `How it works + Trust`;
+- один discovery-блок вместо нескольких SEO-rail секций:
+  - featured insight;
+  - FC26-style teams/players module with crawlable entity links;
+  - compact topic links;
+  - secondary featured quiz card;
 - FAQ;
-- preview About / Methodology;
 - заметные внутренние ссылки на ключевые SEO-разделы.
+
+### Что убрать с главной как отдельные секции
+
+- отдельный блок `Trending Topics`;
+- отдельный блок `Top Teams / Players / Leagues`;
+- отдельный preview `About / Methodology`;
+- повторяющиеся trust-блоки в нескольких местах страницы.
+
+Все это можно оставить в IA сайта, но на главной оно должно жить в более компактном виде:
+
+- `Top Teams / Players / Leagues` -> один FC26-style slider/module;
+- quiz -> вторичная карточка внутри discovery-zone, а не отдельная большая секция;
+- about/methodology preview -> в trust layer или на отдельных страницах.
 
 ### Что важно по стилю
 
 Текст должен остаться понятным и живым, но в нем должны появиться реальные поисковые сигналы:
 
 - football insights;
+- proprietary sports AI model;
+- match volatility;
 - player form;
 - injury impact;
 - tactical analysis;
 - match outlook;
 - lineup changes;
 - stats breakdowns.
+
+### Что важно по конверсии
+
+Hero должен вести прежде всего к установке приложения.
+
+Рекомендуемый приоритет CTA:
+
+1. `Download for iOS`
+2. `Download for Android`
+3. `Download App` как единый fallback CTA вне store badges
+
+### What to codify in the trust layer
+
+Нужен более конкретный explanation-block, а не общий marketing trust copy.
+
+Базовая формулировка:
+
+`SirBro processes millions of historical patterns and live match-state data through our proprietary Intelligence Layer. We don't just give you stats; we analyze volatility, lineup shifts, and momentum to identify the signal within the noise.`
+
+### What to codify in the SEO engine
+
+Для homepage важен один сильный crawlable entity-module:
+
+- league tabs;
+- standings / top goalscorers / assists toggle;
+- hard-coded links на team и player pages;
+- `SirBro Outlook` indicator.
+
+Это важнее, чем несколько разрозненных homepage-секций.
+
+### FAQ capture
+
+FAQ нужно проектировать не только как UX-блок, но и как search-capture слой.
+
+Обязательно:
+
+- accordion UI;
+- `FAQPage` JSON-LD;
+- вопросы про:
+  - AI match volatility;
+  - covered leagues;
+  - Spanish and Portuguese chat;
+  - Fan Arena competition with friends.
+
+### Правило приоритета
+
+Если любой новый блок начинает конкурировать с hero CTA или делает страницу визуально "о нескольких главных вещах сразу", его нужно:
+
+- либо объединять с соседним блоком;
+- либо убирать с home page;
+- либо переносить глубже в структуру сайта.
 
 ## Этап 3. Запустить content model для insights
 
@@ -425,4 +551,3 @@
 4. Добавить `sitemap.xml`.
 5. Внедрить нормальные metadata и structured data.
 6. Только после этого начинать массово запускать `insights`.
-

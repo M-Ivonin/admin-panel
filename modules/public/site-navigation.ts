@@ -1,0 +1,176 @@
+import type { Locale } from '@/lib/i18n/config';
+import { PUBLIC_PAGE_PATHS } from '@/modules/content/public-pages';
+import { buildLocalizedPath } from '@/modules/seo/route-registry';
+import { PUBLIC_HUB_PATHS } from '@/modules/public/scaffold-pages';
+
+interface NavigationItem {
+  label: string;
+  href: string;
+}
+
+const labels = {
+  home: {
+    en: 'Home',
+    es: 'Inicio',
+    pt: 'Início',
+  },
+  insights: {
+    en: 'Insights',
+    es: 'Insights',
+    pt: 'Insights',
+  },
+  explore: {
+    en: 'Explore',
+    es: 'Explorar',
+    pt: 'Explorar',
+  },
+  quizzes: {
+    en: 'Quizzes',
+    es: 'Quizzes',
+    pt: 'Quizzes',
+  },
+  about: {
+    en: 'About',
+    es: 'Sobre',
+    pt: 'Sobre',
+  },
+  aboutSirBro: {
+    en: 'About SirBro',
+    es: 'Sobre SirBro',
+    pt: 'Sobre o SirBro',
+  },
+  teams: {
+    en: 'Teams',
+    es: 'Equipos',
+    pt: 'Times',
+  },
+  players: {
+    en: 'Players',
+    es: 'Jugadores',
+    pt: 'Jogadores',
+  },
+  leagues: {
+    en: 'Leagues',
+    es: 'Ligas',
+    pt: 'Ligas',
+  },
+  topics: {
+    en: 'Topics',
+    es: 'Temas',
+    pt: 'Temas',
+  },
+  methodology: {
+    en: 'Methodology',
+    es: 'Metodología',
+    pt: 'Metodologia',
+  },
+  editorialPolicy: {
+    en: 'Editorial Policy',
+    es: 'Política Editorial',
+    pt: 'Política Editorial',
+  },
+  aiTransparency: {
+    en: 'AI Transparency',
+    es: 'Transparencia de IA',
+    pt: 'Transparência de IA',
+  },
+  faq: {
+    en: 'FAQ',
+    es: 'FAQ',
+    pt: 'FAQ',
+  },
+  contact: {
+    en: 'Contact',
+    es: 'Contacto',
+    pt: 'Contato',
+  },
+  downloadApp: {
+    en: 'Download App',
+    es: 'Descargar App',
+    pt: 'Baixar App',
+  },
+} as const satisfies Record<string, Record<Locale, string>>;
+
+function localizedLabel(key: keyof typeof labels, locale: Locale) {
+  return labels[key][locale];
+}
+
+function homeHref(locale: Locale) {
+  return buildLocalizedPath(locale, PUBLIC_PAGE_PATHS.home);
+}
+
+function localizedHref(locale: Locale, path: string) {
+  return buildLocalizedPath(locale, path);
+}
+
+export function getPublicHeaderNavigation(locale: Locale) {
+  return {
+    primary: [
+      { label: localizedLabel('home', locale), href: homeHref(locale) },
+      // {
+      //   label: localizedLabel('insights', locale),
+      //   href: localizedHref(locale, PUBLIC_HUB_PATHS.insights),
+      // },
+      // {
+      //   label: localizedLabel('explore', locale),
+      //   href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
+      // },
+      {
+        label: localizedLabel('quizzes', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.quizzes),
+      },
+      // {
+      //   label: localizedLabel('about', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      // },
+    ] satisfies NavigationItem[],
+    aboutMenu: [
+      // {
+      //   label: localizedLabel('aboutSirBro', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.about),
+      // },
+      // {
+      //   label: localizedLabel('methodology', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.methodology),
+      // },
+      // {
+      //   label: localizedLabel('editorialPolicy', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS['editorial-policy']),
+      // },
+      // {
+      //   label: localizedLabel('aiTransparency', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS['ai-transparency']),
+      // },
+      // {
+      //   label: localizedLabel('faq', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.faq),
+      // },
+      // {
+      //   label: localizedLabel('contact', locale),
+      //   href: localizedHref(locale, PUBLIC_PAGE_PATHS.contact),
+      // },
+    ] as NavigationItem[],
+    explore: [
+      {
+        label: localizedLabel('teams', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.teams),
+      },
+      {
+        label: localizedLabel('players', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.players),
+      },
+      {
+        label: localizedLabel('leagues', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.leagues),
+      },
+      {
+        label: localizedLabel('topics', locale),
+        href: localizedHref(locale, PUBLIC_HUB_PATHS.topics),
+      },
+    ] satisfies NavigationItem[],
+    cta: {
+      label: localizedLabel('downloadApp', locale),
+      href: `${homeHref(locale)}#download`,
+    } satisfies NavigationItem,
+  };
+}

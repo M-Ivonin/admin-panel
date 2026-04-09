@@ -1,6 +1,6 @@
 {
     "name": "SirBro Deep Link Handler",
-    "short_name": "TipsterBro",
+    "short_name": "SirBro",
     "description": "Deep link handler for SirBro mobile app",
     "start_url": "/",
     "display": "standalone",

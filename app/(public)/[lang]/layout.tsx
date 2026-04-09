@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { i18n } from '@/lib/i18n/config';
+import { PublicChatWidget } from '@/components/public/PublicChatWidget';
 import { getPublicAppConfig } from '@/modules/config/runtime';
 
 const { appHost } = getPublicAppConfig();
@@ -52,5 +53,10 @@ export default async function LangLayout({
   children: React.ReactNode;
   params: Promise<{ lang: string }>;
 }) {
-  return children;
+  return (
+    <>
+      {children}
+      <PublicChatWidget />
+    </>
+  );
 }

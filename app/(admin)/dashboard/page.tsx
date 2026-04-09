@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import {
   Logout,
+  Analytics,
   Chat,
   People,
   Settings,
@@ -89,6 +90,22 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     View and manage users
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link href="/dashboard/prediction-evaluations" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'warning.main', width: 48, height: 48, mb: 2 }}>
+                    <Analytics />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Prediction Evaluation
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Review grouped fixture accuracy, status, and market results
                   </Typography>
                 </CardActionArea>
               </Card>
