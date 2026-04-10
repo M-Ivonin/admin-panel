@@ -25,11 +25,12 @@ Access rules:
 - `sourceTypes`
 - `slotKeys`
 - `marketKeys`
-- `league`
 - `dateFrom`
 - `dateTo`
 - `sortBy`
 - `sortOrder`
+
+`dateFrom` and `dateTo` now accept ISO-8601 datetime values as well as date-only values. The admin UI sends local `datetime-local` values converted to ISO timestamps.
 
 Current default sort:
 
@@ -61,6 +62,12 @@ Supported sort orders:
 - collapsed accordion rows show grouped accuracy stats for the filtered child rows only
 - expanded accordion content shows only the prediction rows that matched the current filters
 - session user identity is intentionally hidden in v1
+- the `Search` field covers fixture id, team names, and league name; there is no separate league input in the UI
+- the prediction evaluations page includes a compact period selector with `All time`, `Last 7 days`, `Last 24 hours`, and `Custom range`
+- the default period is `Last 7 days`
+- selecting a quick period preset updates both `dateFrom` and `dateTo`
+- quick period presets keep exact rolling-window timestamps when calling the API, even though the inputs display minute-level local values
+- editing either `From` or `To` switches the selector to `Custom range`
 
 ## Fixture Metadata
 

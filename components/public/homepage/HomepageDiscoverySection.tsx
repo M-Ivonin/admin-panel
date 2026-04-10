@@ -61,7 +61,7 @@ const leagueCardMeta: Record<string, { src: string; alt: string }> = {
   },
   'FIFA World Cup 2026': {
     src: '/assets/homepage/leagues/fifa-world-cup-2026.svg',
-    alt: 'FIFA World Cup 2026 emblem',
+    alt: 'FIFA World Cup 2026 logo',
   },
 };
 
@@ -265,9 +265,10 @@ export function HomepageDiscoverySection({
                           borderRadius: 2.25,
                           display: 'grid',
                           placeItems: 'center',
-                          background: alpha(homepagePalette.surfaceAlt, 0.72),
+                          background:
+                            'linear-gradient(145deg, #ffffff 0%, #f7faff 100%)',
                           border: '1px solid',
-                          borderColor: alpha(homepagePalette.surfaceBorder, 0.42),
+                          borderColor: alpha('#ffffff', 0.78),
                           boxShadow: `0 10px 24px ${alpha(homepagePalette.shadow, 0.24)}`,
                           px: 1,
                           py: 1,

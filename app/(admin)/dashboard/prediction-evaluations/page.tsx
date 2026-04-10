@@ -43,6 +43,13 @@ import {
   PredictionEvaluationStatus,
   PredictionEvaluationSummary,
 } from '@/lib/api/prediction-evaluations';
+import {
+  PERIOD_PRESET_OPTIONS,
+  PredictionEvaluationPeriodPreset,
+  getPeriodPresetIsoRange,
+  toIsoTimestampFromLocalDateTime,
+  toLocalDateTimeInputValueFromIso,
+} from './period-filter';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
@@ -60,6 +67,10 @@ const STATUS_OPTIONS: Array<{
 const DEFAULT_SORT_FIELD: PredictionEvaluationGroupSortField =
   'prediction_created_at';
 const DEFAULT_SORT_ORDER: PredictionEvaluationGroupSortOrder = 'desc';
+const DEFAULT_PERIOD_PRESET: Exclude<
+  PredictionEvaluationPeriodPreset,
+  'custom'
+> = 'last_7_days';
 
 const SORT_FIELD_OPTIONS: Array<{
   value: PredictionEvaluationGroupSortField;
@@ -246,9 +257,15 @@ export default function PredictionEvaluationsPage() {
   const [slotKeys, setSlotKeys] = useState<PredictionEvaluationSlotKey[]>([]);
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
   const [marketOptions, setMarketOptions] = useState<string[]>([]);
-  const [league, setLeague] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateRange, setDateRange] = useState(() => {
+    const defaultRange = getPeriodPresetIsoRange(DEFAULT_PERIOD_PRESET);
+    return {
+      dateFrom: defaultRange.dateFrom ?? '',
+      dateTo: defaultRange.dateTo ?? '',
+    };
+  });
+  const [periodPreset, setPeriodPreset] =
+    useState<PredictionEvaluationPeriodPreset>(DEFAULT_PERIOD_PRESET);
   const [sortField, setSortField] = useState<PredictionEvaluationGroupSortField>(
     DEFAULT_SORT_FIELD,
   );
@@ -279,9 +296,8 @@ export default function PredictionEvaluationsPage() {
             sourceTypes: sourceTypes.length > 0 ? sourceTypes : undefined,
             slotKeys: slotKeys.length > 0 ? slotKeys : undefined,
             marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
-            league: league.trim() || undefined,
-            dateFrom: dateFrom || undefined,
-            dateTo: dateTo || undefined,
+            dateFrom: dateRange.dateFrom || undefined,
+            dateTo: dateRange.dateTo || undefined,
             sortBy: sortField,
             sortOrder,
           });
@@ -337,9 +353,7 @@ export default function PredictionEvaluationsPage() {
     sourceTypes,
     slotKeys,
     marketKeys,
-    league,
-    dateFrom,
-    dateTo,
+    dateRange,
     sortField,
     sortOrder,
     refreshNonce,
@@ -351,11 +365,55 @@ export default function PredictionEvaluationsPage() {
     sourceTypes.length > 0 ||
     slotKeys.length > 0 ||
     marketKeys.length > 0 ||
-    league.trim().length > 0 ||
-    Boolean(dateFrom) ||
-    Boolean(dateTo) ||
+    periodPreset !== DEFAULT_PERIOD_PRESET ||
     sortField !== DEFAULT_SORT_FIELD ||
     sortOrder !== DEFAULT_SORT_ORDER;
+
+  const handlePeriodPresetChange = (
+    nextPreset: PredictionEvaluationPeriodPreset,
+  ) => {
+    setPeriodPreset(nextPreset);
+
+    if (nextPreset === 'custom') {
+      setPage(0);
+      return;
+    }
+
+    const { dateFrom: nextDateFrom, dateTo: nextDateTo } =
+      getPeriodPresetIsoRange(
+        nextPreset,
+      );
+    setDateRange({
+      dateFrom: nextDateFrom ?? '',
+      dateTo: nextDateTo ?? '',
+    });
+    setPage(0);
+  };
+
+  const handleDateFromChange = (value: string) => {
+    const nextDateFrom = toIsoTimestampFromLocalDateTime(value) ?? '';
+    setDateRange((currentRange) => ({
+      ...currentRange,
+      dateFrom: nextDateFrom,
+    }));
+    setPeriodPreset(value || dateRange.dateTo ? 'custom' : 'all_time');
+    setPage(0);
+  };
+
+  const handleDateToChange = (value: string) => {
+    const nextDateTo = toIsoTimestampFromLocalDateTime(value) ?? '';
+    setDateRange((currentRange) => ({
+      ...currentRange,
+      dateTo: nextDateTo,
+    }));
+    setPeriodPreset(dateRange.dateFrom || value ? 'custom' : 'all_time');
+    setPage(0);
+  };
+
+  const displayedDateFrom = toLocalDateTimeInputValueFromIso(
+    dateRange.dateFrom,
+  );
+  const displayedDateTo = toLocalDateTimeInputValueFromIso(dateRange.dateTo);
 
   const sortOrderOptions = getSortOrderOptions();
 
@@ -494,10 +552,11 @@ export default function PredictionEvaluationsPage() {
                 display: 'grid',
                 gridTemplateColumns: {
                   xs: '1fr',
-                  md: 'repeat(2, minmax(0, 1fr))',
-                  xl: 'repeat(4, minmax(0, 1fr))',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
                 },
                 gap: 2,
+                alignItems: 'start',
               }}
             >
               <TextField
@@ -520,25 +579,35 @@ export default function PredictionEvaluationsPage() {
                 }}
               />
 
-              <TextField
-                size="small"
-                label="League"
-                placeholder="Premier League"
-                value={league}
-                onChange={(event) => {
-                  setLeague(event.target.value);
-                  setPage(0);
-                }}
-              />
+              <FormControl size="small">
+                <InputLabel id="prediction-evaluation-period-label">
+                  Period
+                </InputLabel>
+                <Select<PredictionEvaluationPeriodPreset>
+                  labelId="prediction-evaluation-period-label"
+                  value={periodPreset}
+                  label="Period"
+                  onChange={(event) =>
+                    handlePeriodPresetChange(
+                      event.target.value as PredictionEvaluationPeriodPreset,
+                    )
+                  }
+                >
+                  {PERIOD_PRESET_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <TextField
                 size="small"
                 label="From"
-                type="date"
-                value={dateFrom}
+                type="datetime-local"
+                value={displayedDateFrom}
                 onChange={(event) => {
-                  setDateFrom(event.target.value);
-                  setPage(0);
+                  handleDateFromChange(event.target.value);
                 }}
                 InputLabelProps={{ shrink: true }}
               />
@@ -546,15 +615,27 @@ export default function PredictionEvaluationsPage() {
               <TextField
                 size="small"
                 label="To"
-                type="date"
-                value={dateTo}
+                type="datetime-local"
+                value={displayedDateTo}
                 onChange={(event) => {
-                  setDateTo(event.target.value);
-                  setPage(0);
+                  handleDateToChange(event.target.value);
                 }}
                 InputLabelProps={{ shrink: true }}
               />
+            </Box>
 
+            <Box
+              sx={{
+                mt: 2,
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  md: 'repeat(2, minmax(0, 1fr))',
+                  xl: 'repeat(4, minmax(0, 1fr))',
+                },
+                gap: 2,
+              }}
+            >
               <FormControl size="small">
                 <InputLabel id="prediction-evaluation-statuses-label">
                   Status
@@ -732,9 +813,13 @@ export default function PredictionEvaluationsPage() {
                     setSourceTypes([]);
                     setSlotKeys([]);
                     setMarketKeys([]);
-                    setLeague('');
-                    setDateFrom('');
-                    setDateTo('');
+                    const defaultRange =
+                      getPeriodPresetIsoRange(DEFAULT_PERIOD_PRESET);
+                    setDateRange({
+                      dateFrom: defaultRange.dateFrom ?? '',
+                      dateTo: defaultRange.dateTo ?? '',
+                    });
+                    setPeriodPreset(DEFAULT_PERIOD_PRESET);
                     setSortField(DEFAULT_SORT_FIELD);
                     setSortOrder(DEFAULT_SORT_ORDER);
                     setExpandedFixtureId(null);
