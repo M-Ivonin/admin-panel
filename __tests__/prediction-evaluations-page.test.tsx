@@ -180,7 +180,7 @@ describe('PredictionEvaluationsPage', () => {
       );
     });
 
-    fireEvent.change(screen.getByLabelText('League'), {
+    fireEvent.change(screen.getByLabelText('Search'), {
       target: { value: 'Serie A' },
     });
 
@@ -189,7 +189,7 @@ describe('PredictionEvaluationsPage', () => {
         expect.objectContaining({
           page: 1,
           limit: 20,
-          league: 'Serie A',
+          search: 'Serie A',
         }),
       );
     });
@@ -221,13 +221,29 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.queryByText('21 fixture groups found')).toBeNull();
   });
 
+  it('loads with the last 7 days period selected by default', async () => {
+    render(<PredictionEvaluationsPage />);
+
+    await screen.findByText('Alpha FC vs Beta FC');
+
+    const firstCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls[0][0];
+
+    expect(screen.getByText('Last 7 days')).toBeTruthy();
+    expect(firstCall.dateFrom).toBeTruthy();
+    expect(firstCall.dateTo).toBeTruthy();
+    expect(
+      new Date(firstCall.dateTo).getTime() -
+        new Date(firstCall.dateFrom).getTime(),
+    ).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
   it('applies quick period presets and keeps manual dates in custom range mode', async () => {
     render(<PredictionEvaluationsPage />);
 
     await screen.findByText('Alpha FC vs Beta FC');
 
     fireEvent.mouseDown(screen.getByLabelText('Period'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Last 7 days' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
 
     await waitFor(() => {
       const lastCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls.at(
@@ -239,7 +255,7 @@ describe('PredictionEvaluationsPage', () => {
       expect(
         new Date(lastCall.dateTo).getTime() -
           new Date(lastCall.dateFrom).getTime(),
-      ).toBe(7 * 24 * 60 * 60 * 1000);
+      ).toBe(24 * 60 * 60 * 1000);
       expect(lastCall.dateTo).toMatch(
         /^2026-04-09T12:34:45\.\d{3}Z$/,
       );
