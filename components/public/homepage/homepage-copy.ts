@@ -38,14 +38,12 @@ export const credibilityPanelCopy: Record<
       'Everyone has opinions. We focus on clarity.',
   },
   es: {
-    title: 'Por qué SirBro es creíble',
-    description:
-      'Descubre cómo funciona nuestro análisis, cómo se revisa el contenido y dónde la IA ayuda a convertir datos en decisiones claras.',
+    title: 'Por qué confiar en SirBro',
+    description: 'Todos tienen opiniones. Nosotros buscamos claridad.',
   },
   pt: {
     title: 'Por que o SirBro é confiável',
-    description:
-      'Veja como nossa análise funciona, como o conteúdo é revisado e onde a IA ajuda a transformar dados em decisões claras.',
+    description: 'Opinião todo mundo tem. Clareza poucos entregam.',
   },
 };
 

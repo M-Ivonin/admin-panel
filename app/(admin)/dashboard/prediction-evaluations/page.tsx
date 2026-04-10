@@ -37,6 +37,7 @@ import {
   getPredictionEvaluationGroups,
   PredictionEvaluationGroupSortField,
   PredictionEvaluationGroupSortOrder,
+  PredictionEvaluationOutcomeType,
   PaginatedPredictionEvaluationGroupsResponse,
   PredictionEvaluationSlotKey,
   PredictionEvaluationSourceType,
@@ -203,6 +204,35 @@ function getStatusLabel(status: PredictionEvaluationStatus): string {
       return 'Failed';
     default:
       return status;
+  }
+}
+
+function getOutcomeChipColor(
+  outcomeType: PredictionEvaluationOutcomeType,
+): 'success' | 'error' | 'default' {
+  if (outcomeType === 'win') {
+    return 'success';
+  }
+
+  if (outcomeType === 'loss') {
+    return 'error';
+  }
+
+  return 'default';
+}
+
+function getOutcomeLabel(
+  outcomeType: PredictionEvaluationOutcomeType,
+): string {
+  switch (outcomeType) {
+    case 'win':
+      return 'Win';
+    case 'loss':
+      return 'Loss';
+    case 'void':
+      return 'Void';
+    default:
+      return outcomeType;
   }
 }
 
@@ -1044,14 +1074,12 @@ export default function PredictionEvaluationsPage() {
                                 }
                               />
                               {prediction.status === 'evaluated' &&
-                                prediction.isCorrect !== null && (
+                                prediction.outcomeType && (
                                   <Chip
-                                    label={
-                                      prediction.isCorrect ? 'Correct' : 'Incorrect'
-                                    }
-                                    color={
-                                      prediction.isCorrect ? 'success' : 'error'
-                                    }
+                                    label={getOutcomeLabel(prediction.outcomeType)}
+                                    color={getOutcomeChipColor(
+                                      prediction.outcomeType,
+                                    )}
                                     size="small"
                                     variant="outlined"
                                   />
@@ -1073,7 +1101,7 @@ export default function PredictionEvaluationsPage() {
                               display: 'grid',
                               gridTemplateColumns: {
                                 xs: 'repeat(2, minmax(0, 1fr))',
-                                md: 'repeat(4, minmax(0, 1fr))',
+                                md: 'repeat(5, minmax(0, 1fr))',
                               },
                               gap: 1,
                             }}
@@ -1100,6 +1128,16 @@ export default function PredictionEvaluationsPage() {
                               </Typography>
                               <Typography fontWeight={600}>
                                 {prediction.oddsValue ?? '-'}
+                              </Typography>
+                            </Paper>
+                            <Paper variant="outlined" sx={{ p: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Outcome
+                              </Typography>
+                              <Typography fontWeight={600}>
+                                {prediction.outcomeType
+                                  ? getOutcomeLabel(prediction.outcomeType)
+                                  : '-'}
                               </Typography>
                             </Paper>
                             <Paper variant="outlined" sx={{ p: 1 }}>

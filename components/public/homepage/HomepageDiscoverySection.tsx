@@ -22,7 +22,10 @@ import {
 } from '@/components/public/public-homepage.styles';
 import type { HomepageContent } from '@/modules/public/homepage-content';
 
-const leagueCardMeta: Record<string, { src: string; alt: string }> = {
+const leagueCardMeta: Record<
+  string,
+  { src: string; alt: string; logoScale?: number }
+> = {
   'Premier League': {
     src: '/assets/homepage/leagues/premier-league.svg',
     alt: 'Premier League logo',
@@ -34,6 +37,7 @@ const leagueCardMeta: Record<string, { src: string; alt: string }> = {
   'Serie A': {
     src: '/assets/homepage/leagues/serie-a.svg',
     alt: 'Serie A logo',
+    logoScale: 0.82,
   },
   Bundesliga: {
     src: '/assets/homepage/leagues/bundesliga.svg',
@@ -42,10 +46,12 @@ const leagueCardMeta: Record<string, { src: string; alt: string }> = {
   'Ligue 1': {
     src: '/assets/homepage/leagues/ligue-1.svg',
     alt: 'Ligue 1 logo',
+    logoScale: 0.78,
   },
   Brasileirão: {
     src: '/assets/homepage/leagues/brasileirao.svg',
     alt: 'Brasileirão Série A logo',
+    logoScale: 0.78,
   },
   'Liga MX': {
     src: '/assets/homepage/leagues/liga-mx.svg',
@@ -59,9 +65,28 @@ const leagueCardMeta: Record<string, { src: string; alt: string }> = {
     src: '/assets/homepage/leagues/uefa.svg',
     alt: 'UEFA logo',
   },
+  'Competiciones UEFA': {
+    src: '/assets/homepage/leagues/uefa.svg',
+    alt: 'UEFA logo',
+  },
+  'Competições UEFA': {
+    src: '/assets/homepage/leagues/uefa.svg',
+    alt: 'UEFA logo',
+  },
   'FIFA World Cup 2026': {
     src: '/assets/homepage/leagues/fifa-world-cup-2026.svg',
     alt: 'FIFA World Cup 2026 logo',
+    logoScale: 0.76,
+  },
+  'Mundial FIFA 2026': {
+    src: '/assets/homepage/leagues/fifa-world-cup-2026.svg',
+    alt: 'FIFA World Cup 2026 logo',
+    logoScale: 0.76,
+  },
+  'Copa do Mundo FIFA 2026': {
+    src: '/assets/homepage/leagues/fifa-world-cup-2026.svg',
+    alt: 'FIFA World Cup 2026 logo',
+    logoScale: 0.76,
   },
 };
 
@@ -280,8 +305,8 @@ export function HomepageDiscoverySection({
                           src={leagueCardMeta[league]?.src}
                           alt={leagueCardMeta[league]?.alt ?? `${league} logo`}
                           sx={{
-                            width: '100%',
-                            height: '100%',
+                            width: `${(leagueCardMeta[league]?.logoScale ?? 1) * 100}%`,
+                            height: `${(leagueCardMeta[league]?.logoScale ?? 1) * 100}%`,
                             objectFit: 'contain',
                             display: 'block',
                           }}

@@ -62,6 +62,7 @@ const populatedResponse = {
           oddsValue: 1.95,
           status: 'evaluated',
           isCorrect: true,
+          outcomeType: 'win',
           reasonCode: null,
           evaluatedAt: '2026-04-08T10:00:00.000Z',
           createdAt: '2026-04-08T08:00:00.000Z',
@@ -123,6 +124,7 @@ describe('PredictionEvaluationsPage', () => {
 
     expect(await screen.findByText('Over 2.5')).toBeTruthy();
     expect(screen.getByText('goals_over_under')).toBeTruthy();
+    expect(screen.getAllByText('Win').length).toBeGreaterThan(0);
   });
 
   it('refetches with updated pagination and filters and shows empty state when needed', async () => {
