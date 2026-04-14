@@ -35,8 +35,10 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   FixtureEvaluationGroup,
   getPredictionEvaluationGroups,
+  PredictionEvaluationItem,
   PredictionEvaluationGroupSortField,
   PredictionEvaluationGroupSortOrder,
+  PredictionEvaluationOutcomeType,
   PaginatedPredictionEvaluationGroupsResponse,
   PredictionEvaluationSlotKey,
   PredictionEvaluationSourceType,
@@ -129,6 +131,17 @@ const EMPTY_SUMMARY: PredictionEvaluationSummary = {
   },
 };
 
+interface MergedPredictionEvaluationItem extends PredictionEvaluationItem {
+  slotKeys: PredictionEvaluationSlotKey[];
+  mergedIds: string[];
+}
+
+const SLOT_KEY_ORDER: Record<PredictionEvaluationSlotKey, number> = {
+  primary: 0,
+  safe: 1,
+  risky: 2,
+};
+
 function formatDateTime(dateString: string | null): string {
   if (!dateString) {
     return '-';
@@ -206,6 +219,35 @@ function getStatusLabel(status: PredictionEvaluationStatus): string {
   }
 }
 
+function getOutcomeChipColor(
+  outcomeType: PredictionEvaluationOutcomeType,
+): 'success' | 'error' | 'default' {
+  if (outcomeType === 'win') {
+    return 'success';
+  }
+
+  if (outcomeType === 'loss') {
+    return 'error';
+  }
+
+  return 'default';
+}
+
+function getOutcomeLabel(
+  outcomeType: PredictionEvaluationOutcomeType,
+): string {
+  switch (outcomeType) {
+    case 'win':
+      return 'Win';
+    case 'loss':
+      return 'Loss';
+    case 'void':
+      return 'Void';
+    default:
+      return outcomeType;
+  }
+}
+
 function getSourceChipColor(
   sourceType: PredictionEvaluationSourceType,
 ): 'primary' | 'secondary' {
@@ -239,6 +281,56 @@ function getSortOrderOptions(
     { value: 'asc', label: 'Ascending' },
     { value: 'desc', label: 'Descending' },
   ];
+}
+
+function buildPredictionMergeKey(prediction: PredictionEvaluationItem): string {
+  return [
+    prediction.sourceType,
+    prediction.sourceId,
+    prediction.marketKey ?? '',
+    prediction.predictionValue,
+    prediction.confidenceValue ?? '',
+    prediction.oddsValue ?? '',
+    prediction.status,
+    prediction.isCorrect ?? '',
+    prediction.outcomeType ?? '',
+    prediction.reasonCode ?? '',
+    prediction.evaluatedAt ?? '',
+  ].join('::');
+}
+
+function mergePredictions(
+  predictions: PredictionEvaluationItem[],
+): MergedPredictionEvaluationItem[] {
+  const merged = new Map<string, MergedPredictionEvaluationItem>();
+
+  for (const prediction of predictions) {
+    const key = buildPredictionMergeKey(prediction);
+    const existing = merged.get(key);
+
+    if (!existing) {
+      merged.set(key, {
+        ...prediction,
+        slotKeys: [prediction.slotKey],
+        mergedIds: [prediction.id],
+      });
+      continue;
+    }
+
+    if (!existing.slotKeys.includes(prediction.slotKey)) {
+      existing.slotKeys.push(prediction.slotKey);
+      existing.slotKeys.sort(
+        (left, right) => SLOT_KEY_ORDER[left] - SLOT_KEY_ORDER[right],
+      );
+    }
+
+    existing.mergedIds.push(prediction.id);
+    if (new Date(prediction.createdAt).getTime() < new Date(existing.createdAt).getTime()) {
+      existing.createdAt = prediction.createdAt;
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 export default function PredictionEvaluationsPage() {
@@ -1003,9 +1095,9 @@ export default function PredictionEvaluationsPage() {
 
                   <AccordionDetails sx={{ px: 2.5, pb: 2.5, pt: 0.5 }}>
                     <Stack spacing={1.25}>
-                      {group.predictions.map((prediction) => (
+                      {mergePredictions(group.predictions).map((prediction) => (
                         <Paper
-                          key={prediction.id}
+                          key={prediction.mergedIds.join(':')}
                           variant="outlined"
                           sx={{ p: 1.5 }}
                         >
@@ -1028,11 +1120,14 @@ export default function PredictionEvaluationsPage() {
                                 color={getSourceChipColor(prediction.sourceType)}
                                 size="small"
                               />
-                              <Chip
-                                label={prediction.slotKey}
-                                size="small"
-                                variant="outlined"
-                              />
+                              {prediction.slotKeys.map((slotKey) => (
+                                <Chip
+                                  key={`${prediction.id}-${slotKey}`}
+                                  label={slotKey}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              ))}
                               <Chip
                                 label={getStatusLabel(prediction.status)}
                                 color={getStatusChipColor(prediction.status)}
@@ -1044,14 +1139,12 @@ export default function PredictionEvaluationsPage() {
                                 }
                               />
                               {prediction.status === 'evaluated' &&
-                                prediction.isCorrect !== null && (
+                                prediction.outcomeType && (
                                   <Chip
-                                    label={
-                                      prediction.isCorrect ? 'Correct' : 'Incorrect'
-                                    }
-                                    color={
-                                      prediction.isCorrect ? 'success' : 'error'
-                                    }
+                                    label={getOutcomeLabel(prediction.outcomeType)}
+                                    color={getOutcomeChipColor(
+                                      prediction.outcomeType,
+                                    )}
                                     size="small"
                                     variant="outlined"
                                   />
@@ -1073,7 +1166,7 @@ export default function PredictionEvaluationsPage() {
                               display: 'grid',
                               gridTemplateColumns: {
                                 xs: 'repeat(2, minmax(0, 1fr))',
-                                md: 'repeat(4, minmax(0, 1fr))',
+                                md: 'repeat(5, minmax(0, 1fr))',
                               },
                               gap: 1,
                             }}
@@ -1100,6 +1193,16 @@ export default function PredictionEvaluationsPage() {
                               </Typography>
                               <Typography fontWeight={600}>
                                 {prediction.oddsValue ?? '-'}
+                              </Typography>
+                            </Paper>
+                            <Paper variant="outlined" sx={{ p: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Outcome
+                              </Typography>
+                              <Typography fontWeight={600}>
+                                {prediction.outcomeType
+                                  ? getOutcomeLabel(prediction.outcomeType)
+                                  : '-'}
                               </Typography>
                             </Paper>
                             <Paper variant="outlined" sx={{ p: 1 }}>

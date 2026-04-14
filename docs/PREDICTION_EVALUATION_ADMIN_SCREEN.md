@@ -55,12 +55,23 @@ Supported sort orders:
 - `asc`
 - `desc`
 
+## Accuracy Semantics
+
+Accuracy is calculated by the backend from settlement credit and weight:
+
+- `win`: credit `1`, weight `1`
+- `loss`: credit `0`, weight `1`
+- `void`: credit `0`, weight `0`
+
+The `evaluated` field still counts all rows with `status=evaluated`, including void rows. The `correct` field is the summed backend accuracy credit, and `accuracy` is `SUM(accuracy_credit) / SUM(accuracy_weight)`.
+
 ## UI Behavior
 
 - pagination is fixture-group based
 - filters are applied to prediction rows first, then matching fixture groups are paginated
 - collapsed accordion rows show grouped accuracy stats for the filtered child rows only
 - expanded accordion content shows only the prediction rows that matched the current filters
+- evaluated prediction rows show their richer settlement outcome: `Win`, `Loss`, or `Void`
 - session user identity is intentionally hidden in v1
 - the `Search` field covers fixture id, team names, and league name; there is no separate league input in the UI
 - the prediction evaluations page includes a compact period selector with `All time`, `Last 7 days`, `Last 24 hours`, and `Custom range`

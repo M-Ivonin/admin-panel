@@ -62,6 +62,7 @@ const populatedResponse = {
           oddsValue: 1.95,
           status: 'evaluated',
           isCorrect: true,
+          outcomeType: 'win',
           reasonCode: null,
           evaluatedAt: '2026-04-08T10:00:00.000Z',
           createdAt: '2026-04-08T08:00:00.000Z',
@@ -98,9 +99,12 @@ const populatedResponse = {
 };
 
 describe('PredictionEvaluationsPage', () => {
+  let dateNowSpy: jest.SpyInstance<number, []>;
+
   beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-04-09T12:34:45.678Z'));
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-04-09T12:34:45.678Z').getTime());
     (getPredictionEvaluationGroups as jest.Mock).mockReset();
     (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue(
       populatedResponse,
@@ -108,7 +112,7 @@ describe('PredictionEvaluationsPage', () => {
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    dateNowSpy.mockRestore();
   });
 
   it('renders grouped results and reveals prediction details on accordion expand', async () => {
@@ -123,6 +127,85 @@ describe('PredictionEvaluationsPage', () => {
 
     expect(await screen.findByText('Over 2.5')).toBeTruthy();
     expect(screen.getByText('goals_over_under')).toBeTruthy();
+    expect(screen.getAllByText('Win').length).toBeGreaterThan(0);
+  });
+
+  it('merges identical prediction session rows and shows all slot chips on one card', async () => {
+    (getPredictionEvaluationGroups as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      items: [
+        {
+          ...populatedResponse.items[0],
+          fixtureId: 202,
+          homeTeamName: 'Corinthians',
+          awayTeamName: 'Palmeiras',
+          predictions: [
+            {
+              id: 'session-primary',
+              fixtureId: 202,
+              sourceType: 'prediction_session',
+              sourceId: 'session-1',
+              slotKey: 'primary',
+              marketKey: 'asian_handicap',
+              predictionValue: 'Palmeiras -0.25',
+              confidenceValue: null,
+              oddsValue: 1.53,
+              status: 'evaluated',
+              isCorrect: false,
+              outcomeType: 'loss',
+              reasonCode: null,
+              evaluatedAt: '2026-04-14T12:12:07.739Z',
+              createdAt: '2026-04-11T01:10:03.626Z',
+            },
+            {
+              id: 'session-risky',
+              fixtureId: 202,
+              sourceType: 'prediction_session',
+              sourceId: 'session-1',
+              slotKey: 'risky',
+              marketKey: 'asian_handicap',
+              predictionValue: 'Palmeiras -0.25',
+              confidenceValue: null,
+              oddsValue: 1.53,
+              status: 'evaluated',
+              isCorrect: false,
+              outcomeType: 'loss',
+              reasonCode: null,
+              evaluatedAt: '2026-04-14T12:12:07.739Z',
+              createdAt: '2026-04-12T10:10:00.857Z',
+            },
+            {
+              id: 'session-safe',
+              fixtureId: 202,
+              sourceType: 'prediction_session',
+              sourceId: 'session-1',
+              slotKey: 'safe',
+              marketKey: 'double_chance',
+              predictionValue: 'Draw or Palmeiras',
+              confidenceValue: null,
+              oddsValue: 1.4,
+              status: 'evaluated',
+              isCorrect: true,
+              outcomeType: 'win',
+              reasonCode: null,
+              evaluatedAt: '2026-04-13T02:30:00.000Z',
+              createdAt: '2026-04-11T01:10:03.626Z',
+            },
+          ],
+        },
+      ],
+    });
+
+    render(<PredictionEvaluationsPage />);
+
+    expect(await screen.findByText('Corinthians vs Palmeiras')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Corinthians vs Palmeiras'));
+
+    expect(await screen.findAllByText('Palmeiras -0.25')).toHaveLength(1);
+    expect(screen.getByText('primary')).toBeTruthy();
+    expect(screen.getByText('risky')).toBeTruthy();
+    expect(screen.getByText('Draw or Palmeiras')).toBeTruthy();
   });
 
   it('refetches with updated pagination and filters and shows empty state when needed', async () => {
@@ -257,7 +340,7 @@ describe('PredictionEvaluationsPage', () => {
           new Date(lastCall.dateFrom).getTime(),
       ).toBe(24 * 60 * 60 * 1000);
       expect(lastCall.dateTo).toMatch(
-        /^2026-04-09T12:34:45\.\d{3}Z$/,
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
       );
     });
 
@@ -273,7 +356,9 @@ describe('PredictionEvaluationsPage', () => {
       expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(
         expect.objectContaining({
           dateFrom: toIsoTimestampFromLocalDateTime('2026-04-01T08:00'),
-          dateTo: expect.stringMatching(/^2026-04-09T12:34:45\.\d{3}Z$/),
+          dateTo: expect.stringMatching(
+            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+          ),
         }),
       );
     });

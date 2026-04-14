@@ -13,6 +13,8 @@ export type PredictionEvaluationSourceType =
 
 export type PredictionEvaluationSlotKey = 'primary' | 'safe' | 'risky';
 
+export type PredictionEvaluationOutcomeType = 'win' | 'loss' | 'void';
+
 export type PredictionEvaluationGroupSortField =
   | 'prediction_created_at'
   | 'fixture_time'
@@ -64,6 +66,7 @@ export interface PredictionEvaluationItem {
   oddsValue: number | null;
   status: PredictionEvaluationStatus;
   isCorrect: boolean | null;
+  outcomeType: PredictionEvaluationOutcomeType | null;
   reasonCode: string | null;
   evaluatedAt: string | null;
   createdAt: string;

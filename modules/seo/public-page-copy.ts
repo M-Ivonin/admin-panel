@@ -131,16 +131,14 @@ export function getPublicPageSeoCopy(
           'Get AI-powered football and soccer predictions, match analysis, and real-time insights. Track teams, players, and matches with SirBro.',
       },
       es: {
-        title:
-          'SirBro | App de insights de fútbol para volatilidad, lesiones y forma del jugador',
+        title: 'Predicciones de Fútbol con IA y Análisis de Partidos | SirBro',
         description:
-          'Explora insights de fútbol, forma del jugador, impacto de lesiones, cambios de alineación y volatilidad del partido con el modelo deportivo de SirBro.',
+          'Descubre predicciones de fútbol con IA, análisis de partidos e insights en tiempo real. Sigue equipos, jugadores y ligas con SirBro.',
       },
       pt: {
-        title:
-          'SirBro | App de insights de futebol para volatilidade, lesoes e forma do jogador',
+        title: 'Previsões de Futebol com IA e Análise de Partidas | SirBro',
         description:
-          'Explore insights de futebol, forma do jogador, impacto de lesoes, mudancas de escalação e volatilidade da partida com o modelo esportivo do SirBro.',
+          'Acesse previsões de futebol com IA, análise de jogos e insights em tempo real. Acompanhe times, jogadores e ligas com SirBro.',
       },
     };
 
