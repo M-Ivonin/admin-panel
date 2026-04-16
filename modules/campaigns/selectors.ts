@@ -308,10 +308,11 @@ export function canContinueCampaignStep(
  * Returns whether the draft is eligible for a test send.
  */
 export function canSendTestCampaign(draft: CampaignDraft): boolean {
-  const validation = getCampaignValidationSummary(draft);
+  const readiness = getCampaignLocaleReadiness(draft.content);
   return (
-    validation.errors.length === 0 &&
-    Object.values(validation.readiness).some((readiness) => readiness === 'ready')
+    hasMeaningfulText(draft.name) &&
+    hasMeaningfulText(draft.goal) &&
+    Object.values(readiness).some((localeReadiness) => localeReadiness === 'ready')
   );
 }
 

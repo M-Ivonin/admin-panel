@@ -5,6 +5,16 @@ import { resetMockCampaignsRepository } from '@/modules/campaigns/mock-repositor
 const push = jest.fn();
 const replace = jest.fn();
 
+jest.mock('@/modules/campaigns/repository', () => {
+  const { mockCampaignsRepository } = jest.requireActual(
+    '@/modules/campaigns/mock-repository',
+  );
+
+  return {
+    campaignsRepository: mockCampaignsRepository,
+  };
+});
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push,
@@ -69,9 +79,10 @@ describe('CampaignEditorPage', () => {
     await screen.findByText('Create campaign');
 
     fireEvent.click(screen.getByText('At-risk WAU'));
+    fireEvent.click(screen.getByText('Review'));
 
     await waitFor(() => {
-      expect(screen.getByText('8,015')).toBeTruthy();
+      expect(screen.getByText('saved segment')).toBeTruthy();
     });
   });
 

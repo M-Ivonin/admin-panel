@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Renders the campaigns overview screen with KPI cards, filters, and list state.
+ * Renders the live campaigns overview screen with KPI cards, filters, and list state.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -31,7 +31,7 @@ import type {
   CampaignStatus,
   CampaignsOverviewResponse,
 } from '@/modules/campaigns/contracts';
-import { mockCampaignsRepository } from '@/modules/campaigns/mock-repository';
+import { campaignsRepository } from '@/modules/campaigns/repository';
 
 const PAGE_SIZE_OPTIONS = [4, 8, 12];
 
@@ -225,7 +225,7 @@ function FilterSection({
 }
 
 /**
- * Loads and renders the mock-backed campaigns overview page.
+ * Loads and renders the live campaigns overview page.
  */
 export function CampaignsOverviewPage() {
   const router = useRouter();
@@ -250,7 +250,7 @@ export function CampaignsOverviewPage() {
       setError(null);
 
       try {
-        const response = await mockCampaignsRepository.getCampaignsOverview({
+        const response = await campaignsRepository.getCampaignsOverview({
           page: page + 1,
           limit: rowsPerPage,
           search,

@@ -9,7 +9,7 @@ import type {
   CampaignLocale,
   EstimateAudienceResponse,
 } from '@/modules/campaigns/contracts';
-import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 
 export enum CampaignEditorStep {
   AUDIENCE = 'audience',

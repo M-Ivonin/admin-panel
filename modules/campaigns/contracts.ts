@@ -125,6 +125,7 @@ export interface CampaignSavedSegmentSummary {
   name: string;
   description: string;
   audienceEstimate: number | null;
+  audienceDefinition?: CampaignAudienceDefinition;
   source: 'saved_segment' | 'template_segment';
 }
 
@@ -134,6 +135,7 @@ export interface CampaignTemplateSummary {
   description: string;
   entryTriggerType: CampaignEntryTriggerType;
   deeplinkTarget: CampaignDeeplinkTarget;
+  audienceDefinition?: CampaignAudienceDefinition;
 }
 
 export interface CampaignTokenDefinition {

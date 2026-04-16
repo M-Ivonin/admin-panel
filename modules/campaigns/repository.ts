@@ -2,6 +2,18 @@
  * Repository boundary for all campaigns admin interactions.
  */
 
+import {
+  archiveCampaign,
+  createCampaignDraft,
+  estimateCampaignAudience,
+  getCampaignDraft,
+  getCampaignEditorCatalog,
+  getCampaignsOverview,
+  saveCampaignSegment,
+  scheduleCampaign,
+  sendCampaignTest,
+  updateCampaignDraft,
+} from '@/lib/api/campaigns';
 import type {
   ArchiveCampaignRequest,
   ArchiveCampaignResponse,
@@ -72,3 +84,16 @@ export interface CampaignsRepository {
   scheduleCampaign: ScheduleCampaignMethod;
   archiveCampaign: ArchiveCampaignMethod;
 }
+
+export const campaignsRepository: CampaignsRepository = {
+  getCampaignsOverview,
+  getEditorCatalog: getCampaignEditorCatalog,
+  getCampaign: getCampaignDraft,
+  createCampaignDraft,
+  updateCampaignDraft,
+  estimateAudience: estimateCampaignAudience,
+  saveSegment: saveCampaignSegment,
+  sendTestCampaign: sendCampaignTest,
+  scheduleCampaign,
+  archiveCampaign,
+};

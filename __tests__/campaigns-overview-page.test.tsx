@@ -4,6 +4,16 @@ import { resetMockCampaignsRepository } from '@/modules/campaigns/mock-repositor
 
 const push = jest.fn();
 
+jest.mock('@/modules/campaigns/repository', () => {
+  const { mockCampaignsRepository } = jest.requireActual(
+    '@/modules/campaigns/mock-repository',
+  );
+
+  return {
+    campaignsRepository: mockCampaignsRepository,
+  };
+});
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push,

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Renders the shared create/edit campaign builder with mock-backed actions.
+ * Renders the shared create/edit campaign builder with live backend actions.
  */
 
 import { useEffect, useMemo, useReducer, useState } from 'react';
@@ -35,6 +35,7 @@ import {
   Science,
   WarningAmber,
 } from '@mui/icons-material';
+import { getStoredAuthUser } from '@/lib/auth';
 import {
   RETENTION_STAGE_LABELS,
   RetentionStage,
@@ -48,14 +49,13 @@ import type {
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
 import {
-  mockCampaignsRepository,
-} from '@/modules/campaigns/mock-repository';
+  campaignsRepository,
+} from '@/modules/campaigns/repository';
 import {
   createEmptyCampaignDraft,
-  createSavedSegmentDefinitionMap,
-  createTemplateAudienceDefinitionMap,
-  createTemplateContentPresetMap,
-} from '@/modules/campaigns/mock-data';
+  applySavedSegmentSelection,
+  applyTemplateSelection,
+} from '@/modules/campaigns/defaults';
 import {
   CampaignEditorStep,
   campaignEditorReducer,
@@ -104,7 +104,6 @@ const STEP_LABELS: Record<CampaignEditorStep, string> = {
   [CampaignEditorStep.REVIEW]: 'Review',
 };
 
-const DEFAULT_TEST_RECIPIENTS = ['spec@local.test', 'qa-device-ios'];
 const PENDING_ACTIVE_STEP_STORAGE_KEY = 'campaign-editor-pending-step';
 
 function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
@@ -342,20 +341,22 @@ export function CampaignEditorPage({
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
   const [activeLocale, setActiveLocale] = useState<CampaignLocale>('en');
   const [librarySearch, setLibrarySearch] = useState('');
+  const [currentAdminEmail, setCurrentAdminEmail] = useState<string | null>(null);
 
-  const savedSegmentDefinitions = useMemo(
-    () => createSavedSegmentDefinitionMap(),
-    [],
-  );
-  const templateAudienceDefinitions = useMemo(
-    () => createTemplateAudienceDefinitionMap(),
-    [],
-  );
-  const templateContentPresets = useMemo(
-    () => createTemplateContentPresetMap(),
-    [],
-  );
   const editorTitle = state.draft.name.trim() || 'New Campaign';
+
+  useEffect(() => {
+    const authUser = getStoredAuthUser();
+
+    if (!authUser?.email) {
+      return;
+    }
+
+    setCurrentAdminEmail(authUser.email);
+    setTestRecipients((currentValue) =>
+      currentValue.trim().length > 0 ? currentValue : authUser.email,
+    );
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -365,7 +366,7 @@ export function CampaignEditorPage({
       setError(null);
 
       try {
-        const catalog = await mockCampaignsRepository.getEditorCatalog();
+        const catalog = await campaignsRepository.getEditorCatalog();
 
         if (!isActive) {
           return;
@@ -374,12 +375,12 @@ export function CampaignEditorPage({
         if (mode === 'create') {
           dispatch({
             type: 'loadDraft',
-            draft: createEmptyCampaignDraft(),
+            draft: createEmptyCampaignDraft(catalog),
             catalog,
             lastPersistedDraft: null,
           });
         } else if (campaignId) {
-          const draft = await mockCampaignsRepository.getCampaign(campaignId);
+          const draft = await campaignsRepository.getCampaign(campaignId);
           const pendingStep =
             typeof window !== 'undefined'
               ? window.sessionStorage.getItem(PENDING_ACTIVE_STEP_STORAGE_KEY)
@@ -434,7 +435,7 @@ export function CampaignEditorPage({
     let isActive = true;
 
     async function refreshEstimate(audience: CampaignAudienceDefinition) {
-      const estimate = await mockCampaignsRepository.estimateAudience({ audience });
+      const estimate = await campaignsRepository.estimateAudience({ audience });
       if (isActive) {
         dispatch({ type: 'setEstimate', estimate });
       }
@@ -480,7 +481,7 @@ export function CampaignEditorPage({
     const payload = buildUpsertPayload(state.draft);
 
     if (state.draft.id === null) {
-      const createdDraft = await mockCampaignsRepository.createCampaignDraft(payload);
+      const createdDraft = await campaignsRepository.createCampaignDraft(payload);
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem(
           PENDING_ACTIVE_STEP_STORAGE_KEY,
@@ -497,7 +498,7 @@ export function CampaignEditorPage({
     }
 
     if (state.isDirty) {
-      const updatedDraft = await mockCampaignsRepository.updateCampaignDraft(
+      const updatedDraft = await campaignsRepository.updateCampaignDraft(
         state.draft.id,
         payload,
       );
@@ -537,11 +538,15 @@ export function CampaignEditorPage({
         .split(/[\n,]+/)
         .map((value) => value.trim())
         .filter(Boolean);
-      const response = await mockCampaignsRepository.sendTestCampaign(
+      const response = await campaignsRepository.sendTestCampaign(
         persistedDraft.id as string,
         {
           recipients:
-            parsedRecipients.length > 0 ? parsedRecipients : DEFAULT_TEST_RECIPIENTS,
+            parsedRecipients.length > 0
+              ? parsedRecipients
+              : currentAdminEmail
+                ? [currentAdminEmail]
+                : [],
           locale: testLocale,
         },
       );
@@ -571,7 +576,7 @@ export function CampaignEditorPage({
 
     try {
       const persistedDraft = await persistDraftIfNeeded();
-      const response = await mockCampaignsRepository.scheduleCampaign(
+      const response = await campaignsRepository.scheduleCampaign(
         persistedDraft.id as string,
         { confirm: true },
       );
@@ -604,7 +609,7 @@ export function CampaignEditorPage({
     setError(null);
 
     try {
-      const response = await mockCampaignsRepository.archiveCampaign(state.draft.id, {
+      const response = await campaignsRepository.archiveCampaign(state.draft.id, {
         confirm: true,
       });
 
@@ -636,11 +641,11 @@ export function CampaignEditorPage({
     setError(null);
 
     try {
-      await mockCampaignsRepository.saveSegment({
+      await campaignsRepository.saveSegment({
         name: segmentName.trim(),
         audience: state.draft.audience,
       });
-      const catalog = await mockCampaignsRepository.getEditorCatalog();
+      const catalog = await campaignsRepository.getEditorCatalog();
       dispatch({ type: 'setCatalog', catalog });
       dispatch({
         type: 'markActionSuccess',
@@ -679,26 +684,30 @@ export function CampaignEditorPage({
   }
 
   function applySavedSegment(segmentId: string) {
-    const audience = savedSegmentDefinitions[segmentId];
+    const segment = state.catalog.savedSegments.find((item) => item.id === segmentId);
 
-    if (!audience) {
+    if (!segment) {
       return;
     }
 
     dispatch({
       type: 'applySavedSegment',
       segmentId,
-      audience,
+      audience: applySavedSegmentSelection(state.draft.audience, segment),
     });
   }
 
   function applyTemplate(templateId: string) {
-    const audience = templateAudienceDefinitions[templateId];
-    const contentPatch = templateContentPresets[templateId];
+    const template = state.catalog.templates.find((item) => item.id === templateId);
 
-    if (!audience) {
+    if (!template) {
       return;
     }
+
+    const { audience, contentPatch } = applyTemplateSelection(
+      state.draft,
+      template,
+    );
 
     dispatch({
       type: 'applyTemplateSegment',
@@ -1737,7 +1746,7 @@ export function CampaignEditorPage({
                       {state.estimate?.reachableUsers.toLocaleString('en-US') ?? '0'}
                     </Typography>
                     <Typography sx={{ color: COLORS.textSecondary, fontSize: 12, mt: 0.5 }}>
-                      Deterministic mock estimate from retention, locales, and suppression rules.
+                      Live audience estimate returned by the campaigns backend.
                     </Typography>
                   </Box>
                   {state.estimate?.warnings.map((warning) => (
@@ -1752,7 +1761,7 @@ export function CampaignEditorPage({
                     Match the Pencil builder
                   </Typography>
                   <Typography sx={{ color: COLORS.textSecondary, fontSize: 12, lineHeight: 1.45 }}>
-                    Saved segments and template segments can be applied first, then fine-tuned with the same resolved rules in the center column.
+                    Library selections now tag the live source on the campaign, and the audience rules below stay fully editable before save or launch.
                   </Typography>
                 </SummaryCard>
               </>
@@ -2042,7 +2051,11 @@ export function CampaignEditorPage({
           <Stack spacing={1.5} sx={{ mt: 0.5 }}>
             <TextField
               label="Recipients"
-              placeholder="Leave blank to use deterministic defaults"
+              placeholder={
+                currentAdminEmail
+                  ? `Defaults to ${currentAdminEmail}`
+                  : 'Leave blank to use the authenticated admin user'
+              }
               fullWidth
               multiline
               minRows={2}
@@ -2120,7 +2133,7 @@ export function CampaignEditorPage({
                 type: 'discardChanges',
                 fallbackDraft:
                   mode === 'create' && state.lastPersistedDraft === null
-                    ? createEmptyCampaignDraft()
+                    ? createEmptyCampaignDraft(state.catalog)
                     : undefined,
               })
             }
