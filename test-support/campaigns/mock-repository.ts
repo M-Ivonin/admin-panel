@@ -29,7 +29,11 @@ import {
   createSavedSegmentDefinitionMap,
 } from '@/test-support/campaigns/mock-data';
 import { type CampaignsRepository } from '@/modules/campaigns/repository';
-import { getCampaignLocaleReadiness } from '@/modules/campaigns/selectors';
+import {
+  canScheduleCampaign,
+  getCampaignLocaleReadiness,
+  getCampaignSaveBlockingErrors,
+} from '@/modules/campaigns/selectors';
 
 interface MockCampaignsState {
   drafts: Record<string, CampaignDraft>;
@@ -356,6 +360,30 @@ function toDraft(
   };
 }
 
+function assertDraftSaveAllowed(
+  input: UpsertCampaignDraftRequest,
+  status: CampaignDraft['status'] = 'draft'
+) {
+  const draft: CampaignDraft = {
+    id: null,
+    name: input.name,
+    goal: input.goal,
+    channel: input.channel,
+    status,
+    audience: clone(input.audience),
+    trigger: clone(input.trigger),
+    journey: clone(input.journey),
+    content: clone(input.content),
+    updatedAt: null,
+    createdBy: null,
+  };
+  const saveBlockingErrors = getCampaignSaveBlockingErrors(draft);
+
+  if (saveBlockingErrors.length > 0) {
+    throw new Error(saveBlockingErrors[0]);
+  }
+}
+
 /**
  * Resets the in-memory repository to the seeded state for tests and live validation.
  */
@@ -423,6 +451,8 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async createCampaignDraft(input: UpsertCampaignDraftRequest) {
+    assertDraftSaveAllowed(input);
+
     const id = nextCampaignId();
     const updatedAt = nextTimestampIso(1);
     const draft = toDraft(id, input, 'draft', 'spec-local-user', updatedAt);
@@ -439,6 +469,8 @@ export const mockCampaignsRepository: CampaignsRepository = {
     if (!existing) {
       throw new Error('Campaign not found');
     }
+
+    assertDraftSaveAllowed(input, existing.status);
 
     const updatedAt = nextTimestampIso(1);
     const draft = toDraft(
@@ -486,6 +518,8 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async saveTemplate(input: SaveTemplateRequest): Promise<SaveTemplateResponse> {
+    assertDraftSaveAllowed(input.definition);
+
     const template = {
       id: nextTemplateId(),
       name: input.name,
@@ -542,6 +576,13 @@ export const mockCampaignsRepository: CampaignsRepository = {
 
     if (!draft) {
       throw new Error('Campaign not found');
+    }
+
+    if (!canScheduleCampaign(draft)) {
+      const saveBlockingErrors = getCampaignSaveBlockingErrors(draft);
+      throw new Error(
+        saveBlockingErrors[0] ?? 'Campaign is not ready to schedule'
+      );
     }
 
     const previousStatus = draft.status;

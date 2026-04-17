@@ -34,8 +34,37 @@ function appendQueryParam(
   });
 }
 
+async function readAdminErrorMessage(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as
+      | {
+          message?: string | string[];
+          error?: string;
+        }
+      | undefined;
+
+    if (Array.isArray(body?.message)) {
+      return body.message.join(' ');
+    }
+
+    if (typeof body?.message === 'string' && body.message.trim().length > 0) {
+      return body.message;
+    }
+
+    if (typeof body?.error === 'string' && body.error.trim().length > 0) {
+      return body.error;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 async function parseAdminResponse<T>(response: Response, message: string): Promise<T> {
   if (!response.ok) {
+    const backendMessage = await readAdminErrorMessage(response);
+
     if (response.status === 401) {
       throw new Error('Unauthorized');
     }
@@ -45,10 +74,10 @@ async function parseAdminResponse<T>(response: Response, message: string): Promi
     }
 
     if (response.status === 404) {
-      throw new Error('Campaign not found');
+      throw new Error(backendMessage ?? 'Campaign not found');
     }
 
-    throw new Error(`${message}: ${response.statusText}`);
+    throw new Error(backendMessage ?? `${message}: ${response.statusText}`);
   }
 
   return response.json();
@@ -196,6 +225,8 @@ export async function deleteCampaignTemplate(
   });
 
   if (!response.ok) {
+    const backendMessage = await readAdminErrorMessage(response);
+
     if (response.status === 401) {
       throw new Error('Unauthorized');
     }
@@ -205,10 +236,13 @@ export async function deleteCampaignTemplate(
     }
 
     if (response.status === 404) {
-      throw new Error('Template not found');
+      throw new Error(backendMessage ?? 'Template not found');
     }
 
-    throw new Error(`Failed to delete campaign template: ${response.statusText}`);
+    throw new Error(
+      backendMessage ??
+        `Failed to delete campaign template: ${response.statusText}`
+    );
   }
 
   return response.json();

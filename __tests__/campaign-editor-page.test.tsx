@@ -39,6 +39,17 @@ jest.mock('@/lib/api/users', () => {
 const mockedGetUsers = jest.mocked(getUsers);
 const mockedGetUser = jest.mocked(getUser);
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe('CampaignEditorPage', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
@@ -69,10 +80,55 @@ describe('CampaignEditorPage', () => {
 
     expect(
       screen.getByText(
-        'Optional. If selected, tapping the push opens this screen in the app. If left empty, the app falls back to the default notifications flow.'
+        'Optional. Only Continue onboarding, Open match center, and Open rewards wallet are supported as non-empty follow-up actions right now, and every non-empty action across the campaign must use the same one. If left empty, the app falls back to the default notifications flow.'
       )
     ).toBeTruthy();
     expect(screen.getByText('No follow-up action')).toBeTruthy();
+  });
+
+  it('warns locally and blocks save when follow-up actions mix different goals', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Action after tap (optional)' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Continue onboarding' }));
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('+ Add step'));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.click(screen.getByRole('button', { name: 'Step 2' }));
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Action after tap (optional)' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Open match center' }));
+
+    expect(
+      screen.getByText(
+        'This campaign mixes different non-empty follow-up actions across steps or locales. Saving only works when every non-empty action points to the same supported goal.'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'All non-empty follow-up actions across the campaign must point to one supported goal. Mixed actions found: Continue onboarding in Step 1 EN; Open match center in Step 2 EN.'
+        )
+      ).toBeTruthy();
+    });
   });
 
   it('appends a journey row when + Add step is used', async () => {
@@ -255,8 +311,9 @@ describe('CampaignEditorPage', () => {
       (screen.getByLabelText('Recipients') as HTMLInputElement).value
     ).toBe('admin@example.com');
     expect(
-      screen.getByRole('button', { name: 'Send test' })
-    ).not.toBeDisabled();
+      (screen.getByRole('button', { name: 'Send test' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
 
     fireEvent.click(screen.getByRole('button', { name: 'Send test' }));
 
@@ -268,6 +325,68 @@ describe('CampaignEditorPage', () => {
       expect(replace).toHaveBeenCalledWith(
         '/dashboard/campaigns/cmp_local_001'
       );
+      expect(screen.getByText(/Test accepted successfully/i)).toBeTruthy();
+    });
+  });
+
+  it('shows progress while send-test is in flight', async () => {
+    window.localStorage.setItem(
+      'user',
+      JSON.stringify({
+        id: 'admin-user-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+      })
+    );
+    const deferred = createDeferred<{ acceptedAt: string; warnings: string[] }>();
+    jest
+      .spyOn(campaignsRepository, 'sendTestCampaign')
+      .mockReturnValue(deferred.promise);
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Source event'));
+    fireEvent.click(screen.getByText('+ Add step'));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.click(screen.getByRole('button', { name: 'Step 1' }));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Hello {{first_name}}' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Finish setup now' },
+    });
+    fireEvent.change(screen.getByLabelText('Fallback first name'), {
+      target: { value: 'there' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }));
+
+    expect(screen.getByText('Sending...')).toBeTruthy();
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    deferred.resolve({
+      acceptedAt: '2026-04-17T12:00:00.000Z',
+      warnings: [],
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Sending...')).toBeNull();
       expect(screen.getByText(/Test accepted successfully/i)).toBeTruthy();
     });
   });
@@ -305,7 +424,10 @@ describe('CampaignEditorPage', () => {
     expect(
       (screen.getByLabelText('Recipients') as HTMLInputElement).value
     ).toBe('');
-    expect(screen.getByRole('button', { name: 'Send test' })).toBeDisabled();
+    expect(
+      (screen.getByRole('button', { name: 'Send test' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
     expect(
       screen.getByText('Add at least one user id, email, or device key.')
     ).toBeTruthy();

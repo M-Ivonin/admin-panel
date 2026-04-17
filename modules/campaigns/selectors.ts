@@ -5,6 +5,7 @@
 import { RetentionStage } from '@/lib/api/users';
 import type {
   CampaignDraft,
+  CampaignDeeplinkTarget,
   CampaignJourneyStep,
   CampaignLocale,
   CampaignReadiness,
@@ -18,6 +19,8 @@ const TOKEN_PATTERN = /{{([a-z_]+)}}/g;
 const SOURCE_EVENT_LABELS: Record<string, string> = {
   app_opened: 'Opened app',
   onboarding_completed: 'Completed onboarding',
+  match_center_opened: 'Opened match center',
+  rewards_wallet_opened: 'Opened rewards wallet',
   subscription_started: 'Started subscription',
   subscription_renewed: 'Renewed subscription',
   in_app_purchase_completed: 'Completed in-app purchase',
@@ -40,11 +43,60 @@ const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
   channels_favorite_matches: 'Favorite matches service',
 };
 
+const CAMPAIGN_GOAL_RULE_BY_DEEPLINK_TARGET: Partial<
+  Record<
+    CampaignDeeplinkTarget,
+    {
+      label: string;
+      goalKey: string;
+    }
+  >
+> = {
+  continue_onboarding: {
+    label: 'Continue onboarding',
+    goalKey: 'onboarding_completed:global_state_event',
+  },
+  open_match_center: {
+    label: 'Open match center',
+    goalKey: 'match_center_opened:trace_required_response',
+  },
+  open_rewards_wallet: {
+    label: 'Open rewards wallet',
+    goalKey: 'rewards_wallet_opened:trace_required_response',
+  },
+};
+
+const SUPPORTED_CAMPAIGN_GOAL_LABELS = [
+  'Continue onboarding',
+  'Open match center',
+  'Open rewards wallet',
+].join(', ');
+
 export interface CampaignValidationSummary {
   errors: string[];
   warnings: string[];
   readiness: Record<CampaignLocale, CampaignReadiness>;
   stepReadiness: Record<string, Record<CampaignLocale, CampaignReadiness>>;
+}
+
+export interface CampaignDeeplinkGoalSelection {
+  stepKey: string;
+  stepOrder: number;
+  locale: CampaignLocale;
+  target: CampaignDeeplinkTarget;
+  label: string;
+  goalKey: string | null;
+}
+
+export interface CampaignDeeplinkGoalSummary {
+  selections: CampaignDeeplinkGoalSelection[];
+  unsupportedSelections: CampaignDeeplinkGoalSelection[];
+  goalGroups: Array<{
+    goalKey: string;
+    label: string;
+    selections: CampaignDeeplinkGoalSelection[];
+  }>;
+  hasMixedGoals: boolean;
 }
 
 export interface CampaignReviewModel {
@@ -83,6 +135,29 @@ function combineReadiness(
   }
 
   return 'ready';
+}
+
+function formatStepLocaleLabel(selection: {
+  stepOrder: number;
+  locale: CampaignLocale;
+}): string {
+  return `Step ${selection.stepOrder} ${selection.locale.toUpperCase()}`;
+}
+
+function formatGoalSelectionLocations(
+  selections: CampaignDeeplinkGoalSelection[]
+): string {
+  return selections.map((selection) => formatStepLocaleLabel(selection)).join(', ');
+}
+
+function formatDeeplinkTargetLabel(target: CampaignDeeplinkTarget): string {
+  return (
+    CAMPAIGN_GOAL_RULE_BY_DEEPLINK_TARGET[target]?.label ??
+    target
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+  );
 }
 
 function getLocaleWarnings(
@@ -229,6 +304,114 @@ export function getCampaignLocaleReadiness(
   });
 
   return aggregate;
+}
+
+/**
+ * Describes all non-null deeplink selections and their goal mapping status.
+ */
+export function getCampaignDeeplinkGoalSummary(
+  draft: CampaignDraft
+): CampaignDeeplinkGoalSummary {
+  const selections = draft.journey.steps.flatMap((step) => {
+    const stepContent = draft.content[step.stepKey];
+    if (!stepContent) {
+      return [];
+    }
+
+    return (Object.keys(stepContent) as CampaignLocale[])
+      .map((locale) => {
+        const target = stepContent[locale].deeplinkTarget;
+        if (!target) {
+          return null;
+        }
+
+        const goalRule = CAMPAIGN_GOAL_RULE_BY_DEEPLINK_TARGET[target];
+
+        return {
+          stepKey: step.stepKey,
+          stepOrder: step.order,
+          locale,
+          target,
+          label: formatDeeplinkTargetLabel(target),
+          goalKey: goalRule?.goalKey ?? null,
+        };
+      })
+      .filter(
+        (selection): selection is CampaignDeeplinkGoalSelection =>
+          selection !== null
+      );
+  });
+
+  const unsupportedSelections = selections.filter(
+    (selection) => selection.goalKey === null
+  );
+  const goalGroups = Array.from(
+    selections
+      .filter(
+        (selection): selection is CampaignDeeplinkGoalSelection & {
+          goalKey: string;
+        } => selection.goalKey !== null
+      )
+      .reduce((accumulator, selection) => {
+        const currentGroup = accumulator.get(selection.goalKey);
+        if (currentGroup) {
+          currentGroup.selections.push(selection);
+          return accumulator;
+        }
+
+        accumulator.set(selection.goalKey, {
+          goalKey: selection.goalKey,
+          label: selection.label,
+          selections: [selection],
+        });
+        return accumulator;
+      }, new Map<string, { goalKey: string; label: string; selections: CampaignDeeplinkGoalSelection[] }>())
+      .values()
+  );
+
+  return {
+    selections,
+    unsupportedSelections,
+    goalGroups,
+    hasMixedGoals: goalGroups.length > 1,
+  };
+}
+
+/**
+ * Lists draft-save blockers that are enforced by the backend even before scheduling.
+ */
+export function getCampaignSaveBlockingErrors(
+  draft: CampaignDraft
+): string[] {
+  const goalSummary = getCampaignDeeplinkGoalSummary(draft);
+  const errors: string[] = [];
+
+  if (goalSummary.unsupportedSelections.length > 0) {
+    const unsupportedTargets = Array.from(
+      new Set(
+        goalSummary.unsupportedSelections.map((selection) => selection.label)
+      )
+    ).join(', ');
+
+    errors.push(
+      `Only ${SUPPORTED_CAMPAIGN_GOAL_LABELS} can be used as non-empty follow-up actions. Replace or clear ${unsupportedTargets} in ${formatGoalSelectionLocations(goalSummary.unsupportedSelections)} before saving the draft.`
+    );
+  }
+
+  if (goalSummary.hasMixedGoals) {
+    const mixedGoalDetails = goalSummary.goalGroups
+      .map(
+        (group) =>
+          `${group.label} in ${formatGoalSelectionLocations(group.selections)}`
+      )
+      .join('; ');
+
+    errors.push(
+      `All non-empty follow-up actions across the campaign must point to one supported goal. Mixed actions found: ${mixedGoalDetails}.`
+    );
+  }
+
+  return errors;
 }
 
 /**
@@ -389,6 +572,8 @@ export function getCampaignValidationSummary(
     warnings.push('Every locale using {{first_name}} needs a fallback value.');
   }
 
+  errors.push(...getCampaignSaveBlockingErrors(draft));
+
   return { errors, warnings, readiness, stepReadiness };
 }
 
@@ -422,7 +607,7 @@ export function canContinueCampaignStep(
   if (step === CampaignEditorStep.STEP_CONTENT) {
     return draft.audience.criteria.locales.every(
       (locale) => validation.readiness[locale] !== 'missing'
-    );
+    ) && getCampaignSaveBlockingErrors(draft).length === 0;
   }
 
   return true;
@@ -442,6 +627,7 @@ export function canSendTestCampaign(draft: CampaignDraft): boolean {
   return (
     hasMeaningfulText(draft.name) &&
     hasMeaningfulText(draft.goal) &&
+    getCampaignSaveBlockingErrors(draft).length === 0 &&
     Boolean(firstStepReadiness) &&
     Object.values(firstStepReadiness).some((value) => value === 'ready')
   );

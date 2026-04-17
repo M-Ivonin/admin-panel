@@ -71,9 +71,11 @@ import {
   buildCampaignReviewModel,
   canArchiveCampaign,
   canContinueCampaignStep,
+  getCampaignDeeplinkGoalSummary,
   canScheduleCampaign,
   canSendTestCampaign,
   getCampaignLocaleReadiness,
+  getCampaignSaveBlockingErrors,
   getCampaignValidationSummary,
 } from '@/modules/campaigns/selectors';
 import {
@@ -315,6 +317,10 @@ function getSourceEventLabel(eventKey: string): string {
       return 'Opened app';
     case 'onboarding_completed':
       return 'Completed onboarding';
+    case 'match_center_opened':
+      return 'Opened match center';
+    case 'rewards_wallet_opened':
+      return 'Opened rewards wallet';
     case 'subscription_started':
       return 'Started subscription';
     case 'subscription_renewed':
@@ -362,7 +368,13 @@ function getDeeplinkOptionLabel(
     return 'No follow-up action';
   }
 
-  return options.find((option) => option.target === target)?.label ?? target;
+  const knownLabel = options.find((option) => option.target === target)?.label;
+  if (knownLabel) {
+    return knownLabel;
+  }
+
+  const normalizedLabel = target.replace(/_/g, ' ');
+  return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
 }
 
 export function CampaignEditorPage({
@@ -384,6 +396,7 @@ export function CampaignEditorPage({
   const [testRecipients, setTestRecipients] = useState(
     () => storedAuthUser?.email?.trim() ?? ''
   );
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
@@ -398,6 +411,14 @@ export function CampaignEditorPage({
 
   const validation = useMemo(
     () => getCampaignValidationSummary(state.draft),
+    [state.draft]
+  );
+  const saveBlockingErrors = useMemo(
+    () => getCampaignSaveBlockingErrors(state.draft),
+    [state.draft]
+  );
+  const deeplinkGoalSummary = useMemo(
+    () => getCampaignDeeplinkGoalSummary(state.draft),
     [state.draft]
   );
   const readiness = useMemo(
@@ -535,6 +556,10 @@ export function CampaignEditorPage({
   }, [isInitialized, state.draft.audience]);
 
   async function persistDraft(): Promise<CampaignDraft> {
+    if (saveBlockingErrors.length > 0) {
+      throw new Error(saveBlockingErrors[0]);
+    }
+
     const payload = buildUpsertPayload(state.draft);
     const saved =
       state.draft.id === null
@@ -590,6 +615,7 @@ export function CampaignEditorPage({
     }
 
     try {
+      setIsSendingTest(true);
       const saved = await ensurePersistedDraft();
       const response = await campaignsRepository.sendTestCampaign(saved.id!, {
         recipients: normalizedTestRecipients,
@@ -612,6 +638,8 @@ export function CampaignEditorPage({
           ? actionError.message
           : 'Failed to send test campaign'
       );
+    } finally {
+      setIsSendingTest(false);
     }
   }
 
@@ -679,6 +707,10 @@ export function CampaignEditorPage({
     }
 
     try {
+      if (saveBlockingErrors.length > 0) {
+        throw new Error(saveBlockingErrors[0]);
+      }
+
       const response = await campaignsRepository.saveTemplate({
         name: saveTemplateName.trim(),
         description: saveTemplateDescription.trim() || undefined,
@@ -803,6 +835,13 @@ export function CampaignEditorPage({
 
   const activeStepContent =
     state.draft.content[state.activeContentStepKey]?.[activeLocale];
+  const isLegacyHiddenDeeplink = Boolean(
+    activeStepContent?.deeplinkTarget &&
+      !state.catalog.deeplinkOptions.some(
+        (option) => option.target === activeStepContent.deeplinkTarget
+      )
+  );
+  const campaignHasMixedGoalActions = deeplinkGoalSummary.hasMixedGoals;
   const stateBasedTrigger =
     state.draft.trigger.type === 'state_based' ? state.draft.trigger : null;
   const eventBasedTrigger =
@@ -1792,6 +1831,22 @@ export function CampaignEditorPage({
                   <SectionCard title="Step content">
                     {activeStepContent ? (
                       <Stack spacing={2}>
+                        {isLegacyHiddenDeeplink ? (
+                          <Alert severity="error">
+                            This locale uses a legacy follow-up action that no
+                            longer maps to a supported campaign goal. Replace
+                            it with Continue onboarding, Open match center, Open
+                            rewards wallet, or clear it before saving.
+                          </Alert>
+                        ) : null}
+                        {!isLegacyHiddenDeeplink && campaignHasMixedGoalActions ? (
+                          <Alert severity="warning">
+                            This campaign mixes different non-empty follow-up
+                            actions across steps or locales. Saving only works
+                            when every non-empty action points to the same
+                            supported goal.
+                          </Alert>
+                        ) : null}
                         <Stack direction="row" spacing={1}>
                           <Button
                             variant="outlined"
@@ -1897,6 +1952,16 @@ export function CampaignEditorPage({
                               })
                             }
                           >
+                            {isLegacyHiddenDeeplink &&
+                            activeStepContent.deeplinkTarget ? (
+                              <MenuItem value={activeStepContent.deeplinkTarget}>
+                                {getDeeplinkOptionLabel(
+                                  state.catalog.deeplinkOptions,
+                                  activeStepContent.deeplinkTarget
+                                )} {' '}
+                                (legacy unsupported)
+                              </MenuItem>
+                            ) : null}
                             <MenuItem value="">
                               <em>No follow-up action</em>
                             </MenuItem>
@@ -1910,9 +1975,12 @@ export function CampaignEditorPage({
                             ))}
                           </Select>
                           <FormHelperText>
-                            Optional. If selected, tapping the push opens this
-                            screen in the app. If left empty, the app falls
-                            back to the default notifications flow.
+                            Optional. Only Continue onboarding, Open match
+                            center, and Open rewards wallet are supported as
+                            non-empty follow-up actions right now, and every
+                            non-empty action across the campaign must use the
+                            same one. If left empty, the app falls back to the
+                            default notifications flow.
                           </FormHelperText>
                         </FormControl>
                       </Stack>
@@ -2214,7 +2282,12 @@ export function CampaignEditorPage({
 
       <Dialog
         open={state.dialogs.sendTest}
-        onClose={() => dispatch({ type: 'closeDialog', dialog: 'sendTest' })}
+        onClose={() => {
+          if (isSendingTest) {
+            return;
+          }
+          dispatch({ type: 'closeDialog', dialog: 'sendTest' });
+        }}
       >
         <DialogTitle>Send test</DialogTitle>
         <DialogContent>
@@ -2229,6 +2302,7 @@ export function CampaignEditorPage({
               error={normalizedTestRecipients.length === 0}
               value={testRecipients}
               onChange={(event) => setTestRecipients(event.target.value)}
+              disabled={isSendingTest}
               fullWidth
             />
             <FormControl fullWidth>
@@ -2237,6 +2311,7 @@ export function CampaignEditorPage({
                 onChange={(event) =>
                   setTestLocale(event.target.value as CampaignLocale)
                 }
+                disabled={isSendingTest}
               >
                 {(['en', 'es', 'pt'] as CampaignLocale[]).map((locale) => (
                   <MenuItem key={locale} value={locale}>
@@ -2249,6 +2324,7 @@ export function CampaignEditorPage({
         </DialogContent>
         <DialogActions>
           <Button
+            disabled={isSendingTest}
             onClick={() =>
               dispatch({ type: 'closeDialog', dialog: 'sendTest' })
             }
@@ -2257,9 +2333,16 @@ export function CampaignEditorPage({
           </Button>
           <Button
             onClick={handleSendTest}
-            disabled={normalizedTestRecipients.length === 0}
+            disabled={normalizedTestRecipients.length === 0 || isSendingTest}
           >
-            Send test
+            {isSendingTest ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={16} color="inherit" />
+                <span>Sending...</span>
+              </Stack>
+            ) : (
+              'Send test'
+            )}
           </Button>
         </DialogActions>
       </Dialog>

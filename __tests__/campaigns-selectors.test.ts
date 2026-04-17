@@ -2,7 +2,9 @@ import { RetentionStage } from '@/lib/api/users';
 import { createJourneyStep } from '@/modules/campaigns/defaults';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
+  canSendTestCampaign,
   canScheduleCampaign,
+  getCampaignSaveBlockingErrors,
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
 } from '@/modules/campaigns/selectors';
@@ -145,5 +147,63 @@ describe('campaign selectors', () => {
     };
 
     expect(canScheduleCampaign(draft)).toBe(true);
+  });
+
+  it('blocks saving and sending tests when deeplinks mix different supported goals', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.content.step_1.en = {
+      title: 'Hello',
+      body: 'Finish setup',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'continue_onboarding',
+    };
+    draft.content.step_1.es = {
+      title: 'Hola',
+      body: 'Abre tu partido',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: 'open_match_center',
+    };
+    draft.content.step_1.pt = {
+      title: 'Ola',
+      body: 'Continue',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: null,
+    };
+
+    expect(getCampaignSaveBlockingErrors(draft)).toContain(
+      'All non-empty follow-up actions across the campaign must point to one supported goal. Mixed actions found: Continue onboarding in Step 1 EN; Open match center in Step 1 ES.'
+    );
+    expect(canSendTestCampaign(draft)).toBe(false);
+    expect(canScheduleCampaign(draft)).toBe(false);
+  });
+
+  it('blocks saving when a locale uses an unsupported non-null deeplink', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.content.step_1.en = {
+      title: 'Hello',
+      body: 'Back to the app',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'open_home',
+    };
+    draft.content.step_1.es = {
+      title: 'Hola',
+      body: 'Completa tu setup',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: null,
+    };
+    draft.content.step_1.pt = {
+      title: 'Ola',
+      body: 'Conclua seu setup',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: null,
+    };
+
+    expect(getCampaignValidationSummary(draft).errors).toContain(
+      'Only Continue onboarding, Open match center, Open rewards wallet can be used as non-empty follow-up actions. Replace or clear Open Home in Step 1 EN before saving the draft.'
+    );
   });
 });

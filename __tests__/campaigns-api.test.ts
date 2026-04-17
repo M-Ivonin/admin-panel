@@ -187,4 +187,34 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({ confirm: true }),
     });
   });
+
+  it('surfaces backend validation messages for draft save failures', async () => {
+    const draft = createEmptyCampaignDraft();
+
+    (adminAuthFetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: jest.fn().mockResolvedValue({
+        statusCode: 400,
+        message:
+          'All step locales must map to the same supported campaign goal',
+        error: 'Bad Request',
+      }),
+    });
+
+    await expect(
+      createCampaignDraft({
+        name: draft.name,
+        goal: draft.goal,
+        channel: draft.channel,
+        audience: draft.audience,
+        trigger: draft.trigger,
+        journey: draft.journey,
+        content: draft.content,
+      })
+    ).rejects.toThrow(
+      'All step locales must map to the same supported campaign goal'
+    );
+  });
 });
