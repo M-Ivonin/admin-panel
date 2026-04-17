@@ -109,6 +109,10 @@ export interface CampaignListProgressSummary {
 export interface CampaignListMetricSummary {
   label: 'ctr' | 'goal';
   value: string;
+  detail?: string | null;
+  reachedCount?: number | null;
+  journeyCount?: number | null;
+  attributionMode?: CampaignGoalAttributionMode | null;
 }
 
 export interface CampaignListOwnerSummary {

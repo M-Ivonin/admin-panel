@@ -5,6 +5,7 @@ import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
+  MISSING_TRACKED_GOAL_WARNING,
 } from '@/modules/campaigns/selectors';
 
 describe('campaign selectors', () => {
@@ -70,6 +71,36 @@ describe('campaign selectors', () => {
     expect(summary.warnings).toContain(
       'Every locale using {{first_name}} needs a fallback value.'
     );
+  });
+
+  it('warns when no tracked goal is selected without blocking scheduling', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.goalDefinition = null;
+    draft.content.step_1.en = {
+      title: 'Hello {{first_name}}',
+      body: 'Finish setup',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'continue_onboarding',
+    };
+    draft.content.step_1.es = {
+      title: 'Hola {{first_name}}',
+      body: 'Completa tu setup',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: 'continue_onboarding',
+    };
+    draft.content.step_1.pt = {
+      title: 'Ola {{first_name}}',
+      body: 'Conclua seu setup',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: 'continue_onboarding',
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.warnings).toContain(MISSING_TRACKED_GOAL_WARNING);
+    expect(canScheduleCampaign(draft)).toBe(true);
   });
 
   it('blocks scheduling when any selected locale is missing for any journey step', () => {

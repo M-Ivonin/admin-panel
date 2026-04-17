@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
 import { getUser, getUsers } from '@/lib/api/users';
 import { campaignsRepository } from '@/modules/campaigns/repository';
+import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
 jest.setTimeout(20000);
@@ -148,6 +149,25 @@ describe('CampaignEditorPage', () => {
       expect(
         screen.getByDisplayValue('Recover onboarding completion')
       ).toBeTruthy();
+    });
+  });
+
+  it('shows and clears the missing tracked-goal warning around the selector', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    const trackedGoalSelector = await screen.findByRole('combobox', {
+      name: 'Tracked goal',
+    });
+
+    expect(screen.getByText(MISSING_TRACKED_GOAL_WARNING)).toBeTruthy();
+
+    fireEvent.mouseDown(trackedGoalSelector);
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Onboarding completed' })
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(MISSING_TRACKED_GOAL_WARNING)).toBeNull();
     });
   });
 

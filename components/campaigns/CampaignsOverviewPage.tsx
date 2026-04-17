@@ -758,6 +758,17 @@ export function CampaignsOverviewPage() {
                         <Typography sx={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>
                           {item.metric.value}
                         </Typography>
+                        {item.metric.detail ? (
+                          <Typography
+                            sx={{
+                              color: COLORS.textSecondary,
+                              fontSize: 12,
+                              mt: 0.35,
+                            }}
+                          >
+                            {item.metric.detail}
+                          </Typography>
+                        ) : null}
                         <Stack direction="row" spacing={0.75} sx={{ mt: 0.8 }} flexWrap="wrap">
                           {(Object.keys(item.localeReadiness) as Array<keyof CampaignListItem['localeReadiness']>).map(
                             (locale) => (

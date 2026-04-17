@@ -75,6 +75,7 @@ import {
   canSendTestCampaign,
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
+  MISSING_TRACKED_GOAL_WARNING,
 } from '@/modules/campaigns/selectors';
 import {
   buildCampaignScheduleRule,
@@ -1114,6 +1115,12 @@ export function CampaignEditorPage({
                   Select the backend event used to measure campaign success.
                   Goal suppression and stop-on-goal logic use this definition.
                 </FormHelperText>
+                {state.draft.goalDefinition === null &&
+                validation.warnings.includes(MISSING_TRACKED_GOAL_WARNING) ? (
+                  <Alert severity="warning" sx={{ mt: 1.5 }}>
+                    {MISSING_TRACKED_GOAL_WARNING}
+                  </Alert>
+                ) : null}
               </FormControl>
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

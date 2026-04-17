@@ -45,6 +45,12 @@ const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
   channels_favorite_matches: 'Favorite matches service',
 };
 
+/**
+ * Warns operators that tracked-goal runtime behavior is disabled for the draft.
+ */
+export const MISSING_TRACKED_GOAL_WARNING =
+  'Tracked goal is not set. Campaign success, suppression, and stop-on-goal behavior will not be measured.';
+
 export interface CampaignValidationSummary {
   errors: string[];
   warnings: string[];
@@ -281,6 +287,11 @@ export function getCampaignValidationSummary(
 ): CampaignValidationSummary {
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  if (draft.goalDefinition === null) {
+    warnings.push(MISSING_TRACKED_GOAL_WARNING);
+  }
+
   const stepReadiness = Object.fromEntries(
     Object.entries(draft.content).map(([stepKey, stepContent]) => [
       stepKey,

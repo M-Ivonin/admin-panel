@@ -86,7 +86,7 @@ It is stored as `campaign.goalText` and is primarily a product-facing descriptio
 
 ### 4.2 Backend goal definition
 
-This is the machine-readable success rule derived by the backend from the campaign deeplink target(s). It is stored as `campaign.goalDefinition`.
+This is the machine-readable success rule selected in the tracked-goal field and stored as `campaign.goalDefinition`.
 
 This backend goal definition is what actually powers:
 
@@ -94,11 +94,7 @@ This backend goal definition is what actually powers:
 - stop-on-goal behavior for later journey steps,
 - success attribution logic.
 
-In the current implementation, a non-null `goalDefinition` can only be created from these deeplink targets:
-
-- `continue_onboarding` -> goal event `onboarding_completed`
-- `open_match_center` -> goal event `match_center_opened`
-- `open_rewards_wallet` -> goal event `rewards_wallet_opened`
+If no tracked goal is selected, the editor shows an explicit warning that campaign success, suppression, and stop-on-goal behavior will not be measured. This warning does not block save, test send, or scheduling by itself.
 
 ## 5. Admin-panel experience
 
@@ -172,7 +168,9 @@ Important nuances:
 
 - The audience label uses only the first selected retention stage, not the full audience definition.
 - The audience estimate is a stored snapshot from the last draft save/update, not a live recalculated audience size.
-- The outcome cell shows CTR once the campaign has sent pushes; otherwise it falls back to displaying the free-text goal.
+- KPI cards stay unchanged even when tracked-goal reporting is available on individual rows.
+- The outcome cell still shows CTR for campaigns without a tracked goal after sends begin.
+- When tracked-goal aggregates exist, the outcome cell shows the primary goal-rate value and a secondary `X reached / Y journeys` detail line.
 
 ### 5.3 Editor state model
 
@@ -1063,9 +1061,9 @@ The backend currently ships these scenario templates:
 
 These points are especially important when reasoning about current behavior.
 
-### 17.1 Goal tracking is deeplink-driven, not text-driven
+### 17.1 Goal tracking is tracked-goal-driven, not text-driven
 
-The free-text goal field is descriptive only. Actual tracked success behavior comes from backend-derived `goalDefinition`.
+The free-text goal field is descriptive only. Actual tracked success behavior comes from the explicitly selected `goalDefinition`.
 
 ### 17.2 A campaign can currently have only one backend-tracked goal
 
