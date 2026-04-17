@@ -64,7 +64,7 @@ describe('campaignEditorReducer', () => {
     ]);
   });
 
-  it('inserts a token into step-specific locale content and keeps the state dirty', () => {
+  it('inserts a token at the current cursor position and keeps the state dirty', () => {
     const draft = createEmptyCampaignDraft();
     draft.content.step_1.en.title = 'Welcome back';
     const initialState = createCampaignEditorState(draft);
@@ -75,10 +75,14 @@ describe('campaignEditorReducer', () => {
       locale: 'en',
       field: 'title',
       token: '{{first_name}}',
+      selection: {
+        start: 8,
+        end: 8,
+      },
     });
 
     expect(nextState.draft.content.step_1.en.title).toBe(
-      'Welcome back {{first_name}}',
+      'Welcome {{first_name}}back',
     );
     expect(nextState.isDirty).toBe(true);
   });

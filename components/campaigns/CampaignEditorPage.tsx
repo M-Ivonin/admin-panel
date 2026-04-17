@@ -8,8 +8,11 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
+  type ChangeEvent,
   type ReactNode,
+  type SyntheticEvent,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -61,7 +64,11 @@ import type {
   CampaignStatus,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
-import { createEmptyCampaignDraft, createJourneyStep } from '@/modules/campaigns/defaults';
+import {
+  createEmptyCampaignDraft,
+  createJourneyStep,
+  createScheduledCampaignTrigger,
+} from '@/modules/campaigns/defaults';
 import {
   CampaignEditorStep,
   campaignEditorReducer,
@@ -80,8 +87,8 @@ import {
 import {
   buildCampaignScheduleRule,
   CAMPAIGN_WEEKDAY_OPTIONS,
-  DEFAULT_CAMPAIGN_SCHEDULE,
   describeCampaignScheduleRule,
+  DEFAULT_CAMPAIGN_SCHEDULE,
   formatCampaignScheduleTime,
   parseCampaignScheduleRule,
   withCampaignScheduleTime,
@@ -119,6 +126,23 @@ const STEP_LABELS: Record<CampaignEditorStep, string> = {
 interface CampaignEditorPageProps {
   mode: 'create' | 'edit';
   campaignId?: string;
+}
+
+type CampaignEditorTextField = 'title' | 'body';
+type CampaignEditorTextInputElement = HTMLInputElement | HTMLTextAreaElement;
+
+interface CampaignEditorTextSelection {
+  stepKey: string;
+  locale: CampaignLocale;
+  start: number;
+  end: number;
+}
+
+interface PendingTokenFocus {
+  stepKey: string;
+  locale: CampaignLocale;
+  field: CampaignEditorTextField;
+  cursor: number;
 }
 
 const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
@@ -402,6 +426,16 @@ export function CampaignEditorPage({
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] =
     useState<CampaignScenarioTemplateSummary | null>(null);
+  const contentInputRefs = useRef<
+    Record<CampaignEditorTextField, CampaignEditorTextInputElement | null>
+  >({
+    title: null,
+    body: null,
+  });
+  const contentSelectionRef = useRef<
+    Partial<Record<CampaignEditorTextField, CampaignEditorTextSelection>>
+  >({});
+  const pendingTokenFocusRef = useRef<PendingTokenFocus | null>(null);
   const authorizedUserEmail =
     user?.email?.trim() ?? storedAuthUser?.email?.trim() ?? '';
   const normalizedTestRecipients = testRecipients
@@ -414,8 +448,12 @@ export function CampaignEditorPage({
     [state.draft]
   );
   const readiness = useMemo(
-    () => getCampaignLocaleReadiness(state.draft.content),
-    [state.draft.content]
+    () =>
+      getCampaignLocaleReadiness(
+        state.draft.content,
+        state.draft.audience.criteria.locales
+      ),
+    [state.draft.audience.criteria.locales, state.draft.content]
   );
   const reviewModel = useMemo(
     () => buildCampaignReviewModel(state.draft),
@@ -516,6 +554,157 @@ export function CampaignEditorPage({
       cancelled = true;
     };
   }, [state.draft.audience.criteria.userIds]);
+
+  function getInputSelection(
+    input: CampaignEditorTextInputElement,
+  ): Pick<CampaignEditorTextSelection, 'start' | 'end'> {
+    const fallbackCursor = input.value.length;
+    const start = input.selectionStart ?? fallbackCursor;
+    const end = input.selectionEnd ?? start;
+
+    return { start, end };
+  }
+
+  function storeContentSelection(
+    field: CampaignEditorTextField,
+    selection: Pick<CampaignEditorTextSelection, 'start' | 'end'>,
+  ) {
+    contentSelectionRef.current[field] = {
+      stepKey: state.activeContentStepKey,
+      locale: activeLocale,
+      start: selection.start,
+      end: selection.end,
+    };
+  }
+
+  function captureContentSelection(
+    field: CampaignEditorTextField,
+    input?: CampaignEditorTextInputElement | null,
+  ): CampaignEditorTextSelection | null {
+    const resolvedInput = input ?? contentInputRefs.current[field];
+    if (!resolvedInput) {
+      return null;
+    }
+
+    const selection = getInputSelection(resolvedInput);
+    storeContentSelection(field, selection);
+
+    return contentSelectionRef.current[field] ?? null;
+  }
+
+  function handleContentSelection(
+    field: CampaignEditorTextField,
+    event: SyntheticEvent<CampaignEditorTextInputElement>,
+  ) {
+    contentInputRefs.current[field] = event.currentTarget;
+    captureContentSelection(field, event.currentTarget);
+  }
+
+  function handleStepContentChange(
+    field: CampaignEditorTextField,
+    event: ChangeEvent<CampaignEditorTextInputElement>,
+  ) {
+    const value = event.target.value;
+
+    contentInputRefs.current[field] = event.currentTarget;
+    storeContentSelection(field, getInputSelection(event.currentTarget));
+    dispatch({
+      type: 'updateStepLocaleContent',
+      stepKey: state.activeContentStepKey,
+      locale: activeLocale,
+      patch: field === 'title' ? { title: value } : { body: value },
+    });
+  }
+
+  function openTokenPicker(field: CampaignEditorTextField) {
+    captureContentSelection(field);
+    dispatch({
+      type: 'openDialog',
+      dialog: 'tokenPicker',
+      tokenTarget: {
+        stepKey: state.activeContentStepKey,
+        locale: activeLocale,
+        field,
+      },
+    });
+  }
+
+  function handleInsertToken(token: string) {
+    if (!state.tokenTarget) {
+      return;
+    }
+
+    const storedSelection = contentSelectionRef.current[state.tokenTarget.field];
+    const selection =
+      storedSelection &&
+      storedSelection.stepKey === state.tokenTarget.stepKey &&
+      storedSelection.locale === state.tokenTarget.locale
+        ? storedSelection
+        : captureContentSelection(state.tokenTarget.field);
+    const fallbackCursor =
+      contentInputRefs.current[state.tokenTarget.field]?.value.length ?? 0;
+    const insertionStart = selection?.start ?? fallbackCursor;
+    const cursor = insertionStart + token.length;
+
+    pendingTokenFocusRef.current = {
+      ...state.tokenTarget,
+      cursor,
+    };
+    dispatch({
+      type: 'insertToken',
+      stepKey: state.tokenTarget.stepKey,
+      locale: state.tokenTarget.locale,
+      field: state.tokenTarget.field,
+      token,
+      selection: selection
+        ? {
+            start: selection.start,
+            end: selection.end,
+          }
+        : undefined,
+    });
+    dispatch({ type: 'closeDialog', dialog: 'tokenPicker' });
+  }
+
+  useEffect(() => {
+    const pending = pendingTokenFocusRef.current;
+    if (!pending || state.dialogs.tokenPicker) {
+      return;
+    }
+
+    if (
+      pending.stepKey !== state.activeContentStepKey ||
+      pending.locale !== activeLocale
+    ) {
+      return;
+    }
+
+    const input = contentInputRefs.current[pending.field];
+    if (!input) {
+      return;
+    }
+
+    pendingTokenFocusRef.current = null;
+    const restoreFocusTimeout = window.setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(pending.cursor, pending.cursor);
+      contentSelectionRef.current[pending.field] = {
+        stepKey: pending.stepKey,
+        locale: pending.locale,
+        start: pending.cursor,
+        end: pending.cursor,
+      };
+    }, 0);
+
+    return () => {
+      window.clearTimeout(restoreFocusTimeout);
+    };
+  }, [
+    activeLocale,
+    state.activeContentStepKey,
+    state.dialogs.tokenPicker,
+    state.draft.content,
+  ]);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -841,6 +1030,12 @@ export function CampaignEditorPage({
   const scheduledRuleModel = parsedScheduledRule ?? DEFAULT_CAMPAIGN_SCHEDULE;
   const hasInvalidScheduledRule =
     Boolean(scheduledTrigger?.recurrenceRule.trim()) && !parsedScheduledRule;
+  const scheduledDescription = scheduledTrigger
+    ? describeCampaignScheduleRule(scheduledTrigger.recurrenceRule, {
+        startDate: scheduledTrigger.startDate,
+        maxOccurrences: scheduledTrigger.maxOccurrences,
+      })
+    : '';
   const templateBlockingErrors = validation.errors.filter(
     (error) => !/Step .+ is missing [A-Z]{2} content\./.test(error)
   );
@@ -1218,6 +1413,8 @@ export function CampaignEditorPage({
                       }}
                     >
                       Choose which lifecycle stages should enter the audience.
+                      You can leave this empty if you hand-pick specific users
+                      above.
                     </Typography>
                     <Stack
                       direction="row"
@@ -1356,13 +1553,7 @@ export function CampaignEditorPage({
                               } else {
                                 dispatch({
                                   type: 'changeTrigger',
-                                  trigger: {
-                                    type: 'scheduled_recurring',
-                                    recurrenceRule: buildCampaignScheduleRule(
-                                      DEFAULT_CAMPAIGN_SCHEDULE
-                                    ),
-                                    timezoneMode: 'user_local',
-                                  },
+                                  trigger: createScheduledCampaignTrigger(),
                                 });
                               }
                             }}
@@ -1502,10 +1693,42 @@ export function CampaignEditorPage({
                               save a new schedule.
                             </Alert>
                           ) : null}
-                          <Stack
-                            direction={{ xs: 'column', md: 'row' }}
-                            spacing={2}
+                          <Box
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: 'repeat(2, minmax(0, 1fr))',
+                                xl: 'repeat(4, minmax(0, 1fr))',
+                              },
+                              gap: 2,
+                              alignItems: 'start',
+                            }}
                           >
+                            <TextField
+                              label="Start date"
+                              type="date"
+                              value={scheduledTrigger.startDate ?? ''}
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...scheduledTrigger,
+                                    startDate: event.target.value || null,
+                                  },
+                                })
+                              }
+                              InputLabelProps={{ shrink: true }}
+                              helperText="Choose the local calendar day when the first occurrence can start."
+                              fullWidth
+                              sx={{
+                                gridColumn: {
+                                  xs: 'auto',
+                                  sm: '1 / -1',
+                                  xl: 'span 1',
+                                },
+                              }}
+                            />
                             <TextField
                               label="Repeat every"
                               type="number"
@@ -1561,7 +1784,51 @@ export function CampaignEditorPage({
                                 <MenuItem value="WEEKLY">Week(s)</MenuItem>
                               </Select>
                             </FormControl>
-                          </Stack>
+                            <TextField
+                              label="Send time"
+                              type="time"
+                              value={formatCampaignScheduleTime(scheduledRuleModel)}
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...scheduledTrigger,
+                                    recurrenceRule: buildCampaignScheduleRule(
+                                      withCampaignScheduleTime(
+                                        scheduledRuleModel,
+                                        event.target.value
+                                      )
+                                    ),
+                                  },
+                                })
+                              }
+                              InputLabelProps={{ shrink: true }}
+                              fullWidth
+                            />
+                            <TextField
+                              label="Max occurrences"
+                              type="number"
+                              value={scheduledTrigger.maxOccurrences ?? ''}
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...scheduledTrigger,
+                                    maxOccurrences:
+                                      event.target.value === ''
+                                        ? 1
+                                        : Math.max(
+                                            1,
+                                            Number(event.target.value) || 1
+                                          ),
+                                  },
+                                })
+                              }
+                              inputProps={{ min: 1 }}
+                              helperText="1 sends the full journey once. Higher values repeat every step on each scheduled occurrence."
+                              fullWidth
+                            />
+                          </Box>
                           {scheduledRuleModel.frequency === 'WEEKLY' ? (
                             <Stack spacing={1}>
                               <Typography
@@ -1621,33 +1888,18 @@ export function CampaignEditorPage({
                               </Stack>
                             </Stack>
                           ) : null}
-                          <TextField
-                            label="Send time"
-                            type="time"
-                            value={formatCampaignScheduleTime(scheduledRuleModel)}
-                            onChange={(event) =>
-                              dispatch({
-                                type: 'changeTrigger',
-                                trigger: {
-                                  ...scheduledTrigger,
-                                  recurrenceRule: buildCampaignScheduleRule(
-                                    withCampaignScheduleTime(
-                                      scheduledRuleModel,
-                                      event.target.value
-                                    )
-                                  ),
-                                },
-                              })
-                            }
-                            InputLabelProps={{ shrink: true }}
-                          />
 
                           <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
-                            {describeCampaignScheduleRule(
-                              parsedScheduledRule
-                                ? scheduledTrigger.recurrenceRule
-                                : buildCampaignScheduleRule(scheduledRuleModel)
-                            )}
+                            {parsedScheduledRule
+                              ? scheduledDescription
+                              : describeCampaignScheduleRule(
+                                  buildCampaignScheduleRule(scheduledRuleModel),
+                                  {
+                                    startDate: scheduledTrigger.startDate,
+                                    maxOccurrences:
+                                      scheduledTrigger.maxOccurrences,
+                                  }
+                                )}
                           </Alert>
                         </Stack>
                       ) : null}
@@ -1877,33 +2129,13 @@ export function CampaignEditorPage({
                         <Stack direction="row" spacing={1}>
                           <Button
                             variant="outlined"
-                            onClick={() =>
-                              dispatch({
-                                type: 'openDialog',
-                                dialog: 'tokenPicker',
-                                tokenTarget: {
-                                  stepKey: state.activeContentStepKey,
-                                  locale: activeLocale,
-                                  field: 'title',
-                                },
-                              })
-                            }
+                            onClick={() => openTokenPicker('title')}
                           >
                             Insert token in title
                           </Button>
                           <Button
                             variant="outlined"
-                            onClick={() =>
-                              dispatch({
-                                type: 'openDialog',
-                                dialog: 'tokenPicker',
-                                tokenTarget: {
-                                  stepKey: state.activeContentStepKey,
-                                  locale: activeLocale,
-                                  field: 'body',
-                                },
-                              })
-                            }
+                            onClick={() => openTokenPicker('body')}
                           >
                             Insert token in body
                           </Button>
@@ -1912,26 +2144,44 @@ export function CampaignEditorPage({
                         <TextField
                           label="Push title"
                           value={activeStepContent.title}
+                          inputRef={(element) => {
+                            contentInputRefs.current.title = element;
+                          }}
+                          inputProps={{
+                            onClick: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('title', event),
+                            onKeyUp: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('title', event),
+                            onSelect: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('title', event),
+                          }}
                           onChange={(event) =>
-                            dispatch({
-                              type: 'updateStepLocaleContent',
-                              stepKey: state.activeContentStepKey,
-                              locale: activeLocale,
-                              patch: { title: event.target.value },
-                            })
+                            handleStepContentChange('title', event)
                           }
                           fullWidth
                         />
                         <TextField
                           label="Push body"
                           value={activeStepContent.body}
+                          inputRef={(element) => {
+                            contentInputRefs.current.body = element;
+                          }}
+                          inputProps={{
+                            onClick: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('body', event),
+                            onKeyUp: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('body', event),
+                            onSelect: (
+                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                            ) => handleContentSelection('body', event),
+                          }}
                           onChange={(event) =>
-                            dispatch({
-                              type: 'updateStepLocaleContent',
-                              stepKey: state.activeContentStepKey,
-                              locale: activeLocale,
-                              patch: { body: event.target.value },
-                            })
+                            handleStepContentChange('body', event)
                           }
                           multiline
                           minRows={4}
@@ -2144,7 +2394,7 @@ export function CampaignEditorPage({
           <SectionCard title="Readiness">
             <Stack spacing={2}>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {(['en', 'es', 'pt'] as CampaignLocale[]).map((locale) => (
+                {state.draft.audience.criteria.locales.map((locale) => (
                   <Chip
                     key={locale}
                     label={`${locale.toUpperCase()} · ${readiness[locale]}`}
@@ -2375,7 +2625,10 @@ export function CampaignEditorPage({
         <DialogContent>
           <Typography sx={{ mt: 1 }}>
             {state.draft.trigger.type === 'scheduled_recurring'
-              ? "This will schedule the current recurring journey for live evaluation against each user's local-time rule on the backend cadence."
+              ? state.draft.trigger.maxOccurrences &&
+                state.draft.trigger.maxOccurrences > 1
+                ? 'This will schedule the recurring campaign from the chosen start date. Each occurrence re-enters the full journey from step 1 for eligible users.'
+                : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
               : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
         </DialogContent>
@@ -2457,20 +2710,7 @@ export function CampaignEditorPage({
               <Button
                 key={token.key}
                 variant="outlined"
-                onClick={() => {
-                  if (!state.tokenTarget) {
-                    return;
-                  }
-
-                  dispatch({
-                    type: 'insertToken',
-                    stepKey: state.tokenTarget.stepKey,
-                    locale: state.tokenTarget.locale,
-                    field: state.tokenTarget.field,
-                    token: token.token,
-                  });
-                  dispatch({ type: 'closeDialog', dialog: 'tokenPicker' });
-                }}
+                onClick={() => handleInsertToken(token.token)}
               >
                 {token.label}
               </Button>

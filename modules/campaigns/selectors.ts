@@ -13,6 +13,7 @@ import type {
 import { CampaignEditorStep } from '@/modules/campaigns/reducer';
 import {
   describeCampaignScheduleRule,
+  isValidCampaignScheduleDate,
   parseCampaignScheduleRule,
 } from '@/modules/campaigns/schedule';
 
@@ -72,6 +73,8 @@ export interface CampaignReviewModel {
   }>;
 }
 
+const ALL_CAMPAIGN_LOCALES: CampaignLocale[] = ['en', 'es', 'pt'];
+
 function extractTokens(value: string): string[] {
   const matches = value.match(TOKEN_PATTERN);
   return matches ?? [];
@@ -79,6 +82,13 @@ function extractTokens(value: string): string[] {
 
 function hasMeaningfulText(value: string): boolean {
   return value.trim().length > 0;
+}
+
+function hasAudienceTargeting(draft: CampaignDraft): boolean {
+  return (
+    draft.audience.criteria.retentionStages.length > 0 ||
+    draft.audience.criteria.userIds.length > 0
+  );
 }
 
 function combineReadiness(
@@ -178,7 +188,10 @@ function describeTriggerDetails(draft: CampaignDraft): string {
     return `${eventLabel} from ${sourceLabel}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).`;
   }
 
-  return describeCampaignScheduleRule(draft.trigger.recurrenceRule);
+  return describeCampaignScheduleRule(draft.trigger.recurrenceRule, {
+    startDate: draft.trigger.startDate,
+    maxOccurrences: draft.trigger.maxOccurrences,
+  });
 }
 
 function describeJourneyStep(step: CampaignJourneyStep): string {
@@ -221,7 +234,8 @@ export function getCampaignStepLocaleReadiness(
  * Derives aggregate locale readiness across all journey steps.
  */
 export function getCampaignLocaleReadiness(
-  content: CampaignDraft['content']
+  content: CampaignDraft['content'],
+  locales: CampaignLocale[] = ALL_CAMPAIGN_LOCALES
 ): Record<CampaignLocale, CampaignReadiness> {
   const aggregate: Record<CampaignLocale, CampaignReadiness> = {
     en: 'ready',
@@ -231,7 +245,7 @@ export function getCampaignLocaleReadiness(
 
   Object.values(content).forEach((stepContent) => {
     const readiness = getCampaignStepLocaleReadiness(stepContent);
-    (Object.keys(readiness) as CampaignLocale[]).forEach((locale) => {
+    locales.forEach((locale) => {
       aggregate[locale] = combineReadiness(
         aggregate[locale],
         readiness[locale]
@@ -287,6 +301,7 @@ export function getCampaignValidationSummary(
 ): CampaignValidationSummary {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const selectedLocales = draft.audience.criteria.locales;
 
   if (draft.goalDefinition === null) {
     warnings.push(MISSING_TRACKED_GOAL_WARNING);
@@ -303,7 +318,9 @@ export function getCampaignValidationSummary(
             stepKey,
             localeContent
           );
-          warnings.push(...localeWarnings);
+          if (selectedLocales.includes(locale)) {
+            warnings.push(...localeWarnings);
+          }
 
           if (
             !hasMeaningfulText(localeContent.title) &&
@@ -322,7 +339,7 @@ export function getCampaignValidationSummary(
       ),
     ])
   ) as Record<string, Record<CampaignLocale, CampaignReadiness>>;
-  const readiness = getCampaignLocaleReadiness(draft.content);
+  const readiness = getCampaignLocaleReadiness(draft.content, selectedLocales);
   const usedTokens = getUsedCampaignTokens(draft);
 
   if (!hasMeaningfulText(draft.name)) {
@@ -333,8 +350,8 @@ export function getCampaignValidationSummary(
     errors.push('Campaign goal is required.');
   }
 
-  if (draft.audience.criteria.retentionStages.length === 0) {
-    errors.push('Select at least one retention stage.');
+  if (!hasAudienceTargeting(draft)) {
+    errors.push('Select at least one retention stage or specific user.');
   }
 
   if (draft.audience.criteria.locales.length === 0) {
@@ -375,6 +392,24 @@ export function getCampaignValidationSummary(
   }
 
   if (
+    draft.trigger.type === 'scheduled_recurring' &&
+    (!draft.trigger.startDate?.trim() ||
+      !isValidCampaignScheduleDate(draft.trigger.startDate))
+  ) {
+    errors.push('Recurring campaigns require a valid start date.');
+  }
+
+  if (
+    draft.trigger.type === 'scheduled_recurring' &&
+    draft.trigger.maxOccurrences !== null &&
+    draft.trigger.maxOccurrences !== undefined &&
+    (!Number.isInteger(draft.trigger.maxOccurrences) ||
+      draft.trigger.maxOccurrences <= 0)
+  ) {
+    errors.push('Recurring campaigns require a positive max occurrences value.');
+  }
+
+  if (
     draft.trigger.type === 'event_based' &&
     (!draft.trigger.eventKey.trim() || !draft.trigger.producerKey.trim())
   ) {
@@ -387,7 +422,7 @@ export function getCampaignValidationSummary(
       return;
     }
 
-    draft.audience.criteria.locales.forEach((locale) => {
+    selectedLocales.forEach((locale) => {
       if (stepReadiness[step.stepKey]?.[locale] === 'missing') {
         errors.push(
           `Step ${step.stepKey} is missing ${locale.toUpperCase()} content.`
@@ -399,7 +434,7 @@ export function getCampaignValidationSummary(
   if (
     usedTokens.includes('{{first_name}}') &&
     Object.values(draft.content).some((stepContent) =>
-      (Object.keys(stepContent) as CampaignLocale[]).some(
+      selectedLocales.some(
         (locale) =>
           [
             ...extractTokens(stepContent[locale].title),
@@ -428,7 +463,7 @@ export function canContinueCampaignStep(
     return (
       hasMeaningfulText(draft.name) &&
       hasMeaningfulText(draft.goal) &&
-      draft.audience.criteria.retentionStages.length > 0 &&
+      hasAudienceTargeting(draft) &&
       draft.audience.criteria.locales.length > 0
     );
 
@@ -521,9 +556,13 @@ export function buildCampaignReviewModel(
       {
         label: 'Retention',
         value:
-          draft.audience.criteria.retentionStages
-            .map((stage) => formatRetentionStage(stage))
-            .join(', ') || 'Not set',
+          draft.audience.criteria.retentionStages.length > 0
+            ? draft.audience.criteria.retentionStages
+                .map((stage) => formatRetentionStage(stage))
+                .join(', ')
+            : selectedUserIds.length > 0
+              ? 'Specific users only'
+              : 'Not set',
       },
       {
         label: 'Specific users',
@@ -558,7 +597,11 @@ export function buildCampaignReviewModel(
       }))
     ),
     launchPlan: [
-      `${draft.audience.criteria.retentionStages.length} retention rule set(s)`,
+      draft.audience.criteria.retentionStages.length > 0
+        ? `${draft.audience.criteria.retentionStages.length} retention rule set(s)`
+        : selectedUserIds.length > 0
+          ? 'Specific users only'
+          : 'No audience targeting yet',
       selectedUserIds.length > 0
         ? `${selectedUserIds.length} specific user(s) selected`
         : 'No specific-user filter',

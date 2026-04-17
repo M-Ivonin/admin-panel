@@ -29,14 +29,15 @@ At a high level, the feature lets the team:
 The current implementation is narrower than the raw type contracts may suggest.
 
 - Channel support is currently `push` only.
+- The editor exposes one explicit tracked-goal selector at campaign level.
 - The editor exposes only three deeplink targets for new non-null step actions:
   - `continue_onboarding`
   - `open_match_center`
   - `open_rewards_wallet`
-- These three deeplinks are special because they map to backend-supported tracked goals.
+- These deeplink actions remain available for push behavior, but they do not automatically derive or change `goalDefinition`.
 - The broader deeplink enum still exists in shared contracts.
 - If an older draft contains a legacy unsupported non-null deeplink, the editor renders it as a legacy unsupported value so the admin can replace or clear it.
-- Unsupported or mixed non-null deeplink goals are now blocked in the editor before save, and the backend still re-validates the same rule during draft save.
+- The backend accepts only shipped tracked-goal pairs from the goal catalog and validates them independently from step deeplink choices.
 - The builder exposes templates, but it does not currently expose a saved-segment picker or a save-segment action even though the backend and frontend repository already support them.
 - `paused` exists as a campaign status in the contract and overview UI filters, but there is no pause/resume action in the current editor flow.
 
@@ -208,6 +209,7 @@ The Audience step currently exposes:
 
 - campaign name,
 - campaign goal text,
+- tracked goal selector,
 - optional specific-user filter,
 - retention stages,
 - locales,
@@ -224,6 +226,8 @@ The UI explicitly communicates that goal suppression is always on. There is no u
 
 Important nuances:
 
+- When no tracked goal is selected, the editor shows a warning instead of blocking save, test send, or scheduling.
+- Retention stages are optional when the audience already targets one or more specific users.
 - The draft contract supports `segmentSource` and `sourceSegmentId`, but the editor does not currently let the admin choose a saved segment directly.
 - In current runtime logic, `segmentSource` and `sourceSegmentId` are metadata/provenance fields. Actual audience resolution uses `criteria` and `suppression`, not segment linkage.
 
@@ -287,6 +291,8 @@ Important nuance:
 
 The editor supports a restricted RRULE builder:
 
+- start date
+- max occurrences
 - frequency: daily or weekly
 - interval
 - weekdays for weekly rules
@@ -296,9 +302,10 @@ The UI describes this as user-local scheduling.
 
 Important backend nuance:
 
-- The backend RRULE parser and occurrence generator treat `BYHOUR` and `BYMINUTE` as UTC anchor values.
-- Per-user timezone handling then happens later in the step-level send-window logic.
-- So the UI wording says "user local," but the actual backend implementation is closer to "global UTC recurrence anchor plus per-user local window fitting."
+- New recurring drafts default `maxOccurrences = 1`, which means the schedule runs only once unless the admin explicitly increases the count.
+- When `maxOccurrences > 1`, every matching occurrence starts a fresh journey instance and repeats the full journey from step 1.
+- `startDate` is stored as a local calendar date (`YYYY-MM-DD`) and acts as the schedule anchor for recurring interval math.
+- Legacy recurring campaigns that predate `startDate` still fall back to the runtime anchor timestamp already persisted on the trigger.
 
 ### 5.8 Journey builder
 
@@ -357,15 +364,14 @@ The live catalog currently exposes only these deeplink actions:
 
 Important nuances:
 
-- Although content is edited per step and per locale, non-null deeplinks are validated as one campaign-wide goal contract.
-- Every non-null deeplink across all steps and locales must map to the same single supported goal definition.
+- Deeplink step actions are edited per step and per locale, but they are no longer the source of the campaign tracked goal.
+- The tracked goal is selected separately at campaign level and applies to overview reporting, suppression, and stop-on-goal runtime behavior.
+- Token picker insertion now happens at the current cursor or selection inside the active title/body field instead of always appending at the end.
 - The editor only allows new non-null selections from the supported set:
   - Continue onboarding
   - Open match center
   - Open rewards wallet
 - If a loaded draft still contains a legacy unsupported non-null deeplink, the editor shows it as legacy unsupported and requires the admin to clear or replace it before saving.
-- Mixed deeplink goals across steps or locales are now blocked in editor validation and are also rejected by the backend if they somehow reach draft save.
-- Unsupported non-null deeplinks are now blocked in editor validation and are also rejected by the backend at draft save time.
 
 ### 5.10 Review, readiness, and UI gates
 
@@ -396,11 +402,12 @@ Frontend action gates:
 
 Important nuances:
 
-- The right-rail readiness chips are shown for all `en/es/pt` locales, even if the audience targets only a subset.
+- The right-rail readiness chips are shown only for the locales currently targeted by the audience.
 - Scheduling in the UI now mirrors the backend schedule gate.
   - warning-level locales are allowed,
   - selected locales with `missing` content still block scheduling,
   - invalid recurring rules still block scheduling.
+- Unselected locales do not contribute missing-content warnings or scheduling blockers.
 - Deeplink targets now describe post-tap navigation only.
 - Campaign success tracking is configured explicitly through the tracked-goal field, not inferred from step deeplinks.
 - Saving as template is more permissive than scheduling:
@@ -562,9 +569,8 @@ The backend rejects drafts when:
 - recurring trigger has no RRULE,
 - recurring trigger uses an invalid RRULE,
 - content keys do not match journey step keys exactly,
-- an event-based trigger uses the same event as the derived campaign goal,
-- non-null deeplink targets do not map to the supported goal set,
-- different locales/steps imply different goal definitions.
+- an event-based trigger uses the same event as the selected tracked goal,
+- `goalDefinition` does not match one of the shipped goal options.
 
 ### 8.2 Fixed trigger and journey contract values
 
@@ -729,7 +735,10 @@ After planning, the campaign is marked active and `nextDispatchAt` moves to the 
 
 Important nuance:
 
-- recurring runtime keeps a schedule-time anchor so `INTERVAL` is evaluated consistently,
+- recurring runtime now prefers the explicit `startDate` local date as the recurrence anchor and falls back to the older runtime anchor only for legacy campaigns,
+- planner scheduling is delayed until the first configured start date can occur in at least one timezone, instead of polling immediately after schedule time,
+- `maxOccurrences` limits how many recurring journey entries can be materialized for one scheduled series,
+- each allowed recurring occurrence creates a fresh journey instance, so all later journey steps repeat together with the first step,
 - planner windows are cadence-based, but the actual occurrence moment is still per-user local time,
 - overview timing for recurring campaigns now represents evaluation timing, not a guaranteed global send instant.
 

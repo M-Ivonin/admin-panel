@@ -15,6 +15,7 @@ import type {
 } from '@/modules/campaigns/contracts';
 import {
   createBlankStepLocaleMap,
+  createScheduledCampaignTrigger,
   createEmptyCampaignDraft,
 } from '@/modules/campaigns/defaults';
 
@@ -38,6 +39,11 @@ export interface CampaignEditorTokenTarget {
   stepKey: string;
   locale: CampaignLocale;
   field: 'title' | 'body';
+}
+
+interface CampaignEditorTokenSelection {
+  start?: number | null;
+  end?: number | null;
 }
 
 export interface CampaignEditorActionResult {
@@ -125,6 +131,7 @@ export type CampaignEditorAction =
       locale: CampaignLocale;
       field: 'title' | 'body';
       token: string;
+      selection?: CampaignEditorTokenSelection;
     }
   | {
       type: 'changeDeeplink';
@@ -207,6 +214,44 @@ function normalizeJourneySteps(
     order: index + 1,
     anchor: index === 0 ? { type: 'trigger' } : { type: 'previous_step' },
   }));
+}
+
+function normalizeNewScheduledTrigger(
+  trigger: CampaignTriggerDefinition
+): CampaignTriggerDefinition {
+  if (trigger.type !== 'scheduled_recurring') {
+    return trigger;
+  }
+
+  const defaults = createScheduledCampaignTrigger();
+
+  return {
+    ...defaults,
+    ...trigger,
+    startDate: defaults.startDate,
+    maxOccurrences: trigger.maxOccurrences ?? defaults.maxOccurrences,
+  };
+}
+
+function insertTokenAtSelection(params: {
+  value: string;
+  token: string;
+  selection?: CampaignEditorTokenSelection;
+}): string {
+  const value = params.value ?? '';
+  const defaultCursor = value.length;
+  const requestedStart = params.selection?.start;
+  const requestedEnd = params.selection?.end;
+  const start =
+    typeof requestedStart === 'number'
+      ? Math.min(Math.max(requestedStart, 0), value.length)
+      : defaultCursor;
+  const end =
+    typeof requestedEnd === 'number'
+      ? Math.min(Math.max(requestedEnd, start), value.length)
+      : start;
+
+  return `${value.slice(0, start)}${params.token}${value.slice(end)}`;
 }
 
 /**
@@ -313,7 +358,7 @@ export function campaignEditorReducer(
             segmentSource: 'template_segment',
             sourceSegmentId: action.template.id,
           },
-          trigger: templateDefinition.trigger,
+          trigger: normalizeNewScheduledTrigger(templateDefinition.trigger),
           journey: templateDefinition.journey,
           content: templateDefinition.content,
         },
@@ -420,9 +465,11 @@ export function campaignEditorReducer(
     case 'insertToken': {
       const currentValue =
         state.draft.content[action.stepKey][action.locale][action.field];
-      const nextValue = [currentValue, action.token]
-        .filter(Boolean)
-        .join(currentValue ? ' ' : '');
+      const nextValue = insertTokenAtSelection({
+        value: currentValue,
+        token: action.token,
+        selection: action.selection,
+      });
 
       return markDirty(state, {
         ...state.draft,

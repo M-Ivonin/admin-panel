@@ -11,8 +11,26 @@ import type {
   CampaignStepLocaleContent,
   CampaignStepContentMap,
 } from '@/modules/campaigns/contracts';
+import {
+  buildCampaignScheduleRule,
+  DEFAULT_CAMPAIGN_MAX_OCCURRENCES,
+  DEFAULT_CAMPAIGN_SCHEDULE,
+  getDefaultCampaignScheduleStartDate,
+} from '@/modules/campaigns/schedule';
 
 const DEFAULT_LOCALES: CampaignLocale[] = ['en', 'es', 'pt'];
+
+export function createScheduledCampaignTrigger(
+  referenceDate = new Date()
+): Extract<CampaignDraft['trigger'], { type: 'scheduled_recurring' }> {
+  return {
+    type: 'scheduled_recurring',
+    recurrenceRule: buildCampaignScheduleRule(DEFAULT_CAMPAIGN_SCHEDULE),
+    timezoneMode: 'user_local',
+    startDate: getDefaultCampaignScheduleStartDate(referenceDate),
+    maxOccurrences: DEFAULT_CAMPAIGN_MAX_OCCURRENCES,
+  };
+}
 
 /**
  * Creates one blank localized content map for a specific journey step.

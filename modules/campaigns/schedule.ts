@@ -8,6 +8,11 @@ export interface CampaignScheduleModel {
   byMinute: number;
 }
 
+export interface CampaignScheduleDescriptionOptions {
+  startDate?: string | null;
+  maxOccurrences?: number | null;
+}
+
 export const CAMPAIGN_WEEKDAY_OPTIONS = [
   { key: 'MO', shortLabel: 'Mon', longLabel: 'Monday' },
   { key: 'TU', shortLabel: 'Tue', longLabel: 'Tuesday' },
@@ -30,8 +35,66 @@ export const DEFAULT_CAMPAIGN_SCHEDULE: CampaignScheduleModel = {
   byMinute: 0,
 };
 
+export const DEFAULT_CAMPAIGN_MAX_OCCURRENCES = 1;
+
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
 function padTimeUnit(value: number): string {
   return value.toString().padStart(2, '0');
+}
+
+function formatDateParts(date: Date): string {
+  return [
+    date.getFullYear(),
+    padTimeUnit(date.getMonth() + 1),
+    padTimeUnit(date.getDate()),
+  ].join('-');
+}
+
+function parseScheduleDate(date: string): Date | null {
+  const match = ISO_DATE_PATTERN.exec(date.trim());
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() !== month - 1 ||
+    candidate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return candidate;
+}
+
+function formatScheduleDateLabel(date: string): string {
+  const parsed = parseScheduleDate(date);
+  if (!parsed) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(parsed);
+}
+
+export function getDefaultCampaignScheduleStartDate(
+  referenceDate = new Date()
+): string {
+  return formatDateParts(referenceDate);
+}
+
+export function isValidCampaignScheduleDate(date: string): boolean {
+  return parseScheduleDate(date) !== null;
 }
 
 export function formatCampaignScheduleTime(model: CampaignScheduleModel): string {
@@ -150,7 +213,10 @@ export function withCampaignScheduleTime(
   };
 }
 
-export function describeCampaignScheduleRule(rule: string): string {
+export function describeCampaignScheduleRule(
+  rule: string,
+  options: CampaignScheduleDescriptionOptions = {}
+): string {
   const model = parseCampaignScheduleRule(rule);
   if (!model) {
     return 'Schedule needs a valid daily or weekly rule.';
@@ -165,9 +231,19 @@ export function describeCampaignScheduleRule(rule: string): string {
         ? `Every ${model.interval} days`
         : `Every ${model.interval} weeks`;
   const timeLabel = formatCampaignScheduleTime(model);
+  const startDateLabel =
+    options.startDate && isValidCampaignScheduleDate(options.startDate)
+      ? `Starts on ${formatScheduleDateLabel(options.startDate)}. `
+      : '';
+  const occurrencesLabel =
+    typeof options.maxOccurrences === 'number' && options.maxOccurrences > 0
+      ? options.maxOccurrences === 1
+        ? 'Runs once. '
+        : `Runs up to ${options.maxOccurrences} times. Each occurrence repeats the full journey. `
+      : '';
 
   if (model.frequency === 'DAILY') {
-    return `${intervalLabel} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
+    return `${startDateLabel}${occurrencesLabel}${intervalLabel} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
   }
 
   const dayLabels = model.byDays
@@ -177,5 +253,5 @@ export function describeCampaignScheduleRule(rule: string): string {
     )
     .filter((value): value is NonNullable<typeof value> => Boolean(value));
 
-  return `${intervalLabel} on ${dayLabels.join(', ')} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
+  return `${startDateLabel}${occurrencesLabel}${intervalLabel} on ${dayLabels.join(', ')} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
 }

@@ -152,6 +152,34 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('inserts a token into the push body at the current cursor position', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Step Content'));
+
+    const pushBodyInput = screen.getByLabelText(
+      'Push body'
+    ) as HTMLTextAreaElement;
+    fireEvent.change(pushBodyInput, {
+      target: { value: 'Hello matches' },
+    });
+
+    fireEvent.focus(pushBodyInput);
+    pushBodyInput.setSelectionRange(6, 6);
+    fireEvent.select(pushBodyInput);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Insert token in body' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'First name' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue('Hello {{first_name}}matches')
+      ).toBeTruthy();
+    });
+  });
+
   it('shows and clears the missing tracked-goal warning around the selector', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -491,11 +519,19 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByText('Trigger + Journey'));
     fireEvent.click(screen.getByText('Scheduled'));
 
+    expect(screen.getByLabelText('Start date')).toBeTruthy();
+    expect(screen.getByLabelText('Max occurrences')).toBeTruthy();
     expect(screen.getByLabelText('Repeat every')).toBeTruthy();
     expect(screen.getByLabelText('Cadence')).toBeTruthy();
     expect(screen.getByLabelText('Send time')).toBeTruthy();
     expect(
-      screen.getByText(/Every day at 09:00 in each user's local time/i)
+      (screen.getByLabelText('Max occurrences') as HTMLInputElement).value
+    ).toBe('1');
+    expect(
+      (screen.getByLabelText('Start date') as HTMLInputElement).value
+    ).not.toBe('');
+    expect(
+      screen.getByText(/Runs once\. Every day at 09:00 in each user's local time/i)
     ).toBeTruthy();
   });
 
@@ -582,6 +618,123 @@ describe('CampaignEditorPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Alex')).toBeTruthy();
+    });
+  });
+
+  it('shows readiness chips only for selected locales', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/^EN · /)).toBeTruthy();
+      expect(screen.queryByText(/^ES · /)).toBeNull();
+      expect(screen.queryByText(/^PT · /)).toBeNull();
+    });
+  });
+
+  it('lets specific-user audiences continue without retention stages', async () => {
+    mockedGetUsers.mockResolvedValue({
+      users: [
+        {
+          id: 'user-1',
+          email: 'alex@example.com',
+          name_app: 'Alex',
+          name_tg: null,
+          telegram_username: null,
+          telegram_id: null,
+          phone_number: null,
+          timezone: 'UTC',
+          first_seen_at: null,
+          last_active_at: null,
+          previous_active_at: null,
+          app_user_id: null,
+          sessions: 1,
+          lifecycle_state: 'NEW',
+          retentionStage: undefined,
+          language: 'en',
+          termsAndPoliciesAccepted: true,
+          totalXp: 0,
+          totalPoints: 0,
+          level: 1,
+          levelName: 'Rookie',
+          subscription: null,
+          partnerId: null,
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 25,
+      totalPages: 1,
+      retentionCounts: {
+        NEW: 1,
+        CURRENT: 0,
+        AT_RISK_WAU: 0,
+        AT_RISK_MAU: 0,
+        DEAD: 0,
+        REACTIVATED: 0,
+        RESURRECTED: 0,
+      },
+    });
+    mockedGetUser.mockResolvedValue({
+      id: 'user-1',
+      email: 'alex@example.com',
+      name_app: 'Alex',
+      name_tg: null,
+      telegram_username: null,
+      telegram_id: null,
+      phone_number: null,
+      timezone: 'UTC',
+      first_seen_at: null,
+      last_active_at: null,
+      previous_active_at: null,
+      app_user_id: null,
+      sessions: 1,
+      lifecycle_state: 'NEW',
+      retentionStage: undefined,
+      language: 'en',
+      termsAndPoliciesAccepted: true,
+      totalXp: 0,
+      totalPoints: 0,
+      level: 1,
+      levelName: 'Rookie',
+      subscription: null,
+      partnerId: null,
+    });
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Users' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add users' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Alex alex@example.com' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply users' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Select at least one retention stage or specific user.')
+      ).toBeNull();
+      expect(
+        (screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement)
+          .disabled
+      ).toBe(false);
     });
   });
 });

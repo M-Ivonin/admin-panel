@@ -1,6 +1,9 @@
 import { RetentionStage } from '@/lib/api/users';
-import { createJourneyStep } from '@/modules/campaigns/defaults';
-import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
+import {
+  createEmptyCampaignDraft,
+  createJourneyStep,
+  createScheduledCampaignTrigger,
+} from '@/modules/campaigns/defaults';
 import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,
@@ -24,9 +27,8 @@ describe('campaign selectors', () => {
     draft.name = 'Recurring';
     draft.goal = 'Weekly check-in';
     draft.trigger = {
-      type: 'scheduled_recurring',
+      ...createScheduledCampaignTrigger(),
       recurrenceRule: '',
-      timezoneMode: 'user_local',
     };
 
     const summary = getCampaignValidationSummary(draft);
@@ -42,9 +44,8 @@ describe('campaign selectors', () => {
     draft.goal = 'Weekly check-in';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
     draft.trigger = {
-      type: 'scheduled_recurring',
+      ...createScheduledCampaignTrigger(),
       recurrenceRule: 'FREQ=MONTHLY;BYHOUR=9;BYMINUTE=0',
-      timezoneMode: 'user_local',
     };
 
     const summary = getCampaignValidationSummary(draft);
@@ -53,6 +54,23 @@ describe('campaign selectors', () => {
       'Recurring campaigns require a valid daily or weekly local-time schedule.'
     );
     expect(canScheduleCampaign(draft)).toBe(false);
+  });
+
+  it('blocks scheduling when the recurring start date is missing', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Recurring';
+    draft.goal = 'Weekly check-in';
+    draft.audience.criteria.retentionStages = [RetentionStage.NEW];
+    draft.trigger = {
+      ...createScheduledCampaignTrigger(),
+      startDate: null,
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain(
+      'Recurring campaigns require a valid start date.'
+    );
   });
 
   it('warns when {{first_name}} is used without a locale fallback', () => {
@@ -217,6 +235,51 @@ describe('campaign selectors', () => {
     };
 
     expect(getCampaignValidationSummary(draft).readiness.pt).toBe('warning');
+    expect(canScheduleCampaign(draft)).toBe(true);
+  });
+
+  it('allows specific-user audiences without retention stages', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.audience.criteria.retentionStages = [];
+    draft.audience.criteria.userIds = ['user-1'];
+    draft.audience.criteria.locales = ['en'];
+    draft.content.step_1.en = {
+      title: 'Hello {{first_name}}',
+      body: 'Finish setup',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'continue_onboarding',
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).not.toContain(
+      'Select at least one retention stage or specific user.'
+    );
+    expect(canScheduleCampaign(draft)).toBe(true);
+  });
+
+  it('ignores unselected locales in readiness warnings and schedule gating', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.audience.criteria.retentionStages = [RetentionStage.NEW];
+    draft.audience.criteria.locales = ['en'];
+    draft.content.step_1.en = {
+      title: 'Hello {{first_name}}',
+      body: 'Finish setup',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'continue_onboarding',
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.warnings).not.toContain('Step step_1 · locale ES is empty.');
+    expect(summary.warnings).not.toContain('Step step_1 · locale PT is empty.');
+    expect(summary.errors).not.toContain('Step step_1 is missing ES content.');
+    expect(summary.errors).not.toContain('Step step_1 is missing PT content.');
+    expect(summary.readiness.en).toBe('ready');
     expect(canScheduleCampaign(draft)).toBe(true);
   });
 

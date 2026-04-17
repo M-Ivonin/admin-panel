@@ -491,6 +491,8 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
           recurrenceRule:
             'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=8;BYMINUTE=30',
           timezoneMode: 'user_local',
+          startDate: '2026-04-17',
+          maxOccurrences: 3,
         },
         journey: {
           steps: [firstStep],

@@ -248,6 +248,8 @@ export type CampaignTriggerDefinition =
       type: 'scheduled_recurring';
       recurrenceRule: string;
       timezoneMode: CampaignTimezoneMode;
+      startDate?: string | null;
+      maxOccurrences?: number | null;
     };
 
 export type CampaignJourneyAnchor =
