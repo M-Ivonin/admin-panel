@@ -2,9 +2,7 @@ import { RetentionStage } from '@/lib/api/users';
 import { createJourneyStep } from '@/modules/campaigns/defaults';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
-  canSendTestCampaign,
   canScheduleCampaign,
-  getCampaignSaveBlockingErrors,
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
 } from '@/modules/campaigns/selectors';
@@ -35,6 +33,25 @@ describe('campaign selectors', () => {
     expect(summary.errors).toContain(
       'Recurring campaigns require an RFC5545 RRULE.'
     );
+  });
+
+  it('blocks scheduling when the recurrence rule is not a supported daily or weekly local-time rule', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Recurring';
+    draft.goal = 'Weekly check-in';
+    draft.audience.criteria.retentionStages = [RetentionStage.NEW];
+    draft.trigger = {
+      type: 'scheduled_recurring',
+      recurrenceRule: 'FREQ=MONTHLY;BYHOUR=9;BYMINUTE=0',
+      timezoneMode: 'user_local',
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain(
+      'Recurring campaigns require a valid daily or weekly local-time schedule.'
+    );
+    expect(canScheduleCampaign(draft)).toBe(false);
   });
 
   it('warns when {{first_name}} is used without a locale fallback', () => {
@@ -149,61 +166,27 @@ describe('campaign selectors', () => {
     expect(canScheduleCampaign(draft)).toBe(true);
   });
 
-  it('blocks saving and sending tests when deeplinks mix different supported goals', () => {
+  it('allows scheduling when selected locales need review but are not missing', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
     draft.goal = 'Recover onboarding completion';
+    draft.audience.criteria.retentionStages = [RetentionStage.NEW];
+    draft.audience.criteria.locales = ['en', 'pt'];
     draft.content.step_1.en = {
-      title: 'Hello',
+      title: 'Hello {{first_name}}',
       body: 'Finish setup',
       fallbackFirstName: 'there',
       deeplinkTarget: 'continue_onboarding',
     };
-    draft.content.step_1.es = {
-      title: 'Hola',
-      body: 'Abre tu partido',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: 'open_match_center',
-    };
     draft.content.step_1.pt = {
-      title: 'Ola',
-      body: 'Continue',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: null,
-    };
-
-    expect(getCampaignSaveBlockingErrors(draft)).toContain(
-      'All non-empty follow-up actions across the campaign must point to one supported goal. Mixed actions found: Continue onboarding in Step 1 EN; Open match center in Step 1 ES.'
-    );
-    expect(canSendTestCampaign(draft)).toBe(false);
-    expect(canScheduleCampaign(draft)).toBe(false);
-  });
-
-  it('blocks saving when a locale uses an unsupported non-null deeplink', () => {
-    const draft = createEmptyCampaignDraft();
-    draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
-    draft.content.step_1.en = {
-      title: 'Hello',
-      body: 'Back to the app',
-      fallbackFirstName: 'there',
-      deeplinkTarget: 'open_home',
-    };
-    draft.content.step_1.es = {
-      title: 'Hola',
-      body: 'Completa tu setup',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: null,
-    };
-    draft.content.step_1.pt = {
-      title: 'Ola',
+      title: 'Ola {{first_name}}',
       body: 'Conclua seu setup',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: null,
+      fallbackFirstName: '',
+      deeplinkTarget: 'continue_onboarding',
     };
 
-    expect(getCampaignValidationSummary(draft).errors).toContain(
-      'Only Continue onboarding, Open match center, Open rewards wallet can be used as non-empty follow-up actions. Replace or clear Open Home in Step 1 EN before saving the draft.'
-    );
+    expect(getCampaignValidationSummary(draft).readiness.pt).toBe('warning');
+    expect(canScheduleCampaign(draft)).toBe(true);
   });
+
 });

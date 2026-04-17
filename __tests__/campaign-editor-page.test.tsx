@@ -80,13 +80,13 @@ describe('CampaignEditorPage', () => {
 
     expect(
       screen.getByText(
-        'Optional. Only Continue onboarding, Open match center, and Open rewards wallet are supported as non-empty follow-up actions right now, and every non-empty action across the campaign must use the same one. If left empty, the app falls back to the default notifications flow.'
+        'Optional. Choose the screen or action the push notification opens when tapped. If left empty, the app falls back to the default notifications flow.'
       )
     ).toBeTruthy();
     expect(screen.getByText('No follow-up action')).toBeTruthy();
   });
 
-  it('warns locally and blocks save when follow-up actions mix different goals', async () => {
+  it('persists drafts even when different follow-up actions are configured across steps', async () => {
     render(<CampaignEditorPage mode="create" />);
 
     await screen.findByText('Create campaign');
@@ -94,7 +94,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Campaign Spec Local' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Recover onboarding completion' },
     });
 
@@ -114,20 +114,10 @@ describe('CampaignEditorPage', () => {
     );
     fireEvent.click(screen.getByRole('option', { name: 'Open match center' }));
 
-    expect(
-      screen.getByText(
-        'This campaign mixes different non-empty follow-up actions across steps or locales. Saving only works when every non-empty action points to the same supported goal.'
-      )
-    ).toBeTruthy();
-
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          'All non-empty follow-up actions across the campaign must point to one supported goal. Mixed actions found: Continue onboarding in Step 1 EN; Open match center in Step 2 EN.'
-        )
-      ).toBeTruthy();
+      expect(screen.getByText('Draft saved successfully.')).toBeTruthy();
     });
   });
 
@@ -199,7 +189,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Retention rescue' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Bring users back this week' },
     });
 
@@ -235,7 +225,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Retention rescue' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Bring users back this week' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save as template' }));
@@ -285,7 +275,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Campaign Spec Local' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Recover onboarding completion' },
     });
 
@@ -350,7 +340,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Campaign Spec Local' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Recover onboarding completion' },
     });
 
@@ -399,7 +389,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Campaign name'), {
       target: { value: 'Campaign Spec Local' },
     });
-    fireEvent.change(screen.getByLabelText('Goal'), {
+    fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Recover onboarding completion' },
     });
 

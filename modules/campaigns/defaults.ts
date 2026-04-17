@@ -6,7 +6,6 @@ import { RetentionStage } from '@/lib/api/users';
 import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
-  CampaignEditorCatalog,
   CampaignJourneyStep,
   CampaignLocale,
   CampaignStepLocaleContent,
@@ -63,10 +62,7 @@ export function createJourneyStep(order: number): CampaignJourneyStep {
 /**
  * Creates the canonical empty campaign draft used in create mode.
  */
-export function createEmptyCampaignDraft(
-  catalog?: CampaignEditorCatalog
-): CampaignDraft {
-  void catalog;
+export function createEmptyCampaignDraft(): CampaignDraft {
   const firstStep = createJourneyStep(1);
   const content: CampaignStepContentMap = {
     [firstStep.stepKey]: createBlankStepLocaleMap(null),
@@ -76,6 +72,7 @@ export function createEmptyCampaignDraft(
     id: null,
     name: '',
     goal: '',
+    goalDefinition: null,
     channel: 'push',
     status: 'draft',
     audience: {

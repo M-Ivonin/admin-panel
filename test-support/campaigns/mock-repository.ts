@@ -6,11 +6,17 @@ import { RetentionStage } from '@/lib/api/users';
 import type {
   ArchiveCampaignResponse,
   CampaignAudienceDefinition,
+  CampaignDeeplinkOption,
   CampaignDraft,
+  CampaignEditorCatalog,
+  CampaignGoalOption,
   CampaignListItem,
   CampaignLocale,
+  CampaignScenarioTemplateSummary,
   CampaignSavedSegmentSummary,
+  CampaignSourceEventOption,
   CampaignStatus,
+  CampaignTokenDefinition,
   EstimateAudienceRequest,
   EstimateAudienceResponse,
   GetCampaignsOverviewParams,
@@ -24,22 +30,23 @@ import type {
 import {
   MOCK_TIME_ANCHOR_ISO,
   createInitialCampaignDraftMap,
-  createInitialCampaignEditorCatalog,
   createInitialCampaignsOverviewResponse,
+  createInitialSavedSegments,
+  createInitialScenarioTemplates,
   createSavedSegmentDefinitionMap,
 } from '@/test-support/campaigns/mock-data';
 import { type CampaignsRepository } from '@/modules/campaigns/repository';
 import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,
-  getCampaignSaveBlockingErrors,
 } from '@/modules/campaigns/selectors';
 
 interface MockCampaignsState {
   drafts: Record<string, CampaignDraft>;
   overviewItems: CampaignListItem[];
   stats: ReturnType<typeof createInitialCampaignsOverviewResponse>['stats'];
-  catalog: ReturnType<typeof createInitialCampaignEditorCatalog>;
+  savedSegments: CampaignSavedSegmentSummary[];
+  scenarioTemplates: CampaignScenarioTemplateSummary[];
   savedSegmentDefinitions: Record<string, CampaignAudienceDefinition>;
   campaignSequence: number;
   segmentSequence: number;
@@ -63,6 +70,186 @@ const LOCALE_SHARES: Record<CampaignLocale, number> = {
   pt: 0.2,
 };
 
+const EDITOR_TOKENS: CampaignTokenDefinition[] = [
+  {
+    key: 'first_name',
+    token: '{{first_name}}',
+    label: 'First name',
+    requiresFallback: true,
+    description: 'Personalizes the notification with the user first name.',
+  },
+  {
+    key: 'favorite_team',
+    token: '{{favorite_team}}',
+    label: 'Favorite team',
+    requiresFallback: false,
+    description: 'Inserts the current favorite team name.',
+  },
+  {
+    key: 'bonus_points',
+    token: '{{bonus_points}}',
+    label: 'Bonus points',
+    requiresFallback: false,
+    description: 'Inserts the current bonus points balance.',
+  },
+];
+
+const EDITOR_DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
+  {
+    target: 'continue_onboarding',
+    label: 'Continue onboarding',
+    path: '/setup-content-preferences',
+  },
+  {
+    target: 'open_match_center',
+    label: 'Open match center',
+    path: '/matches',
+  },
+  {
+    target: 'open_rewards_wallet',
+    label: 'Open rewards wallet',
+    path: '/profile',
+  },
+];
+
+const EDITOR_SOURCE_EVENTS: CampaignSourceEventOption[] = [
+  {
+    eventKey: 'app_opened',
+    producerKey: 'crm_source_events',
+    label: 'Opened app',
+    description:
+      'User opened the app and the mobile app sent the authenticated CRM source event.',
+  },
+  {
+    eventKey: 'onboarding_completed',
+    producerKey: 'crm_source_events',
+    label: 'Completed onboarding',
+    description:
+      'User completed onboarding and the mobile app sent the public CRM source event.',
+  },
+  {
+    eventKey: 'subscription_started',
+    producerKey: 'crm_source_events',
+    label: 'Started subscription',
+    description:
+      'User started a paid subscription and the backend emitted the CRM source event from a store purchase or Stripe invoice.',
+  },
+  {
+    eventKey: 'subscription_renewed',
+    producerKey: 'crm_source_events',
+    label: 'Renewed subscription',
+    description:
+      'User renewed an active subscription and the backend emitted the CRM source event from a store or Stripe renewal.',
+  },
+  {
+    eventKey: 'in_app_purchase_completed',
+    producerKey: 'crm_source_events',
+    label: 'Completed in-app purchase',
+    description:
+      'User completed a one-time in-app purchase and the backend emitted the CRM source event from the store verification flow.',
+  },
+  {
+    eventKey: 'daily_streak_reminder',
+    producerKey: 'crm_source_events',
+    label: 'Daily streak reminder',
+    description:
+      'User had a streak yesterday but no activity today, and the CRM scheduler emitted the reminder source event.',
+  },
+  {
+    eventKey: 'weekly_quest_urgency',
+    producerKey: 'crm_source_events',
+    label: 'Weekly quest urgency',
+    description:
+      'User is close to finishing the weekly quest and the CRM scheduler emitted the urgency source event.',
+  },
+  {
+    eventKey: 'favorite_match_kickoff',
+    producerKey: 'channels_favorite_matches',
+    label: 'Favorite match kickoff',
+    description:
+      'A favorite team or league match is close to kickoff and the channels service emitted a source event.',
+  },
+  {
+    eventKey: 'weekly_stats_digest',
+    producerKey: 'crm_source_events',
+    label: 'Weekly stats digest',
+    description:
+      'Weekly stats digest is ready for the user and the CRM scheduler emitted the digest source event.',
+  },
+  {
+    eventKey: 'unread_social_activity',
+    producerKey: 'crm_source_events',
+    label: 'Unread social activity',
+    description:
+      'User has unread channel activity and the CRM scheduler emitted the social activity source event.',
+  },
+  {
+    eventKey: 'live_challenge_starting_soon',
+    producerKey: 'crm_source_events',
+    label: 'Live challenge starting soon',
+    description:
+      'A joined live challenge starts soon and the backend emitted the CRM source event.',
+  },
+  {
+    eventKey: 'live_challenge_results',
+    producerKey: 'crm_source_events',
+    label: 'Live challenge results available',
+    description:
+      'A live challenge finished and the backend emitted the results source event.',
+  },
+];
+
+const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
+  {
+    goalKey: 'app_opened:global_state_event',
+    label: 'Opened app',
+    eventKey: 'app_opened',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'onboarding_completed:global_state_event',
+    label: 'Onboarding completed',
+    eventKey: 'onboarding_completed',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'match_center_opened:trace_required_response',
+    label: 'Match center opened',
+    eventKey: 'match_center_opened',
+    attributionMode: 'trace_required_response',
+  },
+  {
+    goalKey: 'rewards_wallet_opened:trace_required_response',
+    label: 'Rewards wallet opened',
+    eventKey: 'rewards_wallet_opened',
+    attributionMode: 'trace_required_response',
+  },
+  {
+    goalKey: 'subscription_started:global_state_event',
+    label: 'Started subscription',
+    eventKey: 'subscription_started',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'in_app_purchase_completed:global_state_event',
+    label: 'Completed in-app purchase',
+    eventKey: 'in_app_purchase_completed',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'stage_reactivated:global_state_event',
+    label: 'Reactivated after 7-29 days',
+    eventKey: 'stage_reactivated',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'stage_resurrected:global_state_event',
+    label: 'Reactivated after 30+ days',
+    eventKey: 'stage_resurrected',
+    attributionMode: 'global_state_event',
+  },
+];
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -74,12 +261,24 @@ function createInitialState(): MockCampaignsState {
     drafts: createInitialCampaignDraftMap(),
     overviewItems: overview.items,
     stats: overview.stats,
-    catalog: createInitialCampaignEditorCatalog(),
+    savedSegments: createInitialSavedSegments(),
+    scenarioTemplates: createInitialScenarioTemplates(),
     savedSegmentDefinitions: createSavedSegmentDefinitionMap(),
     campaignSequence: 1,
     segmentSequence: 1,
     templateSequence: 1,
     timestampOffsetMinutes: 0,
+  };
+}
+
+function buildEditorCatalog(): CampaignEditorCatalog {
+  return {
+    savedSegments: clone(state.savedSegments),
+    scenarioTemplates: clone(state.scenarioTemplates),
+    tokens: clone(EDITOR_TOKENS),
+    deeplinkOptions: clone(EDITOR_DEEPLINK_OPTIONS),
+    sourceEvents: clone(EDITOR_SOURCE_EVENTS),
+    goalOptions: clone(EDITOR_GOAL_OPTIONS),
   };
 }
 
@@ -225,7 +424,7 @@ function buildAudienceLabel(draft: CampaignDraft): string {
     draft.audience.segmentSource === 'saved_segment' &&
     draft.audience.sourceSegmentId
   ) {
-    const savedSegment = state.catalog.savedSegments.find(
+    const savedSegment = state.savedSegments.find(
       (segment) => segment.id === draft.audience.sourceSegmentId
     );
     if (savedSegment) {
@@ -266,12 +465,22 @@ function buildTimingSummary(
 
   if (draft.status === 'scheduled') {
     if (draft.trigger.type === 'scheduled_recurring') {
-      return { label: 'First send', timestamp: '2026-04-17T08:30:00.000Z' };
+      return {
+        label: 'First evaluation',
+        timestamp: '2026-04-17T08:30:00.000Z',
+      };
     }
 
     const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
     nextDate.setUTCMinutes(nextDate.getUTCMinutes() + delayMinutes);
     return { label: 'First send', timestamp: nextDate.toISOString() };
+  }
+
+  if (draft.trigger.type === 'scheduled_recurring') {
+    return {
+      label: 'Next evaluation',
+      timestamp: '2026-04-16T12:15:00.000Z',
+    };
   }
 
   const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
@@ -349,6 +558,7 @@ function toDraft(
     id,
     name: input.name,
     goal: input.goal,
+    goalDefinition: input.goalDefinition,
     channel: input.channel,
     status,
     audience: clone(input.audience),
@@ -358,30 +568,6 @@ function toDraft(
     updatedAt,
     createdBy,
   };
-}
-
-function assertDraftSaveAllowed(
-  input: UpsertCampaignDraftRequest,
-  status: CampaignDraft['status'] = 'draft'
-) {
-  const draft: CampaignDraft = {
-    id: null,
-    name: input.name,
-    goal: input.goal,
-    channel: input.channel,
-    status,
-    audience: clone(input.audience),
-    trigger: clone(input.trigger),
-    journey: clone(input.journey),
-    content: clone(input.content),
-    updatedAt: null,
-    createdBy: null,
-  };
-  const saveBlockingErrors = getCampaignSaveBlockingErrors(draft);
-
-  if (saveBlockingErrors.length > 0) {
-    throw new Error(saveBlockingErrors[0]);
-  }
 }
 
 /**
@@ -437,7 +623,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async getEditorCatalog() {
-    return clone(state.catalog);
+    return buildEditorCatalog();
   },
 
   async getCampaign(id: string) {
@@ -451,8 +637,6 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async createCampaignDraft(input: UpsertCampaignDraftRequest) {
-    assertDraftSaveAllowed(input);
-
     const id = nextCampaignId();
     const updatedAt = nextTimestampIso(1);
     const draft = toDraft(id, input, 'draft', 'spec-local-user', updatedAt);
@@ -469,8 +653,6 @@ export const mockCampaignsRepository: CampaignsRepository = {
     if (!existing) {
       throw new Error('Campaign not found');
     }
-
-    assertDraftSaveAllowed(input, existing.status);
 
     const updatedAt = nextTimestampIso(1);
     const draft = toDraft(
@@ -507,7 +689,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
       source: 'saved_segment',
     };
 
-    state.catalog.savedSegments = [segment, ...state.catalog.savedSegments];
+    state.savedSegments = [segment, ...state.savedSegments];
     state.savedSegmentDefinitions[segment.id] = clone({
       ...input.audience,
       segmentSource: 'saved_segment',
@@ -518,8 +700,6 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async saveTemplate(input: SaveTemplateRequest): Promise<SaveTemplateResponse> {
-    assertDraftSaveAllowed(input.definition);
-
     const template = {
       id: nextTemplateId(),
       name: input.name,
@@ -529,16 +709,13 @@ export const mockCampaignsRepository: CampaignsRepository = {
       source: 'saved' as const,
     };
 
-    state.catalog.scenarioTemplates = [
-      template,
-      ...state.catalog.scenarioTemplates,
-    ];
+    state.scenarioTemplates = [template, ...state.scenarioTemplates];
 
     return { template: clone(template) };
   },
 
   async deleteTemplate(id: string) {
-    state.catalog.scenarioTemplates = state.catalog.scenarioTemplates.filter(
+    state.scenarioTemplates = state.scenarioTemplates.filter(
       (template) => template.id !== id
     );
 
@@ -579,10 +756,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
     }
 
     if (!canScheduleCampaign(draft)) {
-      const saveBlockingErrors = getCampaignSaveBlockingErrors(draft);
-      throw new Error(
-        saveBlockingErrors[0] ?? 'Campaign is not ready to schedule'
-      );
+      throw new Error('Campaign is not ready to schedule');
     }
 
     const previousStatus = draft.status;
@@ -598,7 +772,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
     const firstStep = updatedDraft.journey.steps[0];
     const firstSendAt =
       updatedDraft.trigger.type === 'scheduled_recurring'
-        ? '2026-04-17T08:30:00.000Z'
+        ? '2026-04-16T12:15:00.000Z'
         : new Date(
             new Date(MOCK_TIME_ANCHOR_ISO).getTime() +
               (firstStep?.delayMinutes ?? 0) * 60_000

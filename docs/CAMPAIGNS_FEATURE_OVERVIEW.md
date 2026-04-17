@@ -151,8 +151,8 @@ The overview supports:
 Important nuance:
 
 - `active_now` and `recent_drafts` are applied at the database query layer.
-- `needs_attention` is applied after the current page of items is already loaded and mapped.
-- In practice, `needs_attention` currently reflects the current page subset rather than a global DB-level filter across all campaigns.
+- `needs_attention` is filtered before pagination is applied.
+- `total` and `totalPages` now reflect the full filtered universe, not only the currently loaded page.
 
 #### List row behavior
 
@@ -393,18 +393,18 @@ Frontend action gates:
   - campaign is not archived,
   - campaign is not already scheduled,
   - validation has no errors,
-  - every selected audience locale is `ready`
+  - every selected audience locale is not `missing`
 - Archive Campaign is enabled when the campaign exists and is not archived.
 
 Important nuances:
 
 - The right-rail readiness chips are shown for all `en/es/pt` locales, even if the audience targets only a subset.
-- Scheduling in the UI is stricter than scheduling in the backend API.
-  - The UI requires selected locales to be fully `ready`.
-  - The backend schedule endpoint only rejects selected locales that are `missing`.
-- Deeplink-goal validation is a UI gate now as well:
-  - mixed or unsupported non-null deeplinks block continuing past Step Content,
-  - the same validation also blocks draft save, save as template, send test, and schedule actions in the editor.
+- Scheduling in the UI now mirrors the backend schedule gate.
+  - warning-level locales are allowed,
+  - selected locales with `missing` content still block scheduling,
+  - invalid recurring rules still block scheduling.
+- Deeplink targets now describe post-tap navigation only.
+- Campaign success tracking is configured explicitly through the tracked-goal field, not inferred from step deeplinks.
 - Saving as template is more permissive than scheduling:
   - template save ignores "step locale missing content" as a blocking UI error,
   - template-derived campaigns cannot be saved as a new template.
@@ -673,8 +673,8 @@ For all trigger types, the planner:
 - determines a journey instance key,
 - determines a journey start time,
 - resolves eligible users,
-- materializes all journey steps up front,
-- stores one pending delivery row per step.
+- materializes only the first journey step,
+- stores one pending delivery row for the current executable step.
 
 Every materialized row stores:
 
@@ -712,7 +712,7 @@ For each due planning pass, the planner:
 - checks if the event's user still matches the campaign audience and suppressions,
 - creates a journey instance key:
   - `event:<sourceEventId>`
-- materializes all journey steps from the source event time.
+- materializes only the first journey step from the source event time.
 
 Important nuance:
 
@@ -721,20 +721,19 @@ Important nuance:
 
 ### 10.4 Scheduled recurring campaigns
 
-Recurring campaigns use the campaign RRULE to compute an occurrence anchor.
+Recurring campaigns evaluate the campaign RRULE against each recipient's local wall-clock time inside the current planner window.
 
 The journey instance key is:
 
 - `rrule:<occurrenceISOString>`
 
-After planning, the campaign is marked active and `nextDispatchAt` moves to the next RRULE occurrence.
+After planning, the campaign is marked active and `nextDispatchAt` moves to the next backend evaluation tick.
 
 Important nuance:
 
-- The schedule is stored with `timezoneMode = user_local`, but runtime branching does not currently use `timezoneMode`.
-- Actual scheduling behavior combines:
-  - a globally computed RRULE occurrence anchor,
-  - then per-user local send-window fitting.
+- recurring runtime keeps a schedule-time anchor so `INTERVAL` is evaluated consistently,
+- planner windows are cadence-based, but the actual occurrence moment is still per-user local time,
+- overview timing for recurring campaigns now represents evaluation timing, not a guaranteed global send instant.
 
 ### 10.5 Per-user delivery materialization
 
@@ -748,9 +747,9 @@ When rows are materialized:
 
 Important nuance:
 
-- All steps are planned up front.
-- The system does not wait for earlier steps to succeed before creating later rows.
-- Sequencing is enforced later at claim time.
+- Only the first step is planned up front.
+- Later steps are materialized by the executor after the current row reaches a terminal state that still allows journey continuation.
+- Sequencing is still enforced at claim time.
 
 ## 11. Journey timing policy
 
@@ -1084,21 +1083,21 @@ The backend can save and list segments, but the current live editor does not let
 
 `template_segment` and `sourceSegmentId` currently matter for UI/management behavior, especially "cannot re-save as template," but not for actual audience resolution.
 
-### 17.6 The UI is stricter than the schedule endpoint
+### 17.6 UI and backend schedule gates are aligned
 
-The UI blocks scheduling on warning states for selected locales, while the backend schedule endpoint only rejects missing selected-locale content plus invalid RRULE/goal rules.
+Both surfaces now allow warning states, while still rejecting missing selected-locale content and invalid recurring rules.
 
-### 17.7 Recurring scheduling wording and backend semantics are not perfectly aligned
+### 17.7 Recurring runtime now matches the user-local wording
 
-The UI speaks in user-local schedule terms, but the backend RRULE engine computes a UTC occurrence anchor and then applies per-user local send-window fitting afterward.
+The UI speaks in user-local schedule terms, and the backend now evaluates recurring eligibility per user local time before materializing the first journey step.
 
-### 17.8 `needs_attention` quick view is not a full DB-level filter
+### 17.8 `needs_attention` quick view is a truthful pre-pagination filter
 
-It is applied after the current result page is loaded and mapped.
+It is filtered before pagination, so totals and page counts stay accurate.
 
-### 17.9 Later steps are not canceled by earlier delivery failure
+### 17.9 Later steps are created step-by-step after terminalization
 
-Later steps are blocked only while earlier steps are still pending/sending. Goal suppression is what stops the journey logically.
+Later steps are no longer pre-materialized. They are inserted after a step finishes unless the campaign became invalid, the row was requeued, or the journey goal was already reached.
 
 ### 17.10 Test sends are single-step only
 

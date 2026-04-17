@@ -51,6 +51,7 @@ describe('campaigns API helpers', () => {
     await createCampaignDraft({
       name: draft.name,
       goal: draft.goal,
+      goalDefinition: draft.goalDefinition,
       channel: draft.channel,
       audience: draft.audience,
       trigger: draft.trigger,
@@ -60,6 +61,7 @@ describe('campaigns API helpers', () => {
     await updateCampaignDraft('cmp_onboarding_not_completed', {
       name: draft.name,
       goal: draft.goal,
+      goalDefinition: draft.goalDefinition,
       channel: draft.channel,
       audience: draft.audience,
       trigger: draft.trigger,
@@ -73,6 +75,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
+        goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
         trigger: draft.trigger,
@@ -86,6 +89,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
+        goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
         trigger: draft.trigger,
@@ -111,6 +115,7 @@ describe('campaigns API helpers', () => {
       definition: {
         name: draft.name,
         goal: draft.goal,
+        goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
         trigger: draft.trigger,
@@ -156,6 +161,7 @@ describe('campaigns API helpers', () => {
         definition: {
           name: draft.name,
           goal: draft.goal,
+          goalDefinition: draft.goalDefinition,
           channel: draft.channel,
           audience: draft.audience,
           trigger: draft.trigger,
@@ -207,6 +213,7 @@ describe('campaigns API helpers', () => {
       createCampaignDraft({
         name: draft.name,
         goal: draft.goal,
+        goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
         trigger: draft.trigger,

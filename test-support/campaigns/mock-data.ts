@@ -7,17 +7,12 @@ import type {
   CampaignAudienceDefinition,
   CampaignDeeplinkTarget,
   CampaignDraft,
-  CampaignEditorCatalog,
   CampaignsOverviewResponse,
   CampaignScenarioTemplateSummary,
   CampaignSavedSegmentSummary,
-  CampaignSourceEventOption,
-  CampaignTokenDefinition,
-  CampaignDeeplinkOption,
 } from '@/modules/campaigns/contracts';
 import {
   createBlankStepLocaleMap,
-  createEmptyCampaignDraft as createDefaultEmptyCampaignDraft,
   createJourneyStep,
 } from '@/modules/campaigns/defaults';
 
@@ -80,7 +75,7 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     status: 'scheduled',
     entryTriggerType: 'scheduled_recurring',
     audience: { estimate: 5320, label: 'Dead users' },
-    timing: { label: 'First send', timestamp: '2026-04-17T08:30:00.000Z' },
+    timing: { label: 'First evaluation', timestamp: '2026-04-17T08:30:00.000Z' },
     progress: { sentCount: 0, totalCount: 5320, progressPercent: 0 },
     metric: { label: 'goal', value: 'Bring back 30+ day inactive users' },
     owner: { ownerName: 'CRM bot', activityLabel: 'Scheduled 2 hours ago' },
@@ -127,211 +122,6 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
       },
     },
     source: 'saved_segment',
-  },
-];
-
-const TOKENS: CampaignTokenDefinition[] = [
-  {
-    key: 'first_name',
-    token: '{{first_name}}',
-    label: 'First name',
-    requiresFallback: true,
-    description: 'Personalizes the notification with the user first name.',
-  },
-  {
-    key: 'favorite_team',
-    token: '{{favorite_team}}',
-    label: 'Favorite team',
-    requiresFallback: false,
-    description: 'Inserts the current favorite team name.',
-  },
-  {
-    key: 'bonus_points',
-    token: '{{bonus_points}}',
-    label: 'Bonus points',
-    requiresFallback: false,
-    description: 'Inserts the current bonus points balance.',
-  },
-];
-
-const ALL_DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
-  {
-    target: 'continue_onboarding',
-    label: 'Continue onboarding',
-    path: '/setup-content-preferences',
-  },
-  {
-    target: 'open_home',
-    label: 'Open home',
-    path: '/',
-  },
-  {
-    target: 'open_home_feed',
-    label: 'Open home feed',
-    path: '/?tab=feed',
-  },
-  {
-    target: 'open_offers',
-    label: 'Open offers',
-    path: '/?tab=offers',
-  },
-  {
-    target: 'open_points_offers',
-    label: 'Open points offers',
-    path: '/?tab=offers&offersTab=points',
-  },
-  {
-    target: 'open_power_ups_offers',
-    label: 'Open power-ups offers',
-    path: '/?tab=offers&offersTab=powerUps',
-  },
-  {
-    target: 'open_passes_offers',
-    label: 'Open passes offers',
-    path: '/?tab=offers&offersTab=passes',
-  },
-  {
-    target: 'open_ai_chat',
-    label: 'Open AI chat',
-    path: '/aichat',
-  },
-  {
-    target: 'open_match_center',
-    label: 'Open match center',
-    path: '/matches',
-  },
-  {
-    target: 'open_channels',
-    label: 'Open channels',
-    path: '/channels',
-  },
-  {
-    target: 'open_explore',
-    label: 'Open explore',
-    path: '/explore',
-  },
-  {
-    target: 'open_rewards_wallet',
-    label: 'Open rewards wallet',
-    path: '/profile',
-  },
-  {
-    target: 'open_support_chat',
-    label: 'Open support chat',
-    path: '/profile/support-chat',
-  },
-  {
-    target: 'open_notifications',
-    label: 'Open notifications',
-    path: '/notifications',
-  },
-  {
-    target: 'open_settings',
-    label: 'Open settings',
-    path: '/settings',
-  },
-  {
-    target: 'open_content_preferences',
-    label: 'Open content preferences',
-    path: '/profile/content-preferences',
-  },
-];
-
-const DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = ALL_DEEPLINK_OPTIONS.filter(
-  (option) =>
-    (
-      [
-        'continue_onboarding',
-        'open_match_center',
-        'open_rewards_wallet',
-      ] as CampaignDeeplinkTarget[]
-    ).includes(option.target)
-);
-
-const SOURCE_EVENTS: CampaignSourceEventOption[] = [
-  {
-    eventKey: 'app_opened',
-    producerKey: 'crm_source_events',
-    label: 'Opened app',
-    description:
-      'User opened the app and the mobile app sent the authenticated CRM source event.',
-  },
-  {
-    eventKey: 'onboarding_completed',
-    producerKey: 'crm_source_events',
-    label: 'Completed onboarding',
-    description:
-      'User completed onboarding and the mobile app sent the public CRM source event.',
-  },
-  {
-    eventKey: 'subscription_started',
-    producerKey: 'crm_source_events',
-    label: 'Started subscription',
-    description:
-      'User started a paid subscription and the backend emitted the CRM source event from a store purchase or Stripe invoice.',
-  },
-  {
-    eventKey: 'subscription_renewed',
-    producerKey: 'crm_source_events',
-    label: 'Renewed subscription',
-    description:
-      'User renewed an active subscription and the backend emitted the CRM source event from a store or Stripe renewal.',
-  },
-  {
-    eventKey: 'in_app_purchase_completed',
-    producerKey: 'crm_source_events',
-    label: 'Completed in-app purchase',
-    description:
-      'User completed a one-time in-app purchase and the backend emitted the CRM source event from the store verification flow.',
-  },
-  {
-    eventKey: 'daily_streak_reminder',
-    producerKey: 'crm_source_events',
-    label: 'Daily streak reminder',
-    description:
-      'User had a streak yesterday but no activity today, and the CRM scheduler emitted the reminder source event.',
-  },
-  {
-    eventKey: 'weekly_quest_urgency',
-    producerKey: 'crm_source_events',
-    label: 'Weekly quest urgency',
-    description:
-      'User is close to finishing the weekly quest and the CRM scheduler emitted the urgency source event.',
-  },
-  {
-    eventKey: 'favorite_match_kickoff',
-    producerKey: 'channels_favorite_matches',
-    label: 'Favorite match kickoff',
-    description:
-      'A favorite team or league match is close to kickoff and the channels service emitted a source event.',
-  },
-  {
-    eventKey: 'weekly_stats_digest',
-    producerKey: 'crm_source_events',
-    label: 'Weekly stats digest',
-    description:
-      'Weekly stats digest is ready for the user and the CRM scheduler emitted the digest source event.',
-  },
-  {
-    eventKey: 'unread_social_activity',
-    producerKey: 'crm_source_events',
-    label: 'Unread social activity',
-    description:
-      'User has unread channel activity and the CRM scheduler emitted the social activity source event.',
-  },
-  {
-    eventKey: 'live_challenge_starting_soon',
-    producerKey: 'crm_source_events',
-    label: 'Live challenge starting soon',
-    description:
-      'A joined live challenge starts soon and the backend emitted the CRM source event.',
-  },
-  {
-    eventKey: 'live_challenge_results',
-    producerKey: 'crm_source_events',
-    label: 'Live challenge results available',
-    description:
-      'A live challenge finished and the backend emitted the results source event.',
   },
 ];
 
@@ -422,6 +212,10 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
     definition: {
       name: 'Onboarding recovery',
       goal: 'Recover onboarding completion',
+      goalDefinition: {
+        eventKey: 'onboarding_completed',
+        attributionMode: 'global_state_event',
+      },
       channel: 'push',
       audience: SAVED_SEGMENT_DEFINITIONS.seg_new_users_setup_dropoff,
       trigger: {
@@ -447,6 +241,10 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
     definition: {
       name: 'Favorite match kickoff',
       goal: 'Drive match-center opens',
+      goalDefinition: {
+        eventKey: 'match_center_opened',
+        attributionMode: 'trace_required_response',
+      },
       channel: 'push',
       audience: {
         segmentSource: 'manual_rules',
@@ -542,6 +340,10 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         id: 'cmp_onboarding_not_completed',
         name: 'onboarding_not_completed',
         goal: 'Recover onboarding completion',
+        goalDefinition: {
+          eventKey: 'onboarding_completed',
+          attributionMode: 'global_state_event',
+        },
         channel: 'push',
         status: 'active',
         audience: SAVED_SEGMENT_DEFINITIONS.seg_new_users_setup_dropoff,
@@ -564,6 +366,10 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         id: 'cmp_favorite_match_kickoff',
         name: 'favorite_match_kickoff',
         goal: 'Drive match-center opens',
+        goalDefinition: {
+          eventKey: 'match_center_opened',
+          attributionMode: 'trace_required_response',
+        },
         channel: 'push',
         status: 'paused',
         audience: {
@@ -621,6 +427,10 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         id: 'cmp_stage_at_risk_wau',
         name: 'stage_at_risk_wau',
         goal: 'Retain at-risk weekly users',
+        goalDefinition: {
+          eventKey: 'match_center_opened',
+          attributionMode: 'trace_required_response',
+        },
         channel: 'push',
         status: 'active',
         audience: SAVED_SEGMENT_DEFINITIONS.seg_at_risk_wau,
@@ -716,25 +526,19 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
 }
 
 /**
- * Creates the catalog used by the campaign editor.
+ * Returns the seeded saved segments consumed by the editor catalog.
  */
-export function createInitialCampaignEditorCatalog(): CampaignEditorCatalog {
-  return JSON.parse(
-    JSON.stringify({
-      savedSegments: SAVED_SEGMENTS,
-      scenarioTemplates: SCENARIO_TEMPLATES,
-      tokens: TOKENS,
-      deeplinkOptions: DEEPLINK_OPTIONS,
-      sourceEvents: SOURCE_EVENTS,
-    })
-  ) as CampaignEditorCatalog;
+export function createInitialSavedSegments(): CampaignSavedSegmentSummary[] {
+  return JSON.parse(JSON.stringify(SAVED_SEGMENTS)) as CampaignSavedSegmentSummary[];
 }
 
 /**
- * Creates the blank create-mode draft required by the implementation spec.
+ * Returns the seeded scenario templates consumed by the editor catalog.
  */
-export function createEmptyCampaignDraft(): CampaignDraft {
-  return createDefaultEmptyCampaignDraft(createInitialCampaignEditorCatalog());
+export function createInitialScenarioTemplates(): CampaignScenarioTemplateSummary[] {
+  return JSON.parse(
+    JSON.stringify(SCENARIO_TEMPLATES)
+  ) as CampaignScenarioTemplateSummary[];
 }
 
 /**

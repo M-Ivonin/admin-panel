@@ -167,7 +167,7 @@ export function describeCampaignScheduleRule(rule: string): string {
   const timeLabel = formatCampaignScheduleTime(model);
 
   if (model.frequency === 'DAILY') {
-    return `${intervalLabel} at ${timeLabel} in each user's local time.`;
+    return `${intervalLabel} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
   }
 
   const dayLabels = model.byDays
@@ -177,5 +177,5 @@ export function describeCampaignScheduleRule(rule: string): string {
     )
     .filter((value): value is NonNullable<typeof value> => Boolean(value));
 
-  return `${intervalLabel} on ${dayLabels.join(', ')} at ${timeLabel} in each user's local time.`;
+  return `${intervalLabel} on ${dayLabels.join(', ')} at ${timeLabel} in each user's local time. The backend evaluates recurring sends on its scheduler cadence.`;
 }

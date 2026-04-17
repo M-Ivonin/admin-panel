@@ -43,6 +43,13 @@ const STATUS_OPTIONS: Array<{ value: CampaignStatus; label: string }> = [
   { value: 'archived', label: 'Archived' },
 ];
 
+const DEFAULT_SELECTED_STATUSES: CampaignStatus[] = [
+  'active',
+  'paused',
+  'scheduled',
+  'draft',
+];
+
 const TRIGGER_OPTIONS: Array<{
   value: CampaignEntryTriggerType;
   label: string;
@@ -232,7 +239,9 @@ export function CampaignsOverviewPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(4);
   const [search, setSearch] = useState('');
-  const [selectedStatuses, setSelectedStatuses] = useState<CampaignStatus[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<CampaignStatus[]>(
+    () => DEFAULT_SELECTED_STATUSES,
+  );
   const [selectedTriggerTypes, setSelectedTriggerTypes] = useState<
     CampaignEntryTriggerType[]
   >([]);

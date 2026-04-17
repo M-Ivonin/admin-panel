@@ -71,11 +71,9 @@ import {
   buildCampaignReviewModel,
   canArchiveCampaign,
   canContinueCampaignStep,
-  getCampaignDeeplinkGoalSummary,
   canScheduleCampaign,
   canSendTestCampaign,
   getCampaignLocaleReadiness,
-  getCampaignSaveBlockingErrors,
   getCampaignValidationSummary,
 } from '@/modules/campaigns/selectors';
 import {
@@ -147,6 +145,7 @@ function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
   return {
     name: draft.name,
     goal: draft.goal,
+    goalDefinition: draft.goalDefinition,
     channel: draft.channel,
     audience: draft.audience,
     trigger: draft.trigger,
@@ -413,14 +412,6 @@ export function CampaignEditorPage({
     () => getCampaignValidationSummary(state.draft),
     [state.draft]
   );
-  const saveBlockingErrors = useMemo(
-    () => getCampaignSaveBlockingErrors(state.draft),
-    [state.draft]
-  );
-  const deeplinkGoalSummary = useMemo(
-    () => getCampaignDeeplinkGoalSummary(state.draft),
-    [state.draft]
-  );
   const readiness = useMemo(
     () => getCampaignLocaleReadiness(state.draft.content),
     [state.draft.content]
@@ -464,7 +455,7 @@ export function CampaignEditorPage({
         } else {
           dispatch({
             type: 'loadDraft',
-            draft: createEmptyCampaignDraft(catalog),
+            draft: createEmptyCampaignDraft(),
             catalog,
             lastPersistedDraft: null,
           });
@@ -556,10 +547,6 @@ export function CampaignEditorPage({
   }, [isInitialized, state.draft.audience]);
 
   async function persistDraft(): Promise<CampaignDraft> {
-    if (saveBlockingErrors.length > 0) {
-      throw new Error(saveBlockingErrors[0]);
-    }
-
     const payload = buildUpsertPayload(state.draft);
     const saved =
       state.draft.id === null
@@ -707,10 +694,6 @@ export function CampaignEditorPage({
     }
 
     try {
-      if (saveBlockingErrors.length > 0) {
-        throw new Error(saveBlockingErrors[0]);
-      }
-
       const response = await campaignsRepository.saveTemplate({
         name: saveTemplateName.trim(),
         description: saveTemplateDescription.trim() || undefined,
@@ -835,13 +818,6 @@ export function CampaignEditorPage({
 
   const activeStepContent =
     state.draft.content[state.activeContentStepKey]?.[activeLocale];
-  const isLegacyHiddenDeeplink = Boolean(
-    activeStepContent?.deeplinkTarget &&
-      !state.catalog.deeplinkOptions.some(
-        (option) => option.target === activeStepContent.deeplinkTarget
-      )
-  );
-  const campaignHasMixedGoalActions = deeplinkGoalSummary.hasMixedGoals;
   const stateBasedTrigger =
     state.draft.trigger.type === 'state_based' ? state.draft.trigger : null;
   const eventBasedTrigger =
@@ -1068,7 +1044,7 @@ export function CampaignEditorPage({
                   fullWidth
                 />
                 <TextField
-                  label="Goal"
+                  label="Goal description"
                   value={state.draft.goal}
                   onChange={(event) =>
                     dispatch({
@@ -1079,6 +1055,66 @@ export function CampaignEditorPage({
                   fullWidth
                 />
               </Stack>
+
+              <FormControl fullWidth>
+                <InputLabel id="campaign-tracked-goal-label" shrink>
+                  Tracked goal
+                </InputLabel>
+                <Select
+                  labelId="campaign-tracked-goal-label"
+                  label="Tracked goal"
+                  displayEmpty
+                  value={
+                    state.draft.goalDefinition
+                      ? `${state.draft.goalDefinition.eventKey}:${state.draft.goalDefinition.attributionMode}`
+                      : ''
+                  }
+                  renderValue={(value) => {
+                    if (!value) {
+                      return 'No tracked goal';
+                    }
+                    const match = state.catalog.goalOptions.find(
+                      (option) => option.goalKey === value
+                    );
+                    return match?.label ?? String(value);
+                  }}
+                  onChange={(event) => {
+                    const goalKey = event.target.value as string;
+                    if (!goalKey) {
+                      dispatch({
+                        type: 'changeGoalDefinition',
+                        goalDefinition: null,
+                      });
+                      return;
+                    }
+                    const option = state.catalog.goalOptions.find(
+                      (o) => o.goalKey === goalKey
+                    );
+                    if (option) {
+                      dispatch({
+                        type: 'changeGoalDefinition',
+                        goalDefinition: {
+                          eventKey: option.eventKey,
+                          attributionMode: option.attributionMode,
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>No tracked goal</em>
+                  </MenuItem>
+                  {state.catalog.goalOptions.map((option) => (
+                    <MenuItem key={option.goalKey} value={option.goalKey}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  Select the backend event used to measure campaign success.
+                  Goal suppression and stop-on-goal logic use this definition.
+                </FormHelperText>
+              </FormControl>
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {STEP_ORDER.map((step) => (
@@ -1831,22 +1867,6 @@ export function CampaignEditorPage({
                   <SectionCard title="Step content">
                     {activeStepContent ? (
                       <Stack spacing={2}>
-                        {isLegacyHiddenDeeplink ? (
-                          <Alert severity="error">
-                            This locale uses a legacy follow-up action that no
-                            longer maps to a supported campaign goal. Replace
-                            it with Continue onboarding, Open match center, Open
-                            rewards wallet, or clear it before saving.
-                          </Alert>
-                        ) : null}
-                        {!isLegacyHiddenDeeplink && campaignHasMixedGoalActions ? (
-                          <Alert severity="warning">
-                            This campaign mixes different non-empty follow-up
-                            actions across steps or locales. Saving only works
-                            when every non-empty action points to the same
-                            supported goal.
-                          </Alert>
-                        ) : null}
                         <Stack direction="row" spacing={1}>
                           <Button
                             variant="outlined"
@@ -1952,16 +1972,6 @@ export function CampaignEditorPage({
                               })
                             }
                           >
-                            {isLegacyHiddenDeeplink &&
-                            activeStepContent.deeplinkTarget ? (
-                              <MenuItem value={activeStepContent.deeplinkTarget}>
-                                {getDeeplinkOptionLabel(
-                                  state.catalog.deeplinkOptions,
-                                  activeStepContent.deeplinkTarget
-                                )} {' '}
-                                (legacy unsupported)
-                              </MenuItem>
-                            ) : null}
                             <MenuItem value="">
                               <em>No follow-up action</em>
                             </MenuItem>
@@ -1975,12 +1985,9 @@ export function CampaignEditorPage({
                             ))}
                           </Select>
                           <FormHelperText>
-                            Optional. Only Continue onboarding, Open match
-                            center, and Open rewards wallet are supported as
-                            non-empty follow-up actions right now, and every
-                            non-empty action across the campaign must use the
-                            same one. If left empty, the app falls back to the
-                            default notifications flow.
+                            Optional. Choose the screen or action the push
+                            notification opens when tapped. If left empty, the
+                            app falls back to the default notifications flow.
                           </FormHelperText>
                         </FormControl>
                       </Stack>
@@ -2151,6 +2158,12 @@ export function CampaignEditorPage({
               {validation.errors.length ? (
                 <Alert severity="warning">{validation.errors[0]}</Alert>
               ) : null}
+
+              <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+                Warning states still need review, but scheduling only blocks
+                when a selected locale is missing required step content or the
+                recurring rule is invalid.
+              </Typography>
 
               <Typography sx={{ color: COLORS.textSecondary }}>
                 Reachable audience:{' '}
@@ -2354,8 +2367,9 @@ export function CampaignEditorPage({
         <DialogTitle>Schedule campaign</DialogTitle>
         <DialogContent>
           <Typography sx={{ mt: 1 }}>
-            This will schedule the current trigger + journey definition for live
-            delivery.
+            {state.draft.trigger.type === 'scheduled_recurring'
+              ? "This will schedule the current recurring journey for live evaluation against each user's local-time rule on the backend cadence."
+              : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
         </DialogContent>
         <DialogActions>

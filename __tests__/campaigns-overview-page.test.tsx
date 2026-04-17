@@ -33,6 +33,8 @@ describe('CampaignsOverviewPage', () => {
     render(<CampaignsOverviewPage />);
 
     expect(await screen.findByText('onboarding_not_completed')).toBeTruthy();
+    expect(screen.getByText(/4 status filter\(s\)/i)).toBeTruthy();
+    expect(screen.getAllByText('On')).toHaveLength(4);
     expect(screen.getByText('favorite_match_kickoff')).toBeTruthy();
     expect(screen.getByText('stage_at_risk_wau')).toBeTruthy();
     expect(screen.getByText('stage_dead_user')).toBeTruthy();
@@ -40,8 +42,8 @@ describe('CampaignsOverviewPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /Paused/i })[0]);
 
     await waitFor(() => {
-      expect(screen.getByText('favorite_match_kickoff')).toBeTruthy();
-      expect(screen.queryByText('onboarding_not_completed')).toBeNull();
+      expect(screen.queryByText('favorite_match_kickoff')).toBeNull();
+      expect(screen.getByText('onboarding_not_completed')).toBeTruthy();
     });
 
     fireEvent.click(screen.getAllByRole('button', { name: /Paused/i })[0]);

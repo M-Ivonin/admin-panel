@@ -183,6 +183,7 @@ export interface CampaignSourceEventOption {
 export interface CampaignTemplateDefinition {
   name: string;
   goal: string;
+  goalDefinition: CampaignGoalDefinition | null;
   channel: CampaignChannel;
   audience: CampaignAudienceDefinition;
   trigger: CampaignTriggerDefinition;
@@ -206,6 +207,7 @@ export interface CampaignEditorCatalog {
   tokens: CampaignTokenDefinition[];
   deeplinkOptions: CampaignDeeplinkOption[];
   sourceEvents: CampaignSourceEventOption[];
+  goalOptions: CampaignGoalOption[];
 }
 
 export interface CampaignAudienceCriteria {
@@ -264,6 +266,22 @@ export interface CampaignJourneyDefinition {
   steps: CampaignJourneyStep[];
 }
 
+export type CampaignGoalAttributionMode =
+  | 'global_state_event'
+  | 'trace_required_response';
+
+export interface CampaignGoalDefinition {
+  eventKey: string;
+  attributionMode: CampaignGoalAttributionMode;
+}
+
+export interface CampaignGoalOption {
+  goalKey: string;
+  label: string;
+  eventKey: string;
+  attributionMode: CampaignGoalAttributionMode;
+}
+
 export interface CampaignStepLocaleContent {
   title: string;
   body: string;
@@ -280,6 +298,7 @@ export interface CampaignDraft {
   id: string | null;
   name: string;
   goal: string;
+  goalDefinition: CampaignGoalDefinition | null;
   channel: CampaignChannel;
   status: CampaignStatus;
   audience: CampaignAudienceDefinition;
@@ -354,6 +373,7 @@ export interface ArchiveCampaignResponse {
 export interface UpsertCampaignDraftRequest {
   name: string;
   goal: string;
+  goalDefinition: CampaignGoalDefinition | null;
   channel: 'push';
   audience: CampaignAudienceDefinition;
   trigger: CampaignTriggerDefinition;

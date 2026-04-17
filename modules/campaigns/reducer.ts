@@ -6,6 +6,7 @@ import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignEditorCatalog,
+  CampaignGoalDefinition,
   CampaignJourneyStep,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
@@ -80,7 +81,7 @@ export type CampaignEditorAction =
     }
   | {
       type: 'updateBasics';
-      patch: Partial<Pick<CampaignDraft, 'name' | 'goal'>>;
+      patch: Partial<Pick<CampaignDraft, 'name' | 'goal' | 'goalDefinition'>>;
     }
   | {
       type: 'applyScenarioTemplate';
@@ -132,6 +133,10 @@ export type CampaignEditorAction =
       target: CampaignDeeplinkTarget | null;
     }
   | {
+      type: 'changeGoalDefinition';
+      goalDefinition: CampaignGoalDefinition | null;
+    }
+  | {
       type: 'openDialog';
       dialog: keyof CampaignEditorDialogs;
       tokenTarget?: CampaignEditorTokenTarget | null;
@@ -170,6 +175,7 @@ const EMPTY_CATALOG: CampaignEditorCatalog = {
   tokens: [],
   deeplinkOptions: [],
   sourceEvents: [],
+  goalOptions: [],
 };
 
 const DEFAULT_DIALOGS: CampaignEditorDialogs = {
@@ -300,6 +306,7 @@ export function campaignEditorReducer(
           ...state.draft,
           name: templateDefinition.name,
           goal: templateDefinition.goal,
+          goalDefinition: templateDefinition.goalDefinition ?? null,
           channel: templateDefinition.channel,
           audience: {
             ...templateDefinition.audience,
@@ -431,6 +438,11 @@ export function campaignEditorReducer(
         },
       });
     }
+    case 'changeGoalDefinition':
+      return markDirty(state, {
+        ...state.draft,
+        goalDefinition: action.goalDefinition,
+      });
     case 'changeDeeplink':
       return markDirty(state, {
         ...state.draft,
@@ -508,7 +520,7 @@ export function campaignEditorReducer(
       const fallbackDraft =
         action.fallbackDraft ??
         state.lastPersistedDraft ??
-        createEmptyCampaignDraft(state.catalog);
+        createEmptyCampaignDraft();
       const nextDraft = cloneDraft(fallbackDraft);
       return {
         ...state,
