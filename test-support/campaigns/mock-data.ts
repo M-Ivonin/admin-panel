@@ -189,11 +189,74 @@ const SOURCE_EVENTS: CampaignSourceEventOption[] = [
       'User completed onboarding and the mobile app sent the public CRM source event.',
   },
   {
+    eventKey: 'subscription_started',
+    producerKey: 'crm_source_events',
+    label: 'Started subscription',
+    description:
+      'User started a paid subscription and the backend emitted the CRM source event from a store purchase or Stripe invoice.',
+  },
+  {
+    eventKey: 'subscription_renewed',
+    producerKey: 'crm_source_events',
+    label: 'Renewed subscription',
+    description:
+      'User renewed an active subscription and the backend emitted the CRM source event from a store or Stripe renewal.',
+  },
+  {
+    eventKey: 'in_app_purchase_completed',
+    producerKey: 'crm_source_events',
+    label: 'Completed in-app purchase',
+    description:
+      'User completed a one-time in-app purchase and the backend emitted the CRM source event from the store verification flow.',
+  },
+  {
+    eventKey: 'daily_streak_reminder',
+    producerKey: 'crm_source_events',
+    label: 'Daily streak reminder',
+    description:
+      'User had a streak yesterday but no activity today, and the CRM scheduler emitted the reminder source event.',
+  },
+  {
+    eventKey: 'weekly_quest_urgency',
+    producerKey: 'crm_source_events',
+    label: 'Weekly quest urgency',
+    description:
+      'User is close to finishing the weekly quest and the CRM scheduler emitted the urgency source event.',
+  },
+  {
     eventKey: 'favorite_match_kickoff',
     producerKey: 'channels_favorite_matches',
     label: 'Favorite match kickoff',
     description:
       'A favorite team or league match is close to kickoff and the channels service emitted a source event.',
+  },
+  {
+    eventKey: 'weekly_stats_digest',
+    producerKey: 'crm_source_events',
+    label: 'Weekly stats digest',
+    description:
+      'Weekly stats digest is ready for the user and the CRM scheduler emitted the digest source event.',
+  },
+  {
+    eventKey: 'unread_social_activity',
+    producerKey: 'crm_source_events',
+    label: 'Unread social activity',
+    description:
+      'User has unread channel activity and the CRM scheduler emitted the social activity source event.',
+  },
+  {
+    eventKey: 'live_challenge_starting_soon',
+    producerKey: 'crm_source_events',
+    label: 'Live challenge starting soon',
+    description:
+      'A joined live challenge starts soon and the backend emitted the CRM source event.',
+  },
+  {
+    eventKey: 'live_challenge_results',
+    producerKey: 'crm_source_events',
+    label: 'Live challenge results available',
+    description:
+      'A live challenge finished and the backend emitted the results source event.',
   },
 ];
 

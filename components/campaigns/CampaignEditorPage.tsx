@@ -275,7 +275,7 @@ function describeScenarioTemplate(
 
 function getSourceEventProducerLabel(producerKey: string): string {
   if (producerKey === 'crm_source_events') {
-    return 'Mobile app CRM events';
+    return 'CRM integration events';
   }
 
   if (producerKey === 'channels_favorite_matches') {
@@ -283,6 +283,47 @@ function getSourceEventProducerLabel(producerKey: string): string {
   }
 
   return producerKey;
+}
+
+function getSourceEventLabel(eventKey: string): string {
+  switch (eventKey) {
+    case 'app_opened':
+      return 'Opened app';
+    case 'onboarding_completed':
+      return 'Completed onboarding';
+    case 'subscription_started':
+      return 'Started subscription';
+    case 'subscription_renewed':
+      return 'Renewed subscription';
+    case 'in_app_purchase_completed':
+      return 'Completed in-app purchase';
+    case 'daily_streak_reminder':
+      return 'Daily streak reminder';
+    case 'weekly_quest_urgency':
+      return 'Weekly quest urgency';
+    case 'favorite_match_kickoff':
+      return 'Favorite match kickoff';
+    case 'weekly_stats_digest':
+      return 'Weekly stats digest';
+    case 'unread_social_activity':
+      return 'Unread social activity';
+    case 'live_challenge_starting_soon':
+      return 'Live challenge starting soon';
+    case 'live_challenge_results':
+      return 'Live challenge results available';
+    case 'stage_at_risk_wau':
+      return 'Became at-risk weekly user';
+    case 'stage_at_risk_mau':
+      return 'Became at-risk monthly user';
+    case 'stage_dead_user':
+      return 'Became inactive 30+ days';
+    case 'stage_reactivated':
+      return 'Reactivated after 7-29 days';
+    case 'stage_resurrected':
+      return 'Reactivated after 30+ days';
+    default:
+      return eventKey;
+  }
 }
 
 function getJourneyAnchorLabel(anchorType: 'trigger' | 'previous_step'): string {
@@ -676,6 +717,7 @@ export function CampaignEditorPage({
           option.producerKey === eventBasedTrigger.producerKey
       ) ?? null
     : null;
+  const isLegacyHiddenSourceEvent = Boolean(eventBasedTrigger && !selectedSourceEvent);
   const parsedScheduledRule = scheduledTrigger
     ? parseCampaignScheduleRule(scheduledTrigger.recurrenceRule)
     : null;
@@ -1190,6 +1232,13 @@ export function CampaignEditorPage({
                                 });
                               }}
                             >
+                              {isLegacyHiddenSourceEvent && eventBasedTrigger ? (
+                                <MenuItem
+                                  value={`${eventBasedTrigger.eventKey}:${eventBasedTrigger.producerKey}`}
+                                >
+                                  {getSourceEventLabel(eventBasedTrigger.eventKey)}
+                                </MenuItem>
+                              ) : null}
                               {state.catalog.sourceEvents.map((option) => (
                                 <MenuItem
                                   key={`${option.eventKey}:${option.producerKey}`}
@@ -1211,6 +1260,17 @@ export function CampaignEditorPage({
                               Source: {' '}
                               {getSourceEventProducerLabel(
                                 selectedSourceEvent.producerKey
+                              )}
+                            </Alert>
+                          ) : null}
+                          {isLegacyHiddenSourceEvent && eventBasedTrigger ? (
+                            <Alert severity="warning" sx={{ bgcolor: COLORS.soft }}>
+                              This campaign uses a legacy source event that is no
+                              longer offered for new campaigns.
+                              <br />
+                              Source: {' '}
+                              {getSourceEventProducerLabel(
+                                eventBasedTrigger.producerKey
                               )}
                             </Alert>
                           ) : null}
@@ -1383,11 +1443,7 @@ export function CampaignEditorPage({
                             }
                             InputLabelProps={{ shrink: true }}
                           />
-                          <TextField
-                            label="Timezone"
-                            value="Each user's local time"
-                            InputProps={{ readOnly: true }}
-                          />
+
                           <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
                             {describeCampaignScheduleRule(
                               parsedScheduledRule

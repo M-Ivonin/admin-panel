@@ -160,7 +160,33 @@ describe('CampaignEditorPage', () => {
     expect(
       screen.getByText('Choose the product event that should start the journey.')
     ).toBeTruthy();
-    expect(screen.getByText(/Source: Mobile app CRM events/i)).toBeTruthy();
+    expect(screen.getByText(/Source: CRM integration events/i)).toBeTruthy();
+  });
+
+  it('hides lifecycle stage events from the source event picker', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Source event'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Entry event' }));
+
+    expect(
+      screen.queryByRole('option', { name: 'Became at-risk weekly user' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('option', { name: 'Became at-risk monthly user' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('option', { name: 'Became inactive 30+ days' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('option', { name: 'Reactivated after 7-29 days' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('option', { name: 'Reactivated after 30+ days' })
+    ).toBeNull();
   });
 
   it('configures scheduled triggers through readable controls', async () => {
@@ -174,7 +200,6 @@ describe('CampaignEditorPage', () => {
     expect(screen.getByLabelText('Repeat every')).toBeTruthy();
     expect(screen.getByLabelText('Cadence')).toBeTruthy();
     expect(screen.getByLabelText('Send time')).toBeTruthy();
-    expect(screen.getByDisplayValue('Each user\'s local time')).toBeTruthy();
     expect(
       screen.getByText(/Every day at 09:00 in each user's local time/i)
     ).toBeTruthy();

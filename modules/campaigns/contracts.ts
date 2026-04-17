@@ -44,7 +44,21 @@ export type CampaignQuickView =
 export type CampaignSourceEventKey =
   | 'app_opened'
   | 'onboarding_completed'
-  | 'favorite_match_kickoff';
+  | 'subscription_started'
+  | 'subscription_renewed'
+  | 'in_app_purchase_completed'
+  | 'daily_streak_reminder'
+  | 'weekly_quest_urgency'
+  | 'favorite_match_kickoff'
+  | 'weekly_stats_digest'
+  | 'unread_social_activity'
+  | 'live_challenge_starting_soon'
+  | 'live_challenge_results'
+  | 'stage_at_risk_wau'
+  | 'stage_at_risk_mau'
+  | 'stage_dead_user'
+  | 'stage_reactivated'
+  | 'stage_resurrected';
 
 export type CampaignSourceEventProducerKey =
   | 'crm_source_events'

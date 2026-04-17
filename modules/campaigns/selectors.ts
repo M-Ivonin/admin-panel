@@ -18,11 +18,25 @@ const TOKEN_PATTERN = /{{([a-z_]+)}}/g;
 const SOURCE_EVENT_LABELS: Record<string, string> = {
   app_opened: 'Opened app',
   onboarding_completed: 'Completed onboarding',
+  subscription_started: 'Started subscription',
+  subscription_renewed: 'Renewed subscription',
+  in_app_purchase_completed: 'Completed in-app purchase',
+  daily_streak_reminder: 'Daily streak reminder',
+  weekly_quest_urgency: 'Weekly quest urgency',
   favorite_match_kickoff: 'Favorite match kickoff',
+  weekly_stats_digest: 'Weekly stats digest',
+  unread_social_activity: 'Unread social activity',
+  live_challenge_starting_soon: 'Live challenge starting soon',
+  live_challenge_results: 'Live challenge results available',
+  stage_at_risk_wau: 'Became at-risk weekly user',
+  stage_at_risk_mau: 'Became at-risk monthly user',
+  stage_dead_user: 'Became inactive 30+ days',
+  stage_reactivated: 'Reactivated after 7-29 days',
+  stage_resurrected: 'Reactivated after 30+ days',
 };
 
 const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
-  crm_source_events: 'Mobile app CRM events',
+  crm_source_events: 'CRM integration events',
   channels_favorite_matches: 'Favorite matches service',
 };
 
