@@ -27,6 +27,7 @@ import {
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
+  CampaignLocale,
   CampaignQuickView,
   CampaignStatus,
   CampaignsOverviewResponse,
@@ -99,6 +100,10 @@ const COLORS = {
   scheduled: '#7B6DFF',
 };
 
+type VisibleLocaleReadiness = NonNullable<
+  CampaignListItem['localeReadiness'][CampaignLocale]
+>;
+
 function formatMetricValue(value: number, suffix?: string): string {
   if (value >= 1000) {
     return `${(value / 1000).toFixed(1)}k${suffix ?? ''}`;
@@ -140,7 +145,7 @@ function getStatusColor(status: CampaignStatus): string {
   return COLORS.textSecondary;
 }
 
-function getReadinessColor(readiness: CampaignListItem['localeReadiness'][keyof CampaignListItem['localeReadiness']]): string {
+function getReadinessColor(readiness: VisibleLocaleReadiness): string {
   if (readiness === 'ready') {
     return COLORS.success;
   }
@@ -150,6 +155,14 @@ function getReadinessColor(readiness: CampaignListItem['localeReadiness'][keyof 
   }
 
   return COLORS.danger;
+}
+
+function getLocaleReadinessEntries(
+  item: CampaignListItem,
+): Array<[CampaignLocale, VisibleLocaleReadiness]> {
+  return Object.entries(item.localeReadiness) as Array<
+    [CampaignLocale, VisibleLocaleReadiness]
+  >;
 }
 
 function KpiCard({
@@ -637,8 +650,7 @@ export function CampaignsOverviewPage() {
                   sx={{
                     p: 2,
                     borderRadius: 4,
-                    bgcolor:
-                      item.status === 'active' ? COLORS.accentSoft : COLORS.soft,
+                    bgcolor: COLORS.soft,
                     border: `1px solid ${
                       item.status === 'active' ? COLORS.accent : COLORS.strokeSoft
                     }`,
@@ -770,15 +782,15 @@ export function CampaignsOverviewPage() {
                           </Typography>
                         ) : null}
                         <Stack direction="row" spacing={0.75} sx={{ mt: 0.8 }} flexWrap="wrap">
-                          {(Object.keys(item.localeReadiness) as Array<keyof CampaignListItem['localeReadiness']>).map(
-                            (locale) => (
+                          {getLocaleReadinessEntries(item).map(
+                            ([locale, readiness]) => (
                               <Chip
                                 key={locale}
-                                label={`${locale.toUpperCase()} · ${item.localeReadiness[locale]}`}
+                                label={`${locale.toUpperCase()} · ${readiness}`}
                                 size="small"
                                 sx={{
-                                  bgcolor: `${getReadinessColor(item.localeReadiness[locale])}22`,
-                                  color: getReadinessColor(item.localeReadiness[locale]),
+                                  bgcolor: `${getReadinessColor(readiness)}22`,
+                                  color: getReadinessColor(readiness),
                                 }}
                               />
                             ),

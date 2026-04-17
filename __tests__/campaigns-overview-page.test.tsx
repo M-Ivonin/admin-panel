@@ -146,4 +146,70 @@ describe('CampaignsOverviewPage', () => {
       overviewSpy.mockRestore();
     }
   });
+
+  it('shows locale readiness only for selected campaign locales', async () => {
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        stats: {
+          activeCampaigns: 1,
+          pausedCampaigns: 0,
+          scheduledCampaigns: 0,
+          sentToday: 0,
+          deliveredRate: 0,
+          avgCtr: 0,
+          ctrDeltaVsPrev7d: 0,
+          reachInProgress: 0,
+        },
+        items: [
+          {
+            id: 'cmp_selected_locale_only',
+            name: 'Selected locale only',
+            goal: 'Recover onboarding completion',
+            channel: 'push',
+            status: 'active',
+            entryTriggerType: 'state_based',
+            audience: {
+              estimate: 120,
+              label: 'New users',
+            },
+            timing: {
+              label: 'Next send',
+              timestamp: '2026-04-17T10:00:00.000Z',
+            },
+            progress: {
+              sentCount: 0,
+              totalCount: 120,
+              progressPercent: 0,
+            },
+            metric: {
+              label: 'goal',
+              value: 'Recover onboarding completion',
+            },
+            owner: {
+              ownerName: 'CRM bot',
+              activityLabel: 'Updated 2 min ago',
+            },
+            updatedAt: '2026-04-17T09:00:00.000Z',
+            localeReadiness: {
+              en: 'warning',
+            },
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      expect(await screen.findByText('EN · warning')).toBeTruthy();
+      expect(screen.queryByText(/^ES · /)).toBeNull();
+      expect(screen.queryByText(/^PT · /)).toBeNull();
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
 });

@@ -499,6 +499,23 @@ function formatCreatedBy(createdBy: string | null): string {
     .join(' ');
 }
 
+function getOverviewLocaleReadiness(
+  draft: CampaignDraft,
+): CampaignListItem['localeReadiness'] {
+  const readiness = getCampaignLocaleReadiness(
+    draft.content,
+    draft.audience.criteria.locales,
+  );
+
+  return draft.audience.criteria.locales.reduce(
+    (accumulator, locale) => ({
+      ...accumulator,
+      [locale]: readiness[locale],
+    }),
+    {} as CampaignListItem['localeReadiness'],
+  );
+}
+
 function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
   const estimate = getAudienceEstimate(draft.audience);
   const existingItemIndex = state.overviewItems.findIndex(
@@ -537,7 +554,7 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
       activityLabel,
     },
     updatedAt: draft.updatedAt ?? nextTimestampIso(1),
-    localeReadiness: getCampaignLocaleReadiness(draft.content),
+    localeReadiness: getOverviewLocaleReadiness(draft),
   };
 
   if (existingItemIndex >= 0) {

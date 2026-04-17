@@ -133,7 +133,7 @@ export interface CampaignListItem {
   metric: CampaignListMetricSummary;
   owner: CampaignListOwnerSummary;
   updatedAt: string;
-  localeReadiness: Record<CampaignLocale, CampaignReadiness>;
+  localeReadiness: Partial<Record<CampaignLocale, CampaignReadiness>>;
 }
 
 export interface GetCampaignsOverviewParams {

@@ -506,6 +506,135 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('describes recurring schedules with the selected start date after scheduling', async () => {
+    const deferred = createDeferred<{
+      campaign: ReturnType<typeof createEmptyCampaignDraft>;
+      firstSendAt: string;
+    }>();
+    jest
+      .spyOn(campaignsRepository, 'scheduleCampaign')
+      .mockReturnValue(deferred.promise);
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Scheduled'));
+    fireEvent.change(screen.getByLabelText('Start date'), {
+      target: { value: '2026-04-18' },
+    });
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Hello there' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Finish setup now' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm schedule' }));
+
+    const scheduledDraft = createEmptyCampaignDraft();
+    scheduledDraft.id = 'cmp_local_001';
+    scheduledDraft.name = 'Campaign Spec Local';
+    scheduledDraft.goal = 'Recover onboarding completion';
+    scheduledDraft.status = 'scheduled';
+    scheduledDraft.audience.criteria.locales = ['en'];
+    scheduledDraft.trigger = {
+      type: 'scheduled_recurring',
+      recurrenceRule: 'FREQ=DAILY;INTERVAL=1;BYHOUR=9;BYMINUTE=0',
+      timezoneMode: 'user_local',
+      startDate: '2026-04-18',
+      maxOccurrences: 1,
+    };
+    scheduledDraft.content.step_1.en = {
+      title: 'Hello there',
+      body: 'Finish setup now',
+      fallbackFirstName: '',
+      deeplinkTarget: null,
+    };
+
+    deferred.resolve({
+      campaign: scheduledDraft,
+      firstSendAt: '2026-04-17T20:45:00.000Z',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Scheduling...')).toBeNull();
+      expect(
+        screen.getByText(/Campaign scheduled successfully\./i)
+      ).toBeTruthy();
+      expect(
+        screen.getByText(
+          /Recurring sends start on Apr 18, 2026 at 09:00 in each user's local time\./i
+        )
+      ).toBeTruthy();
+      expect(screen.queryByText(/First send planned for/i)).toBeNull();
+    });
+  });
+
+  it('saves current changes before opening the schedule dialog', async () => {
+    const createCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'createCampaignDraft'
+    );
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Fresh schedule title' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Fresh schedule body' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+
+    await waitFor(() => {
+      expect(createCampaignDraftSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Campaign Spec Local',
+          goal: 'Recover onboarding completion',
+          content: expect.objectContaining({
+            step_1: expect.objectContaining({
+              en: expect.objectContaining({
+                title: 'Fresh schedule title',
+                body: 'Fresh schedule body',
+              }),
+            }),
+          }),
+        })
+      );
+    });
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Draft saved successfully.')).toBeTruthy();
+  });
+
   it('keeps send-test disabled when there is no resolved recipient', async () => {
     render(<CampaignEditorPage mode="create" />);
 

@@ -146,6 +146,9 @@ interface PendingTokenFocus {
 }
 
 const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
+const PENDING_SCHEDULE_DIALOG_STORAGE_KEY =
+  'campaigns:pending-schedule-dialog';
+const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function getPreferredTestRecipients(
   currentRecipients: string,
@@ -164,6 +167,33 @@ function getPreferredTestRecipients(
   }
 
   return authorizedUserEmail;
+}
+
+function storePendingScheduleDialog(campaignId: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(
+    PENDING_SCHEDULE_DIALOG_STORAGE_KEY,
+    campaignId
+  );
+}
+
+function consumePendingScheduleDialog(campaignId: string): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const pendingCampaignId = window.sessionStorage.getItem(
+    PENDING_SCHEDULE_DIALOG_STORAGE_KEY
+  );
+  if (pendingCampaignId !== campaignId) {
+    return false;
+  }
+
+  window.sessionStorage.removeItem(PENDING_SCHEDULE_DIALOG_STORAGE_KEY);
+  return true;
 }
 
 function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
@@ -193,6 +223,58 @@ function formatScheduleResultTimestamp(timestamp: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(parsedDate);
+}
+
+function formatRecurringScheduleStartDate(date: string | null | undefined): string {
+  if (!date) {
+    return 'the selected start date';
+  }
+
+  const match = ISO_DATE_PATTERN.exec(date.trim());
+  if (!match) {
+    return date;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    parsedDate.getUTCFullYear() !== year ||
+    parsedDate.getUTCMonth() !== month - 1 ||
+    parsedDate.getUTCDate() !== day
+  ) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(parsedDate);
+}
+
+function getScheduleSuccessWarnings(
+  campaign: CampaignDraft,
+  firstSendAt: string
+): string[] {
+  if (campaign.trigger.type !== 'scheduled_recurring') {
+    return [`First send planned for ${formatScheduleResultTimestamp(firstSendAt)}.`];
+  }
+
+  const schedule = parseCampaignScheduleRule(campaign.trigger.recurrenceRule);
+  const startDateLabel = formatRecurringScheduleStartDate(
+    campaign.trigger.startDate
+  );
+  const timeLabel = schedule
+    ? ` at ${formatCampaignScheduleTime(schedule)}`
+    : '';
+
+  return [
+    `Recurring sends start on ${startDateLabel}${timeLabel} in each user's local time.`,
+  ];
 }
 
 function getStatusChipStyles(status: CampaignStatus) {
@@ -432,6 +514,7 @@ export function CampaignEditorPage({
   const [testRecipients, setTestRecipients] = useState(
     () => storedAuthUser?.email?.trim() ?? ''
   );
+  const [isPreparingSchedule, setIsPreparingSchedule] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
@@ -749,6 +832,18 @@ export function CampaignEditorPage({
     };
   }, [isInitialized, state.draft.audience]);
 
+  useEffect(() => {
+    if (!isInitialized || state.isDirty || !state.draft.id) {
+      return;
+    }
+
+    if (!consumePendingScheduleDialog(state.draft.id)) {
+      return;
+    }
+
+    dispatch({ type: 'openDialog', dialog: 'schedule' });
+  }, [isInitialized, state.draft.id, state.isDirty]);
+
   async function persistDraft(): Promise<CampaignDraft> {
     const payload = buildUpsertPayload(state.draft);
     const saved =
@@ -798,9 +893,29 @@ export function CampaignEditorPage({
     dispatch({ type: 'openDialog', dialog: 'sendTest' });
   }
 
-  function handleOpenScheduleDialog() {
-    setError(null);
-    dispatch({ type: 'openDialog', dialog: 'schedule' });
+  async function handleOpenScheduleDialog() {
+    try {
+      setError(null);
+
+      if (state.draft.id !== null && !state.isDirty) {
+        dispatch({ type: 'openDialog', dialog: 'schedule' });
+        return;
+      }
+
+      setIsPreparingSchedule(true);
+      const saved = await ensurePersistedDraft();
+      if (saved.id) {
+        storePendingScheduleDialog(saved.id);
+      }
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Failed to save current changes before scheduling'
+      );
+    } finally {
+      setIsPreparingSchedule(false);
+    }
   }
 
   async function handleSendTest() {
@@ -856,9 +971,10 @@ export function CampaignEditorPage({
         kind: 'schedule',
         draft: response.campaign,
         message: 'Campaign scheduled successfully.',
-        warnings: [
-          `First send planned for ${formatScheduleResultTimestamp(response.firstSendAt)}.`,
-        ],
+        warnings: getScheduleSuccessWarnings(
+          response.campaign,
+          response.firstSendAt
+        ),
       });
     } catch (actionError) {
       setError(
@@ -2490,11 +2606,20 @@ export function CampaignEditorPage({
                 </Button>
                 <Button
                   variant="contained"
-                  disabled={!canScheduleCampaign(state.draft)}
+                  disabled={
+                    !canScheduleCampaign(state.draft) || isPreparingSchedule
+                  }
                   onClick={handleOpenScheduleDialog}
                   sx={{ bgcolor: COLORS.accent, color: COLORS.textPrimary }}
                 >
-                  Schedule Campaign
+                  {isPreparingSchedule ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CircularProgress size={16} color="inherit" />
+                      <span>Saving...</span>
+                    </Stack>
+                  ) : (
+                    'Schedule Campaign'
+                  )}
                 </Button>
                 <Button
                   startIcon={<Archive />}
