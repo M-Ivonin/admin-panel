@@ -8,13 +8,17 @@ import type {
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignsOverviewResponse,
-  CampaignLocale,
+  CampaignScenarioTemplateSummary,
   CampaignSavedSegmentSummary,
-  CampaignTemplateSummary,
+  CampaignSourceEventOption,
   CampaignTokenDefinition,
   CampaignDeeplinkOption,
-  CampaignEventTriggerOption,
 } from '@/modules/campaigns/contracts';
+import {
+  createBlankStepLocaleMap,
+  createEmptyCampaignDraft as createDefaultEmptyCampaignDraft,
+  createJourneyStep,
+} from '@/modules/campaigns/defaults';
 
 export const MOCK_TIME_ANCHOR_ISO = '2026-04-16T12:00:00.000Z';
 
@@ -45,7 +49,10 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     timing: { label: 'Last send', timestamp: '2026-04-16T16:45:00.000Z' },
     progress: { sentCount: 6840, totalCount: 9100, progressPercent: 75.2 },
     metric: { label: 'ctr', value: '22.1%' },
-    owner: { ownerName: 'CRM bot', activityLabel: 'Paused by Natalia 6 min ago' },
+    owner: {
+      ownerName: 'CRM bot',
+      activityLabel: 'Paused by Natalia 6 min ago',
+    },
     updatedAt: '2026-04-16T11:54:00.000Z',
     localeReadiness: { en: 'ready', es: 'ready', pt: 'ready' },
   },
@@ -87,6 +94,19 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
     name: 'New users · onboarding not completed',
     description: '12,480 reachable · best for 3-step reminders',
     audienceEstimate: 12480,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_new_users_setup_dropoff',
+      criteria: {
+        retentionStages: [RetentionStage.NEW],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeConvertedUsers: true,
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
     source: 'saved_segment',
   },
   {
@@ -94,31 +114,20 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
     name: 'At-risk WAU',
     description: 'Inactive today, but active during the last 1–6 days.',
     audienceEstimate: 8920,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_at_risk_wau',
+      criteria: {
+        retentionStages: [RetentionStage.AT_RISK_WAU],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeConvertedUsers: true,
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
     source: 'saved_segment',
-  },
-  {
-    id: 'seg_template_match_kickoff',
-    name: 'Favorite match kickoff',
-    description: '15 min before kickoff · max 3 notifications per day',
-    audienceEstimate: 9100,
-    source: 'template_segment',
-  },
-];
-
-const TEMPLATES: CampaignTemplateSummary[] = [
-  {
-    id: 'tpl_onboarding_recovery',
-    name: 'Onboarding recovery',
-    description: '3-step push flow after setup drop-off.',
-    entryTriggerType: 'state_based',
-    deeplinkTarget: 'continue_onboarding',
-  },
-  {
-    id: 'tpl_favorite_match_kickoff',
-    name: 'Favorite match kickoff',
-    description: '15 min reminder with deep link into match center.',
-    entryTriggerType: 'event_based',
-    deeplinkTarget: 'open_match_center',
   },
 ];
 
@@ -164,16 +173,27 @@ const DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
   },
 ];
 
-const EVENT_TRIGGERS: CampaignEventTriggerOption[] = [
+const SOURCE_EVENTS: CampaignSourceEventOption[] = [
   {
-    key: 'opened_app',
+    eventKey: 'app_opened',
+    producerKey: 'crm_source_events',
     label: 'Opened app',
-    description: 'User performed an app open event.',
+    description:
+      'User opened the app and the mobile app sent the authenticated CRM source event.',
   },
   {
-    key: 'favorited_match',
-    label: 'Favorited match',
-    description: 'User added a match to favorites.',
+    eventKey: 'onboarding_completed',
+    producerKey: 'crm_source_events',
+    label: 'Completed onboarding',
+    description:
+      'User completed onboarding and the mobile app sent the public CRM source event.',
+  },
+  {
+    eventKey: 'favorite_match_kickoff',
+    producerKey: 'channels_favorite_matches',
+    label: 'Favorite match kickoff',
+    description:
+      'A favorite team or league match is close to kickoff and the channels service emitted a source event.',
   },
 ];
 
@@ -183,16 +203,12 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
     sourceSegmentId: 'seg_new_users_setup_dropoff',
     criteria: {
       retentionStages: [RetentionStage.NEW],
-      partnerId: null,
+      userIds: [],
       locales: ['en', 'es', 'pt'],
-      requiresPushOptIn: true,
     },
     suppression: {
       excludeConvertedUsers: true,
-      excludeRecentRecipients: true,
-    },
-    trigger: {
-      type: 'state_based',
+      excludeUsersWithoutPushOpens: false,
     },
   },
   seg_at_risk_wau: {
@@ -200,118 +216,164 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
     sourceSegmentId: 'seg_at_risk_wau',
     criteria: {
       retentionStages: [RetentionStage.AT_RISK_WAU],
-      partnerId: null,
+      userIds: [],
       locales: ['en', 'es', 'pt'],
-      requiresPushOptIn: true,
     },
     suppression: {
       excludeConvertedUsers: true,
-      excludeRecentRecipients: true,
-    },
-    trigger: {
-      type: 'state_based',
-    },
-  },
-  seg_template_match_kickoff: {
-    segmentSource: 'template_segment',
-    sourceSegmentId: 'seg_template_match_kickoff',
-    criteria: {
-      retentionStages: [RetentionStage.CURRENT, RetentionStage.REACTIVATED],
-      partnerId: null,
-      locales: ['en', 'es', 'pt'],
-      requiresPushOptIn: true,
-    },
-    suppression: {
-      excludeConvertedUsers: false,
-      excludeRecentRecipients: true,
-    },
-    trigger: {
-      type: 'event_based',
-      eventKey: 'favorited_match',
+      excludeUsersWithoutPushOpens: false,
     },
   },
 };
 
-const TEMPLATE_AUDIENCE_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
-  tpl_onboarding_recovery: {
-    segmentSource: 'template_segment',
-    sourceSegmentId: 'tpl_onboarding_recovery',
-    criteria: {
-      retentionStages: [RetentionStage.NEW],
-      partnerId: null,
-      locales: ['en', 'es', 'pt'],
-      requiresPushOptIn: true,
+function buildMultiStepContent(
+  firstTarget:
+    | 'continue_onboarding'
+    | 'open_match_center'
+    | 'open_rewards_wallet',
+  secondTarget:
+    | 'continue_onboarding'
+    | 'open_match_center'
+    | 'open_rewards_wallet'
+): CampaignDraft['content'] {
+  return {
+    step_1: {
+      ...createBlankStepLocaleMap(firstTarget),
+      en: {
+        title: 'Complete your setup, {{first_name}}',
+        body: 'Open SirBro now and finish the final onboarding steps.',
+        fallbackFirstName: 'there',
+        deeplinkTarget: firstTarget,
+      },
+      es: {
+        title: 'Completa tu configuracion, {{first_name}}',
+        body: 'Abre SirBro y termina los ultimos pasos del onboarding.',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: firstTarget,
+      },
+      pt: {
+        title: 'Conclua sua configuracao',
+        body: 'Abra o SirBro e finalize as etapas do onboarding.',
+        fallbackFirstName: '',
+        deeplinkTarget: firstTarget,
+      },
     },
-    suppression: {
-      excludeConvertedUsers: true,
-      excludeRecentRecipients: true,
+    step_2: {
+      ...createBlankStepLocaleMap(secondTarget),
+      en: {
+        title: 'Still one step left',
+        body: 'Come back and finish your setup journey.',
+        fallbackFirstName: 'there',
+        deeplinkTarget: secondTarget,
+      },
+      es: {
+        title: 'Aun falta un paso',
+        body: 'Vuelve y completa tu journey de setup.',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: secondTarget,
+      },
+      pt: {
+        title: 'Ainda falta um passo',
+        body: 'Volte e conclua sua jornada de setup.',
+        fallbackFirstName: '',
+        deeplinkTarget: secondTarget,
+      },
     },
-    trigger: {
-      type: 'state_based',
-    },
-  },
-  tpl_favorite_match_kickoff: {
-    segmentSource: 'template_segment',
-    sourceSegmentId: 'tpl_favorite_match_kickoff',
-    criteria: {
-      retentionStages: [RetentionStage.CURRENT, RetentionStage.REACTIVATED],
-      partnerId: null,
-      locales: ['en', 'es', 'pt'],
-      requiresPushOptIn: true,
-    },
-    suppression: {
-      excludeConvertedUsers: false,
-      excludeRecentRecipients: true,
-    },
-    trigger: {
-      type: 'event_based',
-      eventKey: 'favorited_match',
-    },
-  },
-};
+  };
+}
 
-const TEMPLATE_CONTENT_PRESETS: Record<
-  string,
-  Partial<Record<CampaignLocale, Partial<CampaignDraft['content'][CampaignLocale]>>>
-> = {
-  tpl_onboarding_recovery: {
-    en: {
-      title: 'Finish {{first_name}} setup',
-      body: 'Get back to SirBro and complete the final onboarding steps.',
-      fallbackFirstName: 'there',
-      deeplinkTarget: 'continue_onboarding',
-    },
-    es: {
-      title: 'Termina tu configuracion',
-      body: 'Vuelve a SirBro y completa los pasos finales del onboarding.',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: 'continue_onboarding',
-    },
-    pt: {
-      title: 'Conclua sua configuracao',
-      body: 'Volte ao SirBro e conclua as etapas finais do onboarding.',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: 'continue_onboarding',
-    },
-  },
-  tpl_favorite_match_kickoff: {
-    en: {
-      title: '{{favorite_team}} kicks off soon',
-      body: 'Jump into match center before kickoff and stay ahead of every play.',
-      deeplinkTarget: 'open_match_center',
-    },
-    es: {
-      title: '{{favorite_team}} juega pronto',
-      body: 'Entra al centro del partido antes del inicio y sigue cada jugada.',
-      deeplinkTarget: 'open_match_center',
-    },
-    pt: {
-      title: '{{favorite_team}} entra em campo ja',
-      body: 'Abra o match center antes do apito inicial e acompanhe tudo.',
-      deeplinkTarget: 'open_match_center',
+const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
+  {
+    id: 'tpl_onboarding_recovery',
+    name: 'Onboarding recovery',
+    description:
+      'Three-step recovery flow for new users who did not finish setup.',
+    source: 'shipped',
+    definition: {
+      name: 'Onboarding recovery',
+      goal: 'Recover onboarding completion',
+      channel: 'push',
+      audience: SAVED_SEGMENT_DEFINITIONS.seg_new_users_setup_dropoff,
+      trigger: {
+        type: 'state_based',
+        qualificationMode: 'when_user_matches_audience',
+        reentryCooldownHours: 24,
+      },
+      journey: {
+        steps: [createJourneyStep(1), createJourneyStep(2)],
+      },
+      content: buildMultiStepContent(
+        'continue_onboarding',
+        'continue_onboarding',
+      ),
     },
   },
-};
+  {
+    id: 'tpl_favorite_match_kickoff',
+    name: 'Favorite match kickoff',
+    description:
+      'Event-driven reminder before kickoff with a direct link into match center.',
+    source: 'shipped',
+    definition: {
+      name: 'Favorite match kickoff',
+      goal: 'Drive match-center opens',
+      channel: 'push',
+      audience: {
+        segmentSource: 'manual_rules',
+        sourceSegmentId: null,
+        criteria: {
+          retentionStages: [
+            RetentionStage.NEW,
+            RetentionStage.CURRENT,
+            RetentionStage.AT_RISK_WAU,
+            RetentionStage.AT_RISK_MAU,
+            RetentionStage.REACTIVATED,
+            RetentionStage.RESURRECTED,
+          ],
+          userIds: [],
+          locales: ['en', 'es', 'pt'],
+        },
+        suppression: {
+          excludeConvertedUsers: false,
+          excludeUsersWithoutPushOpens: false,
+        },
+      },
+      trigger: {
+        type: 'event_based',
+        eventKey: 'favorite_match_kickoff',
+        producerKey: 'channels_favorite_matches',
+        entryMode: 'first_eligible_event',
+        reentryCooldownHours: 24,
+      },
+      journey: {
+        steps: [{ ...createJourneyStep(1), delayMinutes: 0 }],
+      },
+      content: {
+        step_1: {
+          ...createBlankStepLocaleMap('open_match_center'),
+          en: {
+            title: '{{favorite_team}} kicks off soon',
+            body: 'Open match center before the first whistle.',
+            fallbackFirstName: 'there',
+            deeplinkTarget: 'open_match_center',
+          },
+          es: {
+            title: '{{favorite_team}} empieza pronto',
+            body: 'Abre el match center antes del pitazo inicial.',
+            fallbackFirstName: 'amigo',
+            deeplinkTarget: 'open_match_center',
+          },
+          pt: {
+            title: '{{favorite_team}} comeca em breve',
+            body: 'Abra o match center antes do apito inicial.',
+            fallbackFirstName: 'amigo',
+            deeplinkTarget: 'open_match_center',
+          },
+        },
+      },
+    },
+  },
+];
 
 /**
  * Creates the seeded overview response used by the overview screen.
@@ -334,7 +396,7 @@ export function createInitialCampaignsOverviewResponse(): CampaignsOverviewRespo
       page: 1,
       limit: 10,
       totalPages: 1,
-    }),
+    })
   ) as CampaignsOverviewResponse;
 }
 
@@ -342,6 +404,9 @@ export function createInitialCampaignsOverviewResponse(): CampaignsOverviewRespo
  * Creates the initial mutable draft map for seeded campaigns.
  */
 export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
+  const firstStep = createJourneyStep(1);
+  const secondStep = createJourneyStep(2);
+
   return JSON.parse(
     JSON.stringify({
       cmp_onboarding_not_completed: {
@@ -351,36 +416,18 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         channel: 'push',
         status: 'active',
         audience: SAVED_SEGMENT_DEFINITIONS.seg_new_users_setup_dropoff,
-        timing: {
-          sendMode: 'after_delay',
-          delayMinutes: 20,
-          scheduledAt: null,
-          timezoneMode: 'user_local',
-          sendWindowStart: '08:00',
-          sendWindowEnd: '22:00',
-          frequencyCapHours: 6,
-          stopOnGoalReached: true,
+        trigger: {
+          type: 'state_based',
+          qualificationMode: 'when_user_matches_audience',
+          reentryCooldownHours: 24,
         },
-        content: {
-          en: {
-            title: 'Complete your setup, {{first_name}}',
-            body: 'Open SirBro now and finish the final onboarding steps.',
-            fallbackFirstName: 'there',
-            deeplinkTarget: 'continue_onboarding',
-          },
-          es: {
-            title: 'Completa tu configuracion, {{first_name}}',
-            body: 'Abre SirBro y termina los ultimos pasos del onboarding.',
-            fallbackFirstName: 'amigo',
-            deeplinkTarget: 'continue_onboarding',
-          },
-          pt: {
-            title: 'Conclua sua configuracao',
-            body: 'Abra o SirBro e finalize as etapas do onboarding.',
-            fallbackFirstName: '',
-            deeplinkTarget: 'continue_onboarding',
-          },
+        journey: {
+          steps: [firstStep, secondStep],
         },
+        content: buildMultiStepContent(
+          'continue_onboarding',
+          'continue_onboarding'
+        ),
         updatedAt: '2026-04-16T11:48:00.000Z',
         createdBy: 'Natalia',
       },
@@ -390,35 +437,53 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         goal: 'Drive match-center opens',
         channel: 'push',
         status: 'paused',
-        audience: TEMPLATE_AUDIENCE_DEFINITIONS.tpl_favorite_match_kickoff,
-        timing: {
-          sendMode: 'after_delay',
-          delayMinutes: 15,
-          scheduledAt: null,
-          timezoneMode: 'user_local',
-          sendWindowStart: '08:00',
-          sendWindowEnd: '22:00',
-          frequencyCapHours: 24,
-          stopOnGoalReached: false,
+        audience: {
+          segmentSource: 'manual_rules',
+          sourceSegmentId: null,
+          criteria: {
+            retentionStages: [
+              RetentionStage.CURRENT,
+              RetentionStage.REACTIVATED,
+            ],
+            userIds: [],
+            locales: ['en', 'es', 'pt'],
+          },
+          suppression: {
+            excludeConvertedUsers: false,
+            excludeUsersWithoutPushOpens: false,
+          },
+        },
+        trigger: {
+          type: 'event_based',
+          eventKey: 'favorite_match_kickoff',
+          producerKey: 'channels_favorite_matches',
+          entryMode: 'first_eligible_event',
+          reentryCooldownHours: 24,
+        },
+        journey: {
+          steps: [firstStep],
         },
         content: {
-          en: {
-            title: '{{favorite_team}} kicks off in 15 min',
-            body: 'Go to match center before the first whistle.',
-            fallbackFirstName: 'there',
-            deeplinkTarget: 'open_match_center',
-          },
-          es: {
-            title: '{{favorite_team}} empieza en 15 min',
-            body: 'Ve al centro del partido antes del pitazo inicial.',
-            fallbackFirstName: 'amigo',
-            deeplinkTarget: 'open_match_center',
-          },
-          pt: {
-            title: '{{favorite_team}} comeca em 15 min',
-            body: 'Abra o match center antes do apito inicial.',
-            fallbackFirstName: 'amigo',
-            deeplinkTarget: 'open_match_center',
+          step_1: {
+            ...createBlankStepLocaleMap('open_match_center'),
+            en: {
+              title: '{{favorite_team}} kicks off in 15 min',
+              body: 'Go to match center before the first whistle.',
+              fallbackFirstName: 'there',
+              deeplinkTarget: 'open_match_center',
+            },
+            es: {
+              title: '{{favorite_team}} empieza en 15 min',
+              body: 'Ve al centro del partido antes del pitazo inicial.',
+              fallbackFirstName: 'amigo',
+              deeplinkTarget: 'open_match_center',
+            },
+            pt: {
+              title: '{{favorite_team}} comeca em 15 min',
+              body: 'Abra o match center antes do apito inicial.',
+              fallbackFirstName: 'amigo',
+              deeplinkTarget: 'open_match_center',
+            },
           },
         },
         updatedAt: '2026-04-16T11:54:00.000Z',
@@ -430,51 +495,36 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
         goal: 'Retain at-risk weekly users',
         channel: 'push',
         status: 'active',
-        audience: {
-          segmentSource: 'manual_rules',
-          sourceSegmentId: null,
-          criteria: {
-            retentionStages: [RetentionStage.AT_RISK_WAU],
-            partnerId: null,
-            locales: ['en', 'es', 'pt'],
-            requiresPushOptIn: true,
-          },
-          suppression: {
-            excludeConvertedUsers: true,
-            excludeRecentRecipients: true,
-          },
-          trigger: {
-            type: 'state_based',
-          },
+        audience: SAVED_SEGMENT_DEFINITIONS.seg_at_risk_wau,
+        trigger: {
+          type: 'state_based',
+          qualificationMode: 'when_user_matches_audience',
+          reentryCooldownHours: 24,
         },
-        timing: {
-          sendMode: 'immediately',
-          delayMinutes: null,
-          scheduledAt: null,
-          timezoneMode: 'user_local',
-          sendWindowStart: '16:00',
-          sendWindowEnd: '19:00',
-          frequencyCapHours: 24,
-          stopOnGoalReached: true,
+        journey: {
+          steps: [firstStep],
         },
         content: {
-          en: {
-            title: 'Your next pick is waiting, {{first_name}}',
-            body: 'Open SirBro and catch up with the latest match insights.',
-            fallbackFirstName: 'there',
-            deeplinkTarget: 'open_match_center',
-          },
-          es: {
-            title: 'Tu siguiente pick te espera, {{first_name}}',
-            body: 'Abre SirBro y ponte al dia con los ultimos insights.',
-            fallbackFirstName: 'amigo',
-            deeplinkTarget: 'open_match_center',
-          },
-          pt: {
-            title: 'Seu proximo pick esta te esperando',
-            body: 'Abra o SirBro e veja os ultimos insights de partida.',
-            fallbackFirstName: '',
-            deeplinkTarget: 'open_match_center',
+          step_1: {
+            ...createBlankStepLocaleMap('open_match_center'),
+            en: {
+              title: 'Your next pick is waiting, {{first_name}}',
+              body: 'Open SirBro and catch up with the latest match insights.',
+              fallbackFirstName: 'there',
+              deeplinkTarget: 'open_match_center',
+            },
+            es: {
+              title: 'Tu siguiente pick te espera, {{first_name}}',
+              body: 'Abre SirBro y ponte al dia con los ultimos insights.',
+              fallbackFirstName: 'amigo',
+              deeplinkTarget: 'open_match_center',
+            },
+            pt: {
+              title: 'Seu proximo pick esta te esperando',
+              body: 'Abra o SirBro e veja os ultimos insights de partida.',
+              fallbackFirstName: '',
+              deeplinkTarget: 'open_match_center',
+            },
           },
         },
         updatedAt: '2026-04-16T11:32:00.000Z',
@@ -491,54 +541,50 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
           sourceSegmentId: null,
           criteria: {
             retentionStages: [RetentionStage.DEAD],
-            partnerId: null,
+            userIds: [],
             locales: ['en', 'es', 'pt'],
-            requiresPushOptIn: true,
           },
           suppression: {
             excludeConvertedUsers: true,
-            excludeRecentRecipients: true,
-          },
-          trigger: {
-            type: 'scheduled_recurring',
-            recurrenceRule:
-              'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=8;BYMINUTE=30',
+            excludeUsersWithoutPushOpens: false,
           },
         },
-        timing: {
-          sendMode: 'specific_datetime',
-          delayMinutes: null,
-          scheduledAt: '2026-04-17T08:30:00.000Z',
+        trigger: {
+          type: 'scheduled_recurring',
+          recurrenceRule:
+            'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=8;BYMINUTE=30',
           timezoneMode: 'user_local',
-          sendWindowStart: '08:00',
-          sendWindowEnd: '22:00',
-          frequencyCapHours: 48,
-          stopOnGoalReached: true,
+        },
+        journey: {
+          steps: [firstStep],
         },
         content: {
-          en: {
-            title: 'Come back for fresh rewards, {{first_name}}',
-            body: 'Open SirBro and see what changed since your last visit.',
-            fallbackFirstName: 'there',
-            deeplinkTarget: 'open_rewards_wallet',
-          },
-          es: {
-            title: 'Vuelve por nuevas recompensas, {{first_name}}',
-            body: 'Abre SirBro y descubre lo nuevo desde tu ultima visita.',
-            fallbackFirstName: 'amigo',
-            deeplinkTarget: 'open_rewards_wallet',
-          },
-          pt: {
-            title: 'Volte para novas recompensas',
-            body: 'Abra o SirBro e veja o que mudou desde sua ultima visita.',
-            fallbackFirstName: '',
-            deeplinkTarget: 'open_rewards_wallet',
+          step_1: {
+            ...createBlankStepLocaleMap('open_rewards_wallet'),
+            en: {
+              title: 'Come back for fresh rewards, {{first_name}}',
+              body: 'Open SirBro and see what changed since your last visit.',
+              fallbackFirstName: 'there',
+              deeplinkTarget: 'open_rewards_wallet',
+            },
+            es: {
+              title: 'Vuelve por nuevas recompensas, {{first_name}}',
+              body: 'Abre SirBro y descubre lo nuevo desde tu ultima visita.',
+              fallbackFirstName: 'amigo',
+              deeplinkTarget: 'open_rewards_wallet',
+            },
+            pt: {
+              title: 'Volte para novas recompensas',
+              body: 'Abra o SirBro e veja o que mudou desde sua ultima visita.',
+              fallbackFirstName: '',
+              deeplinkTarget: 'open_rewards_wallet',
+            },
           },
         },
         updatedAt: '2026-04-16T10:00:00.000Z',
         createdBy: 'CRM bot',
       },
-    }),
+    })
   ) as Record<string, CampaignDraft>;
 }
 
@@ -549,11 +595,11 @@ export function createInitialCampaignEditorCatalog(): CampaignEditorCatalog {
   return JSON.parse(
     JSON.stringify({
       savedSegments: SAVED_SEGMENTS,
-      templates: TEMPLATES,
+      scenarioTemplates: SCENARIO_TEMPLATES,
       tokens: TOKENS,
       deeplinkOptions: DEEPLINK_OPTIONS,
-      eventTriggers: EVENT_TRIGGERS,
-    }),
+      sourceEvents: SOURCE_EVENTS,
+    })
   ) as CampaignEditorCatalog;
 }
 
@@ -561,66 +607,11 @@ export function createInitialCampaignEditorCatalog(): CampaignEditorCatalog {
  * Creates the blank create-mode draft required by the implementation spec.
  */
 export function createEmptyCampaignDraft(): CampaignDraft {
-  return {
-    id: null,
-    name: '',
-    goal: '',
-    channel: 'push',
-    status: 'draft',
-    audience: {
-      segmentSource: 'saved_segment',
-      sourceSegmentId: 'seg_new_users_setup_dropoff',
-      criteria: {
-        retentionStages: [RetentionStage.NEW],
-        partnerId: null,
-        locales: ['en', 'es', 'pt'],
-        requiresPushOptIn: true,
-      },
-      suppression: {
-        excludeConvertedUsers: true,
-        excludeRecentRecipients: true,
-      },
-      trigger: {
-        type: 'state_based',
-      },
-    },
-    timing: {
-      sendMode: 'after_delay',
-      delayMinutes: 20,
-      scheduledAt: null,
-      timezoneMode: 'user_local',
-      sendWindowStart: '08:00',
-      sendWindowEnd: '22:00',
-      frequencyCapHours: 24,
-      stopOnGoalReached: true,
-    },
-    content: {
-      en: {
-        title: '',
-        body: '',
-        fallbackFirstName: '',
-        deeplinkTarget: 'continue_onboarding',
-      },
-      es: {
-        title: '',
-        body: '',
-        fallbackFirstName: '',
-        deeplinkTarget: 'continue_onboarding',
-      },
-      pt: {
-        title: '',
-        body: '',
-        fallbackFirstName: '',
-        deeplinkTarget: 'continue_onboarding',
-      },
-    },
-    updatedAt: null,
-    createdBy: 'spec-local-user',
-  };
+  return createDefaultEmptyCampaignDraft(createInitialCampaignEditorCatalog());
 }
 
 /**
- * Returns immutable saved segment definitions used to apply presets.
+ * Returns immutable saved segment definitions used by the lifecycle library.
  */
 export function createSavedSegmentDefinitionMap(): Record<
   string,
@@ -630,24 +621,4 @@ export function createSavedSegmentDefinitionMap(): Record<
     string,
     CampaignAudienceDefinition
   >;
-}
-
-/**
- * Returns immutable template definitions used to apply presets.
- */
-export function createTemplateAudienceDefinitionMap(): Record<
-  string,
-  CampaignAudienceDefinition
-> {
-  return JSON.parse(JSON.stringify(TEMPLATE_AUDIENCE_DEFINITIONS)) as Record<
-    string,
-    CampaignAudienceDefinition
-  >;
-}
-
-/**
- * Returns localized template content presets for the content step.
- */
-export function createTemplateContentPresetMap(): typeof TEMPLATE_CONTENT_PRESETS {
-  return JSON.parse(JSON.stringify(TEMPLATE_CONTENT_PRESETS)) as typeof TEMPLATE_CONTENT_PRESETS;
 }

@@ -15,6 +15,8 @@ import type {
   EstimateAudienceResponse,
   GetCampaignsOverviewParams,
   SaveSegmentRequest,
+  SaveTemplateRequest,
+  SaveTemplateResponse,
   ScheduleCampaignResponse,
   SendTestCampaignResponse,
   UpsertCampaignDraftRequest,
@@ -25,7 +27,6 @@ import {
   createInitialCampaignEditorCatalog,
   createInitialCampaignsOverviewResponse,
   createSavedSegmentDefinitionMap,
-  createTemplateAudienceDefinitionMap,
 } from '@/modules/campaigns/mock-data';
 import { type CampaignsRepository } from '@/modules/campaigns/repository';
 import { getCampaignLocaleReadiness } from '@/modules/campaigns/selectors';
@@ -36,9 +37,9 @@ interface MockCampaignsState {
   stats: ReturnType<typeof createInitialCampaignsOverviewResponse>['stats'];
   catalog: ReturnType<typeof createInitialCampaignEditorCatalog>;
   savedSegmentDefinitions: Record<string, CampaignAudienceDefinition>;
-  templateAudienceDefinitions: Record<string, CampaignAudienceDefinition>;
   campaignSequence: number;
   segmentSequence: number;
+  templateSequence: number;
   timestampOffsetMinutes: number;
 }
 
@@ -71,16 +72,18 @@ function createInitialState(): MockCampaignsState {
     stats: overview.stats,
     catalog: createInitialCampaignEditorCatalog(),
     savedSegmentDefinitions: createSavedSegmentDefinitionMap(),
-    templateAudienceDefinitions: createTemplateAudienceDefinitionMap(),
     campaignSequence: 1,
     segmentSequence: 1,
+    templateSequence: 1,
     timestampOffsetMinutes: 0,
   };
 }
 
 let state = createInitialState();
 
-function statusCountKey(status: CampaignStatus): keyof typeof state.stats | null {
+function statusCountKey(
+  status: CampaignStatus
+): keyof typeof state.stats | null {
   if (status === 'active') {
     return 'activeCampaigns';
   }
@@ -121,15 +124,23 @@ function nextSegmentId(): string {
   return identifier;
 }
 
+function nextTemplateId(): string {
+  const identifier = `tpl_local_${String(state.templateSequence).padStart(3, '0')}`;
+  state.templateSequence += 1;
+  return identifier;
+}
+
 function nextTimestampIso(stepMinutes: number): string {
   state.timestampOffsetMinutes += stepMinutes;
   const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
-  nextDate.setUTCMinutes(nextDate.getUTCMinutes() + state.timestampOffsetMinutes);
+  nextDate.setUTCMinutes(
+    nextDate.getUTCMinutes() + state.timestampOffsetMinutes
+  );
   return nextDate.toISOString();
 }
 
 function getAudienceEstimate(
-  audience: CampaignAudienceDefinition,
+  audience: CampaignAudienceDefinition
 ): EstimateAudienceResponse {
   const warnings: string[] = [];
   const uniqueStages = [...new Set(audience.criteria.retentionStages)];
@@ -148,7 +159,7 @@ function getAudienceEstimate(
       reachableUsers: 0,
       warnings: ['Select at least one locale.'],
       byRetentionStage: Object.fromEntries(
-        uniqueStages.map((stage) => [stage, STAGE_WEIGHTS[stage]]),
+        uniqueStages.map((stage) => [stage, STAGE_WEIGHTS[stage]])
       ) as Partial<Record<RetentionStage, number>>,
       byLocale: {},
     };
@@ -156,30 +167,26 @@ function getAudienceEstimate(
 
   const baseCount = uniqueStages.reduce(
     (sum, stage) => sum + STAGE_WEIGHTS[stage],
-    0,
+    0
   );
 
   let postStageCount = baseCount;
 
-  if (audience.criteria.partnerId !== null) {
-    postStageCount *= 0.4;
-  }
-
-  if (audience.criteria.requiresPushOptIn) {
-    postStageCount *= 0.92;
+  if (audience.criteria.userIds.length > 0) {
+    postStageCount = Math.min(postStageCount, audience.criteria.userIds.length);
   }
 
   if (audience.suppression.excludeConvertedUsers) {
     postStageCount *= 0.88;
   }
 
-  if (audience.suppression.excludeRecentRecipients) {
-    postStageCount *= 0.9;
+  if (audience.suppression.excludeUsersWithoutPushOpens) {
+    postStageCount *= 0.86;
   }
 
   const selectedLocaleShare = audience.criteria.locales.reduce(
     (sum, locale) => sum + LOCALE_SHARES[locale],
-    0,
+    0
   );
   const reachableUsers = Math.floor(postStageCount * selectedLocaleShare);
 
@@ -205,7 +212,7 @@ function getAudienceEstimate(
     reachableUsers,
     warnings,
     byRetentionStage: Object.fromEntries(
-      uniqueStages.map((stage) => [stage, STAGE_WEIGHTS[stage]]),
+      uniqueStages.map((stage) => [stage, STAGE_WEIGHTS[stage]])
     ) as Partial<Record<RetentionStage, number>>,
     byLocale,
   };
@@ -214,9 +221,12 @@ function getAudienceEstimate(
 function buildAudienceLabel(draft: CampaignDraft): string {
   const [primaryStage] = draft.audience.criteria.retentionStages;
 
-  if (draft.audience.segmentSource === 'saved_segment' && draft.audience.sourceSegmentId) {
+  if (
+    draft.audience.segmentSource === 'saved_segment' &&
+    draft.audience.sourceSegmentId
+  ) {
     const savedSegment = state.catalog.savedSegments.find(
-      (segment) => segment.id === draft.audience.sourceSegmentId,
+      (segment) => segment.id === draft.audience.sourceSegmentId
     );
     if (savedSegment) {
       return savedSegment.name;
@@ -243,36 +253,30 @@ function buildAudienceLabel(draft: CampaignDraft): string {
   }
 }
 
-function buildTimingSummary(draft: CampaignDraft, fallbackTimestamp: string | null): CampaignListItem['timing'] {
+function buildTimingSummary(
+  draft: CampaignDraft,
+  fallbackTimestamp: string | null
+): CampaignListItem['timing'] {
+  const firstStep = draft.journey.steps[0];
+  const delayMinutes = firstStep?.delayMinutes ?? 0;
+
   if (draft.status === 'paused') {
     return { label: 'Last send', timestamp: fallbackTimestamp };
   }
 
   if (draft.status === 'scheduled') {
-    if (draft.timing.sendMode === 'specific_datetime') {
-      return { label: 'First send', timestamp: draft.timing.scheduledAt };
+    if (draft.trigger.type === 'scheduled_recurring') {
+      return { label: 'First send', timestamp: '2026-04-17T08:30:00.000Z' };
     }
 
-    if (draft.timing.sendMode === 'after_delay') {
-      const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
-      nextDate.setUTCMinutes(nextDate.getUTCMinutes() + (draft.timing.delayMinutes ?? 0));
-      return { label: 'First send', timestamp: nextDate.toISOString() };
-    }
-
-    return { label: 'First send', timestamp: MOCK_TIME_ANCHOR_ISO };
-  }
-
-  if (draft.timing.sendMode === 'specific_datetime') {
-    return { label: 'Specific date', timestamp: draft.timing.scheduledAt };
-  }
-
-  if (draft.timing.sendMode === 'after_delay') {
     const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
-    nextDate.setUTCMinutes(nextDate.getUTCMinutes() + (draft.timing.delayMinutes ?? 0));
-    return { label: 'Next send', timestamp: nextDate.toISOString() };
+    nextDate.setUTCMinutes(nextDate.getUTCMinutes() + delayMinutes);
+    return { label: 'First send', timestamp: nextDate.toISOString() };
   }
 
-  return { label: 'Next send', timestamp: MOCK_TIME_ANCHOR_ISO };
+  const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
+  nextDate.setUTCMinutes(nextDate.getUTCMinutes() + delayMinutes);
+  return { label: 'Next send', timestamp: nextDate.toISOString() };
 }
 
 function formatCreatedBy(createdBy: string | null): string {
@@ -288,7 +292,9 @@ function formatCreatedBy(createdBy: string | null): string {
 
 function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
   const estimate = getAudienceEstimate(draft.audience);
-  const existingItemIndex = state.overviewItems.findIndex((item) => item.id === draft.id);
+  const existingItemIndex = state.overviewItems.findIndex(
+    (item) => item.id === draft.id
+  );
   const existingItem =
     existingItemIndex >= 0 ? state.overviewItems[existingItemIndex] : null;
 
@@ -298,14 +304,14 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
     goal: draft.goal,
     channel: draft.channel,
     status: draft.status,
-    entryTriggerType: draft.audience.trigger.type,
+    entryTriggerType: draft.trigger.type,
     audience: {
       estimate: estimate.reachableUsers,
       label: buildAudienceLabel(draft),
     },
     timing: buildTimingSummary(
       draft,
-      existingItem?.timing.timestamp ?? draft.updatedAt,
+      existingItem?.timing.timestamp ?? draft.updatedAt
     ),
     progress: existingItem?.progress ?? {
       sentCount: 0,
@@ -317,7 +323,8 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
       value: draft.goal,
     },
     owner: {
-      ownerName: existingItem?.owner.ownerName ?? formatCreatedBy(draft.createdBy),
+      ownerName:
+        existingItem?.owner.ownerName ?? formatCreatedBy(draft.createdBy),
       activityLabel,
     },
     updatedAt: draft.updatedAt ?? nextTimestampIso(1),
@@ -331,7 +338,13 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
   }
 }
 
-function toDraft(id: string, input: UpsertCampaignDraftRequest, status: CampaignDraft['status'], createdBy: string | null, updatedAt: string): CampaignDraft {
+function toDraft(
+  id: string,
+  input: UpsertCampaignDraftRequest,
+  status: CampaignDraft['status'],
+  createdBy: string | null,
+  updatedAt: string
+): CampaignDraft {
   return {
     id,
     name: input.name,
@@ -339,7 +352,8 @@ function toDraft(id: string, input: UpsertCampaignDraftRequest, status: Campaign
     channel: input.channel,
     status,
     audience: clone(input.audience),
-    timing: clone(input.timing),
+    trigger: clone(input.trigger),
+    journey: clone(input.journey),
     content: clone(input.content),
     updatedAt,
     createdBy,
@@ -354,9 +368,7 @@ export function resetMockCampaignsRepository() {
 }
 
 export const mockCampaignsRepository: CampaignsRepository = {
-  async getCampaignsOverview(
-    params: GetCampaignsOverviewParams,
-  ) {
+  async getCampaignsOverview(params: GetCampaignsOverviewParams) {
     const normalizedSearch = params.search.trim().toLowerCase();
 
     const filteredItems = state.overviewItems.filter((item) => {
@@ -379,10 +391,12 @@ export const mockCampaignsRepository: CampaignsRepository = {
         (params.quickView === 'recent_drafts' && item.status === 'draft') ||
         (params.quickView === 'needs_attention' &&
           Object.values(item.localeReadiness).some(
-            (readiness) => readiness !== 'ready',
+            (readiness) => readiness !== 'ready'
           ));
 
-      return matchesSearch && matchesStatus && matchesTrigger && matchesQuickView;
+      return (
+        matchesSearch && matchesStatus && matchesTrigger && matchesQuickView
+      );
     });
 
     const startIndex = Math.max(0, (params.page - 1) * params.limit);
@@ -431,7 +445,13 @@ export const mockCampaignsRepository: CampaignsRepository = {
     }
 
     const updatedAt = nextTimestampIso(1);
-    const draft = toDraft(id, input, existing.status, existing.createdBy, updatedAt);
+    const draft = toDraft(
+      id,
+      input,
+      existing.status,
+      existing.createdBy,
+      updatedAt
+    );
 
     state.drafts[id] = draft;
     upsertOverviewItem(draft, 'Updated just now');
@@ -445,11 +465,17 @@ export const mockCampaignsRepository: CampaignsRepository = {
 
   async saveSegment(input: SaveSegmentRequest) {
     const estimate = getAudienceEstimate(input.audience);
+    const segmentId = nextSegmentId();
     const segment: CampaignSavedSegmentSummary = {
-      id: nextSegmentId(),
+      id: segmentId,
       name: input.name,
       description: `${estimate.reachableUsers.toLocaleString('en-US')} reachable · saved from builder`,
       audienceEstimate: estimate.reachableUsers,
+      audienceDefinition: clone({
+        ...input.audience,
+        segmentSource: 'saved_segment',
+        sourceSegmentId: segmentId,
+      }),
       source: 'saved_segment',
     };
 
@@ -463,17 +489,39 @@ export const mockCampaignsRepository: CampaignsRepository = {
     return { segment: clone(segment) };
   },
 
-  async sendTestCampaign(
-    id: string,
-    input,
-  ): Promise<SendTestCampaignResponse> {
+  async saveTemplate(input: SaveTemplateRequest): Promise<SaveTemplateResponse> {
+    const template = {
+      id: nextTemplateId(),
+      name: input.name,
+      description:
+        input.description?.trim() || 'Saved from the current campaign builder.',
+      definition: clone(input.definition),
+      source: 'saved' as const,
+    };
+
+    state.catalog.scenarioTemplates = [
+      template,
+      ...state.catalog.scenarioTemplates,
+    ];
+
+    return { template: clone(template) };
+  },
+
+  async sendTestCampaign(id, input): Promise<SendTestCampaignResponse> {
     const draft = state.drafts[id];
 
     if (!draft) {
       throw new Error('Campaign not found');
     }
 
-    const readiness = getCampaignLocaleReadiness(draft.content);
+    const firstStepKey = draft.journey.steps[0]?.stepKey;
+    if (!firstStepKey) {
+      throw new Error('Campaign journey is empty');
+    }
+
+    const readiness = getCampaignLocaleReadiness({
+      [firstStepKey]: draft.content[firstStepKey],
+    });
     const warnings =
       readiness[input.locale] === 'ready'
         ? []
@@ -485,7 +533,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async scheduleCampaign(id: string): Promise<ScheduleCampaignResponse> {
+  async scheduleCampaign(id): Promise<ScheduleCampaignResponse> {
     const draft = state.drafts[id];
 
     if (!draft) {
@@ -502,17 +550,14 @@ export const mockCampaignsRepository: CampaignsRepository = {
       incrementStatusCounts(previousStatus, 'scheduled');
     }
 
-    let firstSendAt = MOCK_TIME_ANCHOR_ISO;
-
-    if (updatedDraft.timing.sendMode === 'specific_datetime') {
-      firstSendAt = updatedDraft.timing.scheduledAt ?? MOCK_TIME_ANCHOR_ISO;
-    } else if (updatedDraft.timing.sendMode === 'after_delay') {
-      const nextDate = new Date(MOCK_TIME_ANCHOR_ISO);
-      nextDate.setUTCMinutes(
-        nextDate.getUTCMinutes() + (updatedDraft.timing.delayMinutes ?? 0),
-      );
-      firstSendAt = nextDate.toISOString();
-    }
+    const firstStep = updatedDraft.journey.steps[0];
+    const firstSendAt =
+      updatedDraft.trigger.type === 'scheduled_recurring'
+        ? '2026-04-17T08:30:00.000Z'
+        : new Date(
+            new Date(MOCK_TIME_ANCHOR_ISO).getTime() +
+              (firstStep?.delayMinutes ?? 0) * 60_000
+          ).toISOString();
 
     upsertOverviewItem(updatedDraft, 'Scheduled just now');
 
@@ -522,7 +567,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async archiveCampaign(id: string): Promise<ArchiveCampaignResponse> {
+  async archiveCampaign(id): Promise<ArchiveCampaignResponse> {
     const draft = state.drafts[id];
 
     if (!draft) {

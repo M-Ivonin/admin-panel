@@ -10,6 +10,7 @@ import {
   getCampaignEditorCatalog,
   getCampaignsOverview,
   saveCampaignSegment,
+  saveCampaignTemplate,
   scheduleCampaign,
   sendCampaignTest,
   updateCampaignDraft,
@@ -25,6 +26,8 @@ import type {
   GetCampaignsOverviewParams,
   SaveSegmentRequest,
   SaveSegmentResponse,
+  SaveTemplateRequest,
+  SaveTemplateResponse,
   ScheduleCampaignRequest,
   ScheduleCampaignResponse,
   SendTestCampaignRequest,
@@ -57,6 +60,10 @@ export type SaveCampaignSegmentMethod = (
   input: SaveSegmentRequest,
 ) => Promise<SaveSegmentResponse>;
 
+export type SaveCampaignTemplateMethod = (
+  input: SaveTemplateRequest,
+) => Promise<SaveTemplateResponse>;
+
 export type SendCampaignTestMethod = (
   id: string,
   input: SendTestCampaignRequest,
@@ -80,6 +87,7 @@ export interface CampaignsRepository {
   updateCampaignDraft: UpdateCampaignDraftMethod;
   estimateAudience: EstimateCampaignAudienceMethod;
   saveSegment: SaveCampaignSegmentMethod;
+  saveTemplate: SaveCampaignTemplateMethod;
   sendTestCampaign: SendCampaignTestMethod;
   scheduleCampaign: ScheduleCampaignMethod;
   archiveCampaign: ArchiveCampaignMethod;
@@ -93,6 +101,7 @@ export const campaignsRepository: CampaignsRepository = {
   updateCampaignDraft,
   estimateAudience: estimateCampaignAudience,
   saveSegment: saveCampaignSegment,
+  saveTemplate: saveCampaignTemplate,
   sendTestCampaign: sendCampaignTest,
   scheduleCampaign,
   archiveCampaign,

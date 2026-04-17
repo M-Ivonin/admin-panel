@@ -14,6 +14,8 @@ import type {
   GetCampaignsOverviewParams,
   SaveSegmentRequest,
   SaveSegmentResponse,
+  SaveTemplateRequest,
+  SaveTemplateResponse,
   ScheduleCampaignRequest,
   ScheduleCampaignResponse,
   SendTestCampaignRequest,
@@ -164,6 +166,21 @@ export async function saveCampaignSegment(
   });
 
   return parseAdminResponse(response, 'Failed to save campaign segment');
+}
+
+/**
+ * Saves the current campaign definition as a reusable template.
+ */
+export async function saveCampaignTemplate(
+  input: SaveTemplateRequest,
+): Promise<SaveTemplateResponse> {
+  const response = await adminAuthFetch({
+    path: '/campaigns/admin/templates',
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return parseAdminResponse(response, 'Failed to save campaign template');
 }
 
 /**

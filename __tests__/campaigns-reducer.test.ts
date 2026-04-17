@@ -1,3 +1,4 @@
+import { createJourneyStep } from '@/modules/campaigns/defaults';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
 import {
   CampaignEditorStep,
@@ -6,7 +7,7 @@ import {
 } from '@/modules/campaigns/reducer';
 
 describe('campaignEditorReducer', () => {
-  it('changes segment source and trigger type through the shared draft', () => {
+  it('changes segment source and top-level trigger through the shared draft', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 
     const withManualSource = campaignEditorReducer(initialState, {
@@ -17,54 +18,75 @@ describe('campaignEditorReducer', () => {
 
     const withEventTrigger = campaignEditorReducer(withManualSource, {
       type: 'changeTrigger',
-      trigger: { type: 'event_based', eventKey: 'opened_app' },
+      trigger: {
+        type: 'event_based',
+        eventKey: 'app_opened',
+        producerKey: 'crm_source_events',
+        entryMode: 'first_eligible_event',
+        reentryCooldownHours: 24,
+      },
     });
 
     expect(withManualSource.draft.audience.segmentSource).toBe('manual_rules');
-    expect(withEventTrigger.draft.audience.trigger).toEqual({
+    expect(withEventTrigger.draft.trigger).toEqual({
       type: 'event_based',
-      eventKey: 'opened_app',
+      eventKey: 'app_opened',
+      producerKey: 'crm_source_events',
+      entryMode: 'first_eligible_event',
+      reentryCooldownHours: 24,
     });
     expect(withEventTrigger.isDirty).toBe(true);
   });
 
-  it('switches send mode inside the timing block', () => {
+  it('appends step_2 and step_3, then removes step_2 without rewriting surviving step keys', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 
-    const nextState = campaignEditorReducer(initialState, {
-      type: 'updateTiming',
-      patch: {
-        sendMode: 'specific_datetime',
-        scheduledAt: '2026-04-18T15:00:00.000Z',
-      },
+    const withStepTwo = campaignEditorReducer(initialState, {
+      type: 'appendJourneyStep',
+      step: createJourneyStep(2),
+      deeplinkTarget: 'continue_onboarding',
+    });
+    const withStepThree = campaignEditorReducer(withStepTwo, {
+      type: 'appendJourneyStep',
+      step: createJourneyStep(3),
+      deeplinkTarget: 'continue_onboarding',
+    });
+    const afterDelete = campaignEditorReducer(withStepThree, {
+      type: 'removeJourneyStep',
+      stepKey: 'step_2',
     });
 
-    expect(nextState.draft.timing.sendMode).toBe('specific_datetime');
-    expect(nextState.draft.timing.scheduledAt).toBe('2026-04-18T15:00:00.000Z');
-    expect(nextState.isDirty).toBe(true);
+    expect(withStepThree.draft.journey.steps.map((step) => step.stepKey)).toEqual([
+      'step_1',
+      'step_2',
+      'step_3',
+    ]);
+    expect(afterDelete.draft.journey.steps.map((step) => step.stepKey)).toEqual([
+      'step_1',
+      'step_3',
+    ]);
+    expect(afterDelete.draft.journey.steps.map((step) => step.order)).toEqual([
+      1,
+      2,
+    ]);
   });
 
-  it('inserts a token into locale content and keeps the state dirty', () => {
-    const initialState = createCampaignEditorState({
-      ...createEmptyCampaignDraft(),
-      content: {
-        en: {
-          ...createEmptyCampaignDraft().content.en,
-          title: 'Welcome back',
-        },
-        es: createEmptyCampaignDraft().content.es,
-        pt: createEmptyCampaignDraft().content.pt,
-      },
-    });
+  it('inserts a token into step-specific locale content and keeps the state dirty', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.content.step_1.en.title = 'Welcome back';
+    const initialState = createCampaignEditorState(draft);
 
     const nextState = campaignEditorReducer(initialState, {
       type: 'insertToken',
+      stepKey: 'step_1',
       locale: 'en',
       field: 'title',
       token: '{{first_name}}',
     });
 
-    expect(nextState.draft.content.en.title).toBe('Welcome back {{first_name}}');
+    expect(nextState.draft.content.step_1.en.title).toBe(
+      'Welcome back {{first_name}}',
+    );
     expect(nextState.isDirty).toBe(true);
   });
 

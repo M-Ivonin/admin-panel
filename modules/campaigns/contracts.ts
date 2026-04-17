@@ -25,19 +25,11 @@ export type CampaignEntryTriggerType =
   | 'event_based'
   | 'scheduled_recurring';
 
-export type CampaignEventTriggerKey = string;
-
-export type CampaignSendMode =
-  | 'immediately'
-  | 'after_delay'
-  | 'specific_datetime';
-
+export type CampaignQualificationMode = 'when_user_matches_audience';
+export type CampaignEventEntryMode = 'first_eligible_event';
 export type CampaignTimezoneMode = 'user_local';
 
-export type CampaignTokenKey =
-  | 'first_name'
-  | 'favorite_team'
-  | 'bonus_points';
+export type CampaignTokenKey = 'first_name' | 'favorite_team' | 'bonus_points';
 
 export type CampaignDeeplinkTarget =
   | 'continue_onboarding'
@@ -48,6 +40,17 @@ export type CampaignQuickView =
   | 'active_now'
   | 'needs_attention'
   | 'recent_drafts';
+
+export type CampaignSourceEventKey =
+  | 'app_opened'
+  | 'onboarding_completed'
+  | 'favorite_match_kickoff';
+
+export type CampaignSourceEventProducerKey =
+  | 'crm_source_events'
+  | 'channels_favorite_matches';
+
+export type CampaignJourneyExitRule = 'none' | 'stop_on_goal';
 
 export interface CampaignOverviewStats {
   activeCampaigns: number;
@@ -129,15 +132,6 @@ export interface CampaignSavedSegmentSummary {
   source: 'saved_segment' | 'template_segment';
 }
 
-export interface CampaignTemplateSummary {
-  id: string;
-  name: string;
-  description: string;
-  entryTriggerType: CampaignEntryTriggerType;
-  deeplinkTarget: CampaignDeeplinkTarget;
-  audienceDefinition?: CampaignAudienceDefinition;
-}
-
 export interface CampaignTokenDefinition {
   key: CampaignTokenKey;
   token: `{{${string}}}`;
@@ -152,70 +146,109 @@ export interface CampaignDeeplinkOption {
   path: string;
 }
 
-export interface CampaignEventTriggerOption {
-  key: CampaignEventTriggerKey;
+export interface CampaignSourceEventOption {
+  eventKey: CampaignSourceEventKey;
+  producerKey: CampaignSourceEventProducerKey;
   label: string;
   description: string;
 }
 
+export interface CampaignTemplateDefinition {
+  name: string;
+  goal: string;
+  channel: CampaignChannel;
+  audience: CampaignAudienceDefinition;
+  trigger: CampaignTriggerDefinition;
+  journey: CampaignJourneyDefinition;
+  content: CampaignStepContentMap;
+}
+
+export type CampaignScenarioTemplateSource = 'shipped' | 'saved';
+
+export interface CampaignScenarioTemplateSummary {
+  id: string;
+  name: string;
+  description: string;
+  definition: CampaignTemplateDefinition;
+  source: CampaignScenarioTemplateSource;
+}
+
 export interface CampaignEditorCatalog {
   savedSegments: CampaignSavedSegmentSummary[];
-  templates: CampaignTemplateSummary[];
+  scenarioTemplates: CampaignScenarioTemplateSummary[];
   tokens: CampaignTokenDefinition[];
   deeplinkOptions: CampaignDeeplinkOption[];
-  eventTriggers: CampaignEventTriggerOption[];
+  sourceEvents: CampaignSourceEventOption[];
 }
 
 export interface CampaignAudienceCriteria {
   retentionStages: RetentionStage[];
-  partnerId: string | null;
+  userIds: string[];
   locales: CampaignLocale[];
-  requiresPushOptIn: boolean;
 }
 
 export interface CampaignSuppressionRules {
   excludeConvertedUsers: boolean;
-  excludeRecentRecipients: boolean;
+  excludeUsersWithoutPushOpens: boolean;
 }
-
-export type CampaignEntryTriggerConfig =
-  | {
-      type: 'state_based';
-    }
-  | {
-      type: 'event_based';
-      eventKey: CampaignEventTriggerKey;
-    }
-  | {
-      type: 'scheduled_recurring';
-      recurrenceRule: string;
-    };
 
 export interface CampaignAudienceDefinition {
   segmentSource: CampaignSegmentSource;
   sourceSegmentId: string | null;
   criteria: CampaignAudienceCriteria;
   suppression: CampaignSuppressionRules;
-  trigger: CampaignEntryTriggerConfig;
 }
 
-export interface CampaignTimingRule {
-  sendMode: CampaignSendMode;
+export type CampaignTriggerDefinition =
+  | {
+      type: 'state_based';
+      qualificationMode: CampaignQualificationMode;
+      reentryCooldownHours: number | null;
+    }
+  | {
+      type: 'event_based';
+      eventKey: CampaignSourceEventKey;
+      producerKey: CampaignSourceEventProducerKey;
+      entryMode: CampaignEventEntryMode;
+      reentryCooldownHours: number | null;
+    }
+  | {
+      type: 'scheduled_recurring';
+      recurrenceRule: string;
+      timezoneMode: CampaignTimezoneMode;
+    };
+
+export type CampaignJourneyAnchor =
+  | { type: 'trigger' }
+  | { type: 'previous_step' };
+
+export interface CampaignJourneyStep {
+  stepKey: string;
+  order: number;
+  anchor: CampaignJourneyAnchor;
   delayMinutes: number | null;
-  scheduledAt: string | null;
-  timezoneMode: CampaignTimezoneMode;
+  sameLocalTimeNextDay: boolean;
   sendWindowStart: string;
   sendWindowEnd: string;
+  exitRule: CampaignJourneyExitRule;
   frequencyCapHours: number | null;
-  stopOnGoalReached: boolean;
 }
 
-export interface CampaignLocaleContent {
+export interface CampaignJourneyDefinition {
+  steps: CampaignJourneyStep[];
+}
+
+export interface CampaignStepLocaleContent {
   title: string;
   body: string;
   fallbackFirstName: string;
   deeplinkTarget: CampaignDeeplinkTarget;
 }
+
+export type CampaignStepContentMap = Record<
+  string,
+  Record<CampaignLocale, CampaignStepLocaleContent>
+>;
 
 export interface CampaignDraft {
   id: string | null;
@@ -224,8 +257,9 @@ export interface CampaignDraft {
   channel: CampaignChannel;
   status: CampaignStatus;
   audience: CampaignAudienceDefinition;
-  timing: CampaignTimingRule;
-  content: Record<CampaignLocale, CampaignLocaleContent>;
+  trigger: CampaignTriggerDefinition;
+  journey: CampaignJourneyDefinition;
+  content: CampaignStepContentMap;
   updatedAt: string | null;
   createdBy: string | null;
 }
@@ -248,6 +282,16 @@ export interface SaveSegmentRequest {
 
 export interface SaveSegmentResponse {
   segment: CampaignSavedSegmentSummary;
+}
+
+export interface SaveTemplateRequest {
+  name: string;
+  description?: string;
+  definition: UpsertCampaignDraftRequest;
+}
+
+export interface SaveTemplateResponse {
+  template: CampaignScenarioTemplateSummary;
 }
 
 export interface SendTestCampaignRequest {
@@ -282,6 +326,7 @@ export interface UpsertCampaignDraftRequest {
   goal: string;
   channel: 'push';
   audience: CampaignAudienceDefinition;
-  timing: CampaignTimingRule;
-  content: Record<CampaignLocale, CampaignLocaleContent>;
+  trigger: CampaignTriggerDefinition;
+  journey: CampaignJourneyDefinition;
+  content: CampaignStepContentMap;
 }

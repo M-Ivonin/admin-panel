@@ -1,4 +1,5 @@
 import { RetentionStage } from '@/lib/api/users';
+import { createJourneyStep } from '@/modules/campaigns/defaults';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
 import {
   canScheduleCampaign,
@@ -9,103 +10,139 @@ import {
 describe('campaign selectors', () => {
   it('returns a PT warning when localized content is incomplete', () => {
     const draft = createEmptyCampaignDraft();
-    draft.content.pt.title = 'Volte agora';
-    draft.content.pt.body = '';
+    draft.content.step_1.pt.title = 'Volte agora';
+    draft.content.step_1.pt.body = '';
 
     const readiness = getCampaignLocaleReadiness(draft.content);
 
     expect(readiness.pt).toBe('warning');
   });
 
-  it('fails validation when excludeRecentRecipients is enabled without a frequency cap', () => {
+  it('marks recurring campaigns invalid when the recurrence rule is missing', () => {
     const draft = createEmptyCampaignDraft();
-    draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
-    draft.timing.frequencyCapHours = null;
-    draft.content.en = {
-      title: 'Hi there',
-      body: 'Body',
-      fallbackFirstName: '',
-      deeplinkTarget: 'continue_onboarding',
-    };
-    draft.content.es = {
-      title: 'Hola',
-      body: 'Cuerpo',
-      fallbackFirstName: '',
-      deeplinkTarget: 'continue_onboarding',
-    };
-    draft.content.pt = {
-      title: 'Oi',
-      body: 'Corpo',
-      fallbackFirstName: '',
-      deeplinkTarget: 'continue_onboarding',
+    draft.name = 'Recurring';
+    draft.goal = 'Weekly check-in';
+    draft.trigger = {
+      type: 'scheduled_recurring',
+      recurrenceRule: '',
+      timezoneMode: 'user_local',
     };
 
     const summary = getCampaignValidationSummary(draft);
 
     expect(summary.errors).toContain(
-      'Frequency cap hours are required when excluding recent recipients.',
+      'Recurring campaigns require an RFC5545 RRULE.'
     );
-  });
-
-  it('marks recurring campaigns invalid when the recurrence rule is missing', () => {
-    const draft = createEmptyCampaignDraft();
-    draft.name = 'Recurring';
-    draft.goal = 'Weekly check-in';
-    draft.audience.trigger = {
-      type: 'scheduled_recurring',
-      recurrenceRule: '',
-    };
-
-    const summary = getCampaignValidationSummary(draft);
-
-    expect(summary.errors).toContain('Recurring campaigns require an RFC5545 RRULE.');
   });
 
   it('warns when {{first_name}} is used without a locale fallback', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Token test';
     draft.goal = 'Validate fallback';
-    draft.content.en.title = 'Hello {{first_name}}';
-    draft.content.en.body = 'Welcome back';
-    draft.content.es.title = 'Hola';
-    draft.content.es.body = 'Bienvenido';
-    draft.content.pt.title = 'Ola';
-    draft.content.pt.body = 'Bem-vindo';
+    draft.content.step_1.en.title = 'Hello {{first_name}}';
+    draft.content.step_1.en.body = 'Welcome back';
+    draft.content.step_1.es.title = 'Hola';
+    draft.content.step_1.es.body = 'Bienvenido';
+    draft.content.step_1.pt.title = 'Ola';
+    draft.content.step_1.pt.body = 'Bem-vindo';
 
     const summary = getCampaignValidationSummary(draft);
 
     expect(summary.warnings).toContain(
-      'Every locale using {{first_name}} needs a fallback value.',
+      'Every locale using {{first_name}} needs a fallback value.'
     );
   });
 
-  it('enables scheduling once required content and validations are complete', () => {
+  it('blocks scheduling when any selected locale is missing for any journey step', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
     draft.goal = 'Recover onboarding completion';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
-    draft.audience.criteria.locales = ['en', 'es', 'pt'];
-    draft.content.en = {
+    draft.audience.criteria.locales = ['en', 'es'];
+    draft.journey.steps = [createJourneyStep(1), createJourneyStep(2)];
+    draft.content.step_2 = {
+      en: {
+        title: 'Second step',
+        body: 'Ready',
+        fallbackFirstName: 'there',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      es: {
+        title: '',
+        body: '',
+        fallbackFirstName: '',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      pt: {
+        title: '',
+        body: '',
+        fallbackFirstName: '',
+        deeplinkTarget: 'continue_onboarding',
+      },
+    };
+    draft.content.step_1.en = {
       title: 'Hello {{first_name}}',
       body: 'Finish setup',
       fallbackFirstName: 'there',
       deeplinkTarget: 'continue_onboarding',
     };
-    draft.content.es = {
+    draft.content.step_1.es = {
       title: 'Hola {{first_name}}',
       body: 'Completa tu setup',
       fallbackFirstName: 'amigo',
       deeplinkTarget: 'continue_onboarding',
     };
-    draft.content.pt = {
-      title: 'Ola {{first_name}}',
-      body: 'Conclua seu setup',
-      fallbackFirstName: 'amigo',
-      deeplinkTarget: 'continue_onboarding',
+
+    expect(canScheduleCampaign(draft)).toBe(false);
+  });
+
+  it('enables scheduling once required content is ready across every step', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.audience.criteria.retentionStages = [RetentionStage.NEW];
+    draft.audience.criteria.locales = ['en', 'es', 'pt'];
+    draft.journey.steps = [createJourneyStep(1), createJourneyStep(2)];
+    draft.content.step_1 = {
+      en: {
+        title: 'Hello {{first_name}}',
+        body: 'Finish setup',
+        fallbackFirstName: 'there',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      es: {
+        title: 'Hola {{first_name}}',
+        body: 'Completa tu setup',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      pt: {
+        title: 'Ola {{first_name}}',
+        body: 'Conclua seu setup',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: 'continue_onboarding',
+      },
     };
-    draft.timing.sendMode = 'specific_datetime';
-    draft.timing.scheduledAt = '2026-04-18T15:00:00.000Z';
+    draft.content.step_2 = {
+      en: {
+        title: 'Second step',
+        body: 'Back again',
+        fallbackFirstName: 'there',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      es: {
+        title: 'Segundo paso',
+        body: 'Vuelve otra vez',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: 'continue_onboarding',
+      },
+      pt: {
+        title: 'Segundo passo',
+        body: 'Volte mais uma vez',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: 'continue_onboarding',
+      },
+    };
 
     expect(canScheduleCampaign(draft)).toBe(true);
   });

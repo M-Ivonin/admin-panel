@@ -7,6 +7,7 @@ import {
   getCampaignEditorCatalog,
   getCampaignsOverview,
   saveCampaignSegment,
+  saveCampaignTemplate,
   scheduleCampaign,
   sendCampaignTest,
   updateCampaignDraft,
@@ -43,17 +44,16 @@ describe('campaigns API helpers', () => {
     });
   });
 
-  it('calls the expected paths and methods for catalog, draft, and action helpers', async () => {
+  it('serializes trigger, journey, and per-step content for create/update calls', async () => {
     const draft = createEmptyCampaignDraft();
 
-    await getCampaignEditorCatalog();
-    await getCampaignDraft('cmp_onboarding_not_completed');
     await createCampaignDraft({
       name: draft.name,
       goal: draft.goal,
       channel: draft.channel,
       audience: draft.audience,
-      timing: draft.timing,
+      trigger: draft.trigger,
+      journey: draft.journey,
       content: draft.content,
     });
     await updateCampaignDraft('cmp_onboarding_not_completed', {
@@ -61,13 +61,61 @@ describe('campaigns API helpers', () => {
       goal: draft.goal,
       channel: draft.channel,
       audience: draft.audience,
-      timing: draft.timing,
+      trigger: draft.trigger,
+      journey: draft.journey,
       content: draft.content,
     });
+
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(1, {
+      path: '/campaigns/admin',
+      method: 'POST',
+      body: JSON.stringify({
+        name: draft.name,
+        goal: draft.goal,
+        channel: draft.channel,
+        audience: draft.audience,
+        trigger: draft.trigger,
+        journey: draft.journey,
+        content: draft.content,
+      }),
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(2, {
+      path: '/campaigns/admin/cmp_onboarding_not_completed',
+      method: 'PUT',
+      body: JSON.stringify({
+        name: draft.name,
+        goal: draft.goal,
+        channel: draft.channel,
+        audience: draft.audience,
+        trigger: draft.trigger,
+        journey: draft.journey,
+        content: draft.content,
+      }),
+    });
+  });
+
+  it('calls the expected paths and methods for catalog, draft, and action helpers', async () => {
+    const draft = createEmptyCampaignDraft();
+
+    await getCampaignEditorCatalog();
+    await getCampaignDraft('cmp_onboarding_not_completed');
     await estimateCampaignAudience({ audience: draft.audience });
     await saveCampaignSegment({
       name: 'Saved from test',
       audience: draft.audience,
+    });
+    await saveCampaignTemplate({
+      name: 'Template from test',
+      description: 'Reusable scenario',
+      definition: {
+        name: draft.name,
+        goal: draft.goal,
+        channel: draft.channel,
+        audience: draft.audience,
+        trigger: draft.trigger,
+        journey: draft.journey,
+        content: draft.content,
+      },
     });
     await sendCampaignTest('cmp_onboarding_not_completed', {
       recipients: ['spec@local.test'],
@@ -85,35 +133,11 @@ describe('campaigns API helpers', () => {
       method: 'GET',
     });
     expect(adminAuthFetch).toHaveBeenNthCalledWith(3, {
-      path: '/campaigns/admin',
-      method: 'POST',
-      body: JSON.stringify({
-        name: draft.name,
-        goal: draft.goal,
-        channel: draft.channel,
-        audience: draft.audience,
-        timing: draft.timing,
-        content: draft.content,
-      }),
-    });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(4, {
-      path: '/campaigns/admin/cmp_onboarding_not_completed',
-      method: 'PUT',
-      body: JSON.stringify({
-        name: draft.name,
-        goal: draft.goal,
-        channel: draft.channel,
-        audience: draft.audience,
-        timing: draft.timing,
-        content: draft.content,
-      }),
-    });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(5, {
       path: '/campaigns/admin/estimate-audience',
       method: 'POST',
       body: JSON.stringify({ audience: draft.audience }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(6, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(4, {
       path: '/campaigns/admin/segments',
       method: 'POST',
       body: JSON.stringify({
@@ -121,7 +145,24 @@ describe('campaigns API helpers', () => {
         audience: draft.audience,
       }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(5, {
+      path: '/campaigns/admin/templates',
+      method: 'POST',
+      body: JSON.stringify({
+        name: 'Template from test',
+        description: 'Reusable scenario',
+        definition: {
+          name: draft.name,
+          goal: draft.goal,
+          channel: draft.channel,
+          audience: draft.audience,
+          trigger: draft.trigger,
+          journey: draft.journey,
+          content: draft.content,
+        },
+      }),
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(6, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/send-test',
       method: 'POST',
       body: JSON.stringify({
@@ -129,12 +170,12 @@ describe('campaigns API helpers', () => {
         locale: 'en',
       }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/schedule',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(9, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/archive',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),

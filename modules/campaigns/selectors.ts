@@ -5,10 +5,10 @@
 import { RetentionStage } from '@/lib/api/users';
 import type {
   CampaignDraft,
-  CampaignEntryTriggerType,
+  CampaignJourneyStep,
   CampaignLocale,
-  CampaignLocaleContent,
   CampaignReadiness,
+  CampaignStepLocaleContent,
 } from '@/modules/campaigns/contracts';
 import { CampaignEditorStep } from '@/modules/campaigns/reducer';
 
@@ -18,12 +18,14 @@ export interface CampaignValidationSummary {
   errors: string[];
   warnings: string[];
   readiness: Record<CampaignLocale, CampaignReadiness>;
+  stepReadiness: Record<string, Record<CampaignLocale, CampaignReadiness>>;
 }
 
 export interface CampaignReviewModel {
   basics: Array<{ label: string; value: string }>;
   audience: Array<{ label: string; value: string }>;
-  timing: Array<{ label: string; value: string }>;
+  trigger: Array<{ label: string; value: string }>;
+  journey: Array<{ label: string; value: string }>;
   content: Array<{ label: string; value: string; tone: 'default' | 'warning' }>;
   launchPlan: string[];
   preflightChecks: Array<{
@@ -42,20 +44,41 @@ function hasMeaningfulText(value: string): boolean {
   return value.trim().length > 0;
 }
 
+function combineReadiness(
+  left: CampaignReadiness,
+  right: CampaignReadiness
+): CampaignReadiness {
+  if (left === 'missing' || right === 'missing') {
+    return 'missing';
+  }
+
+  if (left === 'warning' || right === 'warning') {
+    return 'warning';
+  }
+
+  return 'ready';
+}
+
 function getLocaleWarnings(
   locale: CampaignLocale,
-  content: CampaignLocaleContent,
+  stepKey: string,
+  content: CampaignStepLocaleContent
 ): string[] {
   const warnings: string[] = [];
-  const usedTokens = [...extractTokens(content.title), ...extractTokens(content.body)];
+  const usedTokens = [
+    ...extractTokens(content.title),
+    ...extractTokens(content.body),
+  ];
 
   if (!hasMeaningfulText(content.title) && !hasMeaningfulText(content.body)) {
-    warnings.push(`Locale ${locale.toUpperCase()} is empty.`);
+    warnings.push(`Step ${stepKey} · locale ${locale.toUpperCase()} is empty.`);
     return warnings;
   }
 
   if (!hasMeaningfulText(content.title) || !hasMeaningfulText(content.body)) {
-    warnings.push(`Locale ${locale.toUpperCase()} still needs title and body copy.`);
+    warnings.push(
+      `Step ${stepKey} · locale ${locale.toUpperCase()} still needs title and body copy.`
+    );
   }
 
   if (
@@ -63,7 +86,7 @@ function getLocaleWarnings(
     !hasMeaningfulText(content.fallbackFirstName)
   ) {
     warnings.push(
-      `Locale ${locale.toUpperCase()} uses {{first_name}} without fallbackFirstName.`,
+      `Step ${stepKey} · locale ${locale.toUpperCase()} uses {{first_name}} without fallbackFirstName.`
     );
   }
 
@@ -91,53 +114,49 @@ function formatRetentionStage(stage: RetentionStage): string {
   }
 }
 
-function formatTrigger(type: CampaignEntryTriggerType): string {
-  switch (type) {
-    case 'state_based':
-      return 'State based';
-    case 'event_based':
-      return 'Event based';
-    case 'scheduled_recurring':
-      return 'Scheduled recurring';
-    default:
-      return type;
+function formatTrigger(draft: CampaignDraft): string {
+  if (draft.trigger.type === 'state_based') {
+    return 'State based';
   }
+
+  if (draft.trigger.type === 'event_based') {
+    return 'Source event';
+  }
+
+  return 'Scheduled';
 }
 
-function formatSendMode(draft: CampaignDraft): string {
-  if (draft.timing.sendMode === 'immediately') {
-    return 'Immediately';
+function describeTriggerDetails(draft: CampaignDraft): string {
+  if (draft.trigger.type === 'state_based') {
+    return `Qualification: when user matches audience · re-entry ${draft.trigger.reentryCooldownHours ?? 'none'}h`;
   }
 
-  if (draft.timing.sendMode === 'after_delay') {
-    return `After ${draft.timing.delayMinutes ?? 0} min`;
+  if (draft.trigger.type === 'event_based') {
+    return `${draft.trigger.eventKey} via ${draft.trigger.producerKey}`;
   }
 
-  if (!draft.timing.scheduledAt) {
-    return 'Specific date not set';
-  }
+  return `${draft.trigger.recurrenceRule || 'RRULE missing'} · user local`;
+}
 
-  return new Date(draft.timing.scheduledAt).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function describeJourneyStep(step: CampaignJourneyStep): string {
+  return `Step ${step.order} · ${step.stepKey} · ${step.delayMinutes ?? 0} min · ${step.sendWindowStart}-${step.sendWindowEnd}`;
 }
 
 /**
- * Derives locale readiness from localized content only.
+ * Derives locale readiness from one localized step-content map.
  */
-export function getCampaignLocaleReadiness(
-  content: CampaignDraft['content'],
+export function getCampaignStepLocaleReadiness(
+  content: Record<CampaignLocale, CampaignStepLocaleContent>
 ): Record<CampaignLocale, CampaignReadiness> {
   return (Object.keys(content) as CampaignLocale[]).reduce(
     (accumulator, locale) => {
       const localeContent = content[locale];
-      const warnings = getLocaleWarnings(locale, localeContent);
+      const warnings = getLocaleWarnings(locale, 'content', localeContent);
 
-      if (!hasMeaningfulText(localeContent.title) && !hasMeaningfulText(localeContent.body)) {
+      if (
+        !hasMeaningfulText(localeContent.title) &&
+        !hasMeaningfulText(localeContent.body)
+      ) {
         accumulator[locale] = 'missing';
       } else if (warnings.length > 0) {
         accumulator[locale] = 'warning';
@@ -147,39 +166,66 @@ export function getCampaignLocaleReadiness(
 
       return accumulator;
     },
-    {} as Record<CampaignLocale, CampaignReadiness>,
+    {} as Record<CampaignLocale, CampaignReadiness>
   );
 }
 
 /**
- * Lists all tokens referenced across locale content.
+ * Derives aggregate locale readiness across all journey steps.
+ */
+export function getCampaignLocaleReadiness(
+  content: CampaignDraft['content']
+): Record<CampaignLocale, CampaignReadiness> {
+  const aggregate: Record<CampaignLocale, CampaignReadiness> = {
+    en: 'ready',
+    es: 'ready',
+    pt: 'ready',
+  };
+
+  Object.values(content).forEach((stepContent) => {
+    const readiness = getCampaignStepLocaleReadiness(stepContent);
+    (Object.keys(readiness) as CampaignLocale[]).forEach((locale) => {
+      aggregate[locale] = combineReadiness(
+        aggregate[locale],
+        readiness[locale]
+      );
+    });
+  });
+
+  return aggregate;
+}
+
+/**
+ * Lists all tokens referenced across all step content blocks.
  */
 export function getUsedCampaignTokens(
-  draft: CampaignDraft,
+  draft: CampaignDraft
 ): Array<'{{first_name}}' | '{{favorite_team}}' | '{{bonus_points}}'> {
   const tokens = new Set<
     '{{first_name}}' | '{{favorite_team}}' | '{{bonus_points}}'
   >();
 
-  (Object.keys(draft.content) as CampaignLocale[]).forEach((locale) => {
-    extractTokens(draft.content[locale].title).forEach((token) => {
-      if (
-        token === '{{first_name}}' ||
-        token === '{{favorite_team}}' ||
-        token === '{{bonus_points}}'
-      ) {
-        tokens.add(token);
-      }
-    });
+  Object.values(draft.content).forEach((stepContent) => {
+    (Object.keys(stepContent) as CampaignLocale[]).forEach((locale) => {
+      extractTokens(stepContent[locale].title).forEach((token) => {
+        if (
+          token === '{{first_name}}' ||
+          token === '{{favorite_team}}' ||
+          token === '{{bonus_points}}'
+        ) {
+          tokens.add(token);
+        }
+      });
 
-    extractTokens(draft.content[locale].body).forEach((token) => {
-      if (
-        token === '{{first_name}}' ||
-        token === '{{favorite_team}}' ||
-        token === '{{bonus_points}}'
-      ) {
-        tokens.add(token);
-      }
+      extractTokens(stepContent[locale].body).forEach((token) => {
+        if (
+          token === '{{first_name}}' ||
+          token === '{{favorite_team}}' ||
+          token === '{{bonus_points}}'
+        ) {
+          tokens.add(token);
+        }
+      });
     });
   });
 
@@ -190,10 +236,40 @@ export function getUsedCampaignTokens(
  * Builds the canonical validation summary consumed by UI banners and action gates.
  */
 export function getCampaignValidationSummary(
-  draft: CampaignDraft,
+  draft: CampaignDraft
 ): CampaignValidationSummary {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const stepReadiness = Object.fromEntries(
+    Object.entries(draft.content).map(([stepKey, stepContent]) => [
+      stepKey,
+      (Object.keys(stepContent) as CampaignLocale[]).reduce(
+        (accumulator, locale) => {
+          const localeContent = stepContent[locale];
+          const localeWarnings = getLocaleWarnings(
+            locale,
+            stepKey,
+            localeContent
+          );
+          warnings.push(...localeWarnings);
+
+          if (
+            !hasMeaningfulText(localeContent.title) &&
+            !hasMeaningfulText(localeContent.body)
+          ) {
+            accumulator[locale] = 'missing';
+          } else if (localeWarnings.length > 0) {
+            accumulator[locale] = 'warning';
+          } else {
+            accumulator[locale] = 'ready';
+          }
+
+          return accumulator;
+        },
+        {} as Record<CampaignLocale, CampaignReadiness>
+      ),
+    ])
+  ) as Record<string, Record<CampaignLocale, CampaignReadiness>>;
   const readiness = getCampaignLocaleReadiness(draft.content);
   const usedTokens = getUsedCampaignTokens(draft);
 
@@ -213,57 +289,71 @@ export function getCampaignValidationSummary(
     errors.push('Select at least one locale.');
   }
 
-  if (
-    draft.audience.suppression.excludeRecentRecipients &&
-    draft.timing.frequencyCapHours === null
-  ) {
-    errors.push(
-      'Frequency cap hours are required when excluding recent recipients.',
-    );
+  if (draft.journey.steps.length === 0) {
+    errors.push('Add at least one journey step.');
   }
 
+  const stepKeySet = new Set<string>();
+  draft.journey.steps.forEach((step, index) => {
+    if (stepKeySet.has(step.stepKey)) {
+      errors.push(`Duplicate journey step key: ${step.stepKey}.`);
+    }
+    stepKeySet.add(step.stepKey);
+
+    const expectedAnchor = index === 0 ? 'trigger' : 'previous_step';
+    if (step.anchor.type !== expectedAnchor) {
+      errors.push(
+        `Step ${step.order} must anchor to ${expectedAnchor.replace('_', ' ')}.`
+      );
+    }
+  });
+
   if (
-    draft.audience.trigger.type === 'scheduled_recurring' &&
-    !draft.audience.trigger.recurrenceRule.trim()
+    draft.trigger.type === 'scheduled_recurring' &&
+    !draft.trigger.recurrenceRule.trim()
   ) {
     errors.push('Recurring campaigns require an RFC5545 RRULE.');
   }
 
   if (
-    draft.audience.trigger.type === 'event_based' &&
-    !draft.audience.trigger.eventKey.trim()
+    draft.trigger.type === 'event_based' &&
+    (!draft.trigger.eventKey.trim() || !draft.trigger.producerKey.trim())
   ) {
-    errors.push('Event-based campaigns require an event trigger.');
+    errors.push('Event-based campaigns require a shipped source event.');
   }
 
-  if (draft.timing.sendMode === 'after_delay' && (draft.timing.delayMinutes ?? 0) <= 0) {
-    errors.push('After-delay campaigns require a delay greater than zero.');
-  }
+  draft.journey.steps.forEach((step) => {
+    if (!draft.content[step.stepKey]) {
+      errors.push(`Missing content map for ${step.stepKey}.`);
+      return;
+    }
 
-  if (
-    draft.timing.sendMode === 'specific_datetime' &&
-    !draft.timing.scheduledAt
-  ) {
-    errors.push('Specific date & time is required for scheduled sends.');
-  }
-
-  (Object.keys(draft.content) as CampaignLocale[]).forEach((locale) => {
-    warnings.push(...getLocaleWarnings(locale, draft.content[locale]));
+    draft.audience.criteria.locales.forEach((locale) => {
+      if (stepReadiness[step.stepKey]?.[locale] === 'missing') {
+        errors.push(
+          `Step ${step.stepKey} is missing ${locale.toUpperCase()} content.`
+        );
+      }
+    });
   });
 
   if (
     usedTokens.includes('{{first_name}}') &&
-    (Object.keys(draft.content) as CampaignLocale[]).some(
-      (locale) =>
-        [...extractTokens(draft.content[locale].title), ...extractTokens(draft.content[locale].body)].includes(
-          '{{first_name}}',
-        ) && !hasMeaningfulText(draft.content[locale].fallbackFirstName),
+    Object.values(draft.content).some((stepContent) =>
+      (Object.keys(stepContent) as CampaignLocale[]).some(
+        (locale) =>
+          [
+            ...extractTokens(stepContent[locale].title),
+            ...extractTokens(stepContent[locale].body),
+          ].includes('{{first_name}}') &&
+          !hasMeaningfulText(stepContent[locale].fallbackFirstName)
+      )
     )
   ) {
     warnings.push('Every locale using {{first_name}} needs a fallback value.');
   }
 
-  return { errors, warnings, readiness };
+  return { errors, warnings, readiness, stepReadiness };
 }
 
 /**
@@ -271,7 +361,7 @@ export function getCampaignValidationSummary(
  */
 export function canContinueCampaignStep(
   step: CampaignEditorStep,
-  draft: CampaignDraft,
+  draft: CampaignDraft
 ): boolean {
   const validation = getCampaignValidationSummary(draft);
 
@@ -280,24 +370,22 @@ export function canContinueCampaignStep(
       hasMeaningfulText(draft.name) &&
       hasMeaningfulText(draft.goal) &&
       draft.audience.criteria.retentionStages.length > 0 &&
-      draft.audience.criteria.locales.length > 0 &&
-      !validation.errors.some((error) =>
-        error.includes('Event-based') || error.includes('Recurring'),
-      )
+      draft.audience.criteria.locales.length > 0
     );
   }
 
-  if (step === CampaignEditorStep.TIMING) {
-    return !validation.errors.some((error) =>
-      error.includes('Frequency cap') ||
-      error.includes('After-delay') ||
-      error.includes('Specific date'),
+  if (step === CampaignEditorStep.TRIGGER_JOURNEY) {
+    return !validation.errors.some(
+      (error) =>
+        error.includes('journey') ||
+        error.includes('source event') ||
+        error.includes('Recurring')
     );
   }
 
-  if (step === CampaignEditorStep.CONTENT) {
-    return Object.values(validation.readiness).every(
-      (readiness) => readiness !== 'missing',
+  if (step === CampaignEditorStep.STEP_CONTENT) {
+    return draft.audience.criteria.locales.every(
+      (locale) => validation.readiness[locale] !== 'missing'
     );
   }
 
@@ -308,11 +396,18 @@ export function canContinueCampaignStep(
  * Returns whether the draft is eligible for a test send.
  */
 export function canSendTestCampaign(draft: CampaignDraft): boolean {
-  const readiness = getCampaignLocaleReadiness(draft.content);
+  const firstStepKey = draft.journey.steps[0]?.stepKey;
+  if (!firstStepKey) {
+    return false;
+  }
+
+  const firstStepReadiness =
+    getCampaignValidationSummary(draft).stepReadiness[firstStepKey];
   return (
     hasMeaningfulText(draft.name) &&
     hasMeaningfulText(draft.goal) &&
-    Object.values(readiness).some((localeReadiness) => localeReadiness === 'ready')
+    Boolean(firstStepReadiness) &&
+    Object.values(firstStepReadiness).some((value) => value === 'ready')
   );
 }
 
@@ -325,7 +420,9 @@ export function canScheduleCampaign(draft: CampaignDraft): boolean {
     draft.status !== 'archived' &&
     draft.status !== 'scheduled' &&
     validation.errors.length === 0 &&
-    Object.values(validation.readiness).every((readiness) => readiness === 'ready')
+    draft.audience.criteria.locales.every(
+      (locale) => validation.readiness[locale] === 'ready'
+    )
   );
 }
 
@@ -339,8 +436,11 @@ export function canArchiveCampaign(draft: CampaignDraft): boolean {
 /**
  * Builds the review-step view model from the canonical draft.
  */
-export function buildCampaignReviewModel(draft: CampaignDraft): CampaignReviewModel {
+export function buildCampaignReviewModel(
+  draft: CampaignDraft
+): CampaignReviewModel {
   const validation = getCampaignValidationSummary(draft);
+  const selectedUserIds = draft.audience.criteria.userIds ?? [];
   const localeList = draft.audience.criteria.locales
     .map((locale) => locale.toUpperCase())
     .join(', ');
@@ -357,63 +457,64 @@ export function buildCampaignReviewModel(draft: CampaignDraft): CampaignReviewMo
         value: draft.audience.segmentSource.replace(/_/g, ' '),
       },
       {
-        label: 'Trigger',
-        value: formatTrigger(draft.audience.trigger.type),
-      },
-      {
         label: 'Retention',
         value:
           draft.audience.criteria.retentionStages
             .map((stage) => formatRetentionStage(stage))
             .join(', ') || 'Not set',
       },
+      {
+        label: 'Specific users',
+        value:
+          selectedUserIds.length > 0
+            ? `${selectedUserIds.length} selected`
+            : 'All matching users',
+      },
       { label: 'Locales', value: localeList || 'None selected' },
     ],
-    timing: [
-      { label: 'Timing', value: formatSendMode(draft) },
-      {
-        label: 'Quiet hours',
-        value: `${draft.timing.sendWindowStart} - ${draft.timing.sendWindowEnd}`,
-      },
-      {
-        label: 'Frequency cap',
-        value:
-          draft.timing.frequencyCapHours === null
-            ? 'Not set'
-            : `${draft.timing.frequencyCapHours} hr`,
-      },
+    trigger: [
+      { label: 'Trigger', value: formatTrigger(draft) },
+      { label: 'Details', value: describeTriggerDetails(draft) },
     ],
-    content: (Object.keys(validation.readiness) as CampaignLocale[]).map(
-      (locale) => ({
-        label: locale.toUpperCase(),
+    journey: draft.journey.steps.map((step) => ({
+      label: `Step ${step.order}`,
+      value: describeJourneyStep(step),
+    })),
+    content: draft.journey.steps.flatMap((step) =>
+      draft.audience.criteria.locales.map((locale) => ({
+        label: `${step.stepKey} · ${locale.toUpperCase()}`,
         value:
-          validation.readiness[locale] === 'ready'
+          validation.stepReadiness[step.stepKey]?.[locale] === 'ready'
             ? 'Ready'
-            : validation.readiness[locale] === 'warning'
+            : validation.stepReadiness[step.stepKey]?.[locale] === 'warning'
               ? 'Needs review'
               : 'Missing',
-        tone: validation.readiness[locale] === 'ready' ? 'default' : 'warning',
-      }),
+        tone:
+          validation.stepReadiness[step.stepKey]?.[locale] === 'ready'
+            ? 'default'
+            : 'warning',
+      }))
     ),
     launchPlan: [
       `${draft.audience.criteria.retentionStages.length} retention rule set(s)`,
+      selectedUserIds.length > 0
+        ? `${selectedUserIds.length} specific user(s) selected`
+        : 'No specific-user filter',
+      `${draft.journey.steps.length} journey step(s)`,
       `${draft.audience.criteria.locales.length} locale(s) targeted`,
-      `${draft.timing.sendWindowStart} - ${draft.timing.sendWindowEnd} delivery window`,
     ],
     preflightChecks: [
       {
         label: 'Content completeness',
         detail:
           validation.warnings[0] ??
-          'All localized content is ready for launch.',
+          'All selected locales are ready across every journey step.',
         status: validation.warnings.length > 0 ? 'warning' : 'ready',
       },
       {
-        label: 'Scheduling',
+        label: 'Trigger & journey',
         detail:
-          draft.timing.sendMode === 'specific_datetime'
-            ? 'Specific launch time is configured.'
-            : 'Launch timing is configured.',
+          validation.errors[0] ?? 'Trigger and journey rules are configured.',
         status: validation.errors.length > 0 ? 'warning' : 'ready',
       },
       {
