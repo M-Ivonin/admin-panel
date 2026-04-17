@@ -24,7 +24,9 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormHelperText,
   FormControlLabel,
+  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -71,6 +73,15 @@ import {
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
 } from '@/modules/campaigns/selectors';
+import {
+  buildCampaignScheduleRule,
+  CAMPAIGN_WEEKDAY_OPTIONS,
+  DEFAULT_CAMPAIGN_SCHEDULE,
+  describeCampaignScheduleRule,
+  formatCampaignScheduleTime,
+  parseCampaignScheduleRule,
+  withCampaignScheduleTime,
+} from '@/modules/campaigns/schedule';
 
 const COLORS = {
   canvas: '#111111',
@@ -262,6 +273,22 @@ function describeScenarioTemplate(
   ].join(' · ');
 }
 
+function getSourceEventProducerLabel(producerKey: string): string {
+  if (producerKey === 'crm_source_events') {
+    return 'Mobile app CRM events';
+  }
+
+  if (producerKey === 'channels_favorite_matches') {
+    return 'Favorite matches service';
+  }
+
+  return producerKey;
+}
+
+function getJourneyAnchorLabel(anchorType: 'trigger' | 'previous_step'): string {
+  return anchorType === 'trigger' ? 'Campaign entry' : 'Previous step';
+}
+
 export function CampaignEditorPage({
   mode,
   campaignId,
@@ -274,7 +301,6 @@ export function CampaignEditorPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [saveSegmentName, setSaveSegmentName] = useState('');
   const [saveTemplateName, setSaveTemplateName] = useState('');
   const [saveTemplateDescription, setSaveTemplateDescription] = useState('');
   const [testRecipients, setTestRecipients] = useState('spec@local.test');
@@ -543,35 +569,6 @@ export function CampaignEditorPage({
     }
   }
 
-  async function handleSaveSegment() {
-    if (!saveSegmentName.trim()) {
-      return;
-    }
-
-    try {
-      await campaignsRepository.saveSegment({
-        name: saveSegmentName.trim(),
-        audience: state.draft.audience,
-      });
-
-      const catalog = await campaignsRepository.getEditorCatalog();
-      dispatch({ type: 'setCatalog', catalog });
-      dispatch({ type: 'closeDialog', dialog: 'saveSegment' });
-      dispatch({
-        type: 'markActionSuccess',
-        kind: 'segment',
-        message: 'Audience saved as segment.',
-      });
-      setSaveSegmentName('');
-    } catch (actionError) {
-      setError(
-        actionError instanceof Error
-          ? actionError.message
-          : 'Failed to save segment'
-      );
-    }
-  }
-
   async function handleSaveTemplate() {
     if (!saveTemplateName.trim()) {
       return;
@@ -601,6 +598,14 @@ export function CampaignEditorPage({
           : 'Failed to save campaign template'
       );
     }
+  }
+
+  function openSaveTemplateDialog() {
+    setSaveTemplateName(
+      state.draft.name.trim() || 'Reusable campaign template'
+    );
+    setSaveTemplateDescription('');
+    dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
   }
 
   function toggleRetentionStage(stage: RetentionStage) {
@@ -664,7 +669,21 @@ export function CampaignEditorPage({
     state.draft.trigger.type === 'scheduled_recurring'
       ? state.draft.trigger
       : null;
+  const selectedSourceEvent = eventBasedTrigger
+    ? state.catalog.sourceEvents.find(
+        (option) =>
+          option.eventKey === eventBasedTrigger.eventKey &&
+          option.producerKey === eventBasedTrigger.producerKey
+      ) ?? null
+    : null;
+  const parsedScheduledRule = scheduledTrigger
+    ? parseCampaignScheduleRule(scheduledTrigger.recurrenceRule)
+    : null;
+  const scheduledRuleModel = parsedScheduledRule ?? DEFAULT_CAMPAIGN_SCHEDULE;
+  const hasInvalidScheduledRule =
+    Boolean(scheduledTrigger?.recurrenceRule.trim()) && !parsedScheduledRule;
   const canSaveTemplate = validation.errors.length === 0;
+  const isReviewStep = state.activeStep === CampaignEditorStep.REVIEW;
 
   if (loading) {
     return (
@@ -713,41 +732,115 @@ export function CampaignEditorPage({
             display: 'grid',
             gridTemplateColumns: {
               xs: '1fr',
-              lg: 'minmax(0, 1fr) 320px',
+              lg: '280px minmax(0, 1fr) 320px',
             },
             gap: 2,
             alignItems: 'start',
           }}
         >
+          <SectionCard title="Scenario templates">
+            <Stack spacing={1.5}>
+              <Typography sx={{ color: COLORS.textSecondary, fontSize: 13 }}>
+                Apply a ready-made scenario to prefill audience, trigger,
+                journey, and draft copy.
+              </Typography>
+
+              {state.catalog.scenarioTemplates.length > 0 ? (
+                <Stack spacing={1.25}>
+                  {state.catalog.scenarioTemplates.map((template) => (
+                    <Paper
+                      key={template.id}
+                      onClick={() =>
+                        dispatch({
+                          type: 'applyScenarioTemplate',
+                          template,
+                        })
+                      }
+                      sx={{
+                        p: 1.5,
+                        cursor: 'pointer',
+                        bgcolor: COLORS.soft,
+                        border: `1px solid ${COLORS.stroke}`,
+                        transition: 'border-color 160ms ease, transform 160ms ease',
+                        '&:hover': {
+                          borderColor: COLORS.accent,
+                          transform: 'translateY(-1px)',
+                        },
+                      }}
+                    >
+                      <Stack spacing={1}>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="flex-start"
+                          spacing={1}
+                        >
+                          <Typography
+                            sx={{
+                              color: COLORS.textPrimary,
+                              fontWeight: 700,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {template.name}
+                          </Typography>
+                          <Chip
+                            label={
+                              template.source === 'saved' ? 'Saved' : 'Shipped'
+                            }
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                template.source === 'saved'
+                                  ? COLORS.accentSoft
+                                  : COLORS.panel,
+                              color: COLORS.textSecondary,
+                              border: `1px solid ${COLORS.stroke}`,
+                              flexShrink: 0,
+                            }}
+                          />
+                        </Stack>
+
+                        <Typography
+                          sx={{
+                            color: COLORS.textSecondary,
+                            fontSize: 13,
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          {template.description}
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            color: COLORS.textSecondary,
+                            fontSize: 12,
+                          }}
+                        >
+                          {describeScenarioTemplate(template)}
+                        </Typography>
+                      </Stack>
+                    </Paper>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography sx={{ color: COLORS.textSecondary, fontSize: 13 }}>
+                  No templates available yet.
+                </Typography>
+              )}
+            </Stack>
+          </SectionCard>
+
           <SectionCard
             title={mode === 'create' ? 'Create campaign' : 'Edit campaign'}
             action={
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setSaveTemplateName(
-                      state.draft.name.trim() || 'Reusable campaign template'
-                    );
-                    setSaveTemplateDescription('');
-                    dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
-                  }}
-                  disabled={!canSaveTemplate}
-                  sx={{
-                    color: COLORS.textPrimary,
-                    borderColor: COLORS.stroke,
-                  }}
-                >
-                  Save as template
-                </Button>
-                <Button
-                  startIcon={<Save />}
-                  onClick={handleSave}
-                  sx={{ color: COLORS.textPrimary }}
-                >
-                  Save draft
-                </Button>
-              </Stack>
+              <Button
+                startIcon={<Save />}
+                onClick={handleSave}
+                sx={{ color: COLORS.textPrimary }}
+              >
+                Save draft
+              </Button>
             }
           >
             <Stack spacing={2.5}>
@@ -776,110 +869,6 @@ export function CampaignEditorPage({
                 />
               </Stack>
 
-              {state.catalog.scenarioTemplates.length > 0 ? (
-                <SectionCard title="Scenario templates">
-                  <Stack spacing={1.5}>
-                    <Typography sx={{ color: COLORS.textSecondary }}>
-                      Use a ready-made scenario to prefill audience, trigger,
-                      journey, and draft copy. Applying a template replaces the
-                      current builder setup.
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: '1fr',
-                          xl: 'repeat(2, minmax(0, 1fr))',
-                        },
-                        gap: 1.5,
-                      }}
-                    >
-                      {state.catalog.scenarioTemplates.map((template) => (
-                        <Paper
-                          key={template.id}
-                          sx={{
-                            p: 1.5,
-                            bgcolor: COLORS.soft,
-                            border: `1px solid ${COLORS.stroke}`,
-                          }}
-                        >
-                          <Stack spacing={1.25}>
-                            <Stack
-                              direction="row"
-                              justifyContent="space-between"
-                              alignItems="flex-start"
-                              spacing={1}
-                            >
-                              <Box>
-                                <Typography
-                                  sx={{
-                                    color: COLORS.textPrimary,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {template.name}
-                                </Typography>
-                                <Typography
-                                  sx={{
-                                    color: COLORS.textSecondary,
-                                    fontSize: 13,
-                                    mt: 0.5,
-                                  }}
-                                >
-                                  {template.description}
-                                </Typography>
-                              </Box>
-                              <Chip
-                                label={
-                                  template.source === 'saved'
-                                    ? 'Saved'
-                                    : 'Shipped'
-                                }
-                                size="small"
-                                sx={{
-                                  bgcolor:
-                                    template.source === 'saved'
-                                      ? COLORS.accentSoft
-                                      : COLORS.panel,
-                                  color: COLORS.textSecondary,
-                                  border: `1px solid ${COLORS.stroke}`,
-                                }}
-                              />
-                            </Stack>
-
-                            <Typography
-                              sx={{
-                                color: COLORS.textSecondary,
-                                fontSize: 12,
-                              }}
-                            >
-                              {describeScenarioTemplate(template)}
-                            </Typography>
-
-                            <Button
-                              variant="outlined"
-                              onClick={() =>
-                                dispatch({
-                                  type: 'applyScenarioTemplate',
-                                  template,
-                                })
-                              }
-                              sx={{
-                                alignSelf: 'flex-start',
-                                color: COLORS.textPrimary,
-                                borderColor: COLORS.stroke,
-                              }}
-                            >
-                              Apply template
-                            </Button>
-                          </Stack>
-                        </Paper>
-                      ))}
-                    </Box>
-                  </Stack>
-                </SectionCard>
-              ) : null}
-
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {STEP_ORDER.map((step) => (
                   <StepButton
@@ -893,132 +882,25 @@ export function CampaignEditorPage({
 
               {state.activeStep === CampaignEditorStep.AUDIENCE ? (
                 <Stack spacing={2}>
-                  <SectionCard title="Audience source">
-                    <Typography sx={{ color: COLORS.textSecondary, mb: 1 }}>
-                      Build the audience with manual rules or start from a
-                      saved audience segment.
-                    </Typography>
-                    <Stack spacing={2} sx={{ mt: 2 }}>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Button
-                          variant={
-                            state.draft.audience.segmentSource ===
-                            'manual_rules'
-                              ? 'contained'
-                              : 'outlined'
-                          }
-                          onClick={() =>
-                            dispatch({
-                              type: 'changeSegmentSource',
-                              segmentSource: 'manual_rules',
-                              sourceSegmentId: null,
-                            })
-                          }
-                          sx={{
-                            bgcolor:
-                              state.draft.audience.segmentSource ===
-                              'manual_rules'
-                                ? COLORS.accent
-                                : 'transparent',
-                            color: COLORS.textPrimary,
-                            borderColor: COLORS.stroke,
-                          }}
-                        >
-                          Manual rules
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          onClick={() =>
-                            dispatch({ type: 'openDialog', dialog: 'saveSegment' })
-                          }
-                          sx={{
-                            color: COLORS.textPrimary,
-                            borderColor: COLORS.stroke,
-                          }}
-                        >
-                          Save current audience
-                        </Button>
-                      </Stack>
-
-                      <Typography sx={{ color: COLORS.textPrimary }}>
-                        Current source:{' '}
-                        {state.draft.audience.segmentSource.replace(/_/g, ' ')}
-                      </Typography>
-
-                      {state.catalog.savedSegments.length > 0 ? (
-                        <Stack spacing={1}>
-                          <Typography
-                            sx={{ color: COLORS.textPrimary, fontWeight: 600 }}
-                          >
-                            Saved audiences
-                          </Typography>
-                          {state.catalog.savedSegments.map((segment) => (
-                            <Paper
-                              key={segment.id}
-                              onClick={() => {
-                                if (!segment.audienceDefinition) {
-                                  return;
-                                }
-
-                                dispatch({
-                                  type: 'applySavedSegment',
-                                  segmentId: segment.id,
-                                  audience: {
-                                    ...segment.audienceDefinition,
-                                    segmentSource: 'saved_segment',
-                                    sourceSegmentId: segment.id,
-                                  },
-                                });
-                              }}
-                              sx={{
-                                p: 1.5,
-                                cursor: segment.audienceDefinition
-                                  ? 'pointer'
-                                  : 'default',
-                                bgcolor:
-                                  state.draft.audience.sourceSegmentId ===
-                                  segment.id
-                                    ? COLORS.accentSoft
-                                    : COLORS.soft,
-                                border: `1px solid ${COLORS.stroke}`,
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  color: COLORS.textPrimary,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {segment.name}
-                              </Typography>
-                              <Typography
-                                sx={{ color: COLORS.textSecondary, fontSize: 13 }}
-                              >
-                                {segment.description}
-                              </Typography>
-                            </Paper>
-                          ))}
-                        </Stack>
-                      ) : null}
-
+                  <SectionCard title="Specific users">
+                    <Stack spacing={2}>
                       <Stack
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={1.5}
                         justifyContent="space-between"
                         alignItems={{ xs: 'flex-start', sm: 'center' }}
-                        sx={{ mb: 1 }}
                       >
                         <Box>
                           <Typography
                             sx={{ color: COLORS.textPrimary, fontWeight: 600 }}
                           >
-                            Specific users
+                            Optional user filter
                           </Typography>
                           <Typography
                             sx={{ color: COLORS.textSecondary, fontSize: 13 }}
                           >
-                            Start from a hand-picked list of users. You can
-                            search them by name or e-mail.
+                            Limit the campaign to a hand-picked list of users.
+                            Search by name or e-mail.
                           </Typography>
                         </Box>
                         <Button
@@ -1236,7 +1118,9 @@ export function CampaignEditorPage({
                                   type: 'changeTrigger',
                                   trigger: {
                                     type: 'scheduled_recurring',
-                                    recurrenceRule: '',
+                                    recurrenceRule: buildCampaignScheduleRule(
+                                      DEFAULT_CAMPAIGN_SCHEDULE
+                                    ),
                                     timezoneMode: 'user_local',
                                   },
                                 });
@@ -1248,15 +1132,16 @@ export function CampaignEditorPage({
 
                       {stateBasedTrigger ? (
                         <Stack spacing={2}>
-                          <TextField
-                            label="Qualification"
-                            value="when_user_matches_audience"
-                            InputProps={{ readOnly: true }}
-                          />
+                          <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
+                            Users enter this journey when they match the
+                            selected audience. The campaign checks eligibility
+                            on each planner cycle.
+                          </Alert>
                           <TextField
                             label="Re-entry cooldown (hours)"
                             type="number"
                             value={stateBasedTrigger.reentryCooldownHours ?? ''}
+                            helperText="Prevents the same user from starting this journey again too soon."
                             onChange={(event) =>
                               dispatch({
                                 type: 'changeTrigger',
@@ -1276,7 +1161,12 @@ export function CampaignEditorPage({
                       {eventBasedTrigger ? (
                         <Stack spacing={2}>
                           <FormControl fullWidth>
+                            <InputLabel id="campaign-entry-event-label">
+                              Entry event
+                            </InputLabel>
                             <Select
+                              labelId="campaign-entry-event-label"
+                              label="Entry event"
                               value={`${eventBasedTrigger.eventKey}:${eventBasedTrigger.producerKey}`}
                               onChange={(event) => {
                                 const selected =
@@ -1309,16 +1199,26 @@ export function CampaignEditorPage({
                                 </MenuItem>
                               ))}
                             </Select>
+                            <FormHelperText>
+                              Choose the product event that should start the
+                              journey.
+                            </FormHelperText>
                           </FormControl>
-                          <TextField
-                            label="Producer key"
-                            value={eventBasedTrigger.producerKey}
-                            InputProps={{ readOnly: true }}
-                          />
+                          {selectedSourceEvent ? (
+                            <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
+                              {selectedSourceEvent.description}
+                              <br />
+                              Source: {' '}
+                              {getSourceEventProducerLabel(
+                                selectedSourceEvent.producerKey
+                              )}
+                            </Alert>
+                          ) : null}
                           <TextField
                             label="Re-entry cooldown (hours)"
                             type="number"
                             value={eventBasedTrigger.reentryCooldownHours ?? ''}
+                            helperText="Prevents the same user from starting this event-based journey again too soon."
                             onChange={(event) =>
                               dispatch({
                                 type: 'changeTrigger',
@@ -1337,24 +1237,164 @@ export function CampaignEditorPage({
 
                       {scheduledTrigger ? (
                         <Stack spacing={2}>
+                          {hasInvalidScheduledRule ? (
+                            <Alert severity="warning">
+                              This schedule contains an invalid saved rule. The
+                              builder below is showing a safe fallback until you
+                              save a new schedule.
+                            </Alert>
+                          ) : null}
+                          <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={2}
+                          >
+                            <TextField
+                              label="Repeat every"
+                              type="number"
+                              value={scheduledRuleModel.interval}
+                              onChange={(event) => {
+                                const interval = Math.max(
+                                  1,
+                                  Number(event.target.value) || 1
+                                );
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...scheduledTrigger,
+                                    recurrenceRule: buildCampaignScheduleRule({
+                                      ...scheduledRuleModel,
+                                      interval,
+                                    }),
+                                  },
+                                });
+                              }}
+                              fullWidth
+                            />
+                            <FormControl fullWidth>
+                              <InputLabel id="campaign-schedule-frequency-label">
+                                Cadence
+                              </InputLabel>
+                              <Select
+                                labelId="campaign-schedule-frequency-label"
+                                label="Cadence"
+                                value={scheduledRuleModel.frequency}
+                                onChange={(event) => {
+                                  const frequency = event.target
+                                    .value as typeof scheduledRuleModel.frequency;
+                                  dispatch({
+                                    type: 'changeTrigger',
+                                    trigger: {
+                                      ...scheduledTrigger,
+                                      recurrenceRule: buildCampaignScheduleRule({
+                                        ...scheduledRuleModel,
+                                        frequency,
+                                        byDays:
+                                          frequency === 'WEEKLY'
+                                            ? scheduledRuleModel.byDays.length
+                                              ? scheduledRuleModel.byDays
+                                              : ['MO']
+                                            : [],
+                                      }),
+                                    },
+                                  });
+                                }}
+                              >
+                                <MenuItem value="DAILY">Day(s)</MenuItem>
+                                <MenuItem value="WEEKLY">Week(s)</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Stack>
+                          {scheduledRuleModel.frequency === 'WEEKLY' ? (
+                            <Stack spacing={1}>
+                              <Typography
+                                sx={{
+                                  color: COLORS.textSecondary,
+                                  fontSize: 13,
+                                }}
+                              >
+                                Send on
+                              </Typography>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                {CAMPAIGN_WEEKDAY_OPTIONS.map((option) => {
+                                  const selected =
+                                    scheduledRuleModel.byDays.includes(
+                                      option.key
+                                    );
+
+                                  return (
+                                    <ToggleChip
+                                      key={option.key}
+                                      label={option.shortLabel}
+                                      selected={selected}
+                                      onClick={() => {
+                                        const nextByDays = selected
+                                          ? scheduledRuleModel.byDays.filter(
+                                              (day) => day !== option.key
+                                            )
+                                          : [
+                                              ...scheduledRuleModel.byDays,
+                                              option.key,
+                                            ];
+                                        const safeByDays =
+                                          nextByDays.length > 0
+                                            ? nextByDays
+                                            : [option.key];
+
+                                        dispatch({
+                                          type: 'changeTrigger',
+                                          trigger: {
+                                            ...scheduledTrigger,
+                                            recurrenceRule:
+                                              buildCampaignScheduleRule({
+                                                ...scheduledRuleModel,
+                                                byDays: safeByDays,
+                                              }),
+                                          },
+                                        });
+                                      }}
+                                    />
+                                  );
+                                })}
+                              </Stack>
+                            </Stack>
+                          ) : null}
                           <TextField
-                            label="Recurrence rule (RRULE)"
-                            value={scheduledTrigger.recurrenceRule}
+                            label="Send time"
+                            type="time"
+                            value={formatCampaignScheduleTime(scheduledRuleModel)}
                             onChange={(event) =>
                               dispatch({
                                 type: 'changeTrigger',
                                 trigger: {
                                   ...scheduledTrigger,
-                                  recurrenceRule: event.target.value,
+                                  recurrenceRule: buildCampaignScheduleRule(
+                                    withCampaignScheduleTime(
+                                      scheduledRuleModel,
+                                      event.target.value
+                                    )
+                                  ),
                                 },
                               })
                             }
+                            InputLabelProps={{ shrink: true }}
                           />
                           <TextField
-                            label="Timezone mode"
-                            value="user_local"
+                            label="Timezone"
+                            value="Each user's local time"
                             InputProps={{ readOnly: true }}
                           />
+                          <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
+                            {describeCampaignScheduleRule(
+                              parsedScheduledRule
+                                ? scheduledTrigger.recurrenceRule
+                                : buildCampaignScheduleRule(scheduledRuleModel)
+                            )}
+                          </Alert>
                         </Stack>
                       ) : null}
                     </Stack>
@@ -1416,15 +1456,21 @@ export function CampaignEditorPage({
                               spacing={2}
                             >
                               <TextField
-                                label="Anchor"
-                                value={step.anchor.type}
+                                label="Starts from"
+                                value={getJourneyAnchorLabel(step.anchor.type)}
                                 InputProps={{ readOnly: true }}
                                 fullWidth
                               />
                               <TextField
-                                label="Delay (minutes)"
+                                label="Wait before this step (minutes)"
                                 type="number"
                                 value={step.delayMinutes ?? ''}
+                                disabled={step.sameLocalTimeNextDay}
+                                helperText={
+                                  step.sameLocalTimeNextDay
+                                    ? 'This step is using the next-day same local time rule.'
+                                    : 'Use 0 to send as soon as this step becomes eligible.'
+                                }
                                 onChange={(event) =>
                                   dispatch({
                                     type: 'updateJourneyStep',
@@ -1446,7 +1492,7 @@ export function CampaignEditorPage({
                               spacing={2}
                             >
                               <TextField
-                                label="Send window start"
+                                label="Earliest local send time"
                                 value={step.sendWindowStart}
                                 onChange={(event) =>
                                   dispatch({
@@ -1460,7 +1506,7 @@ export function CampaignEditorPage({
                                 fullWidth
                               />
                               <TextField
-                                label="Send window end"
+                                label="Latest local send time"
                                 value={step.sendWindowEnd}
                                 onChange={(event) =>
                                   dispatch({
@@ -1480,9 +1526,10 @@ export function CampaignEditorPage({
                               spacing={2}
                             >
                               <TextField
-                                label="Frequency cap (hours)"
+                                label="Minimum gap after any campaign send (hours)"
                                 type="number"
                                 value={step.frequencyCapHours ?? ''}
+                                helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
                                 onChange={(event) =>
                                   dispatch({
                                     type: 'updateJourneyStep',
@@ -1498,7 +1545,12 @@ export function CampaignEditorPage({
                                 fullWidth
                               />
                               <FormControl fullWidth>
+                                <InputLabel id={`exit-rule-${step.stepKey}`}>
+                                  Exit rule
+                                </InputLabel>
                                 <Select
+                                  labelId={`exit-rule-${step.stepKey}`}
+                                  label="Exit rule"
                                   value={step.exitRule}
                                   onChange={(event) =>
                                     dispatch({
@@ -1511,11 +1563,16 @@ export function CampaignEditorPage({
                                     })
                                   }
                                 >
-                                  <MenuItem value="none">none</MenuItem>
+                                  <MenuItem value="none">
+                                    Keep sending later steps
+                                  </MenuItem>
                                   <MenuItem value="stop_on_goal">
-                                    stop_on_goal
+                                    Stop later steps after goal is reached
                                   </MenuItem>
                                 </Select>
+                                <FormHelperText>
+                                  Applies to the steps that come after this one.
+                                </FormHelperText>
                               </FormControl>
                             </Stack>
 
@@ -1535,7 +1592,7 @@ export function CampaignEditorPage({
                                   }
                                 />
                               }
-                              label="Same local time next day"
+                              label="Send next day at the same local time instead of using the minute delay"
                             />
                           </Stack>
                         </Paper>
@@ -1811,19 +1868,33 @@ export function CampaignEditorPage({
                       Cancel
                     </Button>
                   ) : null}
-                  <Button
-                    variant="contained"
-                    disabled={
-                      !canContinueCampaignStep(state.activeStep, state.draft)
-                    }
-                    onClick={() => goToStep('next')}
-                    sx={{
-                      bgcolor: COLORS.accent,
-                      color: COLORS.textPrimary,
-                    }}
-                  >
-                    Continue
-                  </Button>
+                  {isReviewStep ? (
+                    <Button
+                      variant="outlined"
+                      disabled={!canSaveTemplate}
+                      onClick={openSaveTemplateDialog}
+                      sx={{
+                        color: COLORS.textPrimary,
+                        borderColor: COLORS.stroke,
+                      }}
+                    >
+                      Save as template
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      disabled={
+                        !canContinueCampaignStep(state.activeStep, state.draft)
+                      }
+                      onClick={() => goToStep('next')}
+                      sx={{
+                        bgcolor: COLORS.accent,
+                        color: COLORS.textPrimary,
+                      }}
+                    >
+                      Continue
+                    </Button>
+                  )}
                 </Stack>
               </Stack>
             </Stack>
@@ -1908,32 +1979,6 @@ export function CampaignEditorPage({
           </SectionCard>
         </Box>
       </Stack>
-
-      <Dialog
-        open={state.dialogs.saveSegment}
-        onClose={() => dispatch({ type: 'closeDialog', dialog: 'saveSegment' })}
-      >
-        <DialogTitle>Save segment</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Segment name"
-            value={saveSegmentName}
-            onChange={(event) => setSaveSegmentName(event.target.value)}
-            fullWidth
-            sx={{ mt: 1 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() =>
-              dispatch({ type: 'closeDialog', dialog: 'saveSegment' })
-            }
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSaveSegment}>Save segment</Button>
-        </DialogActions>
-      </Dialog>
 
       <Dialog
         open={state.dialogs.saveTemplate}

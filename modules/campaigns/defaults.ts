@@ -1,16 +1,14 @@
 /**
- * Live-safe draft defaults and saved-segment helpers for campaigns.
+ * Live-safe draft defaults for campaigns.
  */
 
 import { RetentionStage } from '@/lib/api/users';
 import type {
-  CampaignAudienceDefinition,
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignJourneyStep,
   CampaignLocale,
-  CampaignSavedSegmentSummary,
   CampaignStepLocaleContent,
   CampaignStepContentMap,
 } from '@/modules/campaigns/contracts';
@@ -111,27 +109,5 @@ export function createEmptyCampaignDraft(
     content,
     updatedAt: null,
     createdBy: null,
-  };
-}
-
-/**
- * Applies a saved segment to the current audience while preserving the new trigger/journey contract.
- */
-export function applySavedSegmentSelection(
-  audience: CampaignAudienceDefinition,
-  segment: CampaignSavedSegmentSummary
-): CampaignAudienceDefinition {
-  if (segment.audienceDefinition) {
-    return {
-      ...segment.audienceDefinition,
-      segmentSource: 'saved_segment',
-      sourceSegmentId: segment.id,
-    };
-  }
-
-  return {
-    ...audience,
-    segmentSource: 'saved_segment',
-    sourceSegmentId: segment.id,
   };
 }

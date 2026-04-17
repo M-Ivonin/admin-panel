@@ -11,8 +11,20 @@ import type {
   CampaignStepLocaleContent,
 } from '@/modules/campaigns/contracts';
 import { CampaignEditorStep } from '@/modules/campaigns/reducer';
+import { describeCampaignScheduleRule } from '@/modules/campaigns/schedule';
 
 const TOKEN_PATTERN = /{{([a-z_]+)}}/g;
+
+const SOURCE_EVENT_LABELS: Record<string, string> = {
+  app_opened: 'Opened app',
+  onboarding_completed: 'Completed onboarding',
+  favorite_match_kickoff: 'Favorite match kickoff',
+};
+
+const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
+  crm_source_events: 'Mobile app CRM events',
+  channels_favorite_matches: 'Favorite matches service',
+};
 
 export interface CampaignValidationSummary {
   errors: string[];
@@ -128,18 +140,32 @@ function formatTrigger(draft: CampaignDraft): string {
 
 function describeTriggerDetails(draft: CampaignDraft): string {
   if (draft.trigger.type === 'state_based') {
-    return `Qualification: when user matches audience · re-entry ${draft.trigger.reentryCooldownHours ?? 'none'}h`;
+    return `Users enter when they match the selected audience. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).`;
   }
 
   if (draft.trigger.type === 'event_based') {
-    return `${draft.trigger.eventKey} via ${draft.trigger.producerKey}`;
+    const eventLabel =
+      SOURCE_EVENT_LABELS[draft.trigger.eventKey] ?? draft.trigger.eventKey;
+    const sourceLabel =
+      SOURCE_EVENT_SOURCE_LABELS[draft.trigger.producerKey] ??
+      draft.trigger.producerKey;
+
+    return `${eventLabel} from ${sourceLabel}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).`;
   }
 
-  return `${draft.trigger.recurrenceRule || 'RRULE missing'} · user local`;
+  return describeCampaignScheduleRule(draft.trigger.recurrenceRule);
 }
 
 function describeJourneyStep(step: CampaignJourneyStep): string {
-  return `Step ${step.order} · ${step.stepKey} · ${step.delayMinutes ?? 0} min · ${step.sendWindowStart}-${step.sendWindowEnd}`;
+  const delayLabel = step.sameLocalTimeNextDay
+    ? 'next day at the same local time'
+    : `${step.delayMinutes ?? 0} min after the previous anchor`;
+  const exitLabel =
+    step.exitRule === 'stop_on_goal'
+      ? 'stop later steps when goal is reached'
+      : 'continue even if goal is reached';
+
+  return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h · ${exitLabel}`;
 }
 
 /**
@@ -453,10 +479,6 @@ export function buildCampaignReviewModel(
     ],
     audience: [
       {
-        label: 'Segment source',
-        value: draft.audience.segmentSource.replace(/_/g, ' '),
-      },
-      {
         label: 'Retention',
         value:
           draft.audience.criteria.retentionStages
@@ -482,7 +504,7 @@ export function buildCampaignReviewModel(
     })),
     content: draft.journey.steps.flatMap((step) =>
       draft.audience.criteria.locales.map((locale) => ({
-        label: `${step.stepKey} · ${locale.toUpperCase()}`,
+        label: `Step ${step.order} · ${locale.toUpperCase()}`,
         value:
           validation.stepReadiness[step.stepKey]?.[locale] === 'ready'
             ? 'Ready'

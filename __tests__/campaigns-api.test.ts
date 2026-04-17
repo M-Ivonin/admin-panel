@@ -12,7 +12,7 @@ import {
   sendCampaignTest,
   updateCampaignDraft,
 } from '@/lib/api/campaigns';
-import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 
 jest.mock('@/modules/http/admin-auth-client', () => ({
   adminAuthFetch: jest.fn(),

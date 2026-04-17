@@ -1,6 +1,6 @@
 import { RetentionStage } from '@/lib/api/users';
 import { createJourneyStep } from '@/modules/campaigns/defaults';
-import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,

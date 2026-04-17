@@ -1,5 +1,5 @@
 /**
- * In-memory mock repository for the campaigns admin flows.
+ * Test-only in-memory repository for campaigns UI coverage.
  */
 
 import { RetentionStage } from '@/lib/api/users';
@@ -27,7 +27,7 @@ import {
   createInitialCampaignEditorCatalog,
   createInitialCampaignsOverviewResponse,
   createSavedSegmentDefinitionMap,
-} from '@/modules/campaigns/mock-data';
+} from '@/test-support/campaigns/mock-data';
 import { type CampaignsRepository } from '@/modules/campaigns/repository';
 import { getCampaignLocaleReadiness } from '@/modules/campaigns/selectors';
 

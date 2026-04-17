@@ -25,7 +25,6 @@ export enum CampaignEditorStep {
 }
 
 export interface CampaignEditorDialogs {
-  saveSegment: boolean;
   saveTemplate: boolean;
   sendTest: boolean;
   schedule: boolean;
@@ -41,7 +40,7 @@ export interface CampaignEditorTokenTarget {
 }
 
 export interface CampaignEditorActionResult {
-  kind: 'save' | 'segment' | 'template' | 'test' | 'schedule' | 'archive';
+  kind: 'save' | 'template' | 'test' | 'schedule' | 'archive';
   message: string;
   warnings?: string[];
 }
@@ -82,16 +81,6 @@ export type CampaignEditorAction =
   | {
       type: 'updateBasics';
       patch: Partial<Pick<CampaignDraft, 'name' | 'goal'>>;
-    }
-  | {
-      type: 'changeSegmentSource';
-      segmentSource: CampaignDraft['audience']['segmentSource'];
-      sourceSegmentId: string | null;
-    }
-  | {
-      type: 'applySavedSegment';
-      segmentId: string;
-      audience: CampaignDraft['audience'];
     }
   | {
       type: 'applyScenarioTemplate';
@@ -184,7 +173,6 @@ const EMPTY_CATALOG: CampaignEditorCatalog = {
 };
 
 const DEFAULT_DIALOGS: CampaignEditorDialogs = {
-  saveSegment: false,
   saveTemplate: false,
   sendTest: false,
   schedule: false,
@@ -303,27 +291,6 @@ export function campaignEditorReducer(
       return markDirty(state, {
         ...state.draft,
         ...action.patch,
-      });
-    case 'changeSegmentSource':
-      return markDirty(state, {
-        ...state.draft,
-        audience: {
-          ...state.draft.audience,
-          segmentSource: action.segmentSource,
-          sourceSegmentId: action.sourceSegmentId,
-        },
-      });
-    case 'applySavedSegment':
-      return markDirty(state, {
-        ...state.draft,
-        audience: cloneDraft({
-          ...state.draft,
-          audience: {
-            ...action.audience,
-            segmentSource: 'saved_segment',
-            sourceSegmentId: action.segmentId,
-          },
-        }).audience,
       });
     case 'applyScenarioTemplate': {
       const templateDefinition = cloneValue(action.template.definition);

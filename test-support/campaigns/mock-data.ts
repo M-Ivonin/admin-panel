@@ -1,5 +1,5 @@
 /**
- * Deterministic mock seed factories for the campaigns admin UI.
+ * Test-only seed factories for campaigns UI coverage.
  */
 
 import { RetentionStage } from '@/lib/api/users';

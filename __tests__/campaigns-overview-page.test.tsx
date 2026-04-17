@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewPage';
-import { resetMockCampaignsRepository } from '@/modules/campaigns/mock-repository';
+import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
 jest.setTimeout(15000);
 
@@ -8,7 +8,7 @@ const push = jest.fn();
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
-    '@/modules/campaigns/mock-repository',
+    '@/test-support/campaigns/mock-repository',
   );
 
   return {

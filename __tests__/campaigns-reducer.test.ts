@@ -1,5 +1,5 @@
 import { createJourneyStep } from '@/modules/campaigns/defaults';
-import { createEmptyCampaignDraft } from '@/modules/campaigns/mock-data';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
   CampaignEditorStep,
   campaignEditorReducer,
@@ -7,16 +7,10 @@ import {
 } from '@/modules/campaigns/reducer';
 
 describe('campaignEditorReducer', () => {
-  it('changes segment source and top-level trigger through the shared draft', () => {
+  it('changes the top-level trigger through the shared draft', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 
-    const withManualSource = campaignEditorReducer(initialState, {
-      type: 'changeSegmentSource',
-      segmentSource: 'manual_rules',
-      sourceSegmentId: null,
-    });
-
-    const withEventTrigger = campaignEditorReducer(withManualSource, {
+    const withEventTrigger = campaignEditorReducer(initialState, {
       type: 'changeTrigger',
       trigger: {
         type: 'event_based',
@@ -27,7 +21,6 @@ describe('campaignEditorReducer', () => {
       },
     });
 
-    expect(withManualSource.draft.audience.segmentSource).toBe('manual_rules');
     expect(withEventTrigger.draft.trigger).toEqual({
       type: 'event_based',
       eventKey: 'app_opened',
