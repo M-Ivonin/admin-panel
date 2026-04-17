@@ -183,6 +183,18 @@ function formatStatus(status: CampaignStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function formatScheduleResultTimestamp(timestamp: string): string {
+  const parsedDate = new Date(timestamp);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return timestamp;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(parsedDate);
+}
+
 function getStatusChipStyles(status: CampaignStatus) {
   if (status === 'active') {
     return { color: COLORS.success, bgcolor: `${COLORS.success}22` };
@@ -421,6 +433,7 @@ export function CampaignEditorPage({
     () => storedAuthUser?.email?.trim() ?? ''
   );
   const [isSendingTest, setIsSendingTest] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
@@ -785,6 +798,11 @@ export function CampaignEditorPage({
     dispatch({ type: 'openDialog', dialog: 'sendTest' });
   }
 
+  function handleOpenScheduleDialog() {
+    setError(null);
+    dispatch({ type: 'openDialog', dialog: 'schedule' });
+  }
+
   async function handleSendTest() {
     if (normalizedTestRecipients.length === 0) {
       setError('Add at least one recipient before sending a test.');
@@ -822,6 +840,8 @@ export function CampaignEditorPage({
 
   async function handleSchedule() {
     try {
+      setError(null);
+      setIsScheduling(true);
       const saved = await ensurePersistedDraft();
       const response = await campaignsRepository.scheduleCampaign(saved.id!, {
         confirm: true,
@@ -836,6 +856,9 @@ export function CampaignEditorPage({
         kind: 'schedule',
         draft: response.campaign,
         message: 'Campaign scheduled successfully.',
+        warnings: [
+          `First send planned for ${formatScheduleResultTimestamp(response.firstSendAt)}.`,
+        ],
       });
     } catch (actionError) {
       setError(
@@ -843,6 +866,8 @@ export function CampaignEditorPage({
           ? actionError.message
           : 'Failed to schedule campaign'
       );
+    } finally {
+      setIsScheduling(false);
     }
   }
 
@@ -2466,9 +2491,7 @@ export function CampaignEditorPage({
                 <Button
                   variant="contained"
                   disabled={!canScheduleCampaign(state.draft)}
-                  onClick={() =>
-                    dispatch({ type: 'openDialog', dialog: 'schedule' })
-                  }
+                  onClick={handleOpenScheduleDialog}
                   sx={{ bgcolor: COLORS.accent, color: COLORS.textPrimary }}
                 >
                   Schedule Campaign
@@ -2619,7 +2642,13 @@ export function CampaignEditorPage({
 
       <Dialog
         open={state.dialogs.schedule}
-        onClose={() => dispatch({ type: 'closeDialog', dialog: 'schedule' })}
+        onClose={() => {
+          if (isScheduling) {
+            return;
+          }
+
+          dispatch({ type: 'closeDialog', dialog: 'schedule' });
+        }}
       >
         <DialogTitle>Schedule campaign</DialogTitle>
         <DialogContent>
@@ -2631,16 +2660,31 @@ export function CampaignEditorPage({
                 : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
               : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
+          {error ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          ) : null}
         </DialogContent>
         <DialogActions>
           <Button
+            disabled={isScheduling}
             onClick={() =>
               dispatch({ type: 'closeDialog', dialog: 'schedule' })
             }
           >
             Cancel
           </Button>
-          <Button onClick={handleSchedule}>Confirm schedule</Button>
+          <Button onClick={handleSchedule} disabled={isScheduling}>
+            {isScheduling ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={16} color="inherit" />
+                <span>Scheduling...</span>
+              </Stack>
+            ) : (
+              'Confirm schedule'
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
 

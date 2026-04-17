@@ -1,6 +1,14 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from '@testing-library/react';
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
 import { getUser, getUsers } from '@/lib/api/users';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
@@ -429,6 +437,75 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('shows progress while scheduling and then reports the result', async () => {
+    const deferred = createDeferred<{
+      campaign: ReturnType<typeof createEmptyCampaignDraft>;
+      firstSendAt: string;
+    }>();
+    jest
+      .spyOn(campaignsRepository, 'scheduleCampaign')
+      .mockReturnValue(deferred.promise);
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Hello there' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Finish setup now' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm schedule' }));
+
+    expect(screen.getByText('Scheduling...')).toBeTruthy();
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    const scheduledDraft = createEmptyCampaignDraft();
+    scheduledDraft.id = 'cmp_local_001';
+    scheduledDraft.name = 'Campaign Spec Local';
+    scheduledDraft.goal = 'Recover onboarding completion';
+    scheduledDraft.status = 'scheduled';
+    scheduledDraft.audience.criteria.locales = ['en'];
+    scheduledDraft.content.step_1.en = {
+      title: 'Hello there',
+      body: 'Finish setup now',
+      fallbackFirstName: '',
+      deeplinkTarget: null,
+    };
+
+    deferred.resolve({
+      campaign: scheduledDraft,
+      firstSendAt: '2026-04-17T09:00:00.000Z',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Scheduling...')).toBeNull();
+      expect(
+        screen.getByText(/Campaign scheduled successfully\./i)
+      ).toBeTruthy();
+      expect(screen.getByText(/First send planned for/i)).toBeTruthy();
+    });
+  });
+
   it('keeps send-test disabled when there is no resolved recipient', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -723,9 +800,7 @@ describe('CampaignEditorPage', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Apply users' }));
 
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).toBeNull();
-    });
+    await waitForElementToBeRemoved(() => screen.queryByText('Select users'));
 
     await waitFor(() => {
       expect(
