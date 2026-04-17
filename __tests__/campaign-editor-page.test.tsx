@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
-import { resetMockCampaignsRepository } from '@/modules/campaigns/mock-repository';
 import { getUser, getUsers } from '@/lib/api/users';
+import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
 jest.setTimeout(20000);
 
@@ -10,7 +10,7 @@ const replace = jest.fn();
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
-    '@/modules/campaigns/mock-repository'
+    '@/test-support/campaigns/mock-repository'
   );
 
   return {
@@ -77,14 +77,35 @@ describe('CampaignEditorPage', () => {
 
     await screen.findByText('Scenario templates');
 
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Apply template' })[0]
-    );
+    fireEvent.click(screen.getByText('Onboarding recovery'));
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Onboarding recovery')).toBeTruthy();
       expect(
         screen.getByDisplayValue('Recover onboarding completion')
+      ).toBeTruthy();
+    });
+  });
+
+  it('keeps templates in the left rail and hides old audience-source controls', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Scenario templates');
+
+    expect(screen.queryByText('Audience source')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Manual rules' })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Save current audience' })
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save as template' })).toBeNull();
+
+    fireEvent.click(screen.getByText('Review'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: 'Save as template' })
       ).toBeTruthy();
     });
   });
@@ -126,6 +147,37 @@ describe('CampaignEditorPage', () => {
       );
       expect(screen.getByText(/Test accepted successfully/i)).toBeTruthy();
     });
+  });
+
+  it('shows human-readable source event details', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Source event'));
+
+    expect(
+      screen.getByText('Choose the product event that should start the journey.')
+    ).toBeTruthy();
+    expect(screen.getByText(/Source: Mobile app CRM events/i)).toBeTruthy();
+  });
+
+  it('configures scheduled triggers through readable controls', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Scheduled'));
+
+    expect(screen.getByLabelText('Repeat every')).toBeTruthy();
+    expect(screen.getByLabelText('Cadence')).toBeTruthy();
+    expect(screen.getByLabelText('Send time')).toBeTruthy();
+    expect(screen.getByDisplayValue('Each user\'s local time')).toBeTruthy();
+    expect(
+      screen.getByText(/Every day at 09:00 in each user's local time/i)
+    ).toBeTruthy();
   });
 
   it('lets the admin add specific users to the audience', async () => {
