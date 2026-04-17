@@ -33,8 +33,21 @@ export type CampaignTokenKey = 'first_name' | 'favorite_team' | 'bonus_points';
 
 export type CampaignDeeplinkTarget =
   | 'continue_onboarding'
+  | 'open_home'
+  | 'open_home_feed'
+  | 'open_offers'
+  | 'open_points_offers'
+  | 'open_power_ups_offers'
+  | 'open_passes_offers'
+  | 'open_ai_chat'
   | 'open_match_center'
-  | 'open_rewards_wallet';
+  | 'open_channels'
+  | 'open_explore'
+  | 'open_rewards_wallet'
+  | 'open_support_chat'
+  | 'open_notifications'
+  | 'open_settings'
+  | 'open_content_preferences';
 
 export type CampaignQuickView =
   | 'active_now'
@@ -202,7 +215,6 @@ export interface CampaignAudienceCriteria {
 }
 
 export interface CampaignSuppressionRules {
-  excludeConvertedUsers: boolean;
   excludeUsersWithoutPushOpens: boolean;
 }
 
@@ -256,7 +268,7 @@ export interface CampaignStepLocaleContent {
   title: string;
   body: string;
   fallbackFirstName: string;
-  deeplinkTarget: CampaignDeeplinkTarget;
+  deeplinkTarget: CampaignDeeplinkTarget | null;
 }
 
 export type CampaignStepContentMap = Record<
@@ -306,6 +318,10 @@ export interface SaveTemplateRequest {
 
 export interface SaveTemplateResponse {
   template: CampaignScenarioTemplateSummary;
+}
+
+export interface DeleteTemplateResponse {
+  templateId: string;
 }
 
 export interface SendTestCampaignRequest {

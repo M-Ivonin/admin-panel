@@ -26,6 +26,7 @@ import {
   FormControl,
   FormHelperText,
   FormControlLabel,
+  IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -48,6 +49,8 @@ import {
   getUser,
   type User,
 } from '@/lib/api/users';
+import { getStoredAuthUser } from '@/lib/auth';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { CampaignAudienceUserPickerDialog } from '@/components/campaigns/CampaignAudienceUserPickerDialog';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
@@ -115,6 +118,27 @@ const STEP_LABELS: Record<CampaignEditorStep, string> = {
 interface CampaignEditorPageProps {
   mode: 'create' | 'edit';
   campaignId?: string;
+}
+
+const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
+
+function getPreferredTestRecipients(
+  currentRecipients: string,
+  authorizedUserEmail: string
+): string {
+  if (!authorizedUserEmail) {
+    return currentRecipients;
+  }
+
+  const normalizedRecipients = currentRecipients.trim();
+  if (
+    normalizedRecipients.length > 0 &&
+    normalizedRecipients !== LEGACY_TEST_RECIPIENT_PLACEHOLDER
+  ) {
+    return currentRecipients;
+  }
+
+  return authorizedUserEmail;
 }
 
 function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
@@ -330,11 +354,24 @@ function getJourneyAnchorLabel(anchorType: 'trigger' | 'previous_step'): string 
   return anchorType === 'trigger' ? 'Campaign entry' : 'Previous step';
 }
 
+function getDeeplinkOptionLabel(
+  options: Array<{ target: CampaignDeeplinkTarget; label: string }>,
+  target: CampaignDeeplinkTarget | null
+): string {
+  if (!target) {
+    return 'No follow-up action';
+  }
+
+  return options.find((option) => option.target === target)?.label ?? target;
+}
+
 export function CampaignEditorPage({
   mode,
   campaignId,
 }: CampaignEditorPageProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const storedAuthUser = getStoredAuthUser();
   const [state, dispatch] = useReducer(campaignEditorReducer, undefined, () =>
     createCampaignEditorState()
   );
@@ -344,10 +381,20 @@ export function CampaignEditorPage({
   const [isInitialized, setIsInitialized] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
   const [saveTemplateDescription, setSaveTemplateDescription] = useState('');
-  const [testRecipients, setTestRecipients] = useState('spec@local.test');
+  const [testRecipients, setTestRecipients] = useState(
+    () => storedAuthUser?.email?.trim() ?? ''
+  );
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] =
+    useState<CampaignScenarioTemplateSummary | null>(null);
+  const authorizedUserEmail =
+    user?.email?.trim() ?? storedAuthUser?.email?.trim() ?? '';
+  const normalizedTestRecipients = testRecipients
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   const validation = useMemo(
     () => getCampaignValidationSummary(state.draft),
@@ -361,6 +408,12 @@ export function CampaignEditorPage({
     () => buildCampaignReviewModel(state.draft),
     [state.draft]
   );
+
+  useEffect(() => {
+    setTestRecipients((currentRecipients) =>
+      getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
+    );
+  }, [authorizedUserEmail]);
 
   useEffect(() => {
     let cancelled = false;
@@ -522,14 +575,24 @@ export function CampaignEditorPage({
     }
   }
 
+  function handleOpenSendTestDialog() {
+    setError(null);
+    setTestRecipients((currentRecipients) =>
+      getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
+    );
+    dispatch({ type: 'openDialog', dialog: 'sendTest' });
+  }
+
   async function handleSendTest() {
+    if (normalizedTestRecipients.length === 0) {
+      setError('Add at least one recipient before sending a test.');
+      return;
+    }
+
     try {
       const saved = await ensurePersistedDraft();
       const response = await campaignsRepository.sendTestCampaign(saved.id!, {
-        recipients: testRecipients
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean),
+        recipients: normalizedTestRecipients,
         locale: testLocale,
       });
 
@@ -650,6 +713,37 @@ export function CampaignEditorPage({
     }
   }
 
+  async function handleDeleteTemplate() {
+    if (!templateToDelete) {
+      return;
+    }
+
+    try {
+      await campaignsRepository.deleteTemplate(templateToDelete.id);
+      dispatch({
+        type: 'setCatalog',
+        catalog: {
+          ...state.catalog,
+          scenarioTemplates: state.catalog.scenarioTemplates.filter(
+            (template) => template.id !== templateToDelete.id
+          ),
+        },
+      });
+      setTemplateToDelete(null);
+      dispatch({
+        type: 'markActionSuccess',
+        kind: 'template',
+        message: 'Template deleted successfully.',
+      });
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : 'Failed to delete campaign template'
+      );
+    }
+  }
+
   function openSaveTemplateDialog() {
     setSaveTemplateName(
       state.draft.name.trim() || 'Reusable campaign template'
@@ -686,13 +780,11 @@ export function CampaignEditorPage({
 
   function addJourneyStep() {
     const nextStep = createJourneyStep(state.draft.journey.steps.length + 1);
-    const defaultDeeplink =
-      state.catalog.deeplinkOptions[0]?.target ?? 'continue_onboarding';
 
     dispatch({
       type: 'appendJourneyStep',
       step: nextStep,
-      deeplinkTarget: defaultDeeplink,
+      deeplinkTarget: null,
     });
   }
 
@@ -736,7 +828,11 @@ export function CampaignEditorPage({
   const templateBlockingErrors = validation.errors.filter(
     (error) => !/Step .+ is missing [A-Z]{2} content\./.test(error)
   );
-  const canSaveTemplate = templateBlockingErrors.length === 0;
+  const isTemplateDerivedCampaign =
+    state.draft.audience.segmentSource === 'template_segment' &&
+    Boolean(state.draft.audience.sourceSegmentId);
+  const canSaveTemplate =
+    templateBlockingErrors.length === 0 && !isTemplateDerivedCampaign;
 
   if (loading) {
     return (
@@ -837,21 +933,44 @@ export function CampaignEditorPage({
                           >
                             {template.name}
                           </Typography>
-                          <Chip
-                            label={
-                              template.source === 'saved' ? 'Saved' : 'Shipped'
-                            }
-                            size="small"
-                            sx={{
-                              bgcolor:
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            alignItems="center"
+                            sx={{ flexShrink: 0 }}
+                          >
+                            <Chip
+                              label={
                                 template.source === 'saved'
-                                  ? COLORS.accentSoft
-                                  : COLORS.panel,
-                              color: COLORS.textSecondary,
-                              border: `1px solid ${COLORS.stroke}`,
-                              flexShrink: 0,
-                            }}
-                          />
+                                  ? 'Saved'
+                                  : 'Shipped'
+                              }
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  template.source === 'saved'
+                                    ? COLORS.accentSoft
+                                    : COLORS.panel,
+                                color: COLORS.textSecondary,
+                                border: `1px solid ${COLORS.stroke}`,
+                              }}
+                            />
+                            {template.source === 'saved' ? (
+                              <IconButton
+                                size="small"
+                                aria-label={`Delete template ${template.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setTemplateToDelete(template);
+                                }}
+                                sx={{
+                                  color: COLORS.textSecondary,
+                                }}
+                              >
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            ) : null}
+                          </Stack>
                         </Stack>
 
                         <Typography
@@ -1066,29 +1185,15 @@ export function CampaignEditorPage({
                   <SectionCard title="Filters">
                     <Stack spacing={2}>
                       <Box>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={
-                                state.draft.audience.suppression
-                                  .excludeConvertedUsers
-                              }
-                              onChange={(event) =>
-                                dispatch({
-                                  type: 'updateSuppressionRules',
-                                  patch: {
-                                    excludeConvertedUsers: event.target.checked,
-                                  },
-                                })
-                              }
-                            />
-                          }
-                          label="Exclude converted users"
-                        />
+                        <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
+                          Goal suppression is always on
+                        </Typography>
                         <Typography
                           sx={{ color: COLORS.textSecondary, fontSize: 13 }}
                         >
-                          Skip users who already reached the campaign goal.
+                          Users who already reached the campaign goal for the
+                          current journey instance are skipped automatically at
+                          planning time and again right before send.
                         </Typography>
                       </Box>
 
@@ -1611,37 +1716,12 @@ export function CampaignEditorPage({
                                 }
                                 fullWidth
                               />
-                              <FormControl fullWidth>
-                                <InputLabel id={`exit-rule-${step.stepKey}`}>
-                                  Exit rule
-                                </InputLabel>
-                                <Select
-                                  labelId={`exit-rule-${step.stepKey}`}
-                                  label="Exit rule"
-                                  value={step.exitRule}
-                                  onChange={(event) =>
-                                    dispatch({
-                                      type: 'updateJourneyStep',
-                                      stepKey: step.stepKey,
-                                      patch: {
-                                        exitRule: event.target
-                                          .value as CampaignDraft['journey']['steps'][number]['exitRule'],
-                                      },
-                                    })
-                                  }
-                                >
-                                  <MenuItem value="none">
-                                    Keep sending later steps
-                                  </MenuItem>
-                                  <MenuItem value="stop_on_goal">
-                                    Stop later steps after goal is reached
-                                  </MenuItem>
-                                </Select>
-                                <FormHelperText>
-                                  Applies to the steps that come after this one.
-                                </FormHelperText>
-                              </FormControl>
                             </Stack>
+
+                            <FormHelperText sx={{ mt: 0 }}>
+                              Later steps stop automatically once the campaign
+                              goal is reached for the current journey instance.
+                            </FormHelperText>
 
                             <FormControlLabel
                               control={
@@ -1789,18 +1869,37 @@ export function CampaignEditorPage({
                           fullWidth
                         />
                         <FormControl fullWidth>
+                          <InputLabel
+                            id="campaign-step-action-label"
+                            shrink
+                          >
+                            Action after tap (optional)
+                          </InputLabel>
                           <Select
-                            value={activeStepContent.deeplinkTarget}
+                            labelId="campaign-step-action-label"
+                            label="Action after tap (optional)"
+                            displayEmpty
+                            value={activeStepContent.deeplinkTarget ?? ''}
+                            renderValue={(value) =>
+                              getDeeplinkOptionLabel(
+                                state.catalog.deeplinkOptions,
+                                (value as CampaignDeeplinkTarget | '') || null
+                              )
+                            }
                             onChange={(event) =>
                               dispatch({
                                 type: 'changeDeeplink',
                                 stepKey: state.activeContentStepKey,
                                 locale: activeLocale,
-                                target: event.target
-                                  .value as CampaignDeeplinkTarget,
+                                target:
+                                  (event.target.value as CampaignDeeplinkTarget) ||
+                                  null,
                               })
                             }
                           >
+                            <MenuItem value="">
+                              <em>No follow-up action</em>
+                            </MenuItem>
                             {state.catalog.deeplinkOptions.map((option) => (
                               <MenuItem
                                 key={option.target}
@@ -1810,6 +1909,11 @@ export function CampaignEditorPage({
                               </MenuItem>
                             ))}
                           </Select>
+                          <FormHelperText>
+                            Optional. If selected, tapping the push opens this
+                            screen in the app. If left empty, the app falls
+                            back to the default notifications flow.
+                          </FormHelperText>
                         </FormControl>
                       </Stack>
                     ) : (
@@ -2007,13 +2111,16 @@ export function CampaignEditorPage({
                 >
                   Save as template
                 </Button>
+                {isTemplateDerivedCampaign ? (
+                  <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+                    Template-based campaigns cannot be saved as a new template.
+                  </Typography>
+                ) : null}
                 <Button
                   startIcon={<Science />}
                   variant="outlined"
                   disabled={!canSendTestCampaign(state.draft)}
-                  onClick={() =>
-                    dispatch({ type: 'openDialog', dialog: 'sendTest' })
-                  }
+                  onClick={handleOpenSendTestDialog}
                   sx={{ color: COLORS.textPrimary, borderColor: COLORS.stroke }}
                 >
                   Send Test
@@ -2087,6 +2194,25 @@ export function CampaignEditorPage({
       </Dialog>
 
       <Dialog
+        open={templateToDelete !== null}
+        onClose={() => setTemplateToDelete(null)}
+      >
+        <DialogTitle>Delete template</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mt: 1 }}>
+            Remove {templateToDelete?.name ?? 'this template'} from Scenario
+            templates?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTemplateToDelete(null)}>Cancel</Button>
+          <Button color="error" onClick={handleDeleteTemplate}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={state.dialogs.sendTest}
         onClose={() => dispatch({ type: 'closeDialog', dialog: 'sendTest' })}
       >
@@ -2095,7 +2221,12 @@ export function CampaignEditorPage({
           <Stack spacing={2} sx={{ mt: 1, minWidth: 360 }}>
             <TextField
               label="Recipients"
-              helperText="Comma-separated user ids, emails, or device keys"
+              helperText={
+                normalizedTestRecipients.length === 0
+                  ? 'Add at least one user id, email, or device key.'
+                  : 'Comma-separated user ids, emails, or device keys'
+              }
+              error={normalizedTestRecipients.length === 0}
               value={testRecipients}
               onChange={(event) => setTestRecipients(event.target.value)}
               fullWidth
@@ -2124,7 +2255,12 @@ export function CampaignEditorPage({
           >
             Cancel
           </Button>
-          <Button onClick={handleSendTest}>Send test</Button>
+          <Button
+            onClick={handleSendTest}
+            disabled={normalizedTestRecipients.length === 0}
+          >
+            Send test
+          </Button>
         </DialogActions>
       </Dialog>
 

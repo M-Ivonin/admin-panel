@@ -5,6 +5,7 @@
 import {
   archiveCampaign,
   createCampaignDraft,
+  deleteCampaignTemplate,
   estimateCampaignAudience,
   getCampaignDraft,
   getCampaignEditorCatalog,
@@ -18,6 +19,7 @@ import {
 import type {
   ArchiveCampaignRequest,
   ArchiveCampaignResponse,
+  DeleteTemplateResponse,
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignsOverviewResponse,
@@ -64,6 +66,10 @@ export type SaveCampaignTemplateMethod = (
   input: SaveTemplateRequest,
 ) => Promise<SaveTemplateResponse>;
 
+export type DeleteCampaignTemplateMethod = (
+  id: string,
+) => Promise<DeleteTemplateResponse>;
+
 export type SendCampaignTestMethod = (
   id: string,
   input: SendTestCampaignRequest,
@@ -88,6 +94,7 @@ export interface CampaignsRepository {
   estimateAudience: EstimateCampaignAudienceMethod;
   saveSegment: SaveCampaignSegmentMethod;
   saveTemplate: SaveCampaignTemplateMethod;
+  deleteTemplate: DeleteCampaignTemplateMethod;
   sendTestCampaign: SendCampaignTestMethod;
   scheduleCampaign: ScheduleCampaignMethod;
   archiveCampaign: ArchiveCampaignMethod;
@@ -102,6 +109,7 @@ export const campaignsRepository: CampaignsRepository = {
   estimateAudience: estimateCampaignAudience,
   saveSegment: saveCampaignSegment,
   saveTemplate: saveCampaignTemplate,
+  deleteTemplate: deleteCampaignTemplate,
   sendTestCampaign: sendCampaignTest,
   scheduleCampaign,
   archiveCampaign,

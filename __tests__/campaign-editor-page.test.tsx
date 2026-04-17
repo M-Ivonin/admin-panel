@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
 import { getUser, getUsers } from '@/lib/api/users';
+import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
 jest.setTimeout(20000);
@@ -40,11 +41,13 @@ const mockedGetUser = jest.mocked(getUser);
 
 describe('CampaignEditorPage', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     resetMockCampaignsRepository();
     push.mockReset();
     replace.mockReset();
     mockedGetUsers.mockReset();
     mockedGetUser.mockReset();
+    window.localStorage.clear();
   });
 
   it('shows the exact approved step labels', async () => {
@@ -55,6 +58,21 @@ describe('CampaignEditorPage', () => {
     expect(screen.getByText('Trigger + Journey')).toBeTruthy();
     expect(screen.getByText('Step Content')).toBeTruthy();
     expect(screen.getByText('Review')).toBeTruthy();
+  });
+
+  it('explains that step actions are optional and starts with no action selected', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Step Content'));
+
+    expect(
+      screen.getByText(
+        'Optional. If selected, tapping the push opens this screen in the app. If left empty, the app falls back to the default notifications flow.'
+      )
+    ).toBeTruthy();
+    expect(screen.getByText('No follow-up action')).toBeTruthy();
   });
 
   it('appends a journey row when + Add step is used', async () => {
@@ -100,6 +118,21 @@ describe('CampaignEditorPage', () => {
       screen.queryByRole('button', { name: 'Save current audience' })
     ).toBeNull();
     expect(screen.getByRole('button', { name: 'Save as template' })).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Onboarding recovery'));
+
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', {
+          name: 'Save as template',
+        }) as HTMLButtonElement).disabled
+      ).toBe(true);
+      expect(
+        screen.getByText(
+          'Template-based campaigns cannot be saved as a new template.'
+        )
+      ).toBeTruthy();
+    });
   });
 
   it('saves a campaign as a template and adds it to the scenario rail immediately', async () => {
@@ -138,7 +171,57 @@ describe('CampaignEditorPage', () => {
     });
   });
 
-  it('creates a two-step source event campaign and submits send-test', async () => {
+  it('deletes a saved scenario template from the left rail', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Retention rescue' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal'), {
+      target: { value: 'Bring users back this week' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save as template' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/^Template name$/), {
+      target: { value: 'Delete me template' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save template' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete me template')).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    fireEvent.click(
+      screen.getByLabelText('Delete template Delete me template')
+    );
+    const deleteDialog = await screen.findByRole('dialog');
+    fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Delete me template')).toBeNull();
+      expect(screen.getByText('Template deleted successfully.')).toBeTruthy();
+    });
+  });
+
+  it('prefills send-test recipients with the authorized email and submits send-test', async () => {
+    window.localStorage.setItem(
+      'user',
+      JSON.stringify({
+        id: 'admin-user-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+      })
+    );
+    const sendTestCampaignSpy = jest.spyOn(
+      campaignsRepository,
+      'sendTestCampaign'
+    );
+
     render(<CampaignEditorPage mode="create" />);
 
     await screen.findByText('Create campaign');
@@ -167,14 +250,65 @@ describe('CampaignEditorPage', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Send Test' }));
+
+    expect(
+      (screen.getByLabelText('Recipients') as HTMLInputElement).value
+    ).toBe('admin@example.com');
+    expect(
+      screen.getByRole('button', { name: 'Send test' })
+    ).not.toBeDisabled();
+
     fireEvent.click(screen.getByRole('button', { name: 'Send test' }));
 
     await waitFor(() => {
+      expect(sendTestCampaignSpy).toHaveBeenCalledWith('cmp_local_001', {
+        recipients: ['admin@example.com'],
+        locale: 'en',
+      });
       expect(replace).toHaveBeenCalledWith(
         '/dashboard/campaigns/cmp_local_001'
       );
       expect(screen.getByText(/Test accepted successfully/i)).toBeTruthy();
     });
+  });
+
+  it('keeps send-test disabled when there is no resolved recipient', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Source event'));
+    fireEvent.click(screen.getByText('+ Add step'));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.click(screen.getByRole('button', { name: 'Step 1' }));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Hello {{first_name}}' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Finish setup now' },
+    });
+    fireEvent.change(screen.getByLabelText('Fallback first name'), {
+      target: { value: 'there' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }));
+
+    expect(
+      (screen.getByLabelText('Recipients') as HTMLInputElement).value
+    ).toBe('');
+    expect(screen.getByRole('button', { name: 'Send test' })).toBeDisabled();
+    expect(
+      screen.getByText('Add at least one user id, email, or device key.')
+    ).toBeTruthy();
   });
 
   it('shows human-readable source event details', async () => {

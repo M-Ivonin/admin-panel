@@ -6,6 +6,7 @@ import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 import type {
   ArchiveCampaignRequest,
   ArchiveCampaignResponse,
+  DeleteTemplateResponse,
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignsOverviewResponse,
@@ -181,6 +182,36 @@ export async function saveCampaignTemplate(
   });
 
   return parseAdminResponse(response, 'Failed to save campaign template');
+}
+
+/**
+ * Deletes one saved campaign template.
+ */
+export async function deleteCampaignTemplate(
+  id: string,
+): Promise<DeleteTemplateResponse> {
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/templates/${id}`,
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Unauthorized');
+    }
+
+    if (response.status === 403) {
+      throw new Error('Forbidden');
+    }
+
+    if (response.status === 404) {
+      throw new Error('Template not found');
+    }
+
+    throw new Error(`Failed to delete campaign template: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 /**

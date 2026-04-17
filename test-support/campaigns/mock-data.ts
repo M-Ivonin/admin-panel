@@ -5,6 +5,7 @@
 import { RetentionStage } from '@/lib/api/users';
 import type {
   CampaignAudienceDefinition,
+  CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignsOverviewResponse,
@@ -103,7 +104,6 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
         locales: ['en', 'es', 'pt'],
       },
       suppression: {
-        excludeConvertedUsers: true,
         excludeUsersWithoutPushOpens: false,
       },
     },
@@ -123,7 +123,6 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
         locales: ['en', 'es', 'pt'],
       },
       suppression: {
-        excludeConvertedUsers: true,
         excludeUsersWithoutPushOpens: false,
       },
     },
@@ -155,23 +154,99 @@ const TOKENS: CampaignTokenDefinition[] = [
   },
 ];
 
-const DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
+const ALL_DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
   {
     target: 'continue_onboarding',
     label: 'Continue onboarding',
-    path: 'app://setup/continue',
+    path: '/setup-content-preferences',
+  },
+  {
+    target: 'open_home',
+    label: 'Open home',
+    path: '/',
+  },
+  {
+    target: 'open_home_feed',
+    label: 'Open home feed',
+    path: '/?tab=feed',
+  },
+  {
+    target: 'open_offers',
+    label: 'Open offers',
+    path: '/?tab=offers',
+  },
+  {
+    target: 'open_points_offers',
+    label: 'Open points offers',
+    path: '/?tab=offers&offersTab=points',
+  },
+  {
+    target: 'open_power_ups_offers',
+    label: 'Open power-ups offers',
+    path: '/?tab=offers&offersTab=powerUps',
+  },
+  {
+    target: 'open_passes_offers',
+    label: 'Open passes offers',
+    path: '/?tab=offers&offersTab=passes',
+  },
+  {
+    target: 'open_ai_chat',
+    label: 'Open AI chat',
+    path: '/aichat',
   },
   {
     target: 'open_match_center',
     label: 'Open match center',
-    path: 'app://matches/center',
+    path: '/matches',
+  },
+  {
+    target: 'open_channels',
+    label: 'Open channels',
+    path: '/channels',
+  },
+  {
+    target: 'open_explore',
+    label: 'Open explore',
+    path: '/explore',
   },
   {
     target: 'open_rewards_wallet',
     label: 'Open rewards wallet',
-    path: 'app://rewards/wallet',
+    path: '/profile',
+  },
+  {
+    target: 'open_support_chat',
+    label: 'Open support chat',
+    path: '/profile/support-chat',
+  },
+  {
+    target: 'open_notifications',
+    label: 'Open notifications',
+    path: '/notifications',
+  },
+  {
+    target: 'open_settings',
+    label: 'Open settings',
+    path: '/settings',
+  },
+  {
+    target: 'open_content_preferences',
+    label: 'Open content preferences',
+    path: '/profile/content-preferences',
   },
 ];
+
+const DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = ALL_DEEPLINK_OPTIONS.filter(
+  (option) =>
+    (
+      [
+        'continue_onboarding',
+        'open_match_center',
+        'open_rewards_wallet',
+      ] as CampaignDeeplinkTarget[]
+    ).includes(option.target)
+);
 
 const SOURCE_EVENTS: CampaignSourceEventOption[] = [
   {
@@ -270,7 +345,6 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
       locales: ['en', 'es', 'pt'],
     },
     suppression: {
-      excludeConvertedUsers: true,
       excludeUsersWithoutPushOpens: false,
     },
   },
@@ -283,21 +357,14 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
       locales: ['en', 'es', 'pt'],
     },
     suppression: {
-      excludeConvertedUsers: true,
       excludeUsersWithoutPushOpens: false,
     },
   },
 };
 
 function buildMultiStepContent(
-  firstTarget:
-    | 'continue_onboarding'
-    | 'open_match_center'
-    | 'open_rewards_wallet',
-  secondTarget:
-    | 'continue_onboarding'
-    | 'open_match_center'
-    | 'open_rewards_wallet'
+  firstTarget: CampaignDeeplinkTarget | null,
+  secondTarget: CampaignDeeplinkTarget | null
 ): CampaignDraft['content'] {
   return {
     step_1: {
@@ -397,7 +464,6 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
           locales: ['en', 'es', 'pt'],
         },
         suppression: {
-          excludeConvertedUsers: false,
           excludeUsersWithoutPushOpens: false,
         },
       },
@@ -512,7 +578,6 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
             locales: ['en', 'es', 'pt'],
           },
           suppression: {
-            excludeConvertedUsers: false,
             excludeUsersWithoutPushOpens: false,
           },
         },
@@ -608,7 +673,6 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
             locales: ['en', 'es', 'pt'],
           },
           suppression: {
-            excludeConvertedUsers: true,
             excludeUsersWithoutPushOpens: false,
           },
         },

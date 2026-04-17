@@ -14,13 +14,12 @@ import type {
 } from '@/modules/campaigns/contracts';
 
 const DEFAULT_LOCALES: CampaignLocale[] = ['en', 'es', 'pt'];
-const DEFAULT_DEEPLINK_TARGET: CampaignDeeplinkTarget = 'continue_onboarding';
 
 /**
  * Creates one blank localized content map for a specific journey step.
  */
 export function createBlankStepLocaleMap(
-  deeplinkTarget: CampaignDeeplinkTarget
+  deeplinkTarget: CampaignDeeplinkTarget | null
 ): Record<CampaignLocale, CampaignStepLocaleContent> {
   return {
     en: {
@@ -56,15 +55,9 @@ export function createJourneyStep(order: number): CampaignJourneyStep {
     sameLocalTimeNextDay: false,
     sendWindowStart: '08:00',
     sendWindowEnd: '22:00',
-    exitRule: 'none',
+    exitRule: 'stop_on_goal',
     frequencyCapHours: 24,
   };
-}
-
-function getDefaultDeeplinkTarget(
-  catalog?: CampaignEditorCatalog
-): CampaignDeeplinkTarget {
-  return catalog?.deeplinkOptions[0]?.target ?? DEFAULT_DEEPLINK_TARGET;
 }
 
 /**
@@ -73,10 +66,10 @@ function getDefaultDeeplinkTarget(
 export function createEmptyCampaignDraft(
   catalog?: CampaignEditorCatalog
 ): CampaignDraft {
-  const deeplinkTarget = getDefaultDeeplinkTarget(catalog);
+  void catalog;
   const firstStep = createJourneyStep(1);
   const content: CampaignStepContentMap = {
-    [firstStep.stepKey]: createBlankStepLocaleMap(deeplinkTarget),
+    [firstStep.stepKey]: createBlankStepLocaleMap(null),
   };
 
   return {
@@ -94,7 +87,6 @@ export function createEmptyCampaignDraft(
         locales: [...DEFAULT_LOCALES],
       },
       suppression: {
-        excludeConvertedUsers: true,
         excludeUsersWithoutPushOpens: false,
       },
     },

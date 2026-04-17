@@ -176,10 +176,6 @@ function getAudienceEstimate(
     postStageCount = Math.min(postStageCount, audience.criteria.userIds.length);
   }
 
-  if (audience.suppression.excludeConvertedUsers) {
-    postStageCount *= 0.88;
-  }
-
   if (audience.suppression.excludeUsersWithoutPushOpens) {
     postStageCount *= 0.86;
   }
@@ -505,6 +501,14 @@ export const mockCampaignsRepository: CampaignsRepository = {
     ];
 
     return { template: clone(template) };
+  },
+
+  async deleteTemplate(id: string) {
+    state.catalog.scenarioTemplates = state.catalog.scenarioTemplates.filter(
+      (template) => template.id !== id
+    );
+
+    return { templateId: id };
   },
 
   async sendTestCampaign(id, input): Promise<SendTestCampaignResponse> {

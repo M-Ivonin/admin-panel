@@ -101,7 +101,7 @@ export type CampaignEditorAction =
   | {
       type: 'appendJourneyStep';
       step: CampaignJourneyStep;
-      deeplinkTarget: CampaignDeeplinkTarget;
+      deeplinkTarget: CampaignDeeplinkTarget | null;
     }
   | {
       type: 'removeJourneyStep';
@@ -129,7 +129,7 @@ export type CampaignEditorAction =
       type: 'changeDeeplink';
       stepKey: string;
       locale: CampaignLocale;
-      target: CampaignDeeplinkTarget;
+      target: CampaignDeeplinkTarget | null;
     }
   | {
       type: 'openDialog';
@@ -301,7 +301,11 @@ export function campaignEditorReducer(
           name: templateDefinition.name,
           goal: templateDefinition.goal,
           channel: templateDefinition.channel,
-          audience: templateDefinition.audience,
+          audience: {
+            ...templateDefinition.audience,
+            segmentSource: 'template_segment',
+            sourceSegmentId: action.template.id,
+          },
           trigger: templateDefinition.trigger,
           journey: templateDefinition.journey,
           content: templateDefinition.content,

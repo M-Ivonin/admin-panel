@@ -2,6 +2,7 @@ import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 import {
   archiveCampaign,
   createCampaignDraft,
+  deleteCampaignTemplate,
   estimateCampaignAudience,
   getCampaignDraft,
   getCampaignEditorCatalog,
@@ -117,6 +118,7 @@ describe('campaigns API helpers', () => {
         content: draft.content,
       },
     });
+    await deleteCampaignTemplate('tpl_saved_1');
     await sendCampaignTest('cmp_onboarding_not_completed', {
       recipients: ['spec@local.test'],
       locale: 'en',
@@ -163,6 +165,10 @@ describe('campaigns API helpers', () => {
       }),
     });
     expect(adminAuthFetch).toHaveBeenNthCalledWith(6, {
+      path: '/campaigns/admin/templates/tpl_saved_1',
+      method: 'DELETE',
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/send-test',
       method: 'POST',
       body: JSON.stringify({
@@ -170,12 +176,12 @@ describe('campaigns API helpers', () => {
         locale: 'en',
       }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/schedule',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(9, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/archive',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),

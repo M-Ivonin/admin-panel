@@ -37,12 +37,12 @@ describe('campaignEditorReducer', () => {
     const withStepTwo = campaignEditorReducer(initialState, {
       type: 'appendJourneyStep',
       step: createJourneyStep(2),
-      deeplinkTarget: 'continue_onboarding',
+      deeplinkTarget: null,
     });
     const withStepThree = campaignEditorReducer(withStepTwo, {
       type: 'appendJourneyStep',
       step: createJourneyStep(3),
-      deeplinkTarget: 'continue_onboarding',
+      deeplinkTarget: null,
     });
     const afterDelete = campaignEditorReducer(withStepThree, {
       type: 'removeJourneyStep',
@@ -123,5 +123,20 @@ describe('campaignEditorReducer', () => {
 
     expect(nextState.activeStep).toBe(CampaignEditorStep.REVIEW);
     expect(nextState.draft).toEqual(initialState.draft);
+  });
+
+  it('starts new drafts and newly added steps with no follow-up action selected', () => {
+    const initialDraft = createEmptyCampaignDraft();
+    const initialState = createCampaignEditorState(initialDraft);
+    const nextState = campaignEditorReducer(initialState, {
+      type: 'appendJourneyStep',
+      step: createJourneyStep(2),
+      deeplinkTarget: null,
+    });
+
+    expect(initialDraft.content.step_1.en.deeplinkTarget).toBeNull();
+    expect(nextState.draft.content.step_2.en.deeplinkTarget).toBeNull();
+    expect(nextState.draft.content.step_2.es.deeplinkTarget).toBeNull();
+    expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
   });
 });

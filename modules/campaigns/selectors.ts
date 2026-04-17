@@ -174,12 +174,8 @@ function describeJourneyStep(step: CampaignJourneyStep): string {
   const delayLabel = step.sameLocalTimeNextDay
     ? 'next day at the same local time'
     : `${step.delayMinutes ?? 0} min after the previous anchor`;
-  const exitLabel =
-    step.exitRule === 'stop_on_goal'
-      ? 'stop later steps when goal is reached'
-      : 'continue even if goal is reached';
 
-  return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h · ${exitLabel}`;
+  return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h · stop later steps when goal is reached`;
 }
 
 /**
