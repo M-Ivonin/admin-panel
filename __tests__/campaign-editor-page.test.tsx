@@ -99,14 +99,42 @@ describe('CampaignEditorPage', () => {
     expect(
       screen.queryByRole('button', { name: 'Save current audience' })
     ).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save as template' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save as template' })).toBeTruthy();
+  });
 
-    fireEvent.click(screen.getByText('Review'));
+  it('saves a campaign as a template and adds it to the scenario rail immediately', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Retention rescue' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal'), {
+      target: { value: 'Bring users back this week' },
+    });
+
+    const saveTemplateButton = screen.getByRole('button', {
+      name: 'Save as template',
+    });
+    expect((saveTemplateButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(saveTemplateButton);
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(/^Template name$/), {
+      target: { value: 'Saved retention template' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Description$/), {
+      target: { value: 'Saved from readiness panel' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save template' }));
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: 'Save as template' })
-      ).toBeTruthy();
+      expect(screen.getByText('Campaign saved as template.')).toBeTruthy();
+      expect(screen.getByText('Saved retention template')).toBeTruthy();
+      expect(screen.getAllByText('Saved')[0]).toBeTruthy();
     });
   });
 

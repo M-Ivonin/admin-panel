@@ -616,14 +616,23 @@ export function CampaignEditorPage({
     }
 
     try {
-      await campaignsRepository.saveTemplate({
+      const response = await campaignsRepository.saveTemplate({
         name: saveTemplateName.trim(),
         description: saveTemplateDescription.trim() || undefined,
         definition: buildUpsertPayload(state.draft),
       });
-
-      const catalog = await campaignsRepository.getEditorCatalog();
-      dispatch({ type: 'setCatalog', catalog });
+      dispatch({
+        type: 'setCatalog',
+        catalog: {
+          ...state.catalog,
+          scenarioTemplates: [
+            response.template,
+            ...state.catalog.scenarioTemplates.filter(
+              (template) => template.id !== response.template.id
+            ),
+          ],
+        },
+      });
       dispatch({ type: 'closeDialog', dialog: 'saveTemplate' });
       dispatch({
         type: 'markActionSuccess',
@@ -724,8 +733,10 @@ export function CampaignEditorPage({
   const scheduledRuleModel = parsedScheduledRule ?? DEFAULT_CAMPAIGN_SCHEDULE;
   const hasInvalidScheduledRule =
     Boolean(scheduledTrigger?.recurrenceRule.trim()) && !parsedScheduledRule;
-  const canSaveTemplate = validation.errors.length === 0;
-  const isReviewStep = state.activeStep === CampaignEditorStep.REVIEW;
+  const templateBlockingErrors = validation.errors.filter(
+    (error) => !/Step .+ is missing [A-Z]{2} content\./.test(error)
+  );
+  const canSaveTemplate = templateBlockingErrors.length === 0;
 
   if (loading) {
     return (
@@ -1924,19 +1935,7 @@ export function CampaignEditorPage({
                       Cancel
                     </Button>
                   ) : null}
-                  {isReviewStep ? (
-                    <Button
-                      variant="outlined"
-                      disabled={!canSaveTemplate}
-                      onClick={openSaveTemplateDialog}
-                      sx={{
-                        color: COLORS.textPrimary,
-                        borderColor: COLORS.stroke,
-                      }}
-                    >
-                      Save as template
-                    </Button>
-                  ) : (
+                  {state.activeStep !== CampaignEditorStep.REVIEW ? (
                     <Button
                       variant="contained"
                       disabled={
@@ -1950,7 +1949,7 @@ export function CampaignEditorPage({
                     >
                       Continue
                     </Button>
-                  )}
+                  ) : null}
                 </Stack>
               </Stack>
             </Stack>
@@ -1999,6 +1998,15 @@ export function CampaignEditorPage({
               <Divider sx={{ borderColor: COLORS.stroke }} />
 
               <Stack spacing={1}>
+                <Button
+                  startIcon={<Save />}
+                  variant="outlined"
+                  disabled={!canSaveTemplate}
+                  onClick={openSaveTemplateDialog}
+                  sx={{ color: COLORS.textPrimary, borderColor: COLORS.stroke }}
+                >
+                  Save as template
+                </Button>
                 <Button
                   startIcon={<Science />}
                   variant="outlined"
