@@ -17,8 +17,10 @@ import {
 import {
   Logout,
   Analytics,
+  Campaign,
   Chat,
   People,
+  ViewCarousel,
   Settings,
 } from '@mui/icons-material';
 
@@ -106,6 +108,38 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Review grouped fixture accuracy, status, and market results
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link href="/dashboard/campaigns" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'primary.dark', width: 48, height: 48, mb: 2 }}>
+                    <Campaign />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Campaigns
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Plan, preview, and monitor push campaign lifecycles
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link href="/dashboard/home-banner" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'info.main', width: 48, height: 48, mb: 2 }}>
+                    <ViewCarousel />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Home Banner
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Control the localized promo banner shown on the app Home screen
                   </Typography>
                 </CardActionArea>
               </Card>

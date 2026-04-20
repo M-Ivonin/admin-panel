@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import PredictionEvaluationsPage from '@/app/(admin)/dashboard/prediction-evaluations/page';
 import { getPredictionEvaluationGroups } from '@/lib/api/prediction-evaluations';
 import { toIsoTimestampFromLocalDateTime } from '@/app/(admin)/dashboard/prediction-evaluations/period-filter';
@@ -123,7 +123,9 @@ describe('PredictionEvaluationsPage', () => {
     expect(await screen.findAllByText('Safe Accuracy')).toHaveLength(2);
     expect(await screen.findAllByText('Risky Accuracy')).toHaveLength(2);
 
-    fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
+    });
 
     expect(await screen.findByText('Over 2.5')).toBeTruthy();
     expect(screen.getByText('goals_over_under')).toBeTruthy();
@@ -200,7 +202,9 @@ describe('PredictionEvaluationsPage', () => {
 
     expect(await screen.findByText('Corinthians vs Palmeiras')).toBeTruthy();
 
-    fireEvent.click(screen.getByText('Corinthians vs Palmeiras'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Corinthians vs Palmeiras'));
+    });
 
     expect(await screen.findAllByText('Palmeiras -0.25')).toHaveLength(1);
     expect(screen.getByText('primary')).toBeTruthy();
@@ -325,8 +329,12 @@ describe('PredictionEvaluationsPage', () => {
 
     await screen.findByText('Alpha FC vs Beta FC');
 
-    fireEvent.mouseDown(screen.getByLabelText('Period'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
+    await act(async () => {
+      fireEvent.mouseDown(screen.getByLabelText('Period'));
+    });
+    await act(async () => {
+      fireEvent.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
+    });
 
     await waitFor(() => {
       const lastCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls.at(
@@ -344,8 +352,10 @@ describe('PredictionEvaluationsPage', () => {
       );
     });
 
-    fireEvent.change(screen.getByLabelText('From'), {
-      target: { value: '2026-04-01T08:00' },
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('From'), {
+        target: { value: '2026-04-01T08:00' },
+      });
     });
 
     await waitFor(() => {

@@ -11,6 +11,7 @@ export async function adminAuthFetch({
   path,
   skipAuth = false,
   headers,
+  body,
   ...options
 }: AdminFetchOptions): Promise<Response> {
   const { apiBaseUrl } = getAdminAppConfig();
@@ -23,12 +24,13 @@ export async function adminAuthFetch({
     }
   }
 
-  if (!resolvedHeaders.has('Content-Type')) {
+  if (!(body instanceof FormData) && !resolvedHeaders.has('Content-Type')) {
     resolvedHeaders.set('Content-Type', 'application/json');
   }
 
   const response = await fetch(buildApiUrl(apiBaseUrl, path), {
     ...options,
+    body,
     headers: resolvedHeaders,
   });
 

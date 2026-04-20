@@ -21,6 +21,24 @@ export interface AuthResponse {
   tokens: AuthTokens;
 }
 
+function readStoredUser(): AuthUser | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const rawUser = localStorage.getItem('user');
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawUser) as AuthUser;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+}
+
 /**
  * Get API base URL from environment
  */
@@ -113,6 +131,26 @@ export function clearTokens(): void {
 export function isAuthenticated(): boolean {
   const token = getAccessToken();
   return !!token;
+}
+
+export function getStoredAuthUser(): AuthUser | null {
+  const storedUser = readStoredUser();
+  if (storedUser) {
+    return storedUser;
+  }
+
+  const token = getAccessToken();
+  const decoded = token ? decodeToken(token) : null;
+
+  if (!decoded?.email) {
+    return null;
+  }
+
+  return {
+    id: decoded.appUserId || decoded.sub || '',
+    email: decoded.email,
+    name: decoded.name || decoded.email,
+  };
 }
 
 /**
