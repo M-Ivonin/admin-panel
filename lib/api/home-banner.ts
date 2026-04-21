@@ -9,6 +9,8 @@ export interface HomeBannerLocalizedContent {
 export interface HomeBannerAdminConfig {
   enabled: boolean;
   imageUrl: string | null;
+  cta: HomeBannerLocalizedContent;
+  deepLink: string | null;
   content: HomeBannerLocalizedContent;
   updatedAt: string;
 }
@@ -21,7 +23,24 @@ async function parseHomeBannerResponse(
     throw new Error(rawError || 'Failed to load Home banner config');
   }
 
-  return (await response.json()) as HomeBannerAdminConfig;
+  const raw = (await response.json()) as Partial<HomeBannerAdminConfig>;
+
+  return {
+    enabled: raw.enabled ?? false,
+    imageUrl: raw.imageUrl ?? null,
+    deepLink: raw.deepLink ?? null,
+    cta: raw.cta ?? {
+      en: '',
+      es: '',
+      pt: '',
+    },
+    content: raw.content ?? {
+      en: '',
+      es: '',
+      pt: '',
+    },
+    updatedAt: raw.updatedAt ?? new Date(0).toISOString(),
+  };
 }
 
 export async function getHomeBannerAdminConfig(): Promise<HomeBannerAdminConfig> {
@@ -36,12 +55,16 @@ export async function getHomeBannerAdminConfig(): Promise<HomeBannerAdminConfig>
 export async function updateHomeBannerAdminConfig(input: {
   enabled: boolean;
   content: HomeBannerLocalizedContent;
+  cta: HomeBannerLocalizedContent;
+  deepLink?: string | null;
   imageFile?: File | null;
   removeImage?: boolean;
 }): Promise<HomeBannerAdminConfig> {
   const body = new FormData();
   body.set('enabled', String(input.enabled));
   body.set('content', JSON.stringify(input.content));
+  body.set('cta', JSON.stringify(input.cta));
+  body.set('deepLink', input.deepLink?.trim() ?? '');
 
   if (input.removeImage) {
     body.set('removeImage', 'true');

@@ -53,6 +53,12 @@ function createEmptyState(): HomeBannerAdminConfig {
   return {
     enabled: false,
     imageUrl: null,
+    cta: {
+      en: '',
+      es: '',
+      pt: '',
+    },
+    deepLink: null,
     content: {
       en: '',
       es: '',
@@ -138,6 +144,22 @@ export function HomeBannerAdminPage() {
   }, [form.content, form.enabled]);
 
   const validationMessage = useMemo(() => {
+    const hasCta = LOCALE_FIELDS.some(
+      ({ locale }) => form.cta[locale].trim().length > 0
+    );
+    const hasDeepLink = (form.deepLink ?? '').trim().length > 0;
+    const hasMissingCtaLocale = LOCALE_FIELDS.some(
+      ({ locale }) => form.cta[locale].trim().length === 0
+    );
+
+    if (hasCta !== hasDeepLink) {
+      return 'Provide both CTA text and a deep link, or leave both empty.';
+    }
+
+    if (hasDeepLink && hasMissingCtaLocale) {
+      return 'Fill in CTA text for all three locales when a deep link is set.';
+    }
+
     if (!form.enabled) {
       return null;
     }
@@ -190,6 +212,8 @@ export function HomeBannerAdminPage() {
       const saved = await updateHomeBannerAdminConfig({
         enabled: form.enabled,
         content: form.content,
+        cta: form.cta,
+        deepLink: form.deepLink,
         imageFile: selectedImage,
         removeImage,
       });
@@ -252,8 +276,8 @@ export function HomeBannerAdminPage() {
         >
           <Stack spacing={3}>
             <Alert severity="info">
-              Once a user closes the banner, the same text will stay hidden for
-              that user until the localized message changes.
+              Once a user closes the banner, the same version will stay hidden
+              for that user until the text, image, CTA, or deep link changes.
             </Alert>
 
             {error ? <Alert severity="error">{error}</Alert> : null}
@@ -302,8 +326,8 @@ export function HomeBannerAdminPage() {
                     Banner Image
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Optional. If you leave it empty, the app will show the banner
-                    with a built-in fallback icon. Recommended image aspect ratio:
+                    Optional. If you leave it empty, the app will show the
+                    banner without an image. Recommended image aspect ratio:
                     13:8.
                   </Typography>
                   <input
@@ -348,8 +372,7 @@ export function HomeBannerAdminPage() {
                         aspectRatio: '16 / 7',
                         borderRadius: 2,
                         objectFit: 'cover',
-                        border: (theme) =>
-                          `1px solid ${theme.palette.divider}`,
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
                       }}
                     />
                   ) : (
@@ -365,6 +388,46 @@ export function HomeBannerAdminPage() {
                       No image selected.
                     </Paper>
                   )}
+                </Stack>
+
+                <Stack spacing={2}>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    Banner Action
+                  </Typography>
+                  {LOCALE_FIELDS.map(({ locale, label }) => (
+                    <TextField
+                      key={`cta-${locale}`}
+                      label={`${label} CTA`}
+                      placeholder="Enter the button label shown in the dialog"
+                      value={form.cta[locale]}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          cta: {
+                            ...current.cta,
+                            [locale]: event.target.value,
+                          },
+                        }))
+                      }
+                      fullWidth
+                      disabled={isLoading || isSaving}
+                      helperText="Optional. Required for all locales when a deep link is present."
+                    />
+                  ))}
+                  <TextField
+                    label="Deep Link"
+                    placeholder="Example: /channels?action=create_challenge"
+                    value={form.deepLink ?? ''}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        deepLink: event.target.value,
+                      }))
+                    }
+                    fullWidth
+                    disabled={isLoading || isSaving}
+                    helperText="Optional. Use an internal app route or a supported SirBro app link. For the live challenge flow you can use /channels?action=create_challenge."
+                  />
                 </Stack>
 
                 <Stack spacing={2}>
