@@ -53,7 +53,11 @@ function createEmptyState(): HomeBannerAdminConfig {
   return {
     enabled: false,
     imageUrl: null,
-    cta: null,
+    cta: {
+      en: '',
+      es: '',
+      pt: '',
+    },
     deepLink: null,
     content: {
       en: '',
@@ -140,11 +144,20 @@ export function HomeBannerAdminPage() {
   }, [form.content, form.enabled]);
 
   const validationMessage = useMemo(() => {
-    const hasCta = (form.cta ?? '').trim().length > 0;
+    const hasCta = LOCALE_FIELDS.some(
+      ({ locale }) => form.cta[locale].trim().length > 0
+    );
     const hasDeepLink = (form.deepLink ?? '').trim().length > 0;
+    const hasMissingCtaLocale = LOCALE_FIELDS.some(
+      ({ locale }) => form.cta[locale].trim().length === 0
+    );
 
     if (hasCta !== hasDeepLink) {
       return 'Provide both CTA text and a deep link, or leave both empty.';
+    }
+
+    if (hasDeepLink && hasMissingCtaLocale) {
+      return 'Fill in CTA text for all three locales when a deep link is set.';
     }
 
     if (!form.enabled) {
@@ -314,8 +327,8 @@ export function HomeBannerAdminPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Optional. If you leave it empty, the app will show the
-                    banner with a built-in fallback icon. Recommended image
-                    aspect ratio: 13:8.
+                    banner without an image. Recommended image aspect ratio:
+                    13:8.
                   </Typography>
                   <input
                     ref={imageInputRef}
@@ -381,23 +394,29 @@ export function HomeBannerAdminPage() {
                   <Typography variant="subtitle1" fontWeight={600}>
                     Banner Action
                   </Typography>
-                  <TextField
-                    label="CTA"
-                    placeholder="Example: Open offer"
-                    value={form.cta ?? ''}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        cta: event.target.value,
-                      }))
-                    }
-                    fullWidth
-                    disabled={isLoading || isSaving}
-                    helperText="Optional. Shown as the dialog button label when a deep link is present."
-                  />
+                  {LOCALE_FIELDS.map(({ locale, label }) => (
+                    <TextField
+                      key={`cta-${locale}`}
+                      label={`${label} CTA`}
+                      placeholder="Enter the button label shown in the dialog"
+                      value={form.cta[locale]}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          cta: {
+                            ...current.cta,
+                            [locale]: event.target.value,
+                          },
+                        }))
+                      }
+                      fullWidth
+                      disabled={isLoading || isSaving}
+                      helperText="Optional. Required for all locales when a deep link is present."
+                    />
+                  ))}
                   <TextField
                     label="Deep Link"
-                    placeholder="Example: /?tab=offers"
+                    placeholder="Example: /channels?action=create_challenge"
                     value={form.deepLink ?? ''}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -407,7 +426,7 @@ export function HomeBannerAdminPage() {
                     }
                     fullWidth
                     disabled={isLoading || isSaving}
-                    helperText="Optional. Use an internal app route or a supported SirBro app link."
+                    helperText="Optional. Use an internal app route or a supported SirBro app link. For the live challenge flow you can use /channels?action=create_challenge."
                   />
                 </Stack>
 
