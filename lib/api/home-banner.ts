@@ -9,6 +9,8 @@ export interface HomeBannerLocalizedContent {
 export interface HomeBannerAdminConfig {
   enabled: boolean;
   imageUrl: string | null;
+  cta: string | null;
+  deepLink: string | null;
   content: HomeBannerLocalizedContent;
   updatedAt: string;
 }
@@ -36,12 +38,16 @@ export async function getHomeBannerAdminConfig(): Promise<HomeBannerAdminConfig>
 export async function updateHomeBannerAdminConfig(input: {
   enabled: boolean;
   content: HomeBannerLocalizedContent;
+  cta?: string | null;
+  deepLink?: string | null;
   imageFile?: File | null;
   removeImage?: boolean;
 }): Promise<HomeBannerAdminConfig> {
   const body = new FormData();
   body.set('enabled', String(input.enabled));
   body.set('content', JSON.stringify(input.content));
+  body.set('cta', input.cta?.trim() ?? '');
+  body.set('deepLink', input.deepLink?.trim() ?? '');
 
   if (input.removeImage) {
     body.set('removeImage', 'true');
