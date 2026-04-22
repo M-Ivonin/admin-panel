@@ -11,6 +11,7 @@ export interface HomeBannerAdminConfig {
   imageUrl: string | null;
   cta: HomeBannerLocalizedContent;
   deepLink: string | null;
+  dismissOnAction: boolean;
   content: HomeBannerLocalizedContent;
   updatedAt: string;
 }
@@ -29,6 +30,7 @@ async function parseHomeBannerResponse(
     enabled: raw.enabled ?? false,
     imageUrl: raw.imageUrl ?? null,
     deepLink: raw.deepLink ?? null,
+    dismissOnAction: raw.dismissOnAction ?? true,
     cta: raw.cta ?? {
       en: '',
       es: '',
@@ -57,6 +59,7 @@ export async function updateHomeBannerAdminConfig(input: {
   content: HomeBannerLocalizedContent;
   cta: HomeBannerLocalizedContent;
   deepLink?: string | null;
+  dismissOnAction: boolean;
   imageFile?: File | null;
   removeImage?: boolean;
 }): Promise<HomeBannerAdminConfig> {
@@ -65,6 +68,7 @@ export async function updateHomeBannerAdminConfig(input: {
   body.set('content', JSON.stringify(input.content));
   body.set('cta', JSON.stringify(input.cta));
   body.set('deepLink', input.deepLink?.trim() ?? '');
+  body.set('dismissOnAction', String(input.dismissOnAction));
 
   if (input.removeImage) {
     body.set('removeImage', 'true');
