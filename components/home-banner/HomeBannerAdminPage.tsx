@@ -6,6 +6,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   FormControlLabel,
   Paper,
   Stack,
@@ -59,6 +60,7 @@ function createEmptyState(): HomeBannerAdminConfig {
       pt: '',
     },
     deepLink: null,
+    dismissOnAction: true,
     content: {
       en: '',
       es: '',
@@ -169,7 +171,7 @@ export function HomeBannerAdminPage() {
     }
 
     return null;
-  }, [form.enabled, localeErrors]);
+  }, [form.cta, form.deepLink, form.enabled, localeErrors]);
 
   const handleLocaleChange =
     (locale: keyof HomeBannerLocalizedContent) =>
@@ -214,6 +216,7 @@ export function HomeBannerAdminPage() {
         content: form.content,
         cta: form.cta,
         deepLink: form.deepLink,
+        dismissOnAction: form.dismissOnAction,
         imageFile: selectedImage,
         removeImage,
       });
@@ -428,6 +431,29 @@ export function HomeBannerAdminPage() {
                     disabled={isLoading || isSaving}
                     helperText="Optional. Use an internal app route or a supported SirBro app link. For the live challenge flow you can use /channels?action=create_challenge."
                   />
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={form.dismissOnAction}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              dismissOnAction: event.target.checked,
+                            }))
+                          }
+                          disabled={isLoading || isSaving}
+                        />
+                      }
+                      label="Hide banner after CTA click"
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      If enabled, the banner is dismissed after a successful CTA
+                      transition. If disabled, the user is redirected but the
+                      banner keeps showing until it is closed manually or the
+                      banner version changes.
+                    </Typography>
+                  </Box>
                 </Stack>
 
                 <Stack spacing={2}>
