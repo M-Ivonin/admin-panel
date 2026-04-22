@@ -47,6 +47,7 @@ export interface PredictionEvaluationAccuracyBreakdown {
   evaluated: number;
   correct: number;
   accuracy: number | null;
+  averageOdds: number | null;
 }
 
 export interface PredictionEvaluationSummary extends PredictionEvaluationStats {
@@ -102,6 +103,8 @@ export interface PredictionEvaluationFilters {
   league?: string;
   dateFrom?: string;
   dateTo?: string;
+  oddsFrom?: number;
+  oddsTo?: number;
   sortBy?: PredictionEvaluationGroupSortField;
   sortOrder?: PredictionEvaluationGroupSortOrder;
 }
@@ -120,6 +123,12 @@ export async function getPredictionEvaluationGroups(
   if (params.league) searchParams.set('league', params.league);
   if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
   if (params.dateTo) searchParams.set('dateTo', params.dateTo);
+  if (params.oddsFrom !== undefined) {
+    searchParams.set('oddsFrom', params.oddsFrom.toString());
+  }
+  if (params.oddsTo !== undefined) {
+    searchParams.set('oddsTo', params.oddsTo.toString());
+  }
   if (params.sortBy) searchParams.set('sortBy', params.sortBy);
   if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
 
