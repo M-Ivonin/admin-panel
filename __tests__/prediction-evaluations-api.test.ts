@@ -30,11 +30,13 @@ describe('getPredictionEvaluationGroups', () => {
             evaluated: 0,
             correct: 0,
             accuracy: null,
+            averageOdds: null,
           },
           risky: {
             evaluated: 0,
             correct: 0,
             accuracy: null,
+            averageOdds: null,
           },
         },
       }),
@@ -51,13 +53,15 @@ describe('getPredictionEvaluationGroups', () => {
       league: 'Premier League',
       dateFrom: '2026-04-01',
       dateTo: '2026-04-08',
+      oddsFrom: 1.4,
+      oddsTo: 2.2,
       sortBy: 'status',
       sortOrder: 'asc',
     });
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
       path:
-        '/match-predictions/admin/evaluations?page=2&limit=50&search=arsenal&league=Premier+League&dateFrom=2026-04-01&dateTo=2026-04-08&sortBy=status&sortOrder=asc&statuses=pending&statuses=failed&sourceTypes=match_prediction&slotKeys=safe&slotKeys=risky&marketKeys=match_winner&marketKeys=double_chance',
+        '/match-predictions/admin/evaluations?page=2&limit=50&search=arsenal&league=Premier+League&dateFrom=2026-04-01&dateTo=2026-04-08&oddsFrom=1.4&oddsTo=2.2&sortBy=status&sortOrder=asc&statuses=pending&statuses=failed&sourceTypes=match_prediction&slotKeys=safe&slotKeys=risky&marketKeys=match_winner&marketKeys=double_chance',
       method: 'GET',
     });
   });

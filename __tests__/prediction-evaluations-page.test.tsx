@@ -42,11 +42,13 @@ const populatedResponse = {
           evaluated: 1,
           correct: 1,
           accuracy: 100,
+          averageOdds: 1.95,
         },
         risky: {
           evaluated: 0,
           correct: 0,
           accuracy: null,
+          averageOdds: null,
         },
       },
       predictions: [
@@ -89,11 +91,13 @@ const populatedResponse = {
       evaluated: 20,
       correct: 14,
       accuracy: 70,
+      averageOdds: 1.88,
     },
     risky: {
       evaluated: 10,
       correct: 4,
       accuracy: 40,
+      averageOdds: 2.37,
     },
   },
 };
@@ -122,6 +126,8 @@ describe('PredictionEvaluationsPage', () => {
     expect(await screen.findByText('Alpha FC vs Beta FC')).toBeTruthy();
     expect(await screen.findAllByText('Safe Accuracy')).toHaveLength(2);
     expect(await screen.findAllByText('Risky Accuracy')).toHaveLength(2);
+    expect(await screen.findByText('Avg odds 1.88')).toBeTruthy();
+    expect(await screen.findByText('Avg odds 1.95')).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
@@ -241,11 +247,13 @@ describe('PredictionEvaluationsPage', () => {
             evaluated: 0,
             correct: 0,
             accuracy: null,
+            averageOdds: null,
           },
           risky: {
             evaluated: 0,
             correct: 0,
             accuracy: null,
+            averageOdds: null,
           },
         },
       });
@@ -369,6 +377,38 @@ describe('PredictionEvaluationsPage', () => {
           dateTo: expect.stringMatching(
             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
           ),
+        }),
+      );
+    });
+  });
+
+  it('sends the selected odds range filter in the request', async () => {
+    render(<PredictionEvaluationsPage />);
+
+    await screen.findByText('Alpha FC vs Beta FC');
+
+    fireEvent.change(screen.getByLabelText('Odds from'), {
+      target: { value: '1.5' },
+    });
+
+    await waitFor(() => {
+      expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          oddsFrom: 1.5,
+          oddsTo: undefined,
+        }),
+      );
+    });
+
+    fireEvent.change(screen.getByLabelText('Odds to'), {
+      target: { value: '2.4' },
+    });
+
+    await waitFor(() => {
+      expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          oddsFrom: 1.5,
+          oddsTo: 2.4,
         }),
       );
     });

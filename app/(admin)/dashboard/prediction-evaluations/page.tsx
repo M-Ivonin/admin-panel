@@ -123,11 +123,13 @@ const EMPTY_SUMMARY: PredictionEvaluationSummary = {
     evaluated: 0,
     correct: 0,
     accuracy: null,
+    averageOdds: null,
   },
   risky: {
     evaluated: 0,
     correct: 0,
     accuracy: null,
+    averageOdds: null,
   },
 };
 
@@ -162,6 +164,23 @@ function formatPercentage(value: number | null): string {
   }
 
   return `${value.toFixed(value % 1 === 0 ? 0 : 2)}%`;
+}
+
+function formatOdds(value: number | null): string {
+  if (value === null) {
+    return '-';
+  }
+
+  return value.toFixed(2);
+}
+
+function parseOddsInput(value: string): number | undefined {
+  if (!value.trim()) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function formatFixtureLabel(group: FixtureEvaluationGroup): string {
@@ -356,6 +375,10 @@ export default function PredictionEvaluationsPage() {
       dateTo: defaultRange.dateTo ?? '',
     };
   });
+  const [oddsRange, setOddsRange] = useState({
+    oddsFrom: '',
+    oddsTo: '',
+  });
   const [periodPreset, setPeriodPreset] =
     useState<PredictionEvaluationPeriodPreset>(DEFAULT_PERIOD_PRESET);
   const [sortField, setSortField] = useState<PredictionEvaluationGroupSortField>(
@@ -390,6 +413,8 @@ export default function PredictionEvaluationsPage() {
             marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
             dateFrom: dateRange.dateFrom || undefined,
             dateTo: dateRange.dateTo || undefined,
+            oddsFrom: parseOddsInput(oddsRange.oddsFrom),
+            oddsTo: parseOddsInput(oddsRange.oddsTo),
             sortBy: sortField,
             sortOrder,
           });
@@ -446,6 +471,7 @@ export default function PredictionEvaluationsPage() {
     slotKeys,
     marketKeys,
     dateRange,
+    oddsRange,
     sortField,
     sortOrder,
     refreshNonce,
@@ -457,6 +483,8 @@ export default function PredictionEvaluationsPage() {
     sourceTypes.length > 0 ||
     slotKeys.length > 0 ||
     marketKeys.length > 0 ||
+    Boolean(oddsRange.oddsFrom.trim()) ||
+    Boolean(oddsRange.oddsTo.trim()) ||
     periodPreset !== DEFAULT_PERIOD_PRESET ||
     sortField !== DEFAULT_SORT_FIELD ||
     sortOrder !== DEFAULT_SORT_ORDER;
@@ -586,6 +614,9 @@ export default function PredictionEvaluationsPage() {
                 {summary.safe.correct} correct out of {summary.safe.evaluated}{' '}
                 evaluated
               </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Avg odds {formatOdds(summary.safe.averageOdds)}
+              </Typography>
             </Paper>
 
             <Paper sx={{ p: 2.5 }}>
@@ -598,6 +629,9 @@ export default function PredictionEvaluationsPage() {
               <Typography variant="caption" color="text.secondary">
                 {summary.risky.correct} correct out of {summary.risky.evaluated}{' '}
                 evaluated
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Avg odds {formatOdds(summary.risky.averageOdds)}
               </Typography>
             </Paper>
 
@@ -723,7 +757,7 @@ export default function PredictionEvaluationsPage() {
                 gridTemplateColumns: {
                   xs: '1fr',
                   md: 'repeat(2, minmax(0, 1fr))',
-                  xl: 'repeat(4, minmax(0, 1fr))',
+                  xl: 'repeat(6, minmax(0, 1fr))',
                 },
                 gap: 2,
               }}
@@ -824,6 +858,36 @@ export default function PredictionEvaluationsPage() {
                   <TextField {...params} size="small" label="Market" />
                 )}
               />
+
+              <TextField
+                size="small"
+                label="Odds from"
+                type="number"
+                value={oddsRange.oddsFrom}
+                onChange={(event) => {
+                  setOddsRange((current) => ({
+                    ...current,
+                    oddsFrom: event.target.value,
+                  }));
+                  setPage(0);
+                }}
+                inputProps={{ min: 1, step: '0.01' }}
+              />
+
+              <TextField
+                size="small"
+                label="Odds to"
+                type="number"
+                value={oddsRange.oddsTo}
+                onChange={(event) => {
+                  setOddsRange((current) => ({
+                    ...current,
+                    oddsTo: event.target.value,
+                  }));
+                  setPage(0);
+                }}
+                inputProps={{ min: 1, step: '0.01' }}
+              />
             </Box>
 
             <Box
@@ -905,6 +969,10 @@ export default function PredictionEvaluationsPage() {
                     setSourceTypes([]);
                     setSlotKeys([]);
                     setMarketKeys([]);
+                    setOddsRange({
+                      oddsFrom: '',
+                      oddsTo: '',
+                    });
                     const defaultRange =
                       getPeriodPresetIsoRange(DEFAULT_PERIOD_PRESET);
                     setDateRange({
@@ -1061,6 +1129,9 @@ export default function PredictionEvaluationsPage() {
                           <Typography variant="caption" color="text.secondary">
                             {group.stats.safe.correct}/{group.stats.safe.evaluated}
                           </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Avg odds {formatOdds(group.stats.safe.averageOdds)}
+                          </Typography>
                         </Paper>
                         <Paper variant="outlined" sx={{ p: 1.25 }}>
                           <Typography variant="caption" color="text.secondary">
@@ -1071,6 +1142,9 @@ export default function PredictionEvaluationsPage() {
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {group.stats.risky.correct}/{group.stats.risky.evaluated}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Avg odds {formatOdds(group.stats.risky.averageOdds)}
                           </Typography>
                         </Paper>
                         <Paper variant="outlined" sx={{ p: 1.25 }}>
