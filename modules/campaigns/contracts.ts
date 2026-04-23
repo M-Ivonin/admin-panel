@@ -4,6 +4,8 @@
 
 import { RetentionStage } from '@/lib/api/users';
 
+export const CAMPAIGN_GOAL_REWARD_POINTS_MAX = 2_147_483_647;
+
 export type CampaignStatus =
   | 'draft'
   | 'scheduled'
@@ -57,6 +59,8 @@ export type CampaignQuickView =
 export type CampaignSourceEventKey =
   | 'app_opened'
   | 'onboarding_completed'
+  | 'match_center_opened'
+  | 'rewards_wallet_opened'
   | 'subscription_started'
   | 'subscription_renewed'
   | 'in_app_purchase_completed'
@@ -287,14 +291,15 @@ export type CampaignGoalAttributionMode =
   | 'trace_required_response';
 
 export interface CampaignGoalDefinition {
-  eventKey: string;
+  eventKey: CampaignSourceEventKey;
   attributionMode: CampaignGoalAttributionMode;
+  rewardPoints?: number;
 }
 
 export interface CampaignGoalOption {
   goalKey: string;
   label: string;
-  eventKey: string;
+  eventKey: CampaignSourceEventKey;
   attributionMode: CampaignGoalAttributionMode;
 }
 

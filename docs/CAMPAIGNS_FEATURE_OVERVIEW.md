@@ -1,6 +1,6 @@
 # Campaigns Feature Overview
 
-Last reviewed from code: 2026-04-17
+Last reviewed from code: 2026-04-23
 
 This document describes the implemented Campaigns feature by reading the current admin-panel and backend code. It covers the current shipped behavior, data model, runtime flow, and notable implementation nuances.
 
@@ -30,6 +30,7 @@ The current implementation is narrower than the raw type contracts may suggest.
 
 - Channel support is currently `push` only.
 - The editor exposes one explicit tracked-goal selector at campaign level.
+- The editor exposes optional goal reward points for tracked-goal campaigns.
 - The editor exposes only three deeplink targets for new non-null step actions:
   - `continue_onboarding`
   - `open_match_center`
@@ -94,8 +95,19 @@ This backend goal definition is what actually powers:
 - goal suppression,
 - stop-on-goal behavior for later journey steps,
 - success attribution logic.
+- optional one-time goal reward points.
 
 If no tracked goal is selected, the editor shows an explicit warning that campaign success, suppression, and stop-on-goal behavior will not be measured. This warning does not block save, test send, or scheduling by itself.
+
+### 4.3 Campaign goal reward
+
+Tracked-goal campaigns can define `rewardPoints`.
+
+- `0` means no campaign reward.
+- A positive value is awarded once when the user reaches that campaign goal for the current journey.
+- The backend writes the credit through the points ledger with idempotency, so duplicate goal events do not create duplicate credits for the same campaign journey.
+- The rewarded amount is snapshotted onto sent deliveries, so later campaign edits do not retroactively change what an already-sent push pays out.
+- For trace-required CTA goals such as match-center or rewards-wallet opens, the reward is tied to the push delivery trace.
 
 ## 5. Admin-panel experience
 
@@ -210,6 +222,7 @@ The Audience step currently exposes:
 - campaign name,
 - campaign goal text,
 - tracked goal selector,
+- goal reward points,
 - optional specific-user filter,
 - retention stages,
 - locales,
@@ -1062,7 +1075,7 @@ The backend seeds these scenario templates in the database:
 | Onboarding recovery             | State based         | 3 steps | Recover onboarding completion             |
 | Favorite match kickoff          | Event based         | 1 step  | Drive match center opens                  |
 | Onboarding completed activation | Event based         | 1 step  | Drive first match center open after setup |
-| At-risk WAU retention           | Scheduled recurring | 1 step  | Bring back at-risk weekly users           |
+| At-risk WAU retention           | State based         | 1 step  | Bring back at-risk weekly users           |
 | At-risk MAU retention           | Scheduled recurring | 1 step  | Bring back at-risk monthly users          |
 | Dead user winback               | Scheduled recurring | 1 step  | Bring back users inactive for 30+ days    |
 

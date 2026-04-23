@@ -159,7 +159,7 @@ export type CampaignEditorAction =
   | {
       type: 'markSaveSuccess';
       draft: CampaignDraft;
-      message: string;
+      message?: string | null;
     }
   | {
       type: 'markActionSuccess';
@@ -230,7 +230,10 @@ function normalizeNewScheduledTrigger(
     ...defaults,
     ...trigger,
     startDate: defaults.startDate,
-    maxOccurrences: trigger.maxOccurrences ?? defaults.maxOccurrences,
+    maxOccurrences:
+      trigger.maxOccurrences === undefined
+        ? defaults.maxOccurrences
+        : trigger.maxOccurrences,
   };
 }
 
@@ -535,10 +538,12 @@ export function campaignEditorReducer(
         draft: nextDraft,
         activeContentStepKey: getFirstStepKey(nextDraft),
         isDirty: false,
-        lastActionResult: {
-          kind: 'save',
-          message: action.message,
-        },
+        lastActionResult: action.message
+          ? {
+              kind: 'save',
+              message: action.message,
+            }
+          : null,
         lastPersistedDraft: cloneDraft(nextDraft),
       };
     }

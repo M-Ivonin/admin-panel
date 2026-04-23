@@ -51,10 +51,12 @@ import { RetentionStage, getUser, type User } from '@/lib/api/users';
 import { getStoredAuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CampaignAudienceUserPickerDialog } from '@/components/campaigns/CampaignAudienceUserPickerDialog';
+import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
+  CampaignGoalDefinition,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignStatus,
@@ -142,7 +144,6 @@ interface PendingTokenFocus {
 }
 
 const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
-const PENDING_SCHEDULE_DIALOG_STORAGE_KEY = 'campaigns:pending-schedule-dialog';
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function getPreferredTestRecipients(
@@ -164,43 +165,29 @@ function getPreferredTestRecipients(
   return authorizedUserEmail;
 }
 
-function storePendingScheduleDialog(campaignId: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.sessionStorage.setItem(
-    PENDING_SCHEDULE_DIALOG_STORAGE_KEY,
-    campaignId
-  );
-}
-
-function consumePendingScheduleDialog(campaignId: string): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const pendingCampaignId = window.sessionStorage.getItem(
-    PENDING_SCHEDULE_DIALOG_STORAGE_KEY
-  );
-  if (pendingCampaignId !== campaignId) {
-    return false;
-  }
-
-  window.sessionStorage.removeItem(PENDING_SCHEDULE_DIALOG_STORAGE_KEY);
-  return true;
-}
-
 function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
   return {
     name: draft.name,
     goal: draft.goal,
-    goalDefinition: draft.goalDefinition,
+    goalDefinition: normalizeGoalDefinition(draft.goalDefinition),
     channel: draft.channel,
     audience: draft.audience,
     trigger: draft.trigger,
     journey: draft.journey,
     content: draft.content,
+  };
+}
+
+function normalizeGoalDefinition(
+  goalDefinition: CampaignGoalDefinition | null
+): CampaignGoalDefinition | null {
+  if (!goalDefinition) {
+    return null;
+  }
+
+  return {
+    ...goalDefinition,
+    rewardPoints: goalDefinition.rewardPoints ?? 0,
   };
 }
 
@@ -558,6 +545,19 @@ function getDeeplinkOptionLabel(
   return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
 }
 
+function parseRewardPoints(value: string): number {
+  if (value.trim() === '') {
+    return 0;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return parsed;
+}
+
 export function CampaignEditorPage({
   mode,
   campaignId,
@@ -577,7 +577,6 @@ export function CampaignEditorPage({
   const [testRecipients, setTestRecipients] = useState(
     () => storedAuthUser?.email?.trim() ?? ''
   );
-  const [isPreparingSchedule, setIsPreparingSchedule] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
@@ -898,19 +897,15 @@ export function CampaignEditorPage({
     };
   }, [isInitialized, state.draft.audience]);
 
-  useEffect(() => {
-    if (!isInitialized || state.isDirty || !state.draft.id) {
-      return;
-    }
-
-    if (!consumePendingScheduleDialog(state.draft.id)) {
-      return;
-    }
-
-    dispatch({ type: 'openDialog', dialog: 'schedule' });
-  }, [isInitialized, state.draft.id, state.isDirty]);
-
-  async function persistDraft(): Promise<CampaignDraft> {
+  async function persistDraft(options?: {
+    message?: string | null;
+    navigateOnCreate?: boolean;
+  }): Promise<CampaignDraft> {
+    const message =
+      options?.message === undefined
+        ? 'Draft saved successfully.'
+        : options.message;
+    const navigateOnCreate = options?.navigateOnCreate ?? true;
     const payload = buildUpsertPayload(state.draft);
     const saved =
       state.draft.id === null
@@ -923,10 +918,10 @@ export function CampaignEditorPage({
     dispatch({
       type: 'markSaveSuccess',
       draft: saved,
-      message: 'Draft saved successfully.',
+      message,
     });
 
-    if (state.draft.id === null && saved.id) {
+    if (navigateOnCreate && state.draft.id === null && saved.id) {
       router.replace(`/dashboard/campaigns/${saved.id}`);
     }
 
@@ -960,28 +955,8 @@ export function CampaignEditorPage({
   }
 
   async function handleOpenScheduleDialog() {
-    try {
-      setError(null);
-
-      if (state.draft.id !== null && !state.isDirty) {
-        dispatch({ type: 'openDialog', dialog: 'schedule' });
-        return;
-      }
-
-      setIsPreparingSchedule(true);
-      const saved = await ensurePersistedDraft();
-      if (saved.id) {
-        storePendingScheduleDialog(saved.id);
-      }
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Failed to save current changes before scheduling'
-      );
-    } finally {
-      setIsPreparingSchedule(false);
-    }
+    setError(null);
+    dispatch({ type: 'openDialog', dialog: 'schedule' });
   }
 
   async function handleSendTest() {
@@ -1020,13 +995,27 @@ export function CampaignEditorPage({
   }
 
   async function handleSchedule() {
+    let persistedDraftId: string | null = null;
+
     try {
       setError(null);
       setIsScheduling(true);
-      const saved = await ensurePersistedDraft();
+      const shouldPersistBeforeScheduling =
+        state.draft.id === null || state.isDirty;
+      const saved = shouldPersistBeforeScheduling
+        ? await persistDraft({
+            message: null,
+            navigateOnCreate: false,
+          })
+        : state.draft;
+      persistedDraftId = saved.id;
       const response = await campaignsRepository.scheduleCampaign(saved.id!, {
         confirm: true,
       });
+
+      if (state.draft.id === null && saved.id) {
+        router.replace(`/dashboard/campaigns/${saved.id}`);
+      }
 
       dispatch({
         type: 'closeDialog',
@@ -1043,6 +1032,10 @@ export function CampaignEditorPage({
         ),
       });
     } catch (actionError) {
+      if (state.draft.id === null && persistedDraftId) {
+        router.replace(`/dashboard/campaigns/${persistedDraftId}`);
+      }
+
       setError(
         actionError instanceof Error
           ? actionError.message
@@ -1258,6 +1251,7 @@ export function CampaignEditorPage({
 
   const activeStepContent =
     state.draft.content[state.activeContentStepKey]?.[activeLocale];
+  const goalRewardPoints = state.draft.goalDefinition?.rewardPoints ?? 0;
   const stateBasedTrigger =
     state.draft.trigger.type === 'state_based' ? state.draft.trigger : null;
   const eventBasedTrigger =
@@ -1558,6 +1552,7 @@ export function CampaignEditorPage({
                         goalDefinition: {
                           eventKey: option.eventKey,
                           attributionMode: option.attributionMode,
+                          rewardPoints: goalRewardPoints,
                         },
                       });
                     }
@@ -1583,6 +1578,37 @@ export function CampaignEditorPage({
                   </Alert>
                 ) : null}
               </FormControl>
+
+              <TextField
+                label="Goal reward points"
+                type="number"
+                value={goalRewardPoints}
+                disabled={!state.draft.goalDefinition}
+                onChange={(event) => {
+                  if (!state.draft.goalDefinition) {
+                    return;
+                  }
+
+                  dispatch({
+                    type: 'changeGoalDefinition',
+                    goalDefinition: {
+                      ...state.draft.goalDefinition,
+                      rewardPoints: parseRewardPoints(event.target.value),
+                    },
+                  });
+                }}
+                inputProps={{
+                  min: 0,
+                  max: CAMPAIGN_GOAL_REWARD_POINTS_MAX,
+                  step: 1,
+                }}
+                helperText={
+                  state.draft.goalDefinition
+                    ? 'Awarded once when this campaign goal is reached.'
+                    : 'Select a tracked goal before configuring a reward.'
+                }
+                fullWidth
+              />
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {STEP_ORDER.map((step) => (
@@ -2748,20 +2774,11 @@ export function CampaignEditorPage({
                 </Button>
                 <Button
                   variant="contained"
-                  disabled={
-                    !canScheduleCampaign(state.draft) || isPreparingSchedule
-                  }
+                  disabled={!canScheduleCampaign(state.draft)}
                   onClick={handleOpenScheduleDialog}
                   sx={{ bgcolor: COLORS.accent, color: COLORS.textPrimary }}
                 >
-                  {isPreparingSchedule ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress size={16} color="inherit" />
-                      <span>Saving...</span>
-                    </Stack>
-                  ) : (
-                    'Schedule Campaign'
-                  )}
+                  Schedule Campaign
                 </Button>
                 <Button
                   startIcon={<Archive />}
@@ -2932,6 +2949,12 @@ export function CampaignEditorPage({
                 : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
               : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
+          {state.draft.id === null || state.isDirty ? (
+            <Typography sx={{ mt: 2, color: COLORS.textSecondary }}>
+              Your latest changes will be saved first, then the campaign will
+              be scheduled.
+            </Typography>
+          ) : null}
           {error ? (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -2954,7 +2977,9 @@ export function CampaignEditorPage({
                 <span>Scheduling...</span>
               </Stack>
             ) : (
-              'Confirm schedule'
+              state.draft.id === null || state.isDirty
+                ? 'Save and schedule'
+                : 'Confirm schedule'
             )}
           </Button>
         </DialogActions>
