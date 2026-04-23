@@ -17,6 +17,8 @@ import type {
   SaveSegmentResponse,
   SaveTemplateRequest,
   SaveTemplateResponse,
+  UpdateTemplateRequest,
+  UpdateTemplateResponse,
   ScheduleCampaignRequest,
   ScheduleCampaignResponse,
   SendTestCampaignRequest,
@@ -27,14 +29,16 @@ import type {
 function appendQueryParam(
   searchParams: URLSearchParams,
   key: string,
-  values: string[],
+  values: string[]
 ) {
   values.forEach((value) => {
     searchParams.append(key, value);
   });
 }
 
-async function readAdminErrorMessage(response: Response): Promise<string | null> {
+async function readAdminErrorMessage(
+  response: Response
+): Promise<string | null> {
   try {
     const body = (await response.json()) as
       | {
@@ -61,7 +65,10 @@ async function readAdminErrorMessage(response: Response): Promise<string | null>
   return null;
 }
 
-async function parseAdminResponse<T>(response: Response, message: string): Promise<T> {
+async function parseAdminResponse<T>(
+  response: Response,
+  message: string
+): Promise<T> {
   if (!response.ok) {
     const backendMessage = await readAdminErrorMessage(response);
 
@@ -87,7 +94,7 @@ async function parseAdminResponse<T>(response: Response, message: string): Promi
  * Loads the campaigns overview list and KPI payload.
  */
 export async function getCampaignsOverview(
-  params: GetCampaignsOverviewParams,
+  params: GetCampaignsOverviewParams
 ): Promise<CampaignsOverviewResponse> {
   const searchParams = new URLSearchParams({
     page: String(params.page),
@@ -141,7 +148,7 @@ export async function getCampaignDraft(id: string): Promise<CampaignDraft> {
  * Creates a new persisted campaign draft.
  */
 export async function createCampaignDraft(
-  input: UpsertCampaignDraftRequest,
+  input: UpsertCampaignDraftRequest
 ): Promise<CampaignDraft> {
   const response = await adminAuthFetch({
     path: '/campaigns/admin',
@@ -157,7 +164,7 @@ export async function createCampaignDraft(
  */
 export async function updateCampaignDraft(
   id: string,
-  input: UpsertCampaignDraftRequest,
+  input: UpsertCampaignDraftRequest
 ): Promise<CampaignDraft> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/${id}`,
@@ -172,7 +179,7 @@ export async function updateCampaignDraft(
  * Estimates the reachable audience for the current rules.
  */
 export async function estimateCampaignAudience(
-  input: EstimateAudienceRequest,
+  input: EstimateAudienceRequest
 ): Promise<EstimateAudienceResponse> {
   const response = await adminAuthFetch({
     path: '/campaigns/admin/estimate-audience',
@@ -187,7 +194,7 @@ export async function estimateCampaignAudience(
  * Saves the current audience rules as a reusable segment.
  */
 export async function saveCampaignSegment(
-  input: SaveSegmentRequest,
+  input: SaveSegmentRequest
 ): Promise<SaveSegmentResponse> {
   const response = await adminAuthFetch({
     path: '/campaigns/admin/segments',
@@ -202,7 +209,7 @@ export async function saveCampaignSegment(
  * Saves the current campaign definition as a reusable template.
  */
 export async function saveCampaignTemplate(
-  input: SaveTemplateRequest,
+  input: SaveTemplateRequest
 ): Promise<SaveTemplateResponse> {
   const response = await adminAuthFetch({
     path: '/campaigns/admin/templates',
@@ -214,10 +221,26 @@ export async function saveCampaignTemplate(
 }
 
 /**
+ * Updates an existing campaign scenario template.
+ */
+export async function updateCampaignTemplate(
+  id: string,
+  input: UpdateTemplateRequest
+): Promise<UpdateTemplateResponse> {
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/templates/${id}`,
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+
+  return parseAdminResponse(response, 'Failed to update campaign template');
+}
+
+/**
  * Deletes one saved campaign template.
  */
 export async function deleteCampaignTemplate(
-  id: string,
+  id: string
 ): Promise<DeleteTemplateResponse> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/templates/${id}`,
@@ -253,7 +276,7 @@ export async function deleteCampaignTemplate(
  */
 export async function sendCampaignTest(
   id: string,
-  input: SendTestCampaignRequest,
+  input: SendTestCampaignRequest
 ): Promise<SendTestCampaignResponse> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/${id}/send-test`,
@@ -269,7 +292,7 @@ export async function sendCampaignTest(
  */
 export async function scheduleCampaign(
   id: string,
-  input: ScheduleCampaignRequest,
+  input: ScheduleCampaignRequest
 ): Promise<ScheduleCampaignResponse> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/${id}/schedule`,
@@ -285,7 +308,7 @@ export async function scheduleCampaign(
  */
 export async function archiveCampaign(
   id: string,
-  input: ArchiveCampaignRequest,
+  input: ArchiveCampaignRequest
 ): Promise<ArchiveCampaignResponse> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/${id}/archive`,

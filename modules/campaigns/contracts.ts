@@ -160,6 +160,8 @@ export interface CampaignSavedSegmentSummary {
   description: string;
   audienceEstimate: number | null;
   audienceDefinition?: CampaignAudienceDefinition;
+  displayOrder?: number | null;
+  chipColor?: string | null;
   source: 'saved_segment' | 'template_segment';
 }
 
@@ -205,9 +207,17 @@ export interface CampaignScenarioTemplateSummary {
   source: CampaignScenarioTemplateSource;
 }
 
+export interface CampaignRetentionStageOption {
+  stage: RetentionStage;
+  label: string;
+  displayOrder: number;
+  chipColor: string;
+}
+
 export interface CampaignEditorCatalog {
   savedSegments: CampaignSavedSegmentSummary[];
   scenarioTemplates: CampaignScenarioTemplateSummary[];
+  retentionStageOptions: CampaignRetentionStageOption[];
   tokens: CampaignTokenDefinition[];
   deeplinkOptions: CampaignDeeplinkOption[];
   sourceEvents: CampaignSourceEventOption[];
@@ -344,6 +354,10 @@ export interface SaveTemplateRequest {
 export interface SaveTemplateResponse {
   template: CampaignScenarioTemplateSummary;
 }
+
+export type UpdateTemplateRequest = SaveTemplateRequest;
+
+export type UpdateTemplateResponse = SaveTemplateResponse;
 
 export interface DeleteTemplateResponse {
   templateId: string;

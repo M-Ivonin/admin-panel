@@ -179,6 +179,7 @@ export type CampaignEditorAction =
 const EMPTY_CATALOG: CampaignEditorCatalog = {
   savedSegments: [],
   scenarioTemplates: [],
+  retentionStageOptions: [],
   tokens: [],
   deeplinkOptions: [],
   sourceEvents: [],

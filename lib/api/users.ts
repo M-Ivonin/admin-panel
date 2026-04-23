@@ -51,29 +51,6 @@ export enum RetentionStage {
   PRE_REG_ONBOARDING_INCOMPLETE = 'PRE_REG_ONBOARDING_INCOMPLETE',
 }
 
-export const RETENTION_STAGE_LABELS: Record<RetentionStage, string> = {
-  [RetentionStage.NEW]: 'New Users',
-  [RetentionStage.CURRENT]: 'Current Users',
-  [RetentionStage.AT_RISK_WAU]: 'At-Risk WAU',
-  [RetentionStage.AT_RISK_MAU]: 'At-Risk MAU',
-  [RetentionStage.DEAD]: 'Dead Users',
-  [RetentionStage.REACTIVATED]: 'Reactivated',
-  [RetentionStage.RESURRECTED]: 'Resurrected',
-  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]:
-    'Pre-Reg Onboarding Incomplete',
-};
-
-export const RETENTION_STAGE_COLORS: Record<RetentionStage, string> = {
-  [RetentionStage.NEW]: 'bg-blue-100 text-blue-800',
-  [RetentionStage.CURRENT]: 'bg-green-100 text-green-800',
-  [RetentionStage.AT_RISK_WAU]: 'bg-yellow-100 text-yellow-800',
-  [RetentionStage.AT_RISK_MAU]: 'bg-orange-100 text-orange-800',
-  [RetentionStage.DEAD]: 'bg-gray-100 text-gray-800',
-  [RetentionStage.REACTIVATED]: 'bg-purple-100 text-purple-800',
-  [RetentionStage.RESURRECTED]: 'bg-pink-100 text-pink-800',
-  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 'bg-cyan-100 text-cyan-800',
-};
-
 export interface RetentionCounts {
   [RetentionStage.NEW]: number;
   [RetentionStage.CURRENT]: number;

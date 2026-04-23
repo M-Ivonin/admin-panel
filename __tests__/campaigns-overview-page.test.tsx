@@ -9,7 +9,7 @@ const push = jest.fn();
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
-    '@/test-support/campaigns/mock-repository',
+    '@/test-support/campaigns/mock-repository'
   );
 
   return {
@@ -100,7 +100,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
-              label: 'Pre-registration · onboarding incomplete',
+              label: 'Pre-Reg Onboarding Incomplete',
             },
             timing: {
               label: 'Next send',
@@ -171,7 +171,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
-              label: 'Pre-registration · onboarding incomplete',
+              label: 'Pre-Reg Onboarding Incomplete',
             },
             timing: {
               label: 'Next send',

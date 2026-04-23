@@ -171,6 +171,17 @@ describe('CampaignEditorPage', () => {
           .getByRole('button', { name: 'New Users' })
           .getAttribute('aria-pressed')
       ).toBe('false');
+      expect(
+        Boolean(
+          screen
+            .getByRole('button', {
+              name: 'Pre-Reg Onboarding Incomplete',
+            })
+            .compareDocumentPosition(
+              screen.getByRole('button', { name: 'New Users' })
+            ) & Node.DOCUMENT_POSITION_FOLLOWING
+        )
+      ).toBe(true);
     });
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
@@ -333,6 +344,35 @@ describe('CampaignEditorPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Delete me template')).toBeNull();
       expect(screen.getByText('Template deleted successfully.')).toBeTruthy();
+    });
+  });
+
+  it('edits an existing scenario template from the admin rail', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Scenario templates');
+
+    fireEvent.click(screen.getByLabelText('Edit template Onboarding recovery'));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Onboarding recovery')).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Update template' })
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update template' }));
+    const updateDialog = await screen.findByRole('dialog');
+    fireEvent.change(screen.getByLabelText(/^Template name$/), {
+      target: { value: 'Updated onboarding recovery' },
+    });
+    fireEvent.click(
+      within(updateDialog).getByRole('button', { name: 'Update template' })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Template updated successfully.')).toBeTruthy();
+      expect(screen.getByText('Updated onboarding recovery')).toBeTruthy();
     });
   });
 

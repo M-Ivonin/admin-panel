@@ -14,6 +14,7 @@ import {
   saveCampaignTemplate,
   scheduleCampaign,
   sendCampaignTest,
+  updateCampaignTemplate,
   updateCampaignDraft,
 } from '@/lib/api/campaigns';
 import type {
@@ -30,6 +31,8 @@ import type {
   SaveSegmentResponse,
   SaveTemplateRequest,
   SaveTemplateResponse,
+  UpdateTemplateRequest,
+  UpdateTemplateResponse,
   ScheduleCampaignRequest,
   ScheduleCampaignResponse,
   SendTestCampaignRequest,
@@ -38,51 +41,57 @@ import type {
 } from '@/modules/campaigns/contracts';
 
 export type GetCampaignsOverviewMethod = (
-  params: GetCampaignsOverviewParams,
+  params: GetCampaignsOverviewParams
 ) => Promise<CampaignsOverviewResponse>;
 
-export type GetCampaignEditorCatalogMethod = () => Promise<CampaignEditorCatalog>;
+export type GetCampaignEditorCatalogMethod =
+  () => Promise<CampaignEditorCatalog>;
 
 export type GetCampaignDraftMethod = (id: string) => Promise<CampaignDraft>;
 
 export type CreateCampaignDraftMethod = (
-  input: UpsertCampaignDraftRequest,
+  input: UpsertCampaignDraftRequest
 ) => Promise<CampaignDraft>;
 
 export type UpdateCampaignDraftMethod = (
   id: string,
-  input: UpsertCampaignDraftRequest,
+  input: UpsertCampaignDraftRequest
 ) => Promise<CampaignDraft>;
 
 export type EstimateCampaignAudienceMethod = (
-  input: EstimateAudienceRequest,
+  input: EstimateAudienceRequest
 ) => Promise<EstimateAudienceResponse>;
 
 export type SaveCampaignSegmentMethod = (
-  input: SaveSegmentRequest,
+  input: SaveSegmentRequest
 ) => Promise<SaveSegmentResponse>;
 
 export type SaveCampaignTemplateMethod = (
-  input: SaveTemplateRequest,
+  input: SaveTemplateRequest
 ) => Promise<SaveTemplateResponse>;
 
-export type DeleteCampaignTemplateMethod = (
+export type UpdateCampaignTemplateMethod = (
   id: string,
+  input: UpdateTemplateRequest
+) => Promise<UpdateTemplateResponse>;
+
+export type DeleteCampaignTemplateMethod = (
+  id: string
 ) => Promise<DeleteTemplateResponse>;
 
 export type SendCampaignTestMethod = (
   id: string,
-  input: SendTestCampaignRequest,
+  input: SendTestCampaignRequest
 ) => Promise<SendTestCampaignResponse>;
 
 export type ScheduleCampaignMethod = (
   id: string,
-  input: ScheduleCampaignRequest,
+  input: ScheduleCampaignRequest
 ) => Promise<ScheduleCampaignResponse>;
 
 export type ArchiveCampaignMethod = (
   id: string,
-  input: ArchiveCampaignRequest,
+  input: ArchiveCampaignRequest
 ) => Promise<ArchiveCampaignResponse>;
 
 export interface CampaignsRepository {
@@ -94,6 +103,7 @@ export interface CampaignsRepository {
   estimateAudience: EstimateCampaignAudienceMethod;
   saveSegment: SaveCampaignSegmentMethod;
   saveTemplate: SaveCampaignTemplateMethod;
+  updateTemplate: UpdateCampaignTemplateMethod;
   deleteTemplate: DeleteCampaignTemplateMethod;
   sendTestCampaign: SendCampaignTestMethod;
   scheduleCampaign: ScheduleCampaignMethod;
@@ -109,6 +119,7 @@ export const campaignsRepository: CampaignsRepository = {
   estimateAudience: estimateCampaignAudience,
   saveSegment: saveCampaignSegment,
   saveTemplate: saveCampaignTemplate,
+  updateTemplate: updateCampaignTemplate,
   deleteTemplate: deleteCampaignTemplate,
   sendTestCampaign: sendCampaignTest,
   scheduleCampaign,

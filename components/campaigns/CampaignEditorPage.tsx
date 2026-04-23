@@ -39,13 +39,15 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Archive, Delete, Save, Science } from '@mui/icons-material';
 import {
-  RETENTION_STAGE_LABELS,
-  RetentionStage,
-  getUser,
-  type User,
-} from '@/lib/api/users';
+  ArrowBack,
+  Archive,
+  Delete,
+  Edit,
+  Save,
+  Science,
+} from '@mui/icons-material';
+import { RetentionStage, getUser, type User } from '@/lib/api/users';
 import { getStoredAuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CampaignAudienceUserPickerDialog } from '@/components/campaigns/CampaignAudienceUserPickerDialog';
@@ -199,6 +201,46 @@ function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
     trigger: draft.trigger,
     journey: draft.journey,
     content: draft.content,
+  };
+}
+
+function hasSameAudienceRules(
+  left: CampaignDraft['audience'],
+  right: CampaignDraft['audience']
+): boolean {
+  return (
+    JSON.stringify(left.criteria) === JSON.stringify(right.criteria) &&
+    JSON.stringify(left.suppression) === JSON.stringify(right.suppression)
+  );
+}
+
+function buildTemplatePayload(
+  draft: CampaignDraft,
+  sourceTemplate: CampaignScenarioTemplateSummary | null
+): UpsertCampaignDraftRequest {
+  const payload = buildUpsertPayload(draft);
+
+  if (payload.audience.segmentSource !== 'template_segment') {
+    return payload;
+  }
+
+  if (
+    sourceTemplate &&
+    hasSameAudienceRules(payload.audience, sourceTemplate.definition.audience)
+  ) {
+    return {
+      ...payload,
+      audience: sourceTemplate.definition.audience,
+    };
+  }
+
+  return {
+    ...payload,
+    audience: {
+      ...payload.audience,
+      segmentSource: 'manual_rules',
+      sourceSegmentId: null,
+    },
   };
 }
 
@@ -361,12 +403,16 @@ function StepButton({
 function ToggleChip({
   label,
   selected,
+  chipColor,
   onClick,
 }: {
   label: string;
   selected: boolean;
+  chipColor?: string;
   onClick: () => void;
 }) {
+  const color = chipColor ?? COLORS.accent;
+
   return (
     <Chip
       label={label}
@@ -374,12 +420,27 @@ function ToggleChip({
       aria-pressed={selected}
       onClick={onClick}
       sx={{
-        bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
+        bgcolor: selected ? hexToRgba(color, 0.18) : COLORS.soft,
         color: selected ? COLORS.textPrimary : COLORS.textSecondary,
-        border: `1px solid ${selected ? COLORS.accent : COLORS.stroke}`,
+        border: `1px solid ${selected ? color : COLORS.stroke}`,
       }}
     />
   );
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) {
+    return `rgba(220, 80, 56, ${alpha})`;
+  }
+
+  const value = Number.parseInt(normalized, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function getAudienceUserLabel(user: User): string {
@@ -523,6 +584,8 @@ export function CampaignEditorPage({
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] =
+    useState<CampaignScenarioTemplateSummary | null>(null);
+  const [templateBeingEdited, setTemplateBeingEdited] =
     useState<CampaignScenarioTemplateSummary | null>(null);
   const contentInputRefs = useRef<
     Record<CampaignEditorTextField, CampaignEditorTextInputElement | null>
@@ -1028,11 +1091,17 @@ export function CampaignEditorPage({
     }
 
     try {
-      const response = await campaignsRepository.saveTemplate({
+      const templatePayload = {
         name: saveTemplateName.trim(),
         description: saveTemplateDescription.trim() || undefined,
-        definition: buildUpsertPayload(state.draft),
-      });
+        definition: buildTemplatePayload(state.draft, templateBeingEdited),
+      };
+      const response = templateBeingEdited
+        ? await campaignsRepository.updateTemplate(
+            templateBeingEdited.id,
+            templatePayload
+          )
+        : await campaignsRepository.saveTemplate(templatePayload);
       dispatch({
         type: 'setCatalog',
         catalog: {
@@ -1049,15 +1118,20 @@ export function CampaignEditorPage({
       dispatch({
         type: 'markActionSuccess',
         kind: 'template',
-        message: 'Campaign saved as template.',
+        message: templateBeingEdited
+          ? 'Template updated successfully.'
+          : 'Campaign saved as template.',
       });
+      setTemplateBeingEdited(templateBeingEdited ? response.template : null);
       setSaveTemplateName('');
       setSaveTemplateDescription('');
     } catch (actionError) {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : 'Failed to save campaign template'
+          : templateBeingEdited
+            ? 'Failed to update campaign template'
+            : 'Failed to save campaign template'
       );
     }
   }
@@ -1079,6 +1153,9 @@ export function CampaignEditorPage({
         },
       });
       setTemplateToDelete(null);
+      if (templateBeingEdited?.id === templateToDelete.id) {
+        setTemplateBeingEdited(null);
+      }
       dispatch({
         type: 'markActionSuccess',
         kind: 'template',
@@ -1094,11 +1171,40 @@ export function CampaignEditorPage({
   }
 
   function openSaveTemplateDialog() {
+    setTemplateBeingEdited(null);
     setSaveTemplateName(
       state.draft.name.trim() || 'Reusable campaign template'
     );
     setSaveTemplateDescription('');
     dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
+  }
+
+  function openUpdateTemplateDialog() {
+    if (!templateBeingEdited) {
+      return;
+    }
+
+    setSaveTemplateName(templateBeingEdited.name);
+    setSaveTemplateDescription(templateBeingEdited.description);
+    dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
+  }
+
+  function applyTemplate(template: CampaignScenarioTemplateSummary) {
+    setTemplateBeingEdited(null);
+    dispatch({
+      type: 'applyScenarioTemplate',
+      template,
+    });
+  }
+
+  function editTemplate(template: CampaignScenarioTemplateSummary) {
+    setTemplateBeingEdited(template);
+    setSaveTemplateName(template.name);
+    setSaveTemplateDescription(template.description);
+    dispatch({
+      type: 'applyScenarioTemplate',
+      template,
+    });
   }
 
   function toggleRetentionStage(stage: RetentionStage) {
@@ -1189,7 +1295,8 @@ export function CampaignEditorPage({
     state.draft.audience.segmentSource === 'template_segment' &&
     Boolean(state.draft.audience.sourceSegmentId);
   const canSaveTemplate =
-    templateBlockingErrors.length === 0 && !isTemplateDerivedCampaign;
+    templateBlockingErrors.length === 0 &&
+    (!isTemplateDerivedCampaign || templateBeingEdited !== null);
 
   if (loading) {
     return (
@@ -1256,17 +1363,16 @@ export function CampaignEditorPage({
                   {state.catalog.scenarioTemplates.map((template) => (
                     <Paper
                       key={template.id}
-                      onClick={() =>
-                        dispatch({
-                          type: 'applyScenarioTemplate',
-                          template,
-                        })
-                      }
+                      onClick={() => applyTemplate(template)}
                       sx={{
                         p: 1.5,
                         cursor: 'pointer',
                         bgcolor: COLORS.soft,
-                        border: `1px solid ${COLORS.stroke}`,
+                        border: `1px solid ${
+                          templateBeingEdited?.id === template.id
+                            ? COLORS.accent
+                            : COLORS.stroke
+                        }`,
                         transition:
                           'border-color 160ms ease, transform 160ms ease',
                         '&:hover': {
@@ -1313,6 +1419,19 @@ export function CampaignEditorPage({
                                 border: `1px solid ${COLORS.stroke}`,
                               }}
                             />
+                            <IconButton
+                              size="small"
+                              aria-label={`Edit template ${template.name}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                editTemplate(template);
+                              }}
+                              sx={{
+                                color: COLORS.textSecondary,
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
                             {template.source === 'saved' ? (
                               <IconButton
                                 size="small"
@@ -1569,14 +1688,15 @@ export function CampaignEditorPage({
                       flexWrap="wrap"
                       useFlexGap
                     >
-                      {Object.values(RetentionStage).map((stage) => (
+                      {state.catalog.retentionStageOptions.map((option) => (
                         <ToggleChip
-                          key={stage}
-                          label={RETENTION_STAGE_LABELS[stage]}
+                          key={option.stage}
+                          label={option.label}
+                          chipColor={option.chipColor}
                           selected={state.draft.audience.criteria.retentionStages.includes(
-                            stage
+                            option.stage
                           )}
-                          onClick={() => toggleRetentionStage(stage)}
+                          onClick={() => toggleRetentionStage(option.stage)}
                         />
                       ))}
                     </Stack>
@@ -2601,12 +2721,16 @@ export function CampaignEditorPage({
                   startIcon={<Save />}
                   variant="outlined"
                   disabled={!canSaveTemplate}
-                  onClick={openSaveTemplateDialog}
+                  onClick={
+                    templateBeingEdited
+                      ? openUpdateTemplateDialog
+                      : openSaveTemplateDialog
+                  }
                   sx={{ color: COLORS.textPrimary, borderColor: COLORS.stroke }}
                 >
-                  Save as template
+                  {templateBeingEdited ? 'Update template' : 'Save as template'}
                 </Button>
-                {isTemplateDerivedCampaign ? (
+                {isTemplateDerivedCampaign && !templateBeingEdited ? (
                   <Typography
                     sx={{ color: COLORS.textSecondary, fontSize: 12 }}
                   >
@@ -2661,7 +2785,9 @@ export function CampaignEditorPage({
           dispatch({ type: 'closeDialog', dialog: 'saveTemplate' })
         }
       >
-        <DialogTitle>Save as template</DialogTitle>
+        <DialogTitle>
+          {templateBeingEdited ? 'Update template' : 'Save as template'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1, minWidth: 360 }}>
             <TextField
@@ -2695,7 +2821,7 @@ export function CampaignEditorPage({
             onClick={handleSaveTemplate}
             disabled={!saveTemplateName.trim()}
           >
-            Save template
+            {templateBeingEdited ? 'Update template' : 'Save template'}
           </Button>
         </DialogActions>
       </Dialog>
