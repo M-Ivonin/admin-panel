@@ -23,12 +23,7 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
-import {
-  ArrowBack,
-  Refresh,
-  Search,
-  Chat,
-} from '@mui/icons-material';
+import { ArrowBack, Refresh, Search, Chat } from '@mui/icons-material';
 import {
   getUsers,
   User,
@@ -58,7 +53,9 @@ function formatDateTime(dateString: string | null): string {
   });
 }
 
-function getPlanColor(plan: string | undefined): 'default' | 'secondary' | 'warning' {
+function getPlanColor(
+  plan: string | undefined
+): 'default' | 'secondary' | 'warning' {
   const colors: Record<string, 'default' | 'secondary' | 'warning'> = {
     free: 'default',
     playmaker: 'secondary',
@@ -67,8 +64,26 @@ function getPlanColor(plan: string | undefined): 'default' | 'secondary' | 'warn
   return colors[plan || 'free'] || 'default';
 }
 
-function getRetentionChipColor(stage: RetentionStage): 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary' {
-  const colorMap: Record<RetentionStage, 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary'> = {
+function getRetentionChipColor(
+  stage: RetentionStage
+):
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info'
+  | 'primary'
+  | 'secondary' {
+  const colorMap: Record<
+    RetentionStage,
+    | 'default'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | 'info'
+    | 'primary'
+    | 'secondary'
+  > = {
     [RetentionStage.NEW]: 'info',
     [RetentionStage.CURRENT]: 'success',
     [RetentionStage.AT_RISK_WAU]: 'warning',
@@ -76,6 +91,7 @@ function getRetentionChipColor(stage: RetentionStage): 'default' | 'success' | '
     [RetentionStage.DEAD]: 'error',
     [RetentionStage.REACTIVATED]: 'primary',
     [RetentionStage.RESURRECTED]: 'secondary',
+    [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 'info',
   };
   return colorMap[stage] || 'default';
 }
@@ -88,6 +104,7 @@ const RETENTION_STAGES = [
   RetentionStage.DEAD,
   RetentionStage.REACTIVATED,
   RetentionStage.RESURRECTED,
+  RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE,
 ] as const;
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -96,14 +113,16 @@ export default function UsersPage() {
   // Data state
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
-  const [retentionCounts, setRetentionCounts] = useState<RetentionCounts | null>(null);
+  const [retentionCounts, setRetentionCounts] =
+    useState<RetentionCounts | null>(null);
 
   // Filter state
   const [page, setPage] = useState(0); // MUI TablePagination uses 0-based index
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedRetentionStage, setSelectedRetentionStage] = useState<RetentionStage | null>(null);
+  const [selectedRetentionStage, setSelectedRetentionStage] =
+    useState<RetentionStage | null>(null);
   const [partnerFilter, setPartnerFilter] = useState('');
 
   // Sorting state
@@ -154,7 +173,15 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, rowsPerPage, debouncedSearch, selectedRetentionStage, sortBy, sortOrder, partnerFilter]);
+  }, [
+    page,
+    rowsPerPage,
+    debouncedSearch,
+    selectedRetentionStage,
+    sortBy,
+    sortOrder,
+    partnerFilter,
+  ]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -191,7 +218,13 @@ export default function UsersPage() {
   };
 
   const getUserDisplayName = (user: User) => {
-    return user.name_app || user.name_tg || user.email || user.telegram_username || 'Unknown';
+    return (
+      user.name_app ||
+      user.name_tg ||
+      user.email ||
+      user.telegram_username ||
+      'Unknown'
+    );
   };
 
   return (
@@ -199,7 +232,17 @@ export default function UsersPage() {
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* Header */}
         <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
+            sx={{
+              maxWidth: 1280,
+              mx: 'auto',
+              px: { xs: 2, sm: 3, lg: 4 },
+              py: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
             <Link href="/dashboard">
               <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
                 Back
@@ -215,7 +258,14 @@ export default function UsersPage() {
         </Paper>
 
         {/* Main content */}
-        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>
+        <Box
+          sx={{
+            maxWidth: 1280,
+            mx: 'auto',
+            px: { xs: 2, sm: 3, lg: 4 },
+            py: 4,
+          }}
+        >
           {/* Retention Stage Filter Chips */}
           {retentionCounts && (
             <Paper sx={{ p: 2, mb: 3 }}>
@@ -226,8 +276,12 @@ export default function UsersPage() {
                     setSelectedRetentionStage(null);
                     setPage(0);
                   }}
-                  color={selectedRetentionStage === null ? 'primary' : 'default'}
-                  variant={selectedRetentionStage === null ? 'filled' : 'outlined'}
+                  color={
+                    selectedRetentionStage === null ? 'primary' : 'default'
+                  }
+                  variant={
+                    selectedRetentionStage === null ? 'filled' : 'outlined'
+                  }
                 />
                 {RETENTION_STAGES.map((stage) => {
                   const count = retentionCounts[stage] || 0;
@@ -248,7 +302,15 @@ export default function UsersPage() {
 
           {/* Search and actions */}
           <Paper sx={{ p: 2, mb: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <TextField
                 size="small"
                 placeholder="Search by name, email, username..."
@@ -269,11 +331,25 @@ export default function UsersPage() {
                 size="small"
                 placeholder="Filter by partner ID..."
                 value={partnerFilter}
-                onChange={(e) => { setPartnerFilter(e.target.value); setPage(0); }}
+                onChange={(e) => {
+                  setPartnerFilter(e.target.value);
+                  setPage(0);
+                }}
                 sx={{ width: { xs: '100%', sm: 220 } }}
               />
-              <IconButton onClick={fetchUsers} disabled={isLoading} color="primary">
-                <Refresh sx={{ animation: isLoading ? 'spin 1s linear infinite' : 'none', '@keyframes spin': { '100%': { transform: 'rotate(360deg)' } } }} />
+              <IconButton
+                onClick={fetchUsers}
+                disabled={isLoading}
+                color="primary"
+              >
+                <Refresh
+                  sx={{
+                    animation: isLoading ? 'spin 1s linear infinite' : 'none',
+                    '@keyframes spin': {
+                      '100%': { transform: 'rotate(360deg)' },
+                    },
+                  }}
+                />
               </IconButton>
             </Box>
           </Paper>
@@ -305,7 +381,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'name'}
-                          direction={sortBy === 'name' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'name'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('name')}
                         >
                           User
@@ -314,7 +396,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'retentionStage'}
-                          direction={sortBy === 'retentionStage' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'retentionStage'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('retentionStage')}
                         >
                           Status
@@ -323,7 +411,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'activePlan'}
-                          direction={sortBy === 'activePlan' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'activePlan'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('activePlan')}
                         >
                           Plan
@@ -332,7 +426,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'level'}
-                          direction={sortBy === 'level' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'level'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('level')}
                         >
                           Level
@@ -341,7 +441,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'totalXp'}
-                          direction={sortBy === 'totalXp' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'totalXp'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('totalXp')}
                         >
                           XP / Points
@@ -350,7 +456,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'first_seen_at'}
-                          direction={sortBy === 'first_seen_at' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'first_seen_at'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('first_seen_at')}
                         >
                           First Seen
@@ -359,7 +471,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'last_active_at'}
-                          direction={sortBy === 'last_active_at' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'last_active_at'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('last_active_at')}
                         >
                           Last Active
@@ -368,7 +486,13 @@ export default function UsersPage() {
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'language'}
-                          direction={sortBy === 'language' ? (sortOrder === 'ASC' ? 'asc' : 'desc') : 'desc'}
+                          direction={
+                            sortBy === 'language'
+                              ? sortOrder === 'ASC'
+                                ? 'asc'
+                                : 'desc'
+                              : 'desc'
+                          }
                           onClick={() => handleSort('language')}
                         >
                           Language
@@ -386,7 +510,11 @@ export default function UsersPage() {
                             <Typography variant="body2" fontWeight="medium">
                               {getUserDisplayName(user)}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
                               {user.email || '-'}
                             </Typography>
                             {user.telegram_username && (
@@ -398,9 +526,17 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={user.retentionStage ? RETENTION_STAGE_LABELS[user.retentionStage] : 'Unknown'}
+                            label={
+                              user.retentionStage
+                                ? RETENTION_STAGE_LABELS[user.retentionStage]
+                                : 'Unknown'
+                            }
                             size="small"
-                            color={user.retentionStage ? getRetentionChipColor(user.retentionStage) : 'default'}
+                            color={
+                              user.retentionStage
+                                ? getRetentionChipColor(user.retentionStage)
+                                : 'default'
+                            }
                           />
                         </TableCell>
                         <TableCell>
@@ -415,7 +551,10 @@ export default function UsersPage() {
                             <Typography variant="body2" fontWeight="medium">
                               Lvl {user.level}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {user.levelName}
                             </Typography>
                           </Box>
@@ -425,7 +564,10 @@ export default function UsersPage() {
                             <Typography variant="body2">
                               {user.totalXp.toLocaleString()} XP
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {user.totalPoints.toLocaleString()} pts
                             </Typography>
                           </Box>
@@ -452,16 +594,25 @@ export default function UsersPage() {
                               size="small"
                               color="secondary"
                               variant="outlined"
-                              onClick={() => { setPartnerFilter(user.partnerId!); setPage(0); }}
+                              onClick={() => {
+                                setPartnerFilter(user.partnerId!);
+                                setPage(0);
+                              }}
                               title="Click to filter by this partner"
                             />
                           ) : (
-                            <Typography variant="body2" color="text.disabled">—</Typography>
+                            <Typography variant="body2" color="text.disabled">
+                              —
+                            </Typography>
                           )}
                         </TableCell>
                         <TableCell>
                           <Link href={`/dashboard/bot-chat?userId=${user.id}`}>
-                            <Button variant="outlined" size="small" startIcon={<Chat />}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<Chat />}
+                            >
                               Chat
                             </Button>
                           </Link>

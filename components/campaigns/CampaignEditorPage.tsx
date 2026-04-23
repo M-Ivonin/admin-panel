@@ -39,13 +39,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import {
-  ArrowBack,
-  Archive,
-  Delete,
-  Save,
-  Science,
-} from '@mui/icons-material';
+import { ArrowBack, Archive, Delete, Save, Science } from '@mui/icons-material';
 import {
   RETENTION_STAGE_LABELS,
   RetentionStage,
@@ -146,8 +140,7 @@ interface PendingTokenFocus {
 }
 
 const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
-const PENDING_SCHEDULE_DIALOG_STORAGE_KEY =
-  'campaigns:pending-schedule-dialog';
+const PENDING_SCHEDULE_DIALOG_STORAGE_KEY = 'campaigns:pending-schedule-dialog';
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function getPreferredTestRecipients(
@@ -225,7 +218,9 @@ function formatScheduleResultTimestamp(timestamp: string): string {
   }).format(parsedDate);
 }
 
-function formatRecurringScheduleStartDate(date: string | null | undefined): string {
+function formatRecurringScheduleStartDate(
+  date: string | null | undefined
+): string {
   if (!date) {
     return 'the selected start date';
   }
@@ -261,7 +256,9 @@ function getScheduleSuccessWarnings(
   firstSendAt: string
 ): string[] {
   if (campaign.trigger.type !== 'scheduled_recurring') {
-    return [`First send planned for ${formatScheduleResultTimestamp(firstSendAt)}.`];
+    return [
+      `First send planned for ${formatScheduleResultTimestamp(firstSendAt)}.`,
+    ];
   }
 
   const schedule = parseCampaignScheduleRule(campaign.trigger.recurrenceRule);
@@ -374,6 +371,7 @@ function ToggleChip({
     <Chip
       label={label}
       clickable
+      aria-pressed={selected}
       onClick={onClick}
       sx={{
         bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
@@ -394,7 +392,9 @@ function getAudienceUserLabel(user: User): string {
   );
 }
 
-function formatTriggerTypeLabel(trigger: CampaignDraft['trigger']['type']): string {
+function formatTriggerTypeLabel(
+  trigger: CampaignDraft['trigger']['type']
+): string {
   if (trigger === 'state_based') {
     return 'State based';
   }
@@ -407,7 +407,7 @@ function formatTriggerTypeLabel(trigger: CampaignDraft['trigger']['type']): stri
 }
 
 function describeScenarioTemplate(
-  template: CampaignScenarioTemplateSummary,
+  template: CampaignScenarioTemplateSummary
 ): string {
   return [
     formatTriggerTypeLabel(template.definition.trigger.type),
@@ -474,7 +474,9 @@ function getSourceEventLabel(eventKey: string): string {
   }
 }
 
-function getJourneyAnchorLabel(anchorType: 'trigger' | 'previous_step'): string {
+function getJourneyAnchorLabel(
+  anchorType: 'trigger' | 'previous_step'
+): string {
   return anchorType === 'trigger' ? 'Campaign entry' : 'Previous step';
 }
 
@@ -652,7 +654,7 @@ export function CampaignEditorPage({
   }, [state.draft.audience.criteria.userIds]);
 
   function getInputSelection(
-    input: CampaignEditorTextInputElement,
+    input: CampaignEditorTextInputElement
   ): Pick<CampaignEditorTextSelection, 'start' | 'end'> {
     const fallbackCursor = input.value.length;
     const start = input.selectionStart ?? fallbackCursor;
@@ -663,7 +665,7 @@ export function CampaignEditorPage({
 
   function storeContentSelection(
     field: CampaignEditorTextField,
-    selection: Pick<CampaignEditorTextSelection, 'start' | 'end'>,
+    selection: Pick<CampaignEditorTextSelection, 'start' | 'end'>
   ) {
     contentSelectionRef.current[field] = {
       stepKey: state.activeContentStepKey,
@@ -675,7 +677,7 @@ export function CampaignEditorPage({
 
   function captureContentSelection(
     field: CampaignEditorTextField,
-    input?: CampaignEditorTextInputElement | null,
+    input?: CampaignEditorTextInputElement | null
   ): CampaignEditorTextSelection | null {
     const resolvedInput = input ?? contentInputRefs.current[field];
     if (!resolvedInput) {
@@ -690,7 +692,7 @@ export function CampaignEditorPage({
 
   function handleContentSelection(
     field: CampaignEditorTextField,
-    event: SyntheticEvent<CampaignEditorTextInputElement>,
+    event: SyntheticEvent<CampaignEditorTextInputElement>
   ) {
     contentInputRefs.current[field] = event.currentTarget;
     captureContentSelection(field, event.currentTarget);
@@ -698,7 +700,7 @@ export function CampaignEditorPage({
 
   function handleStepContentChange(
     field: CampaignEditorTextField,
-    event: ChangeEvent<CampaignEditorTextInputElement>,
+    event: ChangeEvent<CampaignEditorTextInputElement>
   ) {
     const value = event.target.value;
 
@@ -730,7 +732,8 @@ export function CampaignEditorPage({
       return;
     }
 
-    const storedSelection = contentSelectionRef.current[state.tokenTarget.field];
+    const storedSelection =
+      contentSelectionRef.current[state.tokenTarget.field];
     const selection =
       storedSelection &&
       storedSelection.stepKey === state.tokenTarget.stepKey &&
@@ -1158,13 +1161,15 @@ export function CampaignEditorPage({
       ? state.draft.trigger
       : null;
   const selectedSourceEvent = eventBasedTrigger
-    ? state.catalog.sourceEvents.find(
+    ? (state.catalog.sourceEvents.find(
         (option) =>
           option.eventKey === eventBasedTrigger.eventKey &&
           option.producerKey === eventBasedTrigger.producerKey
-      ) ?? null
+      ) ?? null)
     : null;
-  const isLegacyHiddenSourceEvent = Boolean(eventBasedTrigger && !selectedSourceEvent);
+  const isLegacyHiddenSourceEvent = Boolean(
+    eventBasedTrigger && !selectedSourceEvent
+  );
   const parsedScheduledRule = scheduledTrigger
     ? parseCampaignScheduleRule(scheduledTrigger.recurrenceRule)
     : null;
@@ -1262,7 +1267,8 @@ export function CampaignEditorPage({
                         cursor: 'pointer',
                         bgcolor: COLORS.soft,
                         border: `1px solid ${COLORS.stroke}`,
-                        transition: 'border-color 160ms ease, transform 160ms ease',
+                        transition:
+                          'border-color 160ms ease, transform 160ms ease',
                         '&:hover': {
                           borderColor: COLORS.accent,
                           transform: 'translateY(-1px)',
@@ -1762,11 +1768,14 @@ export function CampaignEditorPage({
                                 });
                               }}
                             >
-                              {isLegacyHiddenSourceEvent && eventBasedTrigger ? (
+                              {isLegacyHiddenSourceEvent &&
+                              eventBasedTrigger ? (
                                 <MenuItem
                                   value={`${eventBasedTrigger.eventKey}:${eventBasedTrigger.producerKey}`}
                                 >
-                                  {getSourceEventLabel(eventBasedTrigger.eventKey)}
+                                  {getSourceEventLabel(
+                                    eventBasedTrigger.eventKey
+                                  )}
                                 </MenuItem>
                               ) : null}
                               {state.catalog.sourceEvents.map((option) => (
@@ -1784,21 +1793,27 @@ export function CampaignEditorPage({
                             </FormHelperText>
                           </FormControl>
                           {selectedSourceEvent ? (
-                            <Alert severity="info" sx={{ bgcolor: COLORS.soft }}>
+                            <Alert
+                              severity="info"
+                              sx={{ bgcolor: COLORS.soft }}
+                            >
                               {selectedSourceEvent.description}
                               <br />
-                              Source: {' '}
+                              Source:{' '}
                               {getSourceEventProducerLabel(
                                 selectedSourceEvent.producerKey
                               )}
                             </Alert>
                           ) : null}
                           {isLegacyHiddenSourceEvent && eventBasedTrigger ? (
-                            <Alert severity="warning" sx={{ bgcolor: COLORS.soft }}>
-                              This campaign uses a legacy source event that is no
-                              longer offered for new campaigns.
+                            <Alert
+                              severity="warning"
+                              sx={{ bgcolor: COLORS.soft }}
+                            >
+                              This campaign uses a legacy source event that is
+                              no longer offered for new campaigns.
                               <br />
-                              Source: {' '}
+                              Source:{' '}
                               {getSourceEventProducerLabel(
                                 eventBasedTrigger.producerKey
                               )}
@@ -1907,16 +1922,18 @@ export function CampaignEditorPage({
                                     type: 'changeTrigger',
                                     trigger: {
                                       ...scheduledTrigger,
-                                      recurrenceRule: buildCampaignScheduleRule({
-                                        ...scheduledRuleModel,
-                                        frequency,
-                                        byDays:
-                                          frequency === 'WEEKLY'
-                                            ? scheduledRuleModel.byDays.length
-                                              ? scheduledRuleModel.byDays
-                                              : ['MO']
-                                            : [],
-                                      }),
+                                      recurrenceRule: buildCampaignScheduleRule(
+                                        {
+                                          ...scheduledRuleModel,
+                                          frequency,
+                                          byDays:
+                                            frequency === 'WEEKLY'
+                                              ? scheduledRuleModel.byDays.length
+                                                ? scheduledRuleModel.byDays
+                                                : ['MO']
+                                              : [],
+                                        }
+                                      ),
                                     },
                                   });
                                 }}
@@ -1928,7 +1945,9 @@ export function CampaignEditorPage({
                             <TextField
                               label="Send time"
                               type="time"
-                              value={formatCampaignScheduleTime(scheduledRuleModel)}
+                              value={formatCampaignScheduleTime(
+                                scheduledRuleModel
+                              )}
                               onChange={(event) =>
                                 dispatch({
                                   type: 'changeTrigger',
@@ -2290,13 +2309,13 @@ export function CampaignEditorPage({
                           }}
                           inputProps={{
                             onClick: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('title', event),
                             onKeyUp: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('title', event),
                             onSelect: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('title', event),
                           }}
                           onChange={(event) =>
@@ -2312,13 +2331,13 @@ export function CampaignEditorPage({
                           }}
                           inputProps={{
                             onClick: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('body', event),
                             onKeyUp: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('body', event),
                             onSelect: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>,
+                              event: SyntheticEvent<CampaignEditorTextInputElement>
                             ) => handleContentSelection('body', event),
                           }}
                           onChange={(event) =>
@@ -2342,10 +2361,7 @@ export function CampaignEditorPage({
                           fullWidth
                         />
                         <FormControl fullWidth>
-                          <InputLabel
-                            id="campaign-step-action-label"
-                            shrink
-                          >
+                          <InputLabel id="campaign-step-action-label" shrink>
                             Action after tap (optional)
                           </InputLabel>
                           <Select
@@ -2365,8 +2381,8 @@ export function CampaignEditorPage({
                                 stepKey: state.activeContentStepKey,
                                 locale: activeLocale,
                                 target:
-                                  (event.target.value as CampaignDeeplinkTarget) ||
-                                  null,
+                                  (event.target
+                                    .value as CampaignDeeplinkTarget) || null,
                               })
                             }
                           >
@@ -2591,7 +2607,9 @@ export function CampaignEditorPage({
                   Save as template
                 </Button>
                 {isTemplateDerivedCampaign ? (
-                  <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+                  <Typography
+                    sx={{ color: COLORS.textSecondary, fontSize: 12 }}
+                  >
                     Template-based campaigns cannot be saved as a new template.
                   </Typography>
                 ) : null}
@@ -2673,7 +2691,10 @@ export function CampaignEditorPage({
           >
             Cancel
           </Button>
-          <Button onClick={handleSaveTemplate} disabled={!saveTemplateName.trim()}>
+          <Button
+            onClick={handleSaveTemplate}
+            disabled={!saveTemplateName.trim()}
+          >
             Save template
           </Button>
         </DialogActions>

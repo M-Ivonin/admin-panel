@@ -48,6 +48,7 @@ export enum RetentionStage {
   DEAD = 'DEAD',
   REACTIVATED = 'REACTIVATED',
   RESURRECTED = 'RESURRECTED',
+  PRE_REG_ONBOARDING_INCOMPLETE = 'PRE_REG_ONBOARDING_INCOMPLETE',
 }
 
 export const RETENTION_STAGE_LABELS: Record<RetentionStage, string> = {
@@ -58,6 +59,8 @@ export const RETENTION_STAGE_LABELS: Record<RetentionStage, string> = {
   [RetentionStage.DEAD]: 'Dead Users',
   [RetentionStage.REACTIVATED]: 'Reactivated',
   [RetentionStage.RESURRECTED]: 'Resurrected',
+  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]:
+    'Pre-Reg Onboarding Incomplete',
 };
 
 export const RETENTION_STAGE_COLORS: Record<RetentionStage, string> = {
@@ -68,6 +71,7 @@ export const RETENTION_STAGE_COLORS: Record<RetentionStage, string> = {
   [RetentionStage.DEAD]: 'bg-gray-100 text-gray-800',
   [RetentionStage.REACTIVATED]: 'bg-purple-100 text-purple-800',
   [RetentionStage.RESURRECTED]: 'bg-pink-100 text-pink-800',
+  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 'bg-cyan-100 text-cyan-800',
 };
 
 export interface RetentionCounts {
@@ -78,6 +82,7 @@ export interface RetentionCounts {
   [RetentionStage.DEAD]: number;
   [RetentionStage.REACTIVATED]: number;
   [RetentionStage.RESURRECTED]: number;
+  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: number;
 }
 
 export interface GetUsersParams {
@@ -102,12 +107,15 @@ export interface PaginatedUsersResponse {
 /**
  * Get paginated list of users with optional filters
  */
-export async function getUsers(params: GetUsersParams = {}): Promise<PaginatedUsersResponse> {
+export async function getUsers(
+  params: GetUsersParams = {}
+): Promise<PaginatedUsersResponse> {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set('page', params.page.toString());
   if (params.limit) searchParams.set('limit', params.limit.toString());
   if (params.search) searchParams.set('search', params.search);
-  if (params.retentionStage) searchParams.set('retentionStage', params.retentionStage);
+  if (params.retentionStage)
+    searchParams.set('retentionStage', params.retentionStage);
   if (params.sortBy) searchParams.set('sortBy', params.sortBy);
   if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
   if (params.partnerId) searchParams.set('partnerId', params.partnerId);
