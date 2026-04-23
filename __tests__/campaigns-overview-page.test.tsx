@@ -100,7 +100,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
-              label: 'New users',
+              label: 'Pre-registration · onboarding incomplete',
             },
             timing: {
               label: 'Next send',
@@ -171,7 +171,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
-              label: 'New users',
+              label: 'Pre-registration · onboarding incomplete',
             },
             timing: {
               label: 'Next send',

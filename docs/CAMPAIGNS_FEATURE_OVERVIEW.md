@@ -237,7 +237,7 @@ The left rail in the editor shows scenario templates.
 
 Templates can come from two sources:
 
-- shipped templates baked into backend constants,
+- shipped templates seeded in the database,
 - saved templates persisted in the database.
 
 Applying a template replaces most of the draft definition:
@@ -441,20 +441,20 @@ Admin access is currently guarded by:
 
 ### Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/campaigns/admin/overview` | Load overview stats and campaign list |
-| `GET` | `/campaigns/admin/catalog` | Load editor catalog |
-| `GET` | `/campaigns/admin/:id` | Load one persisted campaign draft |
-| `POST` | `/campaigns/admin` | Create campaign draft |
-| `PUT` | `/campaigns/admin/:id` | Update campaign draft |
-| `POST` | `/campaigns/admin/estimate-audience` | Estimate audience |
-| `POST` | `/campaigns/admin/segments` | Save reusable audience segment |
-| `POST` | `/campaigns/admin/templates` | Save reusable campaign template |
-| `DELETE` | `/campaigns/admin/templates/:id` | Delete saved template |
-| `POST` | `/campaigns/admin/:id/send-test` | Insert and execute traced test deliveries |
-| `POST` | `/campaigns/admin/:id/schedule` | Schedule or activate live runtime |
-| `POST` | `/campaigns/admin/:id/archive` | Archive a campaign |
+| Method   | Path                                 | Purpose                                   |
+| -------- | ------------------------------------ | ----------------------------------------- |
+| `GET`    | `/campaigns/admin/overview`          | Load overview stats and campaign list     |
+| `GET`    | `/campaigns/admin/catalog`           | Load editor catalog                       |
+| `GET`    | `/campaigns/admin/:id`               | Load one persisted campaign draft         |
+| `POST`   | `/campaigns/admin`                   | Create campaign draft                     |
+| `PUT`    | `/campaigns/admin/:id`               | Update campaign draft                     |
+| `POST`   | `/campaigns/admin/estimate-audience` | Estimate audience                         |
+| `POST`   | `/campaigns/admin/segments`          | Save reusable audience segment            |
+| `POST`   | `/campaigns/admin/templates`         | Save reusable campaign template           |
+| `DELETE` | `/campaigns/admin/templates/:id`     | Delete saved template                     |
+| `POST`   | `/campaigns/admin/:id/send-test`     | Insert and execute traced test deliveries |
+| `POST`   | `/campaigns/admin/:id/schedule`      | Schedule or activate live runtime         |
+| `POST`   | `/campaigns/admin/:id/archive`       | Archive a campaign                        |
 
 ## 7. Persistence model
 
@@ -1040,31 +1040,31 @@ Important nuance:
 
 ## 16. Shipped catalog content
 
-### 16.1 Shipped saved-segment seeds
+### 16.1 Shipped saved segments
 
-The backend currently ships these segment seeds:
+The backend seeds these catalog segments in the database:
 
-| Seed | Meaning |
-| --- | --- |
-| `seg_new_users_setup_dropoff` | New users who did not finish onboarding |
-| `seg_at_risk_wau` | Inactive today, active 1-6 days ago |
-| `seg_at_risk_mau` | Inactive this week, active 7-29 days ago |
-| `seg_dead_user` | Inactive for 30+ days |
-| `seg_reactivated` | First day back after 7-29 inactive days |
-| `seg_resurrected` | First day back after 30+ inactive days |
+| Seed                          | Meaning                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `seg_new_users_setup_dropoff` | Pre-registration users who started onboarding but did not finish within 30 days |
+| `seg_at_risk_wau`             | Inactive today, active 1-6 days ago                                             |
+| `seg_at_risk_mau`             | Inactive this week, active 7-29 days ago                                        |
+| `seg_dead_user`               | Inactive for 30+ days                                                           |
+| `seg_reactivated`             | First day back after 7-29 inactive days                                         |
+| `seg_resurrected`             | First day back after 30+ inactive days                                          |
 
 ### 16.2 Shipped scenario templates
 
-The backend currently ships these scenario templates:
+The backend seeds these scenario templates in the database:
 
-| Template | Trigger | Journey | Goal |
-| --- | --- | --- | --- |
-| Onboarding recovery | State based | 3 steps | Recover onboarding completion |
-| Favorite match kickoff | Event based | 1 step | Drive match center opens |
-| Onboarding completed activation | Event based | 1 step | Drive first match center open after setup |
-| At-risk WAU retention | Scheduled recurring | 1 step | Bring back at-risk weekly users |
-| At-risk MAU retention | Scheduled recurring | 1 step | Bring back at-risk monthly users |
-| Dead user winback | Scheduled recurring | 1 step | Bring back users inactive for 30+ days |
+| Template                        | Trigger             | Journey | Goal                                      |
+| ------------------------------- | ------------------- | ------- | ----------------------------------------- |
+| Onboarding recovery             | State based         | 3 steps | Recover onboarding completion             |
+| Favorite match kickoff          | Event based         | 1 step  | Drive match center opens                  |
+| Onboarding completed activation | Event based         | 1 step  | Drive first match center open after setup |
+| At-risk WAU retention           | Scheduled recurring | 1 step  | Bring back at-risk weekly users           |
+| At-risk MAU retention           | Scheduled recurring | 1 step  | Bring back at-risk monthly users          |
+| Dead user winback               | Scheduled recurring | 1 step  | Bring back users inactive for 30+ days    |
 
 ## 17. Notable implementation nuances and caveats
 

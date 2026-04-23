@@ -111,7 +111,9 @@ describe('CampaignEditorPage', () => {
     fireEvent.mouseDown(
       screen.getByRole('combobox', { name: 'Action after tap (optional)' })
     );
-    fireEvent.click(screen.getByRole('option', { name: 'Continue onboarding' }));
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Continue onboarding' })
+    );
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
     fireEvent.click(screen.getByText('+ Add step'));
@@ -157,6 +159,24 @@ describe('CampaignEditorPage', () => {
       expect(
         screen.getByDisplayValue('Recover onboarding completion')
       ).toBeTruthy();
+      expect(
+        screen
+          .getByRole('button', {
+            name: 'Pre-Reg Onboarding Incomplete',
+          })
+          .getAttribute('aria-pressed')
+      ).toBe('true');
+      expect(
+        screen
+          .getByRole('button', { name: 'New Users' })
+          .getAttribute('aria-pressed')
+      ).toBe('false');
+    });
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Step 3')).toBeTruthy();
     });
   });
 
@@ -178,7 +198,9 @@ describe('CampaignEditorPage', () => {
     pushBodyInput.setSelectionRange(6, 6);
     fireEvent.select(pushBodyInput);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Insert token in body' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Insert token in body' })
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'First name' }));
 
     await waitFor(() => {
@@ -213,21 +235,23 @@ describe('CampaignEditorPage', () => {
     await screen.findByText('Scenario templates');
 
     expect(screen.queryByText('Audience source')).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: 'Manual rules' })
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Manual rules' })).toBeNull();
     expect(
       screen.queryByRole('button', { name: 'Save current audience' })
     ).toBeNull();
-    expect(screen.getByRole('button', { name: 'Save as template' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Save as template' })
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByText('Onboarding recovery'));
 
     await waitFor(() => {
       expect(
-        (screen.getByRole('button', {
-          name: 'Save as template',
-        }) as HTMLButtonElement).disabled
+        (
+          screen.getByRole('button', {
+            name: 'Save as template',
+          }) as HTMLButtonElement
+        ).disabled
       ).toBe(true);
       expect(
         screen.getByText(
@@ -302,7 +326,9 @@ describe('CampaignEditorPage', () => {
       screen.getByLabelText('Delete template Delete me template')
     );
     const deleteDialog = await screen.findByRole('dialog');
-    fireEvent.click(within(deleteDialog).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(
+      within(deleteDialog).getByRole('button', { name: 'Delete' })
+    );
 
     await waitFor(() => {
       expect(screen.queryByText('Delete me template')).toBeNull();
@@ -384,7 +410,10 @@ describe('CampaignEditorPage', () => {
         name: 'Admin User',
       })
     );
-    const deferred = createDeferred<{ acceptedAt: string; warnings: string[] }>();
+    const deferred = createDeferred<{
+      acceptedAt: string;
+      warnings: string[];
+    }>();
     jest
       .spyOn(campaignsRepository, 'sendTestCampaign')
       .mockReturnValue(deferred.promise);
@@ -686,7 +715,9 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByText('Source event'));
 
     expect(
-      screen.getByText('Choose the product event that should start the journey.')
+      screen.getByText(
+        'Choose the product event that should start the journey.'
+      )
     ).toBeTruthy();
     expect(screen.getByText(/Source: CRM integration events/i)).toBeTruthy();
   });
@@ -737,7 +768,9 @@ describe('CampaignEditorPage', () => {
       (screen.getByLabelText('Start date') as HTMLInputElement).value
     ).not.toBe('');
     expect(
-      screen.getByText(/Runs once\. Every day at 09:00 in each user's local time/i)
+      screen.getByText(
+        /Runs once\. Every day at 09:00 in each user's local time/i
+      )
     ).toBeTruthy();
   });
 
@@ -782,6 +815,7 @@ describe('CampaignEditorPage', () => {
         DEAD: 0,
         REACTIVATED: 0,
         RESURRECTED: 0,
+        PRE_REG_ONBOARDING_INCOMPLETE: 0,
       },
     });
     mockedGetUser.mockResolvedValue({
@@ -883,6 +917,7 @@ describe('CampaignEditorPage', () => {
         DEAD: 0,
         REACTIVATED: 0,
         RESURRECTED: 0,
+        PRE_REG_ONBOARDING_INCOMPLETE: 0,
       },
     });
     mockedGetUser.mockResolvedValue({
@@ -933,7 +968,9 @@ describe('CampaignEditorPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByText('Select at least one retention stage or specific user.')
+        screen.queryByText(
+          'Select at least one retention stage or specific user.'
+        )
       ).toBeNull();
       expect(
         (screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement)

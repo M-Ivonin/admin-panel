@@ -156,6 +156,8 @@ function formatRetentionStage(stage: RetentionStage): string {
       return 'Reactivated';
     case RetentionStage.RESURRECTED:
       return 'Resurrected';
+    case RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE:
+      return 'Pre-reg onboarding incomplete';
     default:
       return stage;
   }
@@ -406,7 +408,9 @@ export function getCampaignValidationSummary(
     (!Number.isInteger(draft.trigger.maxOccurrences) ||
       draft.trigger.maxOccurrences <= 0)
   ) {
-    errors.push('Recurring campaigns require a positive max occurrences value.');
+    errors.push(
+      'Recurring campaigns require a positive max occurrences value.'
+    );
   }
 
   if (
@@ -466,7 +470,6 @@ export function canContinueCampaignStep(
       hasAudienceTargeting(draft) &&
       draft.audience.criteria.locales.length > 0
     );
-
   }
 
   if (step === CampaignEditorStep.TRIGGER_JOURNEY) {

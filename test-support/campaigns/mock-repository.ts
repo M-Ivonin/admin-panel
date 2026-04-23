@@ -62,6 +62,7 @@ const STAGE_WEIGHTS: Record<RetentionStage, number> = {
   [RetentionStage.DEAD]: 5320,
   [RetentionStage.REACTIVATED]: 4120,
   [RetentionStage.RESURRECTED]: 2800,
+  [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 3200,
 };
 
 const LOCALE_SHARES: Record<CampaignLocale, number> = {
@@ -447,6 +448,8 @@ function buildAudienceLabel(draft: CampaignDraft): string {
       return 'Reactivated';
     case RetentionStage.RESURRECTED:
       return 'Resurrected';
+    case RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE:
+      return 'Pre-registration · onboarding incomplete';
     default:
       return 'Selected cohort';
   }
@@ -500,11 +503,11 @@ function formatCreatedBy(createdBy: string | null): string {
 }
 
 function getOverviewLocaleReadiness(
-  draft: CampaignDraft,
+  draft: CampaignDraft
 ): CampaignListItem['localeReadiness'] {
   const readiness = getCampaignLocaleReadiness(
     draft.content,
-    draft.audience.criteria.locales,
+    draft.audience.criteria.locales
   );
 
   return draft.audience.criteria.locales.reduce(
@@ -512,7 +515,7 @@ function getOverviewLocaleReadiness(
       ...accumulator,
       [locale]: readiness[locale],
     }),
-    {} as CampaignListItem['localeReadiness'],
+    {} as CampaignListItem['localeReadiness']
   );
 }
 
@@ -716,7 +719,9 @@ export const mockCampaignsRepository: CampaignsRepository = {
     return { segment: clone(segment) };
   },
 
-  async saveTemplate(input: SaveTemplateRequest): Promise<SaveTemplateResponse> {
+  async saveTemplate(
+    input: SaveTemplateRequest
+  ): Promise<SaveTemplateResponse> {
     const template = {
       id: nextTemplateId(),
       name: input.name,

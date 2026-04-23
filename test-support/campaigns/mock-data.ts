@@ -26,9 +26,12 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     channel: 'push',
     status: 'active',
     entryTriggerType: 'state_based',
-    audience: { estimate: 12480, label: 'New users' },
+    audience: {
+      estimate: 3200,
+      label: 'Pre-registration · onboarding incomplete',
+    },
     timing: { label: 'Next send', timestamp: '2026-04-16T18:20:00.000Z' },
-    progress: { sentCount: 4182, totalCount: 12480, progressPercent: 33.5 },
+    progress: { sentCount: 1072, totalCount: 3200, progressPercent: 33.5 },
     metric: { label: 'ctr', value: '18.7%' },
     owner: { ownerName: 'Natalia', activityLabel: 'Updated 12 min ago' },
     updatedAt: '2026-04-16T11:48:00.000Z',
@@ -75,7 +78,10 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     status: 'scheduled',
     entryTriggerType: 'scheduled_recurring',
     audience: { estimate: 5320, label: 'Dead users' },
-    timing: { label: 'First evaluation', timestamp: '2026-04-17T08:30:00.000Z' },
+    timing: {
+      label: 'First evaluation',
+      timestamp: '2026-04-17T08:30:00.000Z',
+    },
     progress: { sentCount: 0, totalCount: 5320, progressPercent: 0 },
     metric: { label: 'goal', value: 'Bring back 30+ day inactive users' },
     owner: { ownerName: 'CRM bot', activityLabel: 'Scheduled 2 hours ago' },
@@ -87,14 +93,14 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
 const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
   {
     id: 'seg_new_users_setup_dropoff',
-    name: 'New users · onboarding not completed',
-    description: '12,480 reachable · best for 3-step reminders',
-    audienceEstimate: 12480,
+    name: 'Pre-registration · onboarding incomplete',
+    description: '3,200 reachable · started onboarding but not registered',
+    audienceEstimate: 3200,
     audienceDefinition: {
       segmentSource: 'saved_segment',
       sourceSegmentId: 'seg_new_users_setup_dropoff',
       criteria: {
-        retentionStages: [RetentionStage.NEW],
+        retentionStages: [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE],
         userIds: [],
         locales: ['en', 'es', 'pt'],
       },
@@ -130,7 +136,7 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
     segmentSource: 'saved_segment',
     sourceSegmentId: 'seg_new_users_setup_dropoff',
     criteria: {
-      retentionStages: [RetentionStage.NEW],
+      retentionStages: [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE],
       userIds: [],
       locales: ['en', 'es', 'pt'],
     },
@@ -154,7 +160,8 @@ const SAVED_SEGMENT_DEFINITIONS: Record<string, CampaignAudienceDefinition> = {
 
 function buildMultiStepContent(
   firstTarget: CampaignDeeplinkTarget | null,
-  secondTarget: CampaignDeeplinkTarget | null
+  secondTarget: CampaignDeeplinkTarget | null,
+  thirdTarget: CampaignDeeplinkTarget | null
 ): CampaignDraft['content'] {
   return {
     step_1: {
@@ -199,6 +206,27 @@ function buildMultiStepContent(
         deeplinkTarget: secondTarget,
       },
     },
+    step_3: {
+      ...createBlankStepLocaleMap(thirdTarget),
+      en: {
+        title: 'Finish setup today',
+        body: 'Your personalized football feed is waiting after one last step.',
+        fallbackFirstName: 'there',
+        deeplinkTarget: thirdTarget,
+      },
+      es: {
+        title: 'Termina la configuracion hoy',
+        body: 'Tu feed de futbol personalizado te espera tras un ultimo paso.',
+        fallbackFirstName: 'amigo',
+        deeplinkTarget: thirdTarget,
+      },
+      pt: {
+        title: 'Finalize a configuracao hoje',
+        body: 'Seu feed de futebol personalizado espera apos a ultima etapa.',
+        fallbackFirstName: '',
+        deeplinkTarget: thirdTarget,
+      },
+    },
   };
 }
 
@@ -207,7 +235,7 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
     id: 'tpl_onboarding_recovery',
     name: 'Onboarding recovery',
     description:
-      'Three-step recovery flow for new users who did not finish setup.',
+      'Three-step recovery flow for pre-registration users who did not finish setup.',
     source: 'shipped',
     definition: {
       name: 'Onboarding recovery',
@@ -224,11 +252,16 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
         reentryCooldownHours: 24,
       },
       journey: {
-        steps: [createJourneyStep(1), createJourneyStep(2)],
+        steps: [
+          createJourneyStep(1),
+          createJourneyStep(2),
+          createJourneyStep(3),
+        ],
       },
       content: buildMultiStepContent(
         'continue_onboarding',
         'continue_onboarding',
+        'continue_onboarding'
       ),
     },
   },
@@ -333,6 +366,7 @@ export function createInitialCampaignsOverviewResponse(): CampaignsOverviewRespo
 export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
   const firstStep = createJourneyStep(1);
   const secondStep = createJourneyStep(2);
+  const thirdStep = createJourneyStep(3);
 
   return JSON.parse(
     JSON.stringify({
@@ -353,9 +387,10 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
           reentryCooldownHours: 24,
         },
         journey: {
-          steps: [firstStep, secondStep],
+          steps: [firstStep, secondStep, thirdStep],
         },
         content: buildMultiStepContent(
+          'continue_onboarding',
           'continue_onboarding',
           'continue_onboarding'
         ),
@@ -531,7 +566,9 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
  * Returns the seeded saved segments consumed by the editor catalog.
  */
 export function createInitialSavedSegments(): CampaignSavedSegmentSummary[] {
-  return JSON.parse(JSON.stringify(SAVED_SEGMENTS)) as CampaignSavedSegmentSummary[];
+  return JSON.parse(
+    JSON.stringify(SAVED_SEGMENTS)
+  ) as CampaignSavedSegmentSummary[];
 }
 
 /**
