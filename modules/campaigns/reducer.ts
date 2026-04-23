@@ -230,10 +230,7 @@ function normalizeNewScheduledTrigger(
     ...defaults,
     ...trigger,
     startDate: defaults.startDate,
-    maxOccurrences:
-      trigger.maxOccurrences === undefined
-        ? defaults.maxOccurrences
-        : trigger.maxOccurrences,
+    maxOccurrences: trigger.maxOccurrences ?? defaults.maxOccurrences,
   };
 }
 

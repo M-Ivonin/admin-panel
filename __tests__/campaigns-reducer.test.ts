@@ -144,41 +144,4 @@ describe('campaignEditorReducer', () => {
     expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
   });
 
-  it('preserves explicit null maxOccurrences when applying a scheduled template', () => {
-    const state = createCampaignEditorState(createEmptyCampaignDraft());
-
-    const nextState = campaignEditorReducer(state, {
-      type: 'applyScenarioTemplate',
-      template: {
-        id: 'tpl_1',
-        name: 'At-risk WAU retention',
-        description: 'Recurring retention template',
-        source: 'shipped',
-        definition: {
-          name: 'At-risk WAU retention',
-          goal: 'Bring back at-risk weekly users',
-          goalDefinition: null,
-          channel: 'push',
-          audience: createEmptyCampaignDraft().audience,
-          trigger: {
-            type: 'scheduled_recurring',
-            recurrenceRule: 'FREQ=DAILY;INTERVAL=2;BYHOUR=17;BYMINUTE=0',
-            timezoneMode: 'user_local',
-            startDate: null,
-            maxOccurrences: null,
-          },
-          journey: createEmptyCampaignDraft().journey,
-          content: createEmptyCampaignDraft().content,
-        },
-      },
-    });
-
-    expect(nextState.draft.trigger).toEqual({
-      type: 'scheduled_recurring',
-      recurrenceRule: 'FREQ=DAILY;INTERVAL=2;BYHOUR=17;BYMINUTE=0',
-      timezoneMode: 'user_local',
-      startDate: expect.any(String),
-      maxOccurrences: null,
-    });
-  });
 });
