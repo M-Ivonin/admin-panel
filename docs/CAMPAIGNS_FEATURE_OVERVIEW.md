@@ -651,7 +651,7 @@ Important nuance:
 
 #### Re-entry suppression
 
-For state-based and event-based campaigns, if `reentryCooldownHours > 0`, users who recently received a sent live delivery from the same campaign are suppressed.
+For state-based and event-based campaigns, if `reentryCooldownHours > 0`, users with a recent live materialized journey row from the same campaign are suppressed. The runtime counts `pending`, `sending`, `sent`, `failed`, and `skipped` rows so a planned-but-not-yet-sent journey also blocks another entry.
 
 Recurring campaigns do not use this branch.
 
@@ -837,6 +837,7 @@ Before a push is sent, the executor can mark the row as terminal for several rea
 - `recipient_missing`
 - `runtime_metadata_missing`
 - `audience_no_longer_matches`
+- `reentry_cooldown`
 - `frequency_cap`
 - `goal_already_reached`
 
@@ -844,6 +845,7 @@ Important nuance:
 
 - Send-time audience revalidation intentionally disables goal, re-entry, and frequency-cap logic during the generic "still matches audience" check.
 - Those suppressions are evaluated separately afterward.
+- Re-entry is checked again before send against earlier materialized journey instances for the same user and campaign. Same-journey later steps are not suppressed by this check.
 
 ### 12.4 Rendering and push payload
 
