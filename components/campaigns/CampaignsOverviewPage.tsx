@@ -261,6 +261,14 @@ function getOptionalNumber(value: number | undefined): number {
   return typeof value === 'number' ? value : 0;
 }
 
+function hasMetricNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function formatCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
 function getTodayDeliveryHelper(
   stats: CampaignsOverviewResponse['stats']
 ): string {
@@ -301,46 +309,62 @@ function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
 }
 
 function formatCampaignDeliveryBreakdown(item: CampaignListItem): string {
-  const hasDetailedBreakdown =
-    typeof item.progress.failedCount === 'number' ||
-    typeof item.progress.inProgressCount === 'number' ||
-    typeof item.progress.skippedCount === 'number' ||
-    typeof item.progress.openCount === 'number';
+  const sent = item.progress.sentCount;
 
-  if (!hasDetailedBreakdown) {
+  if (!hasMetricNumber(sent)) {
     return 'Delivery breakdown unavailable';
   }
 
-  const sent = item.progress.sentCount ?? 0;
-  const failed = item.progress.failedCount ?? 0;
-  const queued = item.progress.inProgressCount ?? 0;
-  const skipped = item.progress.skippedCount ?? 0;
-  const opened = item.progress.openCount ?? 0;
-  const deliveryRate = item.progress.deliveredRate ?? 0;
-  const ctr = item.progress.ctr ?? 0;
-  const parts = [
-    `${sent.toLocaleString('en-US')} delivered`,
-    `${failed.toLocaleString('en-US')} failed`,
-    `${queued.toLocaleString('en-US')} queued`,
-  ];
+  const parts = [`${sent.toLocaleString('en-US')} delivered`];
 
-  if (skipped > 0) {
-    parts.push(`${skipped.toLocaleString('en-US')} skipped`);
+  if (hasMetricNumber(item.progress.failedCount)) {
+    parts.push(`${item.progress.failedCount.toLocaleString('en-US')} failed`);
   }
 
-  if (opened > 0) {
-    parts.push(`${opened.toLocaleString('en-US')} opened`);
+  if (hasMetricNumber(item.progress.inProgressCount)) {
+    parts.push(
+      `${item.progress.inProgressCount.toLocaleString('en-US')} queued`
+    );
   }
 
-  if (sent + failed > 0) {
-    parts.push(`${deliveryRate}% delivery rate`);
+  if (hasMetricNumber(item.progress.skippedCount)) {
+    parts.push(`${item.progress.skippedCount.toLocaleString('en-US')} skipped`);
   }
 
-  if (sent > 0) {
-    parts.push(`${ctr}% CTR`);
+  if (hasMetricNumber(item.progress.openCount)) {
+    parts.push(`${item.progress.openCount.toLocaleString('en-US')} opened`);
+  }
+
+  if (hasMetricNumber(item.progress.deliveredRate)) {
+    parts.push(`${item.progress.deliveredRate}% delivery rate`);
+  }
+
+  if (hasMetricNumber(item.progress.ctr)) {
+    parts.push(`${item.progress.ctr}% CTR`);
   }
 
   return parts.join(' · ');
+}
+
+function formatFailureReason(reason: string): string {
+  return reason.replace(/_/g, ' ');
+}
+
+function formatFailureReasons(item: CampaignListItem): string | null {
+  const reasons = item.progress.failureReasons ?? [];
+
+  if (reasons.length === 0) {
+    return null;
+  }
+
+  return reasons
+    .map(
+      (summary) =>
+        `${formatFailureReason(summary.reason)}: ${summary.count.toLocaleString(
+          'en-US'
+        )}`
+    )
+    .join(' · ');
 }
 
 function getOutcomeHint(item: CampaignListItem): string {
@@ -375,7 +399,89 @@ const ROW_HINTS = {
     'Timing shows the next planned evaluation or delivery checkpoint stored for the campaign runtime.',
   progress:
     'Delivery progress for materialized live journey rows. Total includes delivered, failed, queued, and skipped deliveries, so it can be higher than the current audience estimate.',
+  savedEstimate:
+    'Saved estimate is the audience size captured when the campaign definition was last estimated.',
+  audienceNow:
+    'Audience now is a fresh reachability estimate using the current audience rules and push eligibility.',
+  deliveryRate:
+    'Delivery rate is delivered rows divided by delivered plus failed rows for this campaign.',
+  ctr: 'CTR is opened live deliveries divided by delivered live deliveries for this campaign.',
+  journeyInstances:
+    'Journey instances count unique recipient and journey keys that have live materialized rows.',
+  tracedGoalEvents:
+    'Traced goal events are matching source events that include the delivery trace id for this campaign.',
+  untracedMatchingEvents:
+    'Untraced matching events have the same goal event key after journey start but no delivery trace id, so they are diagnostics only.',
+  sourceEventsWithoutUser:
+    'Source events without user id have the same goal event key but cannot be attributed to a recipient.',
 };
+
+function InlineMetric({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  const content = (
+    <Stack spacing={0.15} sx={{ minWidth: 86 }}>
+      <Typography
+        sx={{
+          color: COLORS.textMuted,
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 10,
+          lineHeight: 1.25,
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        sx={{
+          color: COLORS.textPrimary,
+          fontSize: 12,
+          fontWeight: 600,
+          lineHeight: 1.3,
+          wordBreak: 'break-word',
+        }}
+      >
+        {value}
+      </Typography>
+    </Stack>
+  );
+
+  if (!hint) {
+    return content;
+  }
+
+  return (
+    <Tooltip title={hint} describeChild arrow placement="top">
+      {content}
+    </Tooltip>
+  );
+}
+
+function FailureReasonsLine({ item }: { item: CampaignListItem }) {
+  const failureReasons = formatFailureReasons(item);
+
+  if (!failureReasons) {
+    return null;
+  }
+
+  return (
+    <Typography
+      sx={{
+        color: COLORS.warning,
+        fontSize: 11,
+        mt: 0.85,
+        lineHeight: 1.45,
+      }}
+    >
+      Failure reasons: {failureReasons}
+    </Typography>
+  );
+}
 
 function FilterSection({
   title,
@@ -960,10 +1066,33 @@ export function CampaignsOverviewPage() {
                         <Typography
                           sx={{ color: COLORS.textSecondary, fontSize: 12 }}
                         >
-                          {item.audience.estimate?.toLocaleString('en-US') ??
-                            '0'}{' '}
-                          users
+                          Reach diagnostics
                         </Typography>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          flexWrap="wrap"
+                          sx={{ mt: 0.8 }}
+                        >
+                          {hasMetricNumber(item.audience.estimate) ? (
+                            <InlineMetric
+                              label="Saved estimate"
+                              value={`${formatCount(
+                                item.audience.estimate
+                              )} users`}
+                              hint={ROW_HINTS.savedEstimate}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.audience.currentEstimate) ? (
+                            <InlineMetric
+                              label="Audience now"
+                              value={`${formatCount(
+                                item.audience.currentEstimate
+                              )} users`}
+                              hint={ROW_HINTS.audienceNow}
+                            />
+                          ) : null}
+                        </Stack>
                       </Box>
 
                       <Box>
@@ -997,27 +1126,28 @@ export function CampaignsOverviewPage() {
                             mb: 0.75,
                           }}
                         >
-                          {(item.progress.sentCount ?? 0).toLocaleString(
-                            'en-US'
-                          )}{' '}
-                          /{' '}
-                          {(item.progress.totalCount ?? 0).toLocaleString(
-                            'en-US'
-                          )}
+                          {hasMetricNumber(item.progress.sentCount) &&
+                          hasMetricNumber(item.progress.totalCount)
+                            ? `${formatCount(item.progress.sentCount)} / ${formatCount(
+                                item.progress.totalCount
+                              )}`
+                            : 'Progress unavailable'}
                         </Typography>
-                        <LinearProgress
-                          variant="determinate"
-                          value={item.progress.progressPercent ?? 0}
-                          sx={{
-                            height: 8,
-                            borderRadius: 999,
-                            bgcolor: '#171717',
-                            '& .MuiLinearProgress-bar': {
+                        {hasMetricNumber(item.progress.progressPercent) ? (
+                          <LinearProgress
+                            variant="determinate"
+                            value={item.progress.progressPercent}
+                            sx={{
+                              height: 8,
                               borderRadius: 999,
-                              bgcolor: COLORS.accent,
-                            },
-                          }}
-                        />
+                              bgcolor: '#171717',
+                              '& .MuiLinearProgress-bar': {
+                                borderRadius: 999,
+                                bgcolor: COLORS.accent,
+                              },
+                            }}
+                          />
+                        ) : null}
                         <Typography
                           sx={{
                             color: COLORS.textSecondary,
@@ -1028,6 +1158,81 @@ export function CampaignsOverviewPage() {
                         >
                           {formatCampaignDeliveryBreakdown(item)}
                         </Typography>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          flexWrap="wrap"
+                          sx={{ mt: 0.85 }}
+                        >
+                          {hasMetricNumber(item.progress.sentCount) ? (
+                            <InlineMetric
+                              label="Delivered"
+                              value={formatCount(item.progress.sentCount)}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.failedCount) ? (
+                            <InlineMetric
+                              label="Failed"
+                              value={formatCount(item.progress.failedCount)}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.inProgressCount) ? (
+                            <InlineMetric
+                              label="Queued"
+                              value={formatCount(item.progress.inProgressCount)}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.skippedCount) ? (
+                            <InlineMetric
+                              label="Skipped"
+                              value={formatCount(item.progress.skippedCount)}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.openCount) ? (
+                            <InlineMetric
+                              label="Opened"
+                              value={formatCount(item.progress.openCount)}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.deliveredRate) ? (
+                            <InlineMetric
+                              label="Delivery rate"
+                              value={`${item.progress.deliveredRate}%`}
+                              hint={ROW_HINTS.deliveryRate}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.ctr) ? (
+                            <InlineMetric
+                              label="CTR"
+                              value={`${item.progress.ctr}%`}
+                              hint={ROW_HINTS.ctr}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.uniqueRecipientCount) ? (
+                            <InlineMetric
+                              label="Unique recipients"
+                              value={formatCount(
+                                item.progress.uniqueRecipientCount
+                              )}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.journeyInstanceCount) ? (
+                            <InlineMetric
+                              label="Journey instances"
+                              value={formatCount(
+                                item.progress.journeyInstanceCount
+                              )}
+                              hint={ROW_HINTS.journeyInstances}
+                            />
+                          ) : null}
+                          {hasMetricNumber(item.progress.deliveryRowCount) ? (
+                            <InlineMetric
+                              label="Delivery rows"
+                              value={formatCount(item.progress.deliveryRowCount)}
+                            />
+                          ) : null}
+                        </Stack>
+                        <FailureReasonsLine item={item} />
                       </Box>
 
                       <Box>
@@ -1055,6 +1260,44 @@ export function CampaignsOverviewPage() {
                             {item.metric.detail}
                           </Typography>
                         ) : null}
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          flexWrap="wrap"
+                          sx={{ mt: 0.85 }}
+                        >
+                          {hasMetricNumber(item.metric.traceGoalEventCount) ? (
+                            <InlineMetric
+                              label="Traced goal events"
+                              value={formatCount(
+                                item.metric.traceGoalEventCount
+                              )}
+                              hint={ROW_HINTS.tracedGoalEvents}
+                            />
+                          ) : null}
+                          {hasMetricNumber(
+                            item.metric.untracedGoalEventCount
+                          ) ? (
+                            <InlineMetric
+                              label="Untraced matching events"
+                              value={formatCount(
+                                item.metric.untracedGoalEventCount
+                              )}
+                              hint={ROW_HINTS.untracedMatchingEvents}
+                            />
+                          ) : null}
+                          {hasMetricNumber(
+                            item.metric.sourceEventsWithoutUserCount
+                          ) ? (
+                            <InlineMetric
+                              label="Source events without user"
+                              value={formatCount(
+                                item.metric.sourceEventsWithoutUserCount
+                              )}
+                              hint={ROW_HINTS.sourceEventsWithoutUser}
+                            />
+                          ) : null}
+                        </Stack>
                         <Stack
                           direction="row"
                           spacing={0.75}

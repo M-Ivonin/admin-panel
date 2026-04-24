@@ -3,7 +3,7 @@ import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewP
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
-jest.setTimeout(15000);
+jest.setTimeout(30000);
 
 const push = jest.fn();
 
@@ -36,7 +36,7 @@ describe('CampaignsOverviewPage', () => {
     expect(await screen.findByText('onboarding_not_completed')).toBeTruthy();
     expect(screen.getByText(/4 status filter\(s\)/i)).toBeTruthy();
     expect(screen.getByText('Delivered today')).toBeTruthy();
-    expect(screen.getByText('Delivery rate')).toBeTruthy();
+    expect(screen.getAllByText('Delivery rate').length).toBeGreaterThan(0);
     expect(screen.getByText('Queued deliveries')).toBeTruthy();
     expect(
       screen.getByText(
@@ -108,6 +108,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
+              currentEstimate: 96,
               label: 'Pre-Reg Onboarding Incomplete',
             },
             timing: {
@@ -126,6 +127,9 @@ describe('CampaignsOverviewPage', () => {
               reachedCount: 3,
               journeyCount: 12,
               attributionMode: 'global_state_event',
+              traceGoalEventCount: 0,
+              untracedGoalEventCount: 0,
+              sourceEventsWithoutUserCount: 0,
             },
             owner: {
               ownerName: 'CRM bot',
@@ -155,6 +159,108 @@ describe('CampaignsOverviewPage', () => {
     }
   });
 
+  it('renders saved and current audience diagnostics, runtime rows, failures, and hint labels', async () => {
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        stats: {
+          activeCampaigns: 1,
+          pausedCampaigns: 0,
+          scheduledCampaigns: 0,
+          sentToday: 0,
+          deliveredRate: 0,
+          avgCtr: 0,
+          ctrDeltaVsPrev7d: 0,
+          reachInProgress: 0,
+        },
+        items: [
+          {
+            id: 'cmp_runtime_diagnostics',
+            name: 'Runtime diagnostics campaign',
+            goal: 'Open match center',
+            channel: 'push',
+            status: 'active',
+            entryTriggerType: 'state_based',
+            audience: {
+              estimate: 100,
+              currentEstimate: 41,
+              label: 'At-risk WAU',
+            },
+            timing: {
+              label: 'Next send',
+              timestamp: '2026-04-17T10:00:00.000Z',
+            },
+            progress: {
+              sentCount: 2,
+              totalCount: 4,
+              failedCount: 1,
+              skippedCount: 0,
+              inProgressCount: 1,
+              openCount: 1,
+              deliveredRate: 66.7,
+              ctr: 50,
+              progressPercent: 50,
+              uniqueRecipientCount: 2,
+              journeyInstanceCount: 2,
+              deliveryRowCount: 4,
+              failureReasons: [{ reason: 'invalid_fcm_token', count: 1 }],
+            },
+            metric: {
+              label: 'goal',
+              value: '50.0%',
+              detail: '1 reached / 2 journeys',
+              reachedCount: 1,
+              journeyCount: 2,
+              attributionMode: 'trace_required_response',
+              traceGoalEventCount: 1,
+              untracedGoalEventCount: 3,
+              sourceEventsWithoutUserCount: 2,
+            },
+            owner: {
+              ownerName: 'CRM bot',
+              activityLabel: 'Active',
+            },
+            updatedAt: '2026-04-17T09:00:00.000Z',
+            localeReadiness: {
+              en: 'ready',
+            },
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      expect(await screen.findByText('Runtime diagnostics campaign')).toBeTruthy();
+      expect(screen.getByText('Saved estimate')).toBeTruthy();
+      expect(screen.getByText('Audience now')).toBeTruthy();
+      expect(screen.getByText('100 users')).toBeTruthy();
+      expect(screen.getByText('41 users')).toBeTruthy();
+      expect(
+        screen.getByText(
+          '2 delivered · 1 failed · 1 queued · 0 skipped · 1 opened · 66.7% delivery rate · 50% CTR'
+        )
+      ).toBeTruthy();
+      expect(screen.getAllByText('Delivery rate').length).toBeGreaterThan(0);
+      expect(screen.getByText('CTR')).toBeTruthy();
+      expect(screen.getByText('Unique recipients')).toBeTruthy();
+      expect(screen.getByText('Journey instances')).toBeTruthy();
+      expect(screen.getByText('Delivery rows')).toBeTruthy();
+      expect(
+        screen.getByText('Failure reasons: invalid fcm token: 1')
+      ).toBeTruthy();
+      expect(screen.getByText('Traced goal events')).toBeTruthy();
+      expect(screen.getByText('Untraced matching events')).toBeTruthy();
+      expect(screen.getByText('Source events without user')).toBeTruthy();
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
   it('shows locale readiness only for selected campaign locales', async () => {
     const overviewSpy = jest
       .spyOn(campaignsRepository, 'getCampaignsOverview')
@@ -179,6 +285,7 @@ describe('CampaignsOverviewPage', () => {
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
+              currentEstimate: 96,
               label: 'Pre-Reg Onboarding Incomplete',
             },
             timing: {

@@ -103,6 +103,7 @@ export interface CampaignOverviewStats {
 
 export interface CampaignListAudienceSummary {
   estimate: number | null;
+  currentEstimate: number | null;
   label: string;
 }
 
@@ -118,9 +119,18 @@ export interface CampaignListProgressSummary {
   skippedCount?: number | null;
   inProgressCount?: number | null;
   openCount?: number | null;
+  uniqueRecipientCount?: number | null;
+  journeyInstanceCount?: number | null;
+  deliveryRowCount?: number | null;
+  failureReasons?: CampaignFailureReasonSummary[] | null;
   deliveredRate?: number | null;
   ctr?: number | null;
   progressPercent: number | null;
+}
+
+export interface CampaignFailureReasonSummary {
+  reason: string;
+  count: number;
 }
 
 export interface CampaignListMetricSummary {
@@ -130,6 +140,9 @@ export interface CampaignListMetricSummary {
   reachedCount?: number | null;
   journeyCount?: number | null;
   attributionMode?: CampaignGoalAttributionMode | null;
+  traceGoalEventCount?: number | null;
+  untracedGoalEventCount?: number | null;
+  sourceEventsWithoutUserCount?: number | null;
 }
 
 export interface CampaignListOwnerSummary {

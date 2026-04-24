@@ -576,6 +576,7 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
     entryTriggerType: draft.trigger.type,
     audience: {
       estimate: estimate.reachableUsers,
+      currentEstimate: estimate.reachableUsers,
       label: buildAudienceLabel(draft),
     },
     timing: buildTimingSummary(
