@@ -17,13 +17,10 @@ import {
   Stack,
   TablePagination,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import {
-  Add,
-  ArrowBack,
-  Search,
-} from '@mui/icons-material';
+import { Add, ArrowBack, InfoOutlined, Search } from '@mui/icons-material';
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
@@ -112,6 +109,14 @@ function formatMetricValue(value: number, suffix?: string): string {
   return `${value}${suffix ?? ''}`;
 }
 
+function formatPercentDelta(value: number): string {
+  if (value > 0) {
+    return `+${value}%`;
+  }
+
+  return `${value}%`;
+}
+
 function formatTimestamp(value: string | null): string {
   if (!value) {
     return 'Not scheduled';
@@ -158,7 +163,7 @@ function getReadinessColor(readiness: VisibleLocaleReadiness): string {
 }
 
 function getLocaleReadinessEntries(
-  item: CampaignListItem,
+  item: CampaignListItem
 ): Array<[CampaignLocale, VisibleLocaleReadiness]> {
   return Object.entries(item.localeReadiness) as Array<
     [CampaignLocale, VisibleLocaleReadiness]
@@ -169,53 +174,208 @@ function KpiCard({
   eyebrow,
   value,
   helper,
+  hint,
 }: {
   eyebrow: string;
   value: string;
   helper: string;
+  hint: string;
 }) {
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 1.75,
-        borderRadius: 3,
-        bgcolor: COLORS.panel,
-        border: `1px solid ${COLORS.stroke}`,
-        minHeight: 108,
-      }}
-    >
-      <Typography
+    <Tooltip title={hint} describeChild arrow placement="top">
+      <Paper
+        elevation={0}
         sx={{
-          color: COLORS.textMuted,
-          fontFamily: 'IBM Plex Mono, monospace',
-          fontSize: 11,
-          fontWeight: 500,
-          mb: 0.75,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
+          p: 1.75,
+          borderRadius: 3,
+          bgcolor: COLORS.panel,
+          border: `1px solid ${COLORS.stroke}`,
+          minHeight: 108,
         }}
       >
-        {eyebrow}
-      </Typography>
-      <Typography
-        sx={{
-          color: COLORS.textPrimary,
-          fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-          fontSize: 30,
-          fontWeight: 700,
-          lineHeight: 1.05,
-          mb: 0.5,
-        }}
-      >
-        {value}
-      </Typography>
-      <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
-        {helper}
-      </Typography>
-    </Paper>
+        <Stack
+          direction="row"
+          spacing={0.75}
+          alignItems="center"
+          sx={{ mb: 0.75 }}
+        >
+          <Typography
+            sx={{
+              color: COLORS.textMuted,
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 11,
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {eyebrow}
+          </Typography>
+          <InfoOutlined sx={{ color: COLORS.textMuted, fontSize: 14 }} />
+        </Stack>
+        <Typography
+          sx={{
+            color: COLORS.textPrimary,
+            fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
+            fontSize: 30,
+            fontWeight: 700,
+            lineHeight: 1.05,
+            mb: 0.5,
+          }}
+        >
+          {value}
+        </Typography>
+        <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+          {helper}
+        </Typography>
+      </Paper>
+    </Tooltip>
   );
 }
+
+function MetricLabel({ label, hint }: { label: string; hint: string }) {
+  return (
+    <Tooltip title={hint} describeChild arrow placement="top">
+      <Stack
+        direction="row"
+        spacing={0.5}
+        alignItems="center"
+        sx={{ mb: 0.45, width: 'fit-content' }}
+      >
+        <Typography
+          sx={{
+            color: COLORS.textMuted,
+            fontSize: 11,
+            fontFamily: 'IBM Plex Mono, monospace',
+          }}
+        >
+          {label}
+        </Typography>
+        <InfoOutlined sx={{ color: COLORS.textMuted, fontSize: 13 }} />
+      </Stack>
+    </Tooltip>
+  );
+}
+
+function getOptionalNumber(value: number | undefined): number {
+  return typeof value === 'number' ? value : 0;
+}
+
+function getTodayDeliveryHelper(
+  stats: CampaignsOverviewResponse['stats']
+): string {
+  const attemptedToday = getOptionalNumber(stats.attemptedToday);
+  const failedToday = getOptionalNumber(stats.failedToday);
+  const deliveredRateToday = getOptionalNumber(stats.deliveredRateToday);
+
+  if (attemptedToday === 0) {
+    return '0 finalized today';
+  }
+
+  return `${deliveredRateToday}% today · ${failedToday.toLocaleString('en-US')} failed`;
+}
+
+function getDeliveryRateHelper(
+  stats: CampaignsOverviewResponse['stats']
+): string {
+  const deliveredTotal = getOptionalNumber(stats.deliveredTotal);
+  const attemptedTotal = getOptionalNumber(stats.attemptedTotal);
+
+  if (attemptedTotal === 0) {
+    return '0 finalized deliveries';
+  }
+
+  return `${deliveredTotal.toLocaleString('en-US')} / ${attemptedTotal.toLocaleString('en-US')} finalized`;
+}
+
+function getCtrHelper(stats: CampaignsOverviewResponse['stats']): string {
+  const openedTotal = getOptionalNumber(stats.openedTotal);
+
+  return `${openedTotal.toLocaleString('en-US')} opened · ${formatPercentDelta(
+    stats.ctrDeltaVsPrev7d
+  )} vs prev 7d`;
+}
+
+function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
+  return `${stats.reachInProgress.toLocaleString('en-US')} pending or sending`;
+}
+
+function formatCampaignDeliveryBreakdown(item: CampaignListItem): string {
+  const hasDetailedBreakdown =
+    typeof item.progress.failedCount === 'number' ||
+    typeof item.progress.inProgressCount === 'number' ||
+    typeof item.progress.skippedCount === 'number' ||
+    typeof item.progress.openCount === 'number';
+
+  if (!hasDetailedBreakdown) {
+    return 'Delivery breakdown unavailable';
+  }
+
+  const sent = item.progress.sentCount ?? 0;
+  const failed = item.progress.failedCount ?? 0;
+  const queued = item.progress.inProgressCount ?? 0;
+  const skipped = item.progress.skippedCount ?? 0;
+  const opened = item.progress.openCount ?? 0;
+  const deliveryRate = item.progress.deliveredRate ?? 0;
+  const ctr = item.progress.ctr ?? 0;
+  const parts = [
+    `${sent.toLocaleString('en-US')} delivered`,
+    `${failed.toLocaleString('en-US')} failed`,
+    `${queued.toLocaleString('en-US')} queued`,
+  ];
+
+  if (skipped > 0) {
+    parts.push(`${skipped.toLocaleString('en-US')} skipped`);
+  }
+
+  if (opened > 0) {
+    parts.push(`${opened.toLocaleString('en-US')} opened`);
+  }
+
+  if (sent + failed > 0) {
+    parts.push(`${deliveryRate}% delivery rate`);
+  }
+
+  if (sent > 0) {
+    parts.push(`${ctr}% CTR`);
+  }
+
+  return parts.join(' · ');
+}
+
+function getOutcomeHint(item: CampaignListItem): string {
+  if (item.metric.label === 'goal') {
+    if (item.metric.attributionMode === 'trace_required_response') {
+      return 'Goal reach counts journeys where the configured goal event came back with this push delivery trace id. Regular app activity without a trace is not counted here.';
+    }
+
+    return 'Goal reach counts journeys where the configured user-level goal event happened after the journey started.';
+  }
+
+  return 'CTR is opened deliveries divided by delivered push notifications for this campaign.';
+}
+
+const KPI_HINTS = {
+  activeCampaigns:
+    'Campaign status counts come from persisted campaign rows and are not affected by the current list filters.',
+  deliveredToday:
+    'Delivered today counts live push deliveries with sent_at today. Failed today counts currently failed live rows last updated today.',
+  deliveryRate:
+    'Delivery rate is lifetime live delivered deliveries divided by delivered plus failed deliveries. Pending and skipped rows are not included.',
+  avgCtr:
+    'Average CTR is lifetime opened live deliveries divided by delivered live push notifications.',
+  queued:
+    'Queued deliveries are live campaign delivery rows that are still pending or currently being sent.',
+};
+
+const ROW_HINTS = {
+  audience:
+    'Audience is the saved estimate from the latest campaign definition. Current eligibility can change as users move retention stage or lose push eligibility.',
+  timing:
+    'Timing shows the next planned evaluation or delivery checkpoint stored for the campaign runtime.',
+  progress:
+    'Delivery progress for materialized live journey rows. Total includes delivered, failed, queued, and skipped deliveries, so it can be higher than the current audience estimate.',
+};
 
 function FilterSection({
   title,
@@ -253,7 +413,7 @@ export function CampaignsOverviewPage() {
   const [rowsPerPage, setRowsPerPage] = useState(4);
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<CampaignStatus[]>(
-    () => DEFAULT_SELECTED_STATUSES,
+    () => DEFAULT_SELECTED_STATUSES
   );
   const [selectedTriggerTypes, setSelectedTriggerTypes] = useState<
     CampaignEntryTriggerType[]
@@ -262,7 +422,9 @@ export function CampaignsOverviewPage() {
     useState<CampaignQuickView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [overview, setOverview] = useState<CampaignsOverviewResponse | null>(null);
+  const [overview, setOverview] = useState<CampaignsOverviewResponse | null>(
+    null
+  );
 
   useEffect(() => {
     let isActive = true;
@@ -289,7 +451,7 @@ export function CampaignsOverviewPage() {
           setError(
             loadError instanceof Error
               ? loadError.message
-              : 'Failed to load campaigns overview.',
+              : 'Failed to load campaigns overview.'
           );
         }
       } finally {
@@ -304,13 +466,22 @@ export function CampaignsOverviewPage() {
     return () => {
       isActive = false;
     };
-  }, [page, rowsPerPage, search, selectedStatuses, selectedTriggerTypes, selectedQuickView]);
+  }, [
+    page,
+    rowsPerPage,
+    search,
+    selectedStatuses,
+    selectedTriggerTypes,
+    selectedQuickView,
+  ]);
 
   const stats = overview?.stats;
 
   const filtersSummary = useMemo(() => {
     return [
-      selectedStatuses.length ? `${selectedStatuses.length} status filter(s)` : null,
+      selectedStatuses.length
+        ? `${selectedStatuses.length} status filter(s)`
+        : null,
       selectedTriggerTypes.length
         ? `${selectedTriggerTypes.length} type filter(s)`
         : null,
@@ -325,7 +496,7 @@ export function CampaignsOverviewPage() {
     setSelectedStatuses((current) =>
       current.includes(status)
         ? current.filter((value) => value !== status)
-        : [...current, status],
+        : [...current, status]
     );
   }
 
@@ -334,14 +505,19 @@ export function CampaignsOverviewPage() {
     setSelectedTriggerTypes((current) =>
       current.includes(triggerType)
         ? current.filter((value) => value !== triggerType)
-        : [...current, triggerType],
+        : [...current, triggerType]
     );
   }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: COLORS.canvas }}>
       <Box sx={{ maxWidth: 1440, mx: 'auto', px: 3, py: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          sx={{ mb: 3 }}
+        >
           <Box>
             <Typography
               sx={{
@@ -381,8 +557,11 @@ export function CampaignsOverviewPage() {
                 >
                   Campaigns
                 </Typography>
-                <Typography sx={{ color: COLORS.textSecondary, fontSize: 14, mt: 0.5 }}>
-                  Overview, filters, and lifecycle monitoring for every campaign in flight.
+                <Typography
+                  sx={{ color: COLORS.textSecondary, fontSize: 14, mt: 0.5 }}
+                >
+                  Overview, filters, and lifecycle monitoring for every campaign
+                  in flight.
                 </Typography>
               </Box>
             </Stack>
@@ -411,7 +590,7 @@ export function CampaignsOverviewPage() {
               gridTemplateColumns: {
                 xs: '1fr',
                 md: 'repeat(2, minmax(0, 1fr))',
-                xl: 'repeat(4, minmax(0, 1fr))',
+                xl: 'repeat(5, minmax(0, 1fr))',
               },
               gap: 1.5,
               mb: 3,
@@ -421,21 +600,31 @@ export function CampaignsOverviewPage() {
               eyebrow="Active campaigns"
               value={String(stats.activeCampaigns)}
               helper={`${stats.pausedCampaigns} paused · ${stats.scheduledCampaigns} scheduled`}
+              hint={KPI_HINTS.activeCampaigns}
             />
             <KpiCard
-              eyebrow="Sent today"
+              eyebrow="Delivered today"
               value={formatMetricValue(stats.sentToday)}
-              helper={`${stats.deliveredRate}% delivered`}
+              helper={getTodayDeliveryHelper(stats)}
+              hint={KPI_HINTS.deliveredToday}
+            />
+            <KpiCard
+              eyebrow="Delivery rate"
+              value={`${stats.deliveredRate}%`}
+              helper={getDeliveryRateHelper(stats)}
+              hint={KPI_HINTS.deliveryRate}
             />
             <KpiCard
               eyebrow="Avg CTR"
               value={`${stats.avgCtr}%`}
-              helper={`+${stats.ctrDeltaVsPrev7d}% vs last 7 days`}
+              helper={getCtrHelper(stats)}
+              hint={KPI_HINTS.avgCtr}
             />
             <KpiCard
-              eyebrow="Reach in progress"
+              eyebrow="Queued deliveries"
               value={formatMetricValue(stats.reachInProgress)}
-              helper="users currently inside active flows"
+              helper={getQueuedHelper(stats)}
+              hint={KPI_HINTS.queued}
             />
           </Box>
         )}
@@ -468,7 +657,14 @@ export function CampaignsOverviewPage() {
             >
               Campaign filters
             </Typography>
-            <Typography sx={{ color: COLORS.textSecondary, fontSize: 13, lineHeight: 1.5, mb: 2 }}>
+            <Typography
+              sx={{
+                color: COLORS.textSecondary,
+                fontSize: 13,
+                lineHeight: 1.5,
+                mb: 2,
+              }}
+            >
               Narrow the list by status, trigger type, and quick views.
             </Typography>
 
@@ -491,7 +687,9 @@ export function CampaignsOverviewPage() {
               }}
               slotProps={{
                 input: {
-                  startAdornment: <Search sx={{ color: COLORS.textMuted, mr: 1 }} />,
+                  startAdornment: (
+                    <Search sx={{ color: COLORS.textMuted, mr: 1 }} />
+                  ),
                 },
               }}
             />
@@ -507,7 +705,9 @@ export function CampaignsOverviewPage() {
                       onClick={() => toggleStatus(option.value)}
                       sx={{
                         justifyContent: 'space-between',
-                        color: selected ? COLORS.textPrimary : COLORS.textSecondary,
+                        color: selected
+                          ? COLORS.textPrimary
+                          : COLORS.textSecondary,
                         bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
                         border: `1px solid ${selected ? COLORS.accent : COLORS.strokeSoft}`,
                         borderRadius: 3,
@@ -516,7 +716,13 @@ export function CampaignsOverviewPage() {
                       }}
                     >
                       <span>{option.label}</span>
-                      {selected && <Chip size="small" label="On" sx={{ bgcolor: COLORS.accent, color: '#fff' }} />}
+                      {selected && (
+                        <Chip
+                          size="small"
+                          label="On"
+                          sx={{ bgcolor: COLORS.accent, color: '#fff' }}
+                        />
+                      )}
                     </Button>
                   );
                 })}
@@ -525,7 +731,9 @@ export function CampaignsOverviewPage() {
               <FilterSection title="Type">
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                   {TRIGGER_OPTIONS.map((option) => {
-                    const selected = selectedTriggerTypes.includes(option.value);
+                    const selected = selectedTriggerTypes.includes(
+                      option.value
+                    );
                     return (
                       <Chip
                         key={option.value}
@@ -534,7 +742,9 @@ export function CampaignsOverviewPage() {
                         onClick={() => toggleTrigger(option.value)}
                         sx={{
                           bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
-                          color: selected ? COLORS.textPrimary : COLORS.textSecondary,
+                          color: selected
+                            ? COLORS.textPrimary
+                            : COLORS.textSecondary,
                           border: `1px solid ${selected ? COLORS.accent : COLORS.strokeSoft}`,
                           borderRadius: 999,
                         }}
@@ -554,13 +764,15 @@ export function CampaignsOverviewPage() {
                       onClick={() => {
                         setPage(0);
                         setSelectedQuickView((current) =>
-                          current === option.value ? null : option.value,
+                          current === option.value ? null : option.value
                         );
                       }}
                       sx={{
                         alignItems: 'flex-start',
                         flexDirection: 'column',
-                        color: selected ? COLORS.textPrimary : COLORS.textSecondary,
+                        color: selected
+                          ? COLORS.textPrimary
+                          : COLORS.textSecondary,
                         bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
                         border: `1px solid ${selected ? COLORS.accent : COLORS.strokeSoft}`,
                         borderRadius: 3,
@@ -568,10 +780,14 @@ export function CampaignsOverviewPage() {
                         py: 1.25,
                       }}
                     >
-                      <Typography sx={{ fontSize: 13, fontWeight: 600, color: 'inherit' }}>
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 600, color: 'inherit' }}
+                      >
                         {option.label}
                       </Typography>
-                      <Typography sx={{ fontSize: 11, color: COLORS.textMuted, mt: 0.35 }}>
+                      <Typography
+                        sx={{ fontSize: 11, color: COLORS.textMuted, mt: 0.35 }}
+                      >
                         {option.helper}
                       </Typography>
                     </Button>
@@ -630,8 +846,14 @@ export function CampaignsOverviewPage() {
               </Typography>
             </Stack>
 
-            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-            {isLoading && <LinearProgress sx={{ mb: 2, bgcolor: COLORS.soft }} />}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+            {isLoading && (
+              <LinearProgress sx={{ mb: 2, bgcolor: COLORS.soft }} />
+            )}
 
             <Stack spacing={1.5}>
               {overview?.items.map((item) => (
@@ -652,7 +874,9 @@ export function CampaignsOverviewPage() {
                     borderRadius: 4,
                     bgcolor: COLORS.soft,
                     border: `1px solid ${
-                      item.status === 'active' ? COLORS.accent : COLORS.strokeSoft
+                      item.status === 'active'
+                        ? COLORS.accent
+                        : COLORS.strokeSoft
                     }`,
                     cursor: 'pointer',
                     transition: 'transform 0.18s ease, border-color 0.18s ease',
@@ -680,7 +904,9 @@ export function CampaignsOverviewPage() {
                         >
                           {item.name}
                         </Typography>
-                        <Typography sx={{ color: COLORS.textSecondary, fontSize: 13 }}>
+                        <Typography
+                          sx={{ color: COLORS.textSecondary, fontSize: 13 }}
+                        >
                           {item.goal}
                         </Typography>
                       </Box>
@@ -718,35 +944,66 @@ export function CampaignsOverviewPage() {
                       }}
                     >
                       <Box>
-                        <Typography sx={{ color: COLORS.textMuted, fontSize: 11, fontFamily: 'IBM Plex Mono, monospace', mb: 0.45 }}>
-                          Audience
-                        </Typography>
-                        <Typography sx={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>
+                        <MetricLabel
+                          label="Audience"
+                          hint={ROW_HINTS.audience}
+                        />
+                        <Typography
+                          sx={{
+                            color: COLORS.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                          }}
+                        >
                           {item.audience.label}
                         </Typography>
-                        <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
-                          {item.audience.estimate?.toLocaleString('en-US') ?? '0'} users
+                        <Typography
+                          sx={{ color: COLORS.textSecondary, fontSize: 12 }}
+                        >
+                          {item.audience.estimate?.toLocaleString('en-US') ??
+                            '0'}{' '}
+                          users
                         </Typography>
                       </Box>
 
                       <Box>
-                        <Typography sx={{ color: COLORS.textMuted, fontSize: 11, fontFamily: 'IBM Plex Mono, monospace', mb: 0.45 }}>
-                          Timing
-                        </Typography>
-                        <Typography sx={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>
+                        <MetricLabel label="Timing" hint={ROW_HINTS.timing} />
+                        <Typography
+                          sx={{
+                            color: COLORS.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                          }}
+                        >
                           {item.timing.label}
                         </Typography>
-                        <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+                        <Typography
+                          sx={{ color: COLORS.textSecondary, fontSize: 12 }}
+                        >
                           {formatTimestamp(item.timing.timestamp)}
                         </Typography>
                       </Box>
 
                       <Box>
-                        <Typography sx={{ color: COLORS.textMuted, fontSize: 11, fontFamily: 'IBM Plex Mono, monospace', mb: 0.45 }}>
-                          Progress
-                        </Typography>
-                        <Typography sx={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600, mb: 0.75 }}>
-                          {(item.progress.sentCount ?? 0).toLocaleString('en-US')} / {(item.progress.totalCount ?? 0).toLocaleString('en-US')}
+                        <MetricLabel
+                          label="Progress"
+                          hint={ROW_HINTS.progress}
+                        />
+                        <Typography
+                          sx={{
+                            color: COLORS.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            mb: 0.75,
+                          }}
+                        >
+                          {(item.progress.sentCount ?? 0).toLocaleString(
+                            'en-US'
+                          )}{' '}
+                          /{' '}
+                          {(item.progress.totalCount ?? 0).toLocaleString(
+                            'en-US'
+                          )}
                         </Typography>
                         <LinearProgress
                           variant="determinate"
@@ -761,13 +1018,30 @@ export function CampaignsOverviewPage() {
                             },
                           }}
                         />
+                        <Typography
+                          sx={{
+                            color: COLORS.textSecondary,
+                            fontSize: 11,
+                            mt: 0.65,
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          {formatCampaignDeliveryBreakdown(item)}
+                        </Typography>
                       </Box>
 
                       <Box>
-                        <Typography sx={{ color: COLORS.textMuted, fontSize: 11, fontFamily: 'IBM Plex Mono, monospace', mb: 0.45 }}>
-                          Outcome
-                        </Typography>
-                        <Typography sx={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 600 }}>
+                        <MetricLabel
+                          label="Outcome"
+                          hint={getOutcomeHint(item)}
+                        />
+                        <Typography
+                          sx={{
+                            color: COLORS.textPrimary,
+                            fontSize: 13,
+                            fontWeight: 600,
+                          }}
+                        >
                           {item.metric.value}
                         </Typography>
                         {item.metric.detail ? (
@@ -781,7 +1055,12 @@ export function CampaignsOverviewPage() {
                             {item.metric.detail}
                           </Typography>
                         ) : null}
-                        <Stack direction="row" spacing={0.75} sx={{ mt: 0.8 }} flexWrap="wrap">
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          sx={{ mt: 0.8 }}
+                          flexWrap="wrap"
+                        >
                           {getLocaleReadinessEntries(item).map(
                             ([locale, readiness]) => (
                               <Chip
@@ -793,7 +1072,7 @@ export function CampaignsOverviewPage() {
                                   color: getReadinessColor(readiness),
                                 }}
                               />
-                            ),
+                            )
                           )}
                         </Stack>
                       </Box>
@@ -825,11 +1104,21 @@ export function CampaignsOverviewPage() {
                     textAlign: 'center',
                   }}
                 >
-                  <Typography sx={{ color: COLORS.textPrimary, fontSize: 18, fontWeight: 600, mb: 1 }}>
+                  <Typography
+                    sx={{
+                      color: COLORS.textPrimary,
+                      fontSize: 18,
+                      fontWeight: 600,
+                      mb: 1,
+                    }}
+                  >
                     No campaigns match the current filters
                   </Typography>
-                  <Typography sx={{ color: COLORS.textSecondary, fontSize: 14 }}>
-                    Reset one of the left-rail filters or start a fresh campaign.
+                  <Typography
+                    sx={{ color: COLORS.textSecondary, fontSize: 14 }}
+                  >
+                    Reset one of the left-rail filters or start a fresh
+                    campaign.
                   </Typography>
                 </Paper>
               )}

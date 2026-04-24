@@ -88,7 +88,14 @@ export interface CampaignOverviewStats {
   pausedCampaigns: number;
   scheduledCampaigns: number;
   sentToday: number;
+  failedToday?: number;
+  attemptedToday?: number;
+  deliveredRateToday?: number;
   deliveredRate: number;
+  attemptedTotal?: number;
+  deliveredTotal?: number;
+  failedTotal?: number;
+  openedTotal?: number;
   avgCtr: number;
   ctrDeltaVsPrev7d: number;
   reachInProgress: number;
@@ -107,6 +114,12 @@ export interface CampaignListTimingSummary {
 export interface CampaignListProgressSummary {
   sentCount: number | null;
   totalCount: number | null;
+  failedCount?: number | null;
+  skippedCount?: number | null;
+  inProgressCount?: number | null;
+  openCount?: number | null;
+  deliveredRate?: number | null;
+  ctr?: number | null;
   progressPercent: number | null;
 }
 

@@ -322,9 +322,12 @@ function buildEditorCatalog(): CampaignEditorCatalog {
 
 let state = createInitialState();
 
-function statusCountKey(
-  status: CampaignStatus
-): keyof typeof state.stats | null {
+type StatusCountKey =
+  | 'activeCampaigns'
+  | 'pausedCampaigns'
+  | 'scheduledCampaigns';
+
+function statusCountKey(status: CampaignStatus): StatusCountKey | null {
   if (status === 'active') {
     return 'activeCampaigns';
   }

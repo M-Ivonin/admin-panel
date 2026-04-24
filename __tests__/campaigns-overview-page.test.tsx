@@ -35,6 +35,14 @@ describe('CampaignsOverviewPage', () => {
 
     expect(await screen.findByText('onboarding_not_completed')).toBeTruthy();
     expect(screen.getByText(/4 status filter\(s\)/i)).toBeTruthy();
+    expect(screen.getByText('Delivered today')).toBeTruthy();
+    expect(screen.getByText('Delivery rate')).toBeTruthy();
+    expect(screen.getByText('Queued deliveries')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '1,072 delivered · 120 failed · 2,000 queued · 8 skipped · 200 opened · 89.9% delivery rate · 18.7% CTR'
+      )
+    ).toBeTruthy();
     expect(screen.getAllByText('On')).toHaveLength(4);
     expect(screen.getByText('favorite_match_kickoff')).toBeTruthy();
     expect(screen.getByText('stage_at_risk_wau')).toBeTruthy();
