@@ -37,10 +37,13 @@ describe('campaigns API helpers', () => {
       statuses: ['active', 'paused'],
       triggerTypes: ['state_based', 'event_based'],
       quickView: 'needs_attention',
+      statsPeriod: 'custom',
+      statsFrom: '2026-04-17T00:00:00.000Z',
+      statsTo: '2026-04-24T23:59:59.999Z',
     });
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
-      path: '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based',
+      path: '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statsPeriod=custom&statsFrom=2026-04-17T00%3A00%3A00.000Z&statsTo=2026-04-24T23%3A59%3A59.999Z&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based',
       method: 'GET',
     });
   });

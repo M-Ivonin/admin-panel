@@ -38,11 +38,10 @@ describe('CampaignsOverviewPage', () => {
     expect(screen.getByText('Delivered today')).toBeTruthy();
     expect(screen.getAllByText('Delivery rate').length).toBeGreaterThan(0);
     expect(screen.getByText('Queued deliveries')).toBeTruthy();
-    expect(
-      screen.getByText(
-        '1,072 delivered · 120 failed · 2,000 queued · 8 skipped · 200 opened · 89.9% delivery rate · 18.7% CTR'
-      )
-    ).toBeTruthy();
+    expect(screen.getAllByText('Delivered').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Failed').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Queued').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('CTR').length).toBeGreaterThan(0);
     expect(screen.getAllByText('On')).toHaveLength(4);
     expect(screen.getByText('favorite_match_kickoff')).toBeTruthy();
     expect(screen.getByText('stage_at_risk_wau')).toBeTruthy();
@@ -82,6 +81,34 @@ describe('CampaignsOverviewPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New Campaign' }));
 
     expect(push).toHaveBeenCalledWith('/dashboard/campaigns/new');
+  });
+
+  it('opens editing only from the row Edit button and sends the selected stats period', async () => {
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText('onboarding_not_completed');
+
+      fireEvent.click(screen.getByText('onboarding_not_completed'));
+      expect(push).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getAllByRole('button', { name: /Edit/i })[0]);
+      expect(push).toHaveBeenCalledWith(
+        '/dashboard/campaigns/cmp_onboarding_not_completed'
+      );
+
+      fireEvent.click(screen.getByText('24 hours'));
+
+      await waitFor(() => {
+        expect(overviewSpy).toHaveBeenLastCalledWith(
+          expect.objectContaining({ statsPeriod: 'last_24_hours' })
+        );
+      });
+    } finally {
+      overviewSpy.mockRestore();
+    }
   });
 
   it('renders tracked-goal rate details in the outcome block', async () => {
@@ -159,7 +186,7 @@ describe('CampaignsOverviewPage', () => {
     }
   });
 
-  it('renders saved and current audience diagnostics, runtime rows, failures, and hint labels', async () => {
+  it('renders current audience diagnostics, runtime rows, failures, and hint labels', async () => {
     const overviewSpy = jest
       .spyOn(campaignsRepository, 'getCampaignsOverview')
       .mockResolvedValue({
@@ -236,23 +263,17 @@ describe('CampaignsOverviewPage', () => {
       render(<CampaignsOverviewPage />);
 
       expect(await screen.findByText('Runtime diagnostics campaign')).toBeTruthy();
-      expect(screen.getByText('Saved estimate')).toBeTruthy();
       expect(screen.getByText('Audience now')).toBeTruthy();
-      expect(screen.getByText('100 users')).toBeTruthy();
       expect(screen.getByText('41 users')).toBeTruthy();
-      expect(
-        screen.getByText(
-          '2 delivered · 1 failed · 1 queued · 0 skipped · 1 opened · 66.7% delivery rate · 50% CTR'
-        )
-      ).toBeTruthy();
+      expect(screen.queryByText('Saved estimate')).toBeNull();
+      expect(screen.queryByText('100 users')).toBeNull();
       expect(screen.getAllByText('Delivery rate').length).toBeGreaterThan(0);
       expect(screen.getByText('CTR')).toBeTruthy();
-      expect(screen.getByText('Unique recipients')).toBeTruthy();
-      expect(screen.getByText('Journey instances')).toBeTruthy();
-      expect(screen.getByText('Delivery rows')).toBeTruthy();
-      expect(
-        screen.getByText('Failure reasons: invalid fcm token: 1')
-      ).toBeTruthy();
+      expect(screen.getByText('Users with messages')).toBeTruthy();
+      expect(screen.getByText('Campaign starts')).toBeTruthy();
+      expect(screen.getByText('Message attempts')).toBeTruthy();
+      expect(screen.getByText('Failure reasons')).toBeTruthy();
+      expect(screen.getByText('invalid fcm token: 1')).toBeTruthy();
       expect(screen.getByText('Traced goal events')).toBeTruthy();
       expect(screen.getByText('Untraced matching events')).toBeTruthy();
       expect(screen.getByText('Source events without user')).toBeTruthy();

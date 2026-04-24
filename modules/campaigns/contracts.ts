@@ -56,6 +56,12 @@ export type CampaignQuickView =
   | 'needs_attention'
   | 'recent_drafts';
 
+export type CampaignStatsPeriod =
+  | 'all_time'
+  | 'last_24_hours'
+  | 'last_7_days'
+  | 'custom';
+
 export type CampaignSourceEventKey =
   | 'app_opened'
   | 'onboarding_completed'
@@ -173,6 +179,9 @@ export interface GetCampaignsOverviewParams {
   statuses: CampaignStatus[];
   triggerTypes: CampaignEntryTriggerType[];
   quickView: CampaignQuickView | null;
+  statsPeriod: CampaignStatsPeriod;
+  statsFrom?: string;
+  statsTo?: string;
 }
 
 export interface CampaignsOverviewResponse {

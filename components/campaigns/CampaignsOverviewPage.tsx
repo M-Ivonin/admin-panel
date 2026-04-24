@@ -20,13 +20,14 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Add, ArrowBack, InfoOutlined, Search } from '@mui/icons-material';
+import { Add, ArrowBack, Edit, InfoOutlined, Search } from '@mui/icons-material';
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
   CampaignLocale,
   CampaignQuickView,
   CampaignStatus,
+  CampaignStatsPeriod,
   CampaignsOverviewResponse,
 } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
@@ -55,6 +56,16 @@ const TRIGGER_OPTIONS: Array<{
   { value: 'state_based', label: 'State based' },
   { value: 'event_based', label: 'Event based' },
   { value: 'scheduled_recurring', label: 'Recurring' },
+];
+
+const STATS_PERIOD_OPTIONS: Array<{
+  value: CampaignStatsPeriod;
+  label: string;
+}> = [
+  { value: 'all_time', label: 'All time' },
+  { value: 'last_24_hours', label: '24 hours' },
+  { value: 'last_7_days', label: '7 days' },
+  { value: 'custom', label: 'Custom' },
 ];
 
 const QUICK_VIEW_OPTIONS: Array<{
@@ -128,6 +139,29 @@ function formatTimestamp(value: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function toDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getDateInputValue(daysAgo: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+
+  return toDateInputValue(date);
+}
+
+function startOfLocalDateIso(value: string): string {
+  return new Date(`${value}T00:00:00`).toISOString();
+}
+
+function endOfLocalDateIso(value: string): string {
+  return new Date(`${value}T23:59:59.999`).toISOString();
 }
 
 function getStatusColor(status: CampaignStatus): string {
@@ -308,46 +342,12 @@ function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
   return `${stats.reachInProgress.toLocaleString('en-US')} pending or sending`;
 }
 
-function formatCampaignDeliveryBreakdown(item: CampaignListItem): string {
-  const sent = item.progress.sentCount;
-
-  if (!hasMetricNumber(sent)) {
-    return 'Delivery breakdown unavailable';
-  }
-
-  const parts = [`${sent.toLocaleString('en-US')} delivered`];
-
-  if (hasMetricNumber(item.progress.failedCount)) {
-    parts.push(`${item.progress.failedCount.toLocaleString('en-US')} failed`);
-  }
-
-  if (hasMetricNumber(item.progress.inProgressCount)) {
-    parts.push(
-      `${item.progress.inProgressCount.toLocaleString('en-US')} queued`
-    );
-  }
-
-  if (hasMetricNumber(item.progress.skippedCount)) {
-    parts.push(`${item.progress.skippedCount.toLocaleString('en-US')} skipped`);
-  }
-
-  if (hasMetricNumber(item.progress.openCount)) {
-    parts.push(`${item.progress.openCount.toLocaleString('en-US')} opened`);
-  }
-
-  if (hasMetricNumber(item.progress.deliveredRate)) {
-    parts.push(`${item.progress.deliveredRate}% delivery rate`);
-  }
-
-  if (hasMetricNumber(item.progress.ctr)) {
-    parts.push(`${item.progress.ctr}% CTR`);
-  }
-
-  return parts.join(' · ');
-}
-
 function formatFailureReason(reason: string): string {
-  return reason.replace(/_/g, ' ');
+  return reason
+    .trim()
+    .replace(/_/g, ' ')
+    .replace(/([:;,.])(?=\S)/g, '$1 ')
+    .replace(/\s+/g, ' ');
 }
 
 function formatFailureReasons(item: CampaignListItem): string | null {
@@ -370,50 +370,64 @@ function formatFailureReasons(item: CampaignListItem): string | null {
 function getOutcomeHint(item: CampaignListItem): string {
   if (item.metric.label === 'goal') {
     if (item.metric.attributionMode === 'trace_required_response') {
-      return 'Goal reach counts journeys where the configured goal event came back with this push delivery trace id. Regular app activity without a trace is not counted here.';
+      return 'Reached counts campaign starts where the expected user action can be linked back to a specific campaign message. Similar app activity that cannot be linked is shown only as a diagnostic.';
     }
 
-    return 'Goal reach counts journeys where the configured user-level goal event happened after the journey started.';
+    return 'Reached counts users who completed the expected action after entering this campaign.';
   }
 
-  return 'CTR is opened deliveries divided by delivered push notifications for this campaign.';
+  return 'CTR is the share of delivered campaign messages that users opened.';
 }
 
 const KPI_HINTS = {
   activeCampaigns:
-    'Campaign status counts come from persisted campaign rows and are not affected by the current list filters.',
+    'Counts campaigns by status across all campaigns, not just the rows currently shown by filters.',
   deliveredToday:
-    'Delivered today counts live push deliveries with sent_at today. Failed today counts currently failed live rows last updated today.',
+    'Delivered today is messages successfully sent today. Failed today is messages that failed today.',
   deliveryRate:
-    'Delivery rate is lifetime live delivered deliveries divided by delivered plus failed deliveries. Pending and skipped rows are not included.',
+    'Share of finished send attempts that were delivered instead of failed. Waiting and skipped messages are not included.',
   avgCtr:
-    'Average CTR is lifetime opened live deliveries divided by delivered live push notifications.',
+    'Average share of delivered campaign messages that users opened.',
   queued:
-    'Queued deliveries are live campaign delivery rows that are still pending or currently being sent.',
+    'Messages waiting to be sent or currently being sent.',
 };
 
 const ROW_HINTS = {
   audience:
-    'Audience is the saved estimate from the latest campaign definition. Current eligibility can change as users move retention stage or lose push eligibility.',
+    'People who match this campaign audience right now and can currently receive push messages.',
   timing:
-    'Timing shows the next planned evaluation or delivery checkpoint stored for the campaign runtime.',
+    'The next time this campaign is expected to check users or send messages.',
   progress:
-    'Delivery progress for materialized live journey rows. Total includes delivered, failed, queued, and skipped deliveries, so it can be higher than the current audience estimate.',
-  savedEstimate:
-    'Saved estimate is the audience size captured when the campaign definition was last estimated.',
+    'How far this campaign has moved through the messages it already created. The total can be higher than Audience now because it includes past users and past attempts.',
+  progressCompletion:
+    'Delivered messages compared with all message attempts created by this campaign.',
   audienceNow:
-    'Audience now is a fresh reachability estimate using the current audience rules and push eligibility.',
+    'People who match the audience rules now and still have push notifications available.',
+  delivered:
+    'Messages successfully sent to users.',
+  failed:
+    'Messages that could not be sent successfully.',
+  queued:
+    'Messages waiting to be sent or being sent now.',
+  skipped:
+    'Messages the campaign decided not to send.',
+  opened:
+    'Delivered messages that users opened.',
   deliveryRate:
-    'Delivery rate is delivered rows divided by delivered plus failed rows for this campaign.',
-  ctr: 'CTR is opened live deliveries divided by delivered live deliveries for this campaign.',
+    'Share of finished send attempts that were delivered instead of failed.',
+  ctr: 'Share of delivered campaign messages that users opened.',
+  uniqueRecipients:
+    'Different users who already had at least one message attempt in this campaign. This can be higher than Audience now if some users are no longer reachable.',
   journeyInstances:
-    'Journey instances count unique recipient and journey keys that have live materialized rows.',
+    'How many times users started this campaign. If users can re-enter, the same user can count more than once.',
+  deliveryRows:
+    'Every message attempt created by this campaign, including delivered, failed, waiting, and skipped messages.',
   tracedGoalEvents:
-    'Traced goal events are matching source events that include the delivery trace id for this campaign.',
+    'Goal actions that can be linked back to a specific campaign message.',
   untracedMatchingEvents:
-    'Untraced matching events have the same goal event key after journey start but no delivery trace id, so they are diagnostics only.',
+    'Matching user actions that happened after campaign entry but cannot be linked to a specific campaign message, so they are informational only.',
   sourceEventsWithoutUser:
-    'Source events without user id have the same goal event key but cannot be attributed to a recipient.',
+    'Matching actions where the user was unknown, so the campaign cannot attribute them to a person.',
 };
 
 function InlineMetric({
@@ -470,16 +484,38 @@ function FailureReasonsLine({ item }: { item: CampaignListItem }) {
   }
 
   return (
-    <Typography
+    <Box
       sx={{
-        color: COLORS.warning,
-        fontSize: 11,
-        mt: 0.85,
-        lineHeight: 1.45,
+        bgcolor: '#2A2317',
+        border: `1px solid ${COLORS.warning}44`,
+        borderRadius: 1,
+        mt: 1,
+        px: 1,
+        py: 0.85,
       }}
     >
-      Failure reasons: {failureReasons}
-    </Typography>
+      <Typography
+        sx={{
+          color: COLORS.warning,
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: 10,
+          lineHeight: 1.25,
+          mb: 0.35,
+        }}
+      >
+        Failure reasons
+      </Typography>
+      <Typography
+        sx={{
+          color: COLORS.textPrimary,
+          fontSize: 11,
+          lineHeight: 1.45,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {failureReasons}
+      </Typography>
+    </Box>
   );
 }
 
@@ -526,11 +562,30 @@ export function CampaignsOverviewPage() {
   >([]);
   const [selectedQuickView, setSelectedQuickView] =
     useState<CampaignQuickView | null>(null);
+  const [statsPeriod, setStatsPeriod] =
+    useState<CampaignStatsPeriod>('all_time');
+  const [customStatsFrom, setCustomStatsFrom] = useState(() =>
+    getDateInputValue(7)
+  );
+  const [customStatsTo, setCustomStatsTo] = useState(() =>
+    getDateInputValue(0)
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [overview, setOverview] = useState<CampaignsOverviewResponse | null>(
     null
   );
+
+  const statsRangeParams = useMemo(() => {
+    if (statsPeriod !== 'custom' || !customStatsFrom || !customStatsTo) {
+      return {};
+    }
+
+    return {
+      statsFrom: startOfLocalDateIso(customStatsFrom),
+      statsTo: endOfLocalDateIso(customStatsTo),
+    };
+  }, [customStatsFrom, customStatsTo, statsPeriod]);
 
   useEffect(() => {
     let isActive = true;
@@ -547,6 +602,8 @@ export function CampaignsOverviewPage() {
           statuses: selectedStatuses,
           triggerTypes: selectedTriggerTypes,
           quickView: selectedQuickView,
+          statsPeriod,
+          ...statsRangeParams,
         });
 
         if (isActive) {
@@ -579,6 +636,8 @@ export function CampaignsOverviewPage() {
     selectedStatuses,
     selectedTriggerTypes,
     selectedQuickView,
+    statsPeriod,
+    statsRangeParams,
   ]);
 
   const stats = overview?.stats;
@@ -592,10 +651,14 @@ export function CampaignsOverviewPage() {
         ? `${selectedTriggerTypes.length} type filter(s)`
         : null,
       selectedQuickView ? '1 quick view' : null,
+      statsPeriod !== 'all_time'
+        ? STATS_PERIOD_OPTIONS.find((option) => option.value === statsPeriod)
+            ?.label
+        : null,
     ]
       .filter(Boolean)
       .join(' · ');
-  }, [selectedQuickView, selectedStatuses, selectedTriggerTypes]);
+  }, [selectedQuickView, selectedStatuses, selectedTriggerTypes, statsPeriod]);
 
   function toggleStatus(status: CampaignStatus) {
     setPage(0);
@@ -900,6 +963,7 @@ export function CampaignsOverviewPage() {
                   );
                 })}
               </FilterSection>
+
             </Stack>
           </Paper>
 
@@ -952,6 +1016,109 @@ export function CampaignsOverviewPage() {
               </Typography>
             </Stack>
 
+            <Box
+              sx={{
+                alignItems: { xs: 'flex-start', lg: 'center' },
+                bgcolor: '#1F1F1F',
+                border: `1px solid ${COLORS.strokeSoft}`,
+                borderRadius: 3,
+                display: 'flex',
+                flexDirection: { xs: 'column', lg: 'row' },
+                gap: 1.25,
+                justifyContent: 'space-between',
+                mb: 2,
+                px: 1.5,
+                py: 1.15,
+              }}
+            >
+              <Stack spacing={0.25}>
+                <Typography
+                  sx={{
+                    color: COLORS.textMuted,
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    fontSize: 11,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  Stats period
+                </Typography>
+                <Typography sx={{ color: COLORS.textSecondary, fontSize: 12 }}>
+                  Applies to the numbers shown in the campaign rows.
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                alignItems="center"
+                justifyContent={{ xs: 'flex-start', lg: 'flex-end' }}
+              >
+                {STATS_PERIOD_OPTIONS.map((option) => {
+                  const selected = statsPeriod === option.value;
+                  return (
+                    <Chip
+                      key={option.value}
+                      label={option.label}
+                      clickable
+                      onClick={() => {
+                        setPage(0);
+                        setStatsPeriod(option.value);
+                      }}
+                      sx={{
+                        bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
+                        color: selected
+                          ? COLORS.textPrimary
+                          : COLORS.textSecondary,
+                        border: `1px solid ${selected ? COLORS.accent : COLORS.strokeSoft}`,
+                        borderRadius: 999,
+                      }}
+                    />
+                  );
+                })}
+                {statsPeriod === 'custom' ? (
+                  <>
+                    <TextField
+                      label="From"
+                      type="date"
+                      size="small"
+                      value={customStatsFrom}
+                      onChange={(event) => {
+                        setPage(0);
+                        setCustomStatsFrom(event.target.value);
+                      }}
+                      sx={{
+                        width: 152,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          bgcolor: COLORS.soft,
+                        },
+                      }}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                    <TextField
+                      label="To"
+                      type="date"
+                      size="small"
+                      value={customStatsTo}
+                      onChange={(event) => {
+                        setPage(0);
+                        setCustomStatsTo(event.target.value);
+                      }}
+                      sx={{
+                        width: 152,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          bgcolor: COLORS.soft,
+                        },
+                      }}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            </Box>
+
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
@@ -965,15 +1132,6 @@ export function CampaignsOverviewPage() {
               {overview?.items.map((item) => (
                 <Paper
                   key={item.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(`/dashboard/campaigns/${item.id}`)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      router.push(`/dashboard/campaigns/${item.id}`);
-                    }
-                  }}
                   elevation={0}
                   sx={{
                     p: 2,
@@ -984,10 +1142,8 @@ export function CampaignsOverviewPage() {
                         ? COLORS.accent
                         : COLORS.strokeSoft
                     }`,
-                    cursor: 'pointer',
-                    transition: 'transform 0.18s ease, border-color 0.18s ease',
+                    transition: 'border-color 0.18s ease',
                     '&:hover': {
-                      transform: 'translateY(-1px)',
                       borderColor: COLORS.accent,
                     },
                   }}
@@ -1017,25 +1173,62 @@ export function CampaignsOverviewPage() {
                         </Typography>
                       </Box>
 
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        <Chip
-                          label={item.status}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        flexWrap="wrap"
+                        alignItems="center"
+                        justifyContent={{ xs: 'flex-start', lg: 'flex-end' }}
+                        sx={{ minWidth: { lg: 330 } }}
+                      >
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          flexWrap="wrap"
+                          alignItems="center"
+                        >
+                          <Chip
+                            label={item.status}
+                            size="small"
+                            sx={{
+                              bgcolor: `${getStatusColor(item.status)}22`,
+                              color: getStatusColor(item.status),
+                              textTransform: 'capitalize',
+                            }}
+                          />
+                          <Chip
+                            label={item.entryTriggerType.replace(/_/g, ' ')}
+                            size="small"
+                            sx={{
+                              bgcolor: '#171717',
+                              color: COLORS.textSecondary,
+                              textTransform: 'capitalize',
+                            }}
+                          />
+                        </Stack>
+                        <Button
                           size="small"
+                          variant="outlined"
+                          startIcon={<Edit fontSize="small" />}
+                          onClick={() =>
+                            router.push(`/dashboard/campaigns/${item.id}`)
+                          }
                           sx={{
-                            bgcolor: `${getStatusColor(item.status)}22`,
-                            color: getStatusColor(item.status),
-                            textTransform: 'capitalize',
+                            borderColor: COLORS.stroke,
+                            borderRadius: 2,
+                            color: COLORS.textPrimary,
+                            height: 32,
+                            ml: { lg: 'auto' },
+                            px: 1.25,
+                            textTransform: 'none',
+                            '&:hover': {
+                              borderColor: COLORS.accent,
+                              bgcolor: COLORS.accentSoft,
+                            },
                           }}
-                        />
-                        <Chip
-                          label={item.entryTriggerType.replace(/_/g, ' ')}
-                          size="small"
-                          sx={{
-                            bgcolor: '#171717',
-                            color: COLORS.textSecondary,
-                            textTransform: 'capitalize',
-                          }}
-                        />
+                        >
+                          Edit
+                        </Button>
                       </Stack>
                     </Stack>
 
@@ -1044,9 +1237,11 @@ export function CampaignsOverviewPage() {
                         display: 'grid',
                         gridTemplateColumns: {
                           xs: '1fr',
-                          md: 'repeat(4, minmax(0, 1fr))',
+                          md: 'minmax(150px, 1fr) minmax(135px, 0.8fr) minmax(300px, 2.15fr) minmax(210px, 1.35fr)',
                         },
-                        gap: 1.25,
+                        columnGap: 2.25,
+                        rowGap: 1.75,
+                        alignItems: 'start',
                       }}
                     >
                       <Box>
@@ -1066,7 +1261,7 @@ export function CampaignsOverviewPage() {
                         <Typography
                           sx={{ color: COLORS.textSecondary, fontSize: 12 }}
                         >
-                          Reach diagnostics
+                          Current reach
                         </Typography>
                         <Stack
                           direction="row"
@@ -1074,15 +1269,6 @@ export function CampaignsOverviewPage() {
                           flexWrap="wrap"
                           sx={{ mt: 0.8 }}
                         >
-                          {hasMetricNumber(item.audience.estimate) ? (
-                            <InlineMetric
-                              label="Saved estimate"
-                              value={`${formatCount(
-                                item.audience.estimate
-                              )} users`}
-                              hint={ROW_HINTS.savedEstimate}
-                            />
-                          ) : null}
                           {hasMetricNumber(item.audience.currentEstimate) ? (
                             <InlineMetric
                               label="Audience now"
@@ -1118,80 +1304,97 @@ export function CampaignsOverviewPage() {
                           label="Progress"
                           hint={ROW_HINTS.progress}
                         />
-                        <Typography
-                          sx={{
-                            color: COLORS.textPrimary,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            mb: 0.75,
-                          }}
+                        <Tooltip
+                          title={ROW_HINTS.progressCompletion}
+                          describeChild
+                          arrow
+                          placement="top"
                         >
-                          {hasMetricNumber(item.progress.sentCount) &&
-                          hasMetricNumber(item.progress.totalCount)
-                            ? `${formatCount(item.progress.sentCount)} / ${formatCount(
-                                item.progress.totalCount
-                              )}`
-                            : 'Progress unavailable'}
-                        </Typography>
-                        {hasMetricNumber(item.progress.progressPercent) ? (
-                          <LinearProgress
-                            variant="determinate"
-                            value={item.progress.progressPercent}
+                          <Typography
                             sx={{
-                              height: 8,
-                              borderRadius: 999,
-                              bgcolor: '#171717',
-                              '& .MuiLinearProgress-bar': {
-                                borderRadius: 999,
-                                bgcolor: COLORS.accent,
-                              },
+                              color: COLORS.textPrimary,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              mb: 0.75,
+                              width: 'fit-content',
                             }}
-                          />
+                          >
+                            {hasMetricNumber(item.progress.sentCount) &&
+                            hasMetricNumber(item.progress.totalCount)
+                              ? `${formatCount(item.progress.sentCount)} / ${formatCount(
+                                  item.progress.totalCount
+                                )}`
+                              : 'Progress unavailable'}
+                          </Typography>
+                        </Tooltip>
+                        {hasMetricNumber(item.progress.progressPercent) ? (
+                          <Tooltip
+                            title={ROW_HINTS.progressCompletion}
+                            describeChild
+                            arrow
+                            placement="top"
+                          >
+                            <LinearProgress
+                              variant="determinate"
+                              value={item.progress.progressPercent}
+                              sx={{
+                                height: 8,
+                                borderRadius: 999,
+                                bgcolor: '#171717',
+                                '& .MuiLinearProgress-bar': {
+                                  borderRadius: 999,
+                                  bgcolor: COLORS.accent,
+                                },
+                              }}
+                            />
+                          </Tooltip>
                         ) : null}
-                        <Typography
+                        <Box
                           sx={{
-                            color: COLORS.textSecondary,
-                            fontSize: 11,
-                            mt: 0.65,
-                            lineHeight: 1.45,
+                            display: 'grid',
+                            gridTemplateColumns: {
+                              xs: 'repeat(2, minmax(0, 1fr))',
+                              sm: 'repeat(3, minmax(0, 1fr))',
+                              md: 'repeat(3, minmax(0, 1fr))',
+                            },
+                            columnGap: 1.25,
+                            rowGap: 0.9,
+                            mt: 1,
                           }}
-                        >
-                          {formatCampaignDeliveryBreakdown(item)}
-                        </Typography>
-                        <Stack
-                          direction="row"
-                          spacing={1.25}
-                          flexWrap="wrap"
-                          sx={{ mt: 0.85 }}
                         >
                           {hasMetricNumber(item.progress.sentCount) ? (
                             <InlineMetric
                               label="Delivered"
                               value={formatCount(item.progress.sentCount)}
+                              hint={ROW_HINTS.delivered}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.failedCount) ? (
                             <InlineMetric
                               label="Failed"
                               value={formatCount(item.progress.failedCount)}
+                              hint={ROW_HINTS.failed}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.inProgressCount) ? (
                             <InlineMetric
                               label="Queued"
                               value={formatCount(item.progress.inProgressCount)}
+                              hint={ROW_HINTS.queued}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.skippedCount) ? (
                             <InlineMetric
                               label="Skipped"
                               value={formatCount(item.progress.skippedCount)}
+                              hint={ROW_HINTS.skipped}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.openCount) ? (
                             <InlineMetric
                               label="Opened"
                               value={formatCount(item.progress.openCount)}
+                              hint={ROW_HINTS.opened}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.deliveredRate) ? (
@@ -1210,15 +1413,16 @@ export function CampaignsOverviewPage() {
                           ) : null}
                           {hasMetricNumber(item.progress.uniqueRecipientCount) ? (
                             <InlineMetric
-                              label="Unique recipients"
+                              label="Users with messages"
                               value={formatCount(
                                 item.progress.uniqueRecipientCount
                               )}
+                              hint={ROW_HINTS.uniqueRecipients}
                             />
                           ) : null}
                           {hasMetricNumber(item.progress.journeyInstanceCount) ? (
                             <InlineMetric
-                              label="Journey instances"
+                              label="Campaign starts"
                               value={formatCount(
                                 item.progress.journeyInstanceCount
                               )}
@@ -1227,11 +1431,12 @@ export function CampaignsOverviewPage() {
                           ) : null}
                           {hasMetricNumber(item.progress.deliveryRowCount) ? (
                             <InlineMetric
-                              label="Delivery rows"
+                              label="Message attempts"
                               value={formatCount(item.progress.deliveryRowCount)}
+                              hint={ROW_HINTS.deliveryRows}
                             />
                           ) : null}
-                        </Stack>
+                        </Box>
                         <FailureReasonsLine item={item} />
                       </Box>
 
@@ -1260,11 +1465,18 @@ export function CampaignsOverviewPage() {
                             {item.metric.detail}
                           </Typography>
                         ) : null}
-                        <Stack
-                          direction="row"
-                          spacing={1.25}
-                          flexWrap="wrap"
-                          sx={{ mt: 0.85 }}
+                        <Box
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: {
+                              xs: 'repeat(2, minmax(0, 1fr))',
+                              md: '1fr',
+                              xl: 'repeat(2, minmax(0, 1fr))',
+                            },
+                            columnGap: 1.25,
+                            rowGap: 0.9,
+                            mt: 1,
+                          }}
                         >
                           {hasMetricNumber(item.metric.traceGoalEventCount) ? (
                             <InlineMetric
@@ -1297,7 +1509,7 @@ export function CampaignsOverviewPage() {
                               hint={ROW_HINTS.sourceEventsWithoutUser}
                             />
                           ) : null}
-                        </Stack>
+                        </Box>
                         <Stack
                           direction="row"
                           spacing={0.75}

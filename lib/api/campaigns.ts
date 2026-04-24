@@ -109,6 +109,16 @@ export async function getCampaignsOverview(
     searchParams.set('quickView', params.quickView);
   }
 
+  searchParams.set('statsPeriod', params.statsPeriod);
+
+  if (params.statsFrom) {
+    searchParams.set('statsFrom', params.statsFrom);
+  }
+
+  if (params.statsTo) {
+    searchParams.set('statsTo', params.statsTo);
+  }
+
   appendQueryParam(searchParams, 'statuses', params.statuses);
   appendQueryParam(searchParams, 'triggerTypes', params.triggerTypes);
 
