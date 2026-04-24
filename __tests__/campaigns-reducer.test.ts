@@ -143,4 +143,5 @@ describe('campaignEditorReducer', () => {
     expect(nextState.draft.content.step_2.es.deeplinkTarget).toBeNull();
     expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
   });
+
 });

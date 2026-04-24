@@ -106,6 +106,8 @@ describe('CampaignEditorPage', () => {
     fireEvent.change(screen.getByLabelText('Goal description'), {
       target: { value: 'Recover onboarding completion' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
 
     fireEvent.click(screen.getByText('Step Content'));
     fireEvent.mouseDown(
@@ -171,6 +173,17 @@ describe('CampaignEditorPage', () => {
           .getByRole('button', { name: 'New Users' })
           .getAttribute('aria-pressed')
       ).toBe('false');
+      expect(
+        Boolean(
+          screen
+            .getByRole('button', {
+              name: 'Pre-Reg Onboarding Incomplete',
+            })
+            .compareDocumentPosition(
+              screen.getByRole('button', { name: 'New Users' })
+            ) & Node.DOCUMENT_POSITION_FOLLOWING
+        )
+      ).toBe(true);
     });
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
@@ -226,6 +239,47 @@ describe('CampaignEditorPage', () => {
 
     await waitFor(() => {
       expect(screen.queryByText(MISSING_TRACKED_GOAL_WARNING)).toBeNull();
+    });
+  });
+
+  it('saves configured goal reward points with the tracked goal', async () => {
+    const createCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'createCampaignDraft'
+    );
+
+    render(<CampaignEditorPage mode="create" />);
+
+    const trackedGoalSelector = await screen.findByRole('combobox', {
+      name: 'Tracked goal',
+    });
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Match reward rescue' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Drive match center opens' },
+    });
+
+    fireEvent.mouseDown(trackedGoalSelector);
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Match center opened' })
+    );
+    fireEvent.change(screen.getByLabelText('Goal reward points'), {
+      target: { value: '300' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(createCampaignDraftSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          goalDefinition: expect.objectContaining({
+            eventKey: 'match_center_opened',
+            attributionMode: 'trace_required_response',
+            rewardPoints: 300,
+          }),
+        })
+      );
     });
   });
 
@@ -333,6 +387,35 @@ describe('CampaignEditorPage', () => {
     await waitFor(() => {
       expect(screen.queryByText('Delete me template')).toBeNull();
       expect(screen.getByText('Template deleted successfully.')).toBeTruthy();
+    });
+  });
+
+  it('edits an existing scenario template from the admin rail', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Scenario templates');
+
+    fireEvent.click(screen.getByLabelText('Edit template Onboarding recovery'));
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Onboarding recovery')).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Update template' })
+      ).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update template' }));
+    const updateDialog = await screen.findByRole('dialog');
+    fireEvent.change(screen.getByLabelText(/^Template name$/), {
+      target: { value: 'Updated onboarding recovery' },
+    });
+    fireEvent.click(
+      within(updateDialog).getByRole('button', { name: 'Update template' })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Template updated successfully.')).toBeTruthy();
+      expect(screen.getByText('Updated onboarding recovery')).toBeTruthy();
     });
   });
 
@@ -498,8 +581,13 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Your latest changes will be saved first, then the campaign will be scheduled.'
+      )
+    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
 
     expect(screen.getByText('Scheduling...')).toBeTruthy();
     expect(screen.getByRole('progressbar')).toBeTruthy();
@@ -573,7 +661,7 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
 
     const scheduledDraft = createEmptyCampaignDraft();
     scheduledDraft.id = 'cmp_local_001';
@@ -614,7 +702,7 @@ describe('CampaignEditorPage', () => {
     });
   });
 
-  it('saves current changes before opening the schedule dialog', async () => {
+  it('opens the schedule dialog immediately and saves only after confirmation', async () => {
     const createCampaignDraftSpy = jest.spyOn(
       campaignsRepository,
       'createCampaignDraft'
@@ -643,6 +731,16 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
 
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(createCampaignDraftSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        'Your latest changes will be saved first, then the campaign will be scheduled.'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+
     await waitFor(() => {
       expect(createCampaignDraftSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -660,8 +758,54 @@ describe('CampaignEditorPage', () => {
       );
     });
 
-    expect(await screen.findByRole('dialog')).toBeTruthy();
-    expect(screen.getByText('Draft saved successfully.')).toBeTruthy();
+    expect(screen.queryByText('Draft saved successfully.')).toBeNull();
+  });
+
+  it('navigates to the saved draft when scheduling fails after the create-flow save', async () => {
+    const savedDraft = createEmptyCampaignDraft();
+    savedDraft.id = 'cmp_local_001';
+    savedDraft.name = 'Campaign Spec Local';
+    savedDraft.goal = 'Recover onboarding completion';
+    savedDraft.content.step_1.en = {
+      title: 'Fresh schedule title',
+      body: 'Fresh schedule body',
+      fallbackFirstName: '',
+      deeplinkTarget: null,
+    };
+
+    jest
+      .spyOn(campaignsRepository, 'createCampaignDraft')
+      .mockResolvedValue(savedDraft);
+    jest
+      .spyOn(campaignsRepository, 'scheduleCampaign')
+      .mockRejectedValue(new Error('Schedule failed'));
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+    fireEvent.click(screen.getByRole('button', { name: 'PT' }));
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Fresh schedule title' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Fresh schedule body' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+
+    expect((await screen.findAllByText('Schedule failed')).length).toBeGreaterThan(0);
+    expect(replace).toHaveBeenCalledWith('/dashboard/campaigns/cmp_local_001');
   });
 
   it('keeps send-test disabled when there is no resolved recipient', async () => {

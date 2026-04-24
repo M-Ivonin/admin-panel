@@ -159,7 +159,7 @@ export type CampaignEditorAction =
   | {
       type: 'markSaveSuccess';
       draft: CampaignDraft;
-      message: string;
+      message?: string | null;
     }
   | {
       type: 'markActionSuccess';
@@ -179,6 +179,7 @@ export type CampaignEditorAction =
 const EMPTY_CATALOG: CampaignEditorCatalog = {
   savedSegments: [],
   scenarioTemplates: [],
+  retentionStageOptions: [],
   tokens: [],
   deeplinkOptions: [],
   sourceEvents: [],
@@ -534,10 +535,12 @@ export function campaignEditorReducer(
         draft: nextDraft,
         activeContentStepKey: getFirstStepKey(nextDraft),
         isDirty: false,
-        lastActionResult: {
-          kind: 'save',
-          message: action.message,
-        },
+        lastActionResult: action.message
+          ? {
+              kind: 'save',
+              message: action.message,
+            }
+          : null,
         lastPersistedDraft: cloneDraft(nextDraft),
       };
     }

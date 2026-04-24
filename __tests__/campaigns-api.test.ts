@@ -11,6 +11,7 @@ import {
   saveCampaignTemplate,
   scheduleCampaign,
   sendCampaignTest,
+  updateCampaignTemplate,
   updateCampaignDraft,
 } from '@/lib/api/campaigns';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
@@ -39,8 +40,7 @@ describe('campaigns API helpers', () => {
     });
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
-      path:
-        '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based',
+      path: '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based',
       method: 'GET',
     });
   });
@@ -123,6 +123,20 @@ describe('campaigns API helpers', () => {
         content: draft.content,
       },
     });
+    await updateCampaignTemplate('tpl_onboarding_recovery', {
+      name: 'Updated template',
+      description: 'Edited in admin',
+      definition: {
+        name: draft.name,
+        goal: draft.goal,
+        goalDefinition: draft.goalDefinition,
+        channel: draft.channel,
+        audience: draft.audience,
+        trigger: draft.trigger,
+        journey: draft.journey,
+        content: draft.content,
+      },
+    });
     await deleteCampaignTemplate('tpl_saved_1');
     await sendCampaignTest('cmp_onboarding_not_completed', {
       recipients: ['spec@local.test'],
@@ -171,10 +185,28 @@ describe('campaigns API helpers', () => {
       }),
     });
     expect(adminAuthFetch).toHaveBeenNthCalledWith(6, {
+      path: '/campaigns/admin/templates/tpl_onboarding_recovery',
+      method: 'PUT',
+      body: JSON.stringify({
+        name: 'Updated template',
+        description: 'Edited in admin',
+        definition: {
+          name: draft.name,
+          goal: draft.goal,
+          goalDefinition: draft.goalDefinition,
+          channel: draft.channel,
+          audience: draft.audience,
+          trigger: draft.trigger,
+          journey: draft.journey,
+          content: draft.content,
+        },
+      }),
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
       path: '/campaigns/admin/templates/tpl_saved_1',
       method: 'DELETE',
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(7, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/send-test',
       method: 'POST',
       body: JSON.stringify({
@@ -182,12 +214,12 @@ describe('campaigns API helpers', () => {
         locale: 'en',
       }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(8, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(9, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/schedule',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),
     });
-    expect(adminAuthFetch).toHaveBeenNthCalledWith(9, {
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(10, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/archive',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),

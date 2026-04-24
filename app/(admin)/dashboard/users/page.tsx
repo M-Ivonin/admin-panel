@@ -1,6 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  ChangeEvent,
+} from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import Link from 'next/link';
 import {
@@ -28,10 +35,11 @@ import {
   getUsers,
   User,
   RetentionStage,
-  RETENTION_STAGE_LABELS,
   PaginatedUsersResponse,
   RetentionCounts,
 } from '@/lib/api/users';
+import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
+import type { CampaignRetentionStageOption } from '@/modules/campaigns/contracts';
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '-';
@@ -64,48 +72,36 @@ function getPlanColor(
   return colors[plan || 'free'] || 'default';
 }
 
-function getRetentionChipColor(
-  stage: RetentionStage
-):
-  | 'default'
-  | 'success'
-  | 'warning'
-  | 'error'
-  | 'info'
-  | 'primary'
-  | 'secondary' {
-  const colorMap: Record<
-    RetentionStage,
-    | 'default'
-    | 'success'
-    | 'warning'
-    | 'error'
-    | 'info'
-    | 'primary'
-    | 'secondary'
-  > = {
-    [RetentionStage.NEW]: 'info',
-    [RetentionStage.CURRENT]: 'success',
-    [RetentionStage.AT_RISK_WAU]: 'warning',
-    [RetentionStage.AT_RISK_MAU]: 'warning',
-    [RetentionStage.DEAD]: 'error',
-    [RetentionStage.REACTIVATED]: 'primary',
-    [RetentionStage.RESURRECTED]: 'secondary',
-    [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 'info',
-  };
-  return colorMap[stage] || 'default';
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) {
+    return `rgba(107, 114, 128, ${alpha})`;
+  }
+
+  const value = Number.parseInt(normalized, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-const RETENTION_STAGES = [
-  RetentionStage.NEW,
-  RetentionStage.CURRENT,
-  RetentionStage.AT_RISK_WAU,
-  RetentionStage.AT_RISK_MAU,
-  RetentionStage.DEAD,
-  RetentionStage.REACTIVATED,
-  RetentionStage.RESURRECTED,
-  RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE,
-] as const;
+function getRetentionChipSx(
+  option: CampaignRetentionStageOption | null,
+  selected = false
+) {
+  const color = option?.chipColor ?? '#6b7280';
+
+  return {
+    borderColor: color,
+    color,
+    bgcolor: selected ? hexToRgba(color, 0.14) : 'transparent',
+    '& .MuiChip-label': {
+      fontWeight: selected ? 700 : 500,
+    },
+  };
+}
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
@@ -115,6 +111,9 @@ export default function UsersPage() {
   const [total, setTotal] = useState(0);
   const [retentionCounts, setRetentionCounts] =
     useState<RetentionCounts | null>(null);
+  const [retentionStageOptions, setRetentionStageOptions] = useState<
+    CampaignRetentionStageOption[]
+  >([]);
 
   // Filter state
   const [page, setPage] = useState(0); // MUI TablePagination uses 0-based index
@@ -183,6 +182,36 @@ export default function UsersPage() {
     partnerFilter,
   ]);
 
+  const fetchRetentionStageOptions = useCallback(async () => {
+    try {
+      const catalog = await getCampaignEditorCatalog();
+      setRetentionStageOptions(catalog.retentionStageOptions || []);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to fetch retention stages'
+      );
+    }
+  }, []);
+
+  const retentionStageLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        retentionStageOptions.map((option) => [option.stage, option.label])
+      ) as Partial<Record<RetentionStage, string>>,
+    [retentionStageOptions]
+  );
+
+  const getRetentionStageLabel = useCallback(
+    (stage: RetentionStage) => retentionStageLabels[stage] || stage,
+    [retentionStageLabels]
+  );
+
+  const getRetentionStageOption = useCallback(
+    (stage: RetentionStage) =>
+      retentionStageOptions.find((option) => option.stage === stage) ?? null,
+    [retentionStageOptions]
+  );
+
   const handleSort = (column: string) => {
     if (sortBy === column) {
       // Toggle order if same column
@@ -198,6 +227,10 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetchRetentionStageOptions();
+  }, [fetchRetentionStageOptions]);
 
   const handleRetentionStageClick = (stage: RetentionStage) => {
     if (selectedRetentionStage === stage) {
@@ -283,15 +316,15 @@ export default function UsersPage() {
                     selectedRetentionStage === null ? 'filled' : 'outlined'
                   }
                 />
-                {RETENTION_STAGES.map((stage) => {
-                  const count = retentionCounts[stage] || 0;
-                  const isSelected = selectedRetentionStage === stage;
+                {retentionStageOptions.map((option) => {
+                  const count = retentionCounts[option.stage] || 0;
+                  const isSelected = selectedRetentionStage === option.stage;
                   return (
                     <Chip
-                      key={stage}
-                      label={`${RETENTION_STAGE_LABELS[stage]} (${count})`}
-                      onClick={() => handleRetentionStageClick(stage)}
-                      color={getRetentionChipColor(stage)}
+                      key={option.stage}
+                      label={`${option.label} (${count})`}
+                      onClick={() => handleRetentionStageClick(option.stage)}
+                      sx={getRetentionChipSx(option, isSelected)}
                       variant={isSelected ? 'filled' : 'outlined'}
                     />
                   );
@@ -528,15 +561,16 @@ export default function UsersPage() {
                           <Chip
                             label={
                               user.retentionStage
-                                ? RETENTION_STAGE_LABELS[user.retentionStage]
+                                ? getRetentionStageLabel(user.retentionStage)
                                 : 'Unknown'
                             }
                             size="small"
-                            color={
+                            variant="outlined"
+                            sx={getRetentionChipSx(
                               user.retentionStage
-                                ? getRetentionChipColor(user.retentionStage)
-                                : 'default'
-                            }
+                                ? getRetentionStageOption(user.retentionStage)
+                                : null
+                            )}
                           />
                         </TableCell>
                         <TableCell>

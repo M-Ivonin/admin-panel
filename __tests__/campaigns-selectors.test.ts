@@ -1,4 +1,5 @@
 import { RetentionStage } from '@/lib/api/users';
+import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import {
   createEmptyCampaignDraft,
   createJourneyStep,
@@ -119,6 +120,30 @@ describe('campaign selectors', () => {
 
     expect(summary.warnings).toContain(MISSING_TRACKED_GOAL_WARNING);
     expect(canScheduleCampaign(draft)).toBe(true);
+  });
+
+  it('blocks scheduling when goal reward points exceed the supported points range', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'Campaign Spec Local';
+    draft.goal = 'Recover onboarding completion';
+    draft.goalDefinition = {
+      eventKey: 'match_center_opened',
+      attributionMode: 'trace_required_response',
+      rewardPoints: CAMPAIGN_GOAL_REWARD_POINTS_MAX + 1,
+    };
+    draft.content.step_1.en = {
+      title: 'Open match center',
+      body: 'See fresh fixtures',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'open_match_center',
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain(
+      `Goal reward points must be zero or a positive whole number no greater than ${CAMPAIGN_GOAL_REWARD_POINTS_MAX}.`
+    );
+    expect(canScheduleCampaign(draft)).toBe(false);
   });
 
   it('blocks scheduling when any selected locale is missing for any journey step', () => {

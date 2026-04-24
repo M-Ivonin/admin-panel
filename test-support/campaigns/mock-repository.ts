@@ -255,6 +255,40 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function buildRetentionStageOptions(
+  savedSegments: CampaignSavedSegmentSummary[]
+): CampaignEditorCatalog['retentionStageOptions'] {
+  return savedSegments
+    .flatMap((segment) => {
+      const stages = segment.audienceDefinition?.criteria.retentionStages ?? [];
+      const [stage] = stages;
+
+      if (
+        stages.length !== 1 ||
+        !stage ||
+        segment.displayOrder === null ||
+        segment.displayOrder === undefined ||
+        !segment.chipColor
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          stage,
+          label: segment.name,
+          displayOrder: segment.displayOrder,
+          chipColor: segment.chipColor,
+        },
+      ];
+    })
+    .sort(
+      (left, right) =>
+        left.displayOrder - right.displayOrder ||
+        left.label.localeCompare(right.label)
+    );
+}
+
 function createInitialState(): MockCampaignsState {
   const overview = createInitialCampaignsOverviewResponse();
 
@@ -273,9 +307,12 @@ function createInitialState(): MockCampaignsState {
 }
 
 function buildEditorCatalog(): CampaignEditorCatalog {
+  const savedSegments = clone(state.savedSegments);
+
   return {
-    savedSegments: clone(state.savedSegments),
+    savedSegments,
     scenarioTemplates: clone(state.scenarioTemplates),
+    retentionStageOptions: buildRetentionStageOptions(savedSegments),
     tokens: clone(EDITOR_TOKENS),
     deeplinkOptions: clone(EDITOR_DEEPLINK_OPTIONS),
     sourceEvents: clone(EDITOR_SOURCE_EVENTS),
@@ -449,7 +486,7 @@ function buildAudienceLabel(draft: CampaignDraft): string {
     case RetentionStage.RESURRECTED:
       return 'Resurrected';
     case RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE:
-      return 'Pre-registration · onboarding incomplete';
+      return 'Pre-Reg Onboarding Incomplete';
     default:
       return 'Selected cohort';
   }
@@ -732,6 +769,33 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
 
     state.scenarioTemplates = [template, ...state.scenarioTemplates];
+
+    return { template: clone(template) };
+  },
+
+  async updateTemplate(
+    id: string,
+    input: SaveTemplateRequest
+  ): Promise<SaveTemplateResponse> {
+    const existingTemplate = state.scenarioTemplates.find(
+      (template) => template.id === id
+    );
+
+    if (!existingTemplate) {
+      throw new Error('Campaign template not found');
+    }
+
+    const template = {
+      ...existingTemplate,
+      name: input.name,
+      description:
+        input.description?.trim() || 'Saved from the current campaign builder.',
+      definition: clone(input.definition),
+    };
+
+    state.scenarioTemplates = state.scenarioTemplates.map((item) =>
+      item.id === id ? template : item
+    );
 
     return { template: clone(template) };
   },

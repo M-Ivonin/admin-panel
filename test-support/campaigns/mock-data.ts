@@ -28,7 +28,7 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     entryTriggerType: 'state_based',
     audience: {
       estimate: 3200,
-      label: 'Pre-registration · onboarding incomplete',
+      label: 'Pre-Reg Onboarding Incomplete',
     },
     timing: { label: 'Next send', timestamp: '2026-04-16T18:20:00.000Z' },
     progress: { sentCount: 1072, totalCount: 3200, progressPercent: 33.5 },
@@ -93,7 +93,7 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
 const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
   {
     id: 'seg_new_users_setup_dropoff',
-    name: 'Pre-registration · onboarding incomplete',
+    name: 'Pre-Reg Onboarding Incomplete',
     description: '3,200 reachable · started onboarding but not registered',
     audienceEstimate: 3200,
     audienceDefinition: {
@@ -109,6 +109,50 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
       },
     },
     source: 'saved_segment',
+    displayOrder: 10,
+    chipColor: '#06b6d4',
+  },
+  {
+    id: 'seg_new_users',
+    name: 'New Users',
+    description: 'Registered users in their first active lifecycle window.',
+    audienceEstimate: 12480,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_new_users',
+      criteria: {
+        retentionStages: [RetentionStage.NEW],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 20,
+    chipColor: '#2563eb',
+  },
+  {
+    id: 'seg_current_users',
+    name: 'Current Users',
+    description: 'Recently active registered users.',
+    audienceEstimate: 9100,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_current_users',
+      criteria: {
+        retentionStages: [RetentionStage.CURRENT],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 30,
+    chipColor: '#16a34a',
   },
   {
     id: 'seg_at_risk_wau',
@@ -128,6 +172,93 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
       },
     },
     source: 'saved_segment',
+    displayOrder: 40,
+    chipColor: '#d97706',
+  },
+  {
+    id: 'seg_at_risk_mau',
+    name: 'At-risk MAU',
+    description:
+      'Inactive today and the last 1-6 days, but active during the last 7-29 days.',
+    audienceEstimate: 7800,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_at_risk_mau',
+      criteria: {
+        retentionStages: [RetentionStage.AT_RISK_MAU],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 50,
+    chipColor: '#ea580c',
+  },
+  {
+    id: 'seg_dead_user',
+    name: 'Dead Users',
+    description: 'Inactive for 30+ days.',
+    audienceEstimate: 5320,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_dead_user',
+      criteria: {
+        retentionStages: [RetentionStage.DEAD],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 60,
+    chipColor: '#6b7280',
+  },
+  {
+    id: 'seg_reactivated',
+    name: 'Reactivated',
+    description: 'First day back after 7-29 days away.',
+    audienceEstimate: 4120,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_reactivated',
+      criteria: {
+        retentionStages: [RetentionStage.REACTIVATED],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 70,
+    chipColor: '#7c3aed',
+  },
+  {
+    id: 'seg_resurrected',
+    name: 'Resurrected',
+    description: 'First day back after 30+ days away.',
+    audienceEstimate: 2800,
+    audienceDefinition: {
+      segmentSource: 'saved_segment',
+      sourceSegmentId: 'seg_resurrected',
+      criteria: {
+        retentionStages: [RetentionStage.RESURRECTED],
+        userIds: [],
+        locales: ['en', 'es', 'pt'],
+      },
+      suppression: {
+        excludeUsersWithoutPushOpens: false,
+      },
+    },
+    source: 'saved_segment',
+    displayOrder: 80,
+    chipColor: '#db2777',
   },
 ];
 

@@ -3,6 +3,7 @@
  */
 
 import { RetentionStage } from '@/lib/api/users';
+import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import type {
   CampaignDraft,
   CampaignJourneyStep,
@@ -89,6 +90,10 @@ function hasAudienceTargeting(draft: CampaignDraft): boolean {
     draft.audience.criteria.retentionStages.length > 0 ||
     draft.audience.criteria.userIds.length > 0
   );
+}
+
+function getGoalRewardPoints(draft: CampaignDraft): number {
+  return draft.goalDefinition?.rewardPoints ?? 0;
 }
 
 function combineReadiness(
@@ -352,6 +357,17 @@ export function getCampaignValidationSummary(
     errors.push('Campaign goal is required.');
   }
 
+  if (
+    draft.goalDefinition &&
+    (!Number.isInteger(getGoalRewardPoints(draft)) ||
+      getGoalRewardPoints(draft) < 0 ||
+      getGoalRewardPoints(draft) > CAMPAIGN_GOAL_REWARD_POINTS_MAX)
+  ) {
+    errors.push(
+      `Goal reward points must be zero or a positive whole number no greater than ${CAMPAIGN_GOAL_REWARD_POINTS_MAX}.`
+    );
+  }
+
   if (!hasAudienceTargeting(draft)) {
     errors.push('Select at least one retention stage or specific user.');
   }
@@ -552,6 +568,13 @@ export function buildCampaignReviewModel(
         value: draft.goalDefinition
           ? `${draft.goalDefinition.eventKey} (${draft.goalDefinition.attributionMode})`
           : 'None',
+      },
+      {
+        label: 'Goal reward',
+        value:
+          getGoalRewardPoints(draft) > 0
+            ? `${getGoalRewardPoints(draft)} points`
+            : 'None',
       },
       { label: 'Channel', value: draft.channel.toUpperCase() },
     ],

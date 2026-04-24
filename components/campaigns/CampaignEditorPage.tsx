@@ -39,20 +39,24 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Archive, Delete, Save, Science } from '@mui/icons-material';
 import {
-  RETENTION_STAGE_LABELS,
-  RetentionStage,
-  getUser,
-  type User,
-} from '@/lib/api/users';
+  ArrowBack,
+  Archive,
+  Delete,
+  Edit,
+  Save,
+  Science,
+} from '@mui/icons-material';
+import { RetentionStage, getUser, type User } from '@/lib/api/users';
 import { getStoredAuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CampaignAudienceUserPickerDialog } from '@/components/campaigns/CampaignAudienceUserPickerDialog';
+import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
+  CampaignGoalDefinition,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignStatus,
@@ -140,7 +144,6 @@ interface PendingTokenFocus {
 }
 
 const LEGACY_TEST_RECIPIENT_PLACEHOLDER = 'spec@local.test';
-const PENDING_SCHEDULE_DIALOG_STORAGE_KEY = 'campaigns:pending-schedule-dialog';
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 function getPreferredTestRecipients(
@@ -162,43 +165,69 @@ function getPreferredTestRecipients(
   return authorizedUserEmail;
 }
 
-function storePendingScheduleDialog(campaignId: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.sessionStorage.setItem(
-    PENDING_SCHEDULE_DIALOG_STORAGE_KEY,
-    campaignId
-  );
-}
-
-function consumePendingScheduleDialog(campaignId: string): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const pendingCampaignId = window.sessionStorage.getItem(
-    PENDING_SCHEDULE_DIALOG_STORAGE_KEY
-  );
-  if (pendingCampaignId !== campaignId) {
-    return false;
-  }
-
-  window.sessionStorage.removeItem(PENDING_SCHEDULE_DIALOG_STORAGE_KEY);
-  return true;
-}
-
 function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
   return {
     name: draft.name,
     goal: draft.goal,
-    goalDefinition: draft.goalDefinition,
+    goalDefinition: normalizeGoalDefinition(draft.goalDefinition),
     channel: draft.channel,
     audience: draft.audience,
     trigger: draft.trigger,
     journey: draft.journey,
     content: draft.content,
+  };
+}
+
+function normalizeGoalDefinition(
+  goalDefinition: CampaignGoalDefinition | null
+): CampaignGoalDefinition | null {
+  if (!goalDefinition) {
+    return null;
+  }
+
+  return {
+    ...goalDefinition,
+    rewardPoints: goalDefinition.rewardPoints ?? 0,
+  };
+}
+
+function hasSameAudienceRules(
+  left: CampaignDraft['audience'],
+  right: CampaignDraft['audience']
+): boolean {
+  return (
+    JSON.stringify(left.criteria) === JSON.stringify(right.criteria) &&
+    JSON.stringify(left.suppression) === JSON.stringify(right.suppression)
+  );
+}
+
+function buildTemplatePayload(
+  draft: CampaignDraft,
+  sourceTemplate: CampaignScenarioTemplateSummary | null
+): UpsertCampaignDraftRequest {
+  const payload = buildUpsertPayload(draft);
+
+  if (payload.audience.segmentSource !== 'template_segment') {
+    return payload;
+  }
+
+  if (
+    sourceTemplate &&
+    hasSameAudienceRules(payload.audience, sourceTemplate.definition.audience)
+  ) {
+    return {
+      ...payload,
+      audience: sourceTemplate.definition.audience,
+    };
+  }
+
+  return {
+    ...payload,
+    audience: {
+      ...payload.audience,
+      segmentSource: 'manual_rules',
+      sourceSegmentId: null,
+    },
   };
 }
 
@@ -361,12 +390,16 @@ function StepButton({
 function ToggleChip({
   label,
   selected,
+  chipColor,
   onClick,
 }: {
   label: string;
   selected: boolean;
+  chipColor?: string;
   onClick: () => void;
 }) {
+  const color = chipColor ?? COLORS.accent;
+
   return (
     <Chip
       label={label}
@@ -374,12 +407,27 @@ function ToggleChip({
       aria-pressed={selected}
       onClick={onClick}
       sx={{
-        bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
+        bgcolor: selected ? hexToRgba(color, 0.18) : COLORS.soft,
         color: selected ? COLORS.textPrimary : COLORS.textSecondary,
-        border: `1px solid ${selected ? COLORS.accent : COLORS.stroke}`,
+        border: `1px solid ${selected ? color : COLORS.stroke}`,
       }}
     />
   );
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace('#', '');
+
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) {
+    return `rgba(220, 80, 56, ${alpha})`;
+  }
+
+  const value = Number.parseInt(normalized, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function getAudienceUserLabel(user: User): string {
@@ -497,6 +545,19 @@ function getDeeplinkOptionLabel(
   return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
 }
 
+function parseRewardPoints(value: string): number {
+  if (value.trim() === '') {
+    return 0;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  return parsed;
+}
+
 export function CampaignEditorPage({
   mode,
   campaignId,
@@ -516,13 +577,14 @@ export function CampaignEditorPage({
   const [testRecipients, setTestRecipients] = useState(
     () => storedAuthUser?.email?.trim() ?? ''
   );
-  const [isPreparingSchedule, setIsPreparingSchedule] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] =
+    useState<CampaignScenarioTemplateSummary | null>(null);
+  const [templateBeingEdited, setTemplateBeingEdited] =
     useState<CampaignScenarioTemplateSummary | null>(null);
   const contentInputRefs = useRef<
     Record<CampaignEditorTextField, CampaignEditorTextInputElement | null>
@@ -835,19 +897,15 @@ export function CampaignEditorPage({
     };
   }, [isInitialized, state.draft.audience]);
 
-  useEffect(() => {
-    if (!isInitialized || state.isDirty || !state.draft.id) {
-      return;
-    }
-
-    if (!consumePendingScheduleDialog(state.draft.id)) {
-      return;
-    }
-
-    dispatch({ type: 'openDialog', dialog: 'schedule' });
-  }, [isInitialized, state.draft.id, state.isDirty]);
-
-  async function persistDraft(): Promise<CampaignDraft> {
+  async function persistDraft(options?: {
+    message?: string | null;
+    navigateOnCreate?: boolean;
+  }): Promise<CampaignDraft> {
+    const message =
+      options?.message === undefined
+        ? 'Draft saved successfully.'
+        : options.message;
+    const navigateOnCreate = options?.navigateOnCreate ?? true;
     const payload = buildUpsertPayload(state.draft);
     const saved =
       state.draft.id === null
@@ -860,10 +918,10 @@ export function CampaignEditorPage({
     dispatch({
       type: 'markSaveSuccess',
       draft: saved,
-      message: 'Draft saved successfully.',
+      message,
     });
 
-    if (state.draft.id === null && saved.id) {
+    if (navigateOnCreate && state.draft.id === null && saved.id) {
       router.replace(`/dashboard/campaigns/${saved.id}`);
     }
 
@@ -897,28 +955,8 @@ export function CampaignEditorPage({
   }
 
   async function handleOpenScheduleDialog() {
-    try {
-      setError(null);
-
-      if (state.draft.id !== null && !state.isDirty) {
-        dispatch({ type: 'openDialog', dialog: 'schedule' });
-        return;
-      }
-
-      setIsPreparingSchedule(true);
-      const saved = await ensurePersistedDraft();
-      if (saved.id) {
-        storePendingScheduleDialog(saved.id);
-      }
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Failed to save current changes before scheduling'
-      );
-    } finally {
-      setIsPreparingSchedule(false);
-    }
+    setError(null);
+    dispatch({ type: 'openDialog', dialog: 'schedule' });
   }
 
   async function handleSendTest() {
@@ -957,13 +995,27 @@ export function CampaignEditorPage({
   }
 
   async function handleSchedule() {
+    let persistedDraftId: string | null = null;
+
     try {
       setError(null);
       setIsScheduling(true);
-      const saved = await ensurePersistedDraft();
+      const shouldPersistBeforeScheduling =
+        state.draft.id === null || state.isDirty;
+      const saved = shouldPersistBeforeScheduling
+        ? await persistDraft({
+            message: null,
+            navigateOnCreate: false,
+          })
+        : state.draft;
+      persistedDraftId = saved.id;
       const response = await campaignsRepository.scheduleCampaign(saved.id!, {
         confirm: true,
       });
+
+      if (state.draft.id === null && saved.id) {
+        router.replace(`/dashboard/campaigns/${saved.id}`);
+      }
 
       dispatch({
         type: 'closeDialog',
@@ -980,6 +1032,10 @@ export function CampaignEditorPage({
         ),
       });
     } catch (actionError) {
+      if (state.draft.id === null && persistedDraftId) {
+        router.replace(`/dashboard/campaigns/${persistedDraftId}`);
+      }
+
       setError(
         actionError instanceof Error
           ? actionError.message
@@ -1028,11 +1084,17 @@ export function CampaignEditorPage({
     }
 
     try {
-      const response = await campaignsRepository.saveTemplate({
+      const templatePayload = {
         name: saveTemplateName.trim(),
         description: saveTemplateDescription.trim() || undefined,
-        definition: buildUpsertPayload(state.draft),
-      });
+        definition: buildTemplatePayload(state.draft, templateBeingEdited),
+      };
+      const response = templateBeingEdited
+        ? await campaignsRepository.updateTemplate(
+            templateBeingEdited.id,
+            templatePayload
+          )
+        : await campaignsRepository.saveTemplate(templatePayload);
       dispatch({
         type: 'setCatalog',
         catalog: {
@@ -1049,15 +1111,20 @@ export function CampaignEditorPage({
       dispatch({
         type: 'markActionSuccess',
         kind: 'template',
-        message: 'Campaign saved as template.',
+        message: templateBeingEdited
+          ? 'Template updated successfully.'
+          : 'Campaign saved as template.',
       });
+      setTemplateBeingEdited(templateBeingEdited ? response.template : null);
       setSaveTemplateName('');
       setSaveTemplateDescription('');
     } catch (actionError) {
       setError(
         actionError instanceof Error
           ? actionError.message
-          : 'Failed to save campaign template'
+          : templateBeingEdited
+            ? 'Failed to update campaign template'
+            : 'Failed to save campaign template'
       );
     }
   }
@@ -1079,6 +1146,9 @@ export function CampaignEditorPage({
         },
       });
       setTemplateToDelete(null);
+      if (templateBeingEdited?.id === templateToDelete.id) {
+        setTemplateBeingEdited(null);
+      }
       dispatch({
         type: 'markActionSuccess',
         kind: 'template',
@@ -1094,11 +1164,40 @@ export function CampaignEditorPage({
   }
 
   function openSaveTemplateDialog() {
+    setTemplateBeingEdited(null);
     setSaveTemplateName(
       state.draft.name.trim() || 'Reusable campaign template'
     );
     setSaveTemplateDescription('');
     dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
+  }
+
+  function openUpdateTemplateDialog() {
+    if (!templateBeingEdited) {
+      return;
+    }
+
+    setSaveTemplateName(templateBeingEdited.name);
+    setSaveTemplateDescription(templateBeingEdited.description);
+    dispatch({ type: 'openDialog', dialog: 'saveTemplate' });
+  }
+
+  function applyTemplate(template: CampaignScenarioTemplateSummary) {
+    setTemplateBeingEdited(null);
+    dispatch({
+      type: 'applyScenarioTemplate',
+      template,
+    });
+  }
+
+  function editTemplate(template: CampaignScenarioTemplateSummary) {
+    setTemplateBeingEdited(template);
+    setSaveTemplateName(template.name);
+    setSaveTemplateDescription(template.description);
+    dispatch({
+      type: 'applyScenarioTemplate',
+      template,
+    });
   }
 
   function toggleRetentionStage(stage: RetentionStage) {
@@ -1152,6 +1251,7 @@ export function CampaignEditorPage({
 
   const activeStepContent =
     state.draft.content[state.activeContentStepKey]?.[activeLocale];
+  const goalRewardPoints = state.draft.goalDefinition?.rewardPoints ?? 0;
   const stateBasedTrigger =
     state.draft.trigger.type === 'state_based' ? state.draft.trigger : null;
   const eventBasedTrigger =
@@ -1189,7 +1289,8 @@ export function CampaignEditorPage({
     state.draft.audience.segmentSource === 'template_segment' &&
     Boolean(state.draft.audience.sourceSegmentId);
   const canSaveTemplate =
-    templateBlockingErrors.length === 0 && !isTemplateDerivedCampaign;
+    templateBlockingErrors.length === 0 &&
+    (!isTemplateDerivedCampaign || templateBeingEdited !== null);
 
   if (loading) {
     return (
@@ -1256,17 +1357,16 @@ export function CampaignEditorPage({
                   {state.catalog.scenarioTemplates.map((template) => (
                     <Paper
                       key={template.id}
-                      onClick={() =>
-                        dispatch({
-                          type: 'applyScenarioTemplate',
-                          template,
-                        })
-                      }
+                      onClick={() => applyTemplate(template)}
                       sx={{
                         p: 1.5,
                         cursor: 'pointer',
                         bgcolor: COLORS.soft,
-                        border: `1px solid ${COLORS.stroke}`,
+                        border: `1px solid ${
+                          templateBeingEdited?.id === template.id
+                            ? COLORS.accent
+                            : COLORS.stroke
+                        }`,
                         transition:
                           'border-color 160ms ease, transform 160ms ease',
                         '&:hover': {
@@ -1313,6 +1413,19 @@ export function CampaignEditorPage({
                                 border: `1px solid ${COLORS.stroke}`,
                               }}
                             />
+                            <IconButton
+                              size="small"
+                              aria-label={`Edit template ${template.name}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                editTemplate(template);
+                              }}
+                              sx={{
+                                color: COLORS.textSecondary,
+                              }}
+                            >
+                              <Edit fontSize="small" />
+                            </IconButton>
                             {template.source === 'saved' ? (
                               <IconButton
                                 size="small"
@@ -1439,6 +1552,7 @@ export function CampaignEditorPage({
                         goalDefinition: {
                           eventKey: option.eventKey,
                           attributionMode: option.attributionMode,
+                          rewardPoints: goalRewardPoints,
                         },
                       });
                     }
@@ -1464,6 +1578,37 @@ export function CampaignEditorPage({
                   </Alert>
                 ) : null}
               </FormControl>
+
+              <TextField
+                label="Goal reward points"
+                type="number"
+                value={goalRewardPoints}
+                disabled={!state.draft.goalDefinition}
+                onChange={(event) => {
+                  if (!state.draft.goalDefinition) {
+                    return;
+                  }
+
+                  dispatch({
+                    type: 'changeGoalDefinition',
+                    goalDefinition: {
+                      ...state.draft.goalDefinition,
+                      rewardPoints: parseRewardPoints(event.target.value),
+                    },
+                  });
+                }}
+                inputProps={{
+                  min: 0,
+                  max: CAMPAIGN_GOAL_REWARD_POINTS_MAX,
+                  step: 1,
+                }}
+                helperText={
+                  state.draft.goalDefinition
+                    ? 'Awarded once when this campaign goal is reached.'
+                    : 'Select a tracked goal before configuring a reward.'
+                }
+                fullWidth
+              />
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {STEP_ORDER.map((step) => (
@@ -1569,14 +1714,15 @@ export function CampaignEditorPage({
                       flexWrap="wrap"
                       useFlexGap
                     >
-                      {Object.values(RetentionStage).map((stage) => (
+                      {state.catalog.retentionStageOptions.map((option) => (
                         <ToggleChip
-                          key={stage}
-                          label={RETENTION_STAGE_LABELS[stage]}
+                          key={option.stage}
+                          label={option.label}
+                          chipColor={option.chipColor}
                           selected={state.draft.audience.criteria.retentionStages.includes(
-                            stage
+                            option.stage
                           )}
-                          onClick={() => toggleRetentionStage(stage)}
+                          onClick={() => toggleRetentionStage(option.stage)}
                         />
                       ))}
                     </Stack>
@@ -2601,12 +2747,16 @@ export function CampaignEditorPage({
                   startIcon={<Save />}
                   variant="outlined"
                   disabled={!canSaveTemplate}
-                  onClick={openSaveTemplateDialog}
+                  onClick={
+                    templateBeingEdited
+                      ? openUpdateTemplateDialog
+                      : openSaveTemplateDialog
+                  }
                   sx={{ color: COLORS.textPrimary, borderColor: COLORS.stroke }}
                 >
-                  Save as template
+                  {templateBeingEdited ? 'Update template' : 'Save as template'}
                 </Button>
-                {isTemplateDerivedCampaign ? (
+                {isTemplateDerivedCampaign && !templateBeingEdited ? (
                   <Typography
                     sx={{ color: COLORS.textSecondary, fontSize: 12 }}
                   >
@@ -2624,20 +2774,11 @@ export function CampaignEditorPage({
                 </Button>
                 <Button
                   variant="contained"
-                  disabled={
-                    !canScheduleCampaign(state.draft) || isPreparingSchedule
-                  }
+                  disabled={!canScheduleCampaign(state.draft)}
                   onClick={handleOpenScheduleDialog}
                   sx={{ bgcolor: COLORS.accent, color: COLORS.textPrimary }}
                 >
-                  {isPreparingSchedule ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress size={16} color="inherit" />
-                      <span>Saving...</span>
-                    </Stack>
-                  ) : (
-                    'Schedule Campaign'
-                  )}
+                  Schedule Campaign
                 </Button>
                 <Button
                   startIcon={<Archive />}
@@ -2661,7 +2802,9 @@ export function CampaignEditorPage({
           dispatch({ type: 'closeDialog', dialog: 'saveTemplate' })
         }
       >
-        <DialogTitle>Save as template</DialogTitle>
+        <DialogTitle>
+          {templateBeingEdited ? 'Update template' : 'Save as template'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1, minWidth: 360 }}>
             <TextField
@@ -2695,7 +2838,7 @@ export function CampaignEditorPage({
             onClick={handleSaveTemplate}
             disabled={!saveTemplateName.trim()}
           >
-            Save template
+            {templateBeingEdited ? 'Update template' : 'Save template'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2806,6 +2949,12 @@ export function CampaignEditorPage({
                 : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
               : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
+          {state.draft.id === null || state.isDirty ? (
+            <Typography sx={{ mt: 2, color: COLORS.textSecondary }}>
+              Your latest changes will be saved first, then the campaign will
+              be scheduled.
+            </Typography>
+          ) : null}
           {error ? (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
@@ -2828,7 +2977,9 @@ export function CampaignEditorPage({
                 <span>Scheduling...</span>
               </Stack>
             ) : (
-              'Confirm schedule'
+              state.draft.id === null || state.isDirty
+                ? 'Save and schedule'
+                : 'Confirm schedule'
             )}
           </Button>
         </DialogActions>
