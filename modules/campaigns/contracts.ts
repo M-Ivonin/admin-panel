@@ -261,6 +261,9 @@ export interface CampaignEditorCatalog {
   deeplinkOptions: CampaignDeeplinkOption[];
   sourceEvents: CampaignSourceEventOption[];
   goalOptions: CampaignGoalOption[];
+  defaults: {
+    eventMaxSendsPerUser: number | null;
+  };
 }
 
 export interface CampaignAudienceCriteria {
@@ -292,6 +295,7 @@ export type CampaignTriggerDefinition =
       producerKey: CampaignSourceEventProducerKey;
       entryMode: CampaignEventEntryMode;
       reentryCooldownHours: number | null;
+      maxSendsPerUser: number | null;
     }
   | {
       type: 'scheduled_recurring';

@@ -184,6 +184,9 @@ const EMPTY_CATALOG: CampaignEditorCatalog = {
   deeplinkOptions: [],
   sourceEvents: [],
   goalOptions: [],
+  defaults: {
+    eventMaxSendsPerUser: null,
+  },
 };
 
 const DEFAULT_DIALOGS: CampaignEditorDialogs = {

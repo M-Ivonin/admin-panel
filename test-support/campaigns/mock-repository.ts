@@ -317,6 +317,9 @@ function buildEditorCatalog(): CampaignEditorCatalog {
     deeplinkOptions: clone(EDITOR_DEEPLINK_OPTIONS),
     sourceEvents: clone(EDITOR_SOURCE_EVENTS),
     goalOptions: clone(EDITOR_GOAL_OPTIONS),
+    defaults: {
+      eventMaxSendsPerUser: 3,
+    },
   };
 }
 
@@ -489,7 +492,7 @@ function buildAudienceLabel(draft: CampaignDraft): string {
     case RetentionStage.RESURRECTED:
       return 'Resurrected';
     case RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE:
-      return 'Pre-Reg Onboarding Incomplete';
+      return 'Pre-auth incomplete';
     default:
       return 'Selected cohort';
   }

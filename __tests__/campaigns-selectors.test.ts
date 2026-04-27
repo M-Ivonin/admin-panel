@@ -57,6 +57,24 @@ describe('campaign selectors', () => {
     expect(canScheduleCampaign(draft)).toBe(false);
   });
 
+  it('blocks event-based campaigns when max sends per user is not positive', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.trigger = {
+      type: 'event_based',
+      eventKey: 'app_opened',
+      producerKey: 'crm_source_events',
+      entryMode: 'first_eligible_event',
+      reentryCooldownHours: 24,
+      maxSendsPerUser: 0,
+    };
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain(
+      'Event-based campaigns require a positive max sends per user value.'
+    );
+  });
+
   it('blocks scheduling when the recurring start date is missing', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Recurring';
@@ -95,7 +113,7 @@ describe('campaign selectors', () => {
   it('warns when no tracked goal is selected without blocking scheduling', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.goalDefinition = null;
     draft.content.step_1.en = {
       title: 'Hello {{first_name}}',
@@ -125,7 +143,7 @@ describe('campaign selectors', () => {
   it('blocks scheduling when goal reward points exceed the supported points range', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.goalDefinition = {
       eventKey: 'match_center_opened',
       attributionMode: 'trace_required_response',
@@ -149,7 +167,7 @@ describe('campaign selectors', () => {
   it('blocks scheduling when any selected locale is missing for any journey step', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
     draft.audience.criteria.locales = ['en', 'es'];
     draft.journey.steps = [createJourneyStep(1), createJourneyStep(2)];
@@ -192,7 +210,7 @@ describe('campaign selectors', () => {
   it('enables scheduling once required content is ready across every step', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
     draft.audience.criteria.locales = ['en', 'es', 'pt'];
     draft.journey.steps = [createJourneyStep(1), createJourneyStep(2)];
@@ -243,7 +261,7 @@ describe('campaign selectors', () => {
   it('allows scheduling when selected locales need review but are not missing', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
     draft.audience.criteria.locales = ['en', 'pt'];
     draft.content.step_1.en = {
@@ -266,7 +284,7 @@ describe('campaign selectors', () => {
   it('allows specific-user audiences without retention stages', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.audience.criteria.retentionStages = [];
     draft.audience.criteria.userIds = ['user-1'];
     draft.audience.criteria.locales = ['en'];
@@ -288,7 +306,7 @@ describe('campaign selectors', () => {
   it('ignores unselected locales in readiness warnings and schedule gating', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Campaign Spec Local';
-    draft.goal = 'Recover onboarding completion';
+    draft.goal = 'Recover authorization completion';
     draft.audience.criteria.retentionStages = [RetentionStage.NEW];
     draft.audience.criteria.locales = ['en'];
     draft.content.step_1.en = {

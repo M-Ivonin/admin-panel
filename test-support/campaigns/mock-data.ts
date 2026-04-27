@@ -517,6 +517,7 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
         producerKey: 'channels_favorite_matches',
         entryMode: 'first_eligible_event',
         reentryCooldownHours: 24,
+        maxSendsPerUser: 3,
       },
       journey: {
         steps: [{ ...createJourneyStep(1), delayMinutes: 0 }],
@@ -648,6 +649,7 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
           producerKey: 'channels_favorite_matches',
           entryMode: 'first_eligible_event',
           reentryCooldownHours: 24,
+          maxSendsPerUser: 3,
         },
         journey: {
           steps: [firstStep],

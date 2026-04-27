@@ -1841,6 +1841,9 @@ export function CampaignEditorPage({
                                       'crm_source_events',
                                     entryMode: 'first_eligible_event',
                                     reentryCooldownHours: 24,
+                                    maxSendsPerUser:
+                                      state.catalog.defaults
+                                        .eventMaxSendsPerUser,
                                   },
                                 });
                               } else {
@@ -1965,24 +1968,56 @@ export function CampaignEditorPage({
                               )}
                             </Alert>
                           ) : null}
-                          <TextField
-                            label="Re-entry cooldown (hours)"
-                            type="number"
-                            value={eventBasedTrigger.reentryCooldownHours ?? ''}
-                            helperText="Prevents the same user from starting this event-based journey again too soon."
-                            onChange={(event) =>
-                              dispatch({
-                                type: 'changeTrigger',
-                                trigger: {
-                                  ...eventBasedTrigger,
-                                  reentryCooldownHours:
-                                    event.target.value === ''
-                                      ? null
-                                      : Number(event.target.value),
-                                },
-                              })
-                            }
-                          />
+                          <Box
+                            sx={{
+                              display: 'grid',
+                              gap: 2,
+                              gridTemplateColumns: {
+                                xs: '1fr',
+                                md: 'repeat(2, minmax(0, 1fr))',
+                              },
+                            }}
+                          >
+                            <TextField
+                              label="Re-entry cooldown (hours)"
+                              type="number"
+                              value={
+                                eventBasedTrigger.reentryCooldownHours ?? ''
+                              }
+                              helperText="Prevents the same user from starting this event-based journey again too soon."
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...eventBasedTrigger,
+                                    reentryCooldownHours:
+                                      event.target.value === ''
+                                        ? null
+                                        : Number(event.target.value),
+                                  },
+                                })
+                              }
+                            />
+                            <TextField
+                              label="Max sends per user"
+                              type="number"
+                              value={eventBasedTrigger.maxSendsPerUser ?? ''}
+                              helperText="Leave empty to use the backend default."
+                              inputProps={{ min: 1 }}
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...eventBasedTrigger,
+                                    maxSendsPerUser:
+                                      event.target.value === ''
+                                        ? null
+                                        : Number(event.target.value),
+                                  },
+                                })
+                              }
+                            />
+                          </Box>
                         </Stack>
                       ) : null}
 
