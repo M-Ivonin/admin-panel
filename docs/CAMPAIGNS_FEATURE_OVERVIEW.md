@@ -291,7 +291,8 @@ The UI explains that users enter when they match the selected audience and that 
 The admin can configure:
 
 - entry event from a backend-owned catalog,
-- re-entry cooldown in hours
+- re-entry cooldown in hours,
+- max sends per user for this campaign
 
 The source event catalog shown to new campaigns is restricted. Some supported backend event pairs are intentionally hidden from new selection.
 
@@ -651,9 +652,13 @@ Important nuance:
 
 #### Re-entry suppression
 
-For state-based and event-based campaigns, if `reentryCooldownHours > 0`, users who recently received a sent live delivery from the same campaign are suppressed.
+For state-based and event-based campaigns, if `reentryCooldownHours > 0`, users with a recent live materialized journey row from the same campaign are suppressed. The runtime counts `pending`, `sending`, `sent`, `failed`, and `skipped` rows so a planned-but-not-yet-sent journey also blocks another entry.
 
 Recurring campaigns do not use this branch.
+
+#### Event-based max sends per user
+
+For event-based campaigns, `maxSendsPerUser` can cap how many sent live deliveries from the same campaign one user can receive. Empty or omitted values use the default cap of 3. When the cap is reached, new matching source events are materialized as skipped with `max_sends_per_user` so the same source event does not stay eligible forever.
 
 #### Frequency cap
 
@@ -837,6 +842,7 @@ Before a push is sent, the executor can mark the row as terminal for several rea
 - `recipient_missing`
 - `runtime_metadata_missing`
 - `audience_no_longer_matches`
+- `reentry_cooldown`
 - `frequency_cap`
 - `goal_already_reached`
 
@@ -844,6 +850,7 @@ Important nuance:
 
 - Send-time audience revalidation intentionally disables goal, re-entry, and frequency-cap logic during the generic "still matches audience" check.
 - Those suppressions are evaluated separately afterward.
+- Re-entry is checked again before send against earlier materialized journey instances for the same user and campaign. Same-journey later steps are not suppressed by this check.
 
 ### 12.4 Rendering and push payload
 

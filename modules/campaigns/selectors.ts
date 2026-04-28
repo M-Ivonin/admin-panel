@@ -191,8 +191,11 @@ function describeTriggerDetails(draft: CampaignDraft): string {
     const sourceLabel =
       SOURCE_EVENT_SOURCE_LABELS[draft.trigger.producerKey] ??
       draft.trigger.producerKey;
+    const maxSendsLabel = draft.trigger.maxSendsPerUser
+      ? `${draft.trigger.maxSendsPerUser} send(s) per user`
+      : 'backend default send limit';
 
-    return `${eventLabel} from ${sourceLabel}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).`;
+    return `${eventLabel} from ${sourceLabel}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s). ${maxSendsLabel}.`;
   }
 
   return describeCampaignScheduleRule(draft.trigger.recurrenceRule, {
@@ -434,6 +437,18 @@ export function getCampaignValidationSummary(
     (!draft.trigger.eventKey.trim() || !draft.trigger.producerKey.trim())
   ) {
     errors.push('Event-based campaigns require a shipped source event.');
+  }
+
+  if (
+    draft.trigger.type === 'event_based' &&
+    draft.trigger.maxSendsPerUser !== null &&
+    draft.trigger.maxSendsPerUser !== undefined &&
+    (!Number.isInteger(draft.trigger.maxSendsPerUser) ||
+      draft.trigger.maxSendsPerUser <= 0)
+  ) {
+    errors.push(
+      'Event-based campaigns require a positive max sends per user value.'
+    );
   }
 
   draft.journey.steps.forEach((step) => {

@@ -761,6 +761,64 @@ describe('CampaignEditorPage', () => {
     expect(screen.queryByText('Draft saved successfully.')).toBeNull();
   });
 
+  it('saves edited tracked-goal changes before scheduling an existing campaign', async () => {
+    const updateCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'updateCampaignDraft'
+    );
+    const scheduleCampaignSpy = jest.spyOn(
+      campaignsRepository,
+      'scheduleCampaign'
+    );
+
+    render(
+      <CampaignEditorPage
+        mode="edit"
+        campaignId="cmp_onboarding_not_completed"
+      />
+    );
+
+    await screen.findByDisplayValue('onboarding_not_completed');
+
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Tracked goal' })
+    );
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Rewards wallet opened' })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Your latest changes will be saved first, then the campaign will be scheduled.'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+
+    await waitFor(() => {
+      expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
+        'cmp_onboarding_not_completed',
+        expect.objectContaining({
+          goalDefinition: expect.objectContaining({
+            eventKey: 'rewards_wallet_opened',
+            attributionMode: 'trace_required_response',
+            rewardPoints: 0,
+          }),
+        })
+      );
+      expect(scheduleCampaignSpy).toHaveBeenCalledWith(
+        'cmp_onboarding_not_completed',
+        { confirm: true }
+      );
+    });
+
+    expect(
+      updateCampaignDraftSpy.mock.invocationCallOrder[0]
+    ).toBeLessThan(scheduleCampaignSpy.mock.invocationCallOrder[0]);
+  });
+
   it('navigates to the saved draft when scheduling fails after the create-flow save', async () => {
     const savedDraft = createEmptyCampaignDraft();
     savedDraft.id = 'cmp_local_001';

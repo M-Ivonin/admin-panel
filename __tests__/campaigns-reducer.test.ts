@@ -18,6 +18,7 @@ describe('campaignEditorReducer', () => {
         producerKey: 'crm_source_events',
         entryMode: 'first_eligible_event',
         reentryCooldownHours: 24,
+        maxSendsPerUser: 3,
       },
     });
 
@@ -27,6 +28,7 @@ describe('campaignEditorReducer', () => {
       producerKey: 'crm_source_events',
       entryMode: 'first_eligible_event',
       reentryCooldownHours: 24,
+      maxSendsPerUser: 3,
     });
     expect(withEventTrigger.isDirty).toBe(true);
   });

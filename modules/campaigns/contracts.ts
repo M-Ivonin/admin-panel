@@ -56,6 +56,12 @@ export type CampaignQuickView =
   | 'needs_attention'
   | 'recent_drafts';
 
+export type CampaignStatsPeriod =
+  | 'all_time'
+  | 'last_24_hours'
+  | 'last_7_days'
+  | 'custom';
+
 export type CampaignSourceEventKey =
   | 'app_opened'
   | 'onboarding_completed'
@@ -88,7 +94,14 @@ export interface CampaignOverviewStats {
   pausedCampaigns: number;
   scheduledCampaigns: number;
   sentToday: number;
+  failedToday?: number;
+  attemptedToday?: number;
+  deliveredRateToday?: number;
   deliveredRate: number;
+  attemptedTotal?: number;
+  deliveredTotal?: number;
+  failedTotal?: number;
+  openedTotal?: number;
   avgCtr: number;
   ctrDeltaVsPrev7d: number;
   reachInProgress: number;
@@ -96,6 +109,7 @@ export interface CampaignOverviewStats {
 
 export interface CampaignListAudienceSummary {
   estimate: number | null;
+  currentEstimate: number | null;
   label: string;
 }
 
@@ -107,7 +121,22 @@ export interface CampaignListTimingSummary {
 export interface CampaignListProgressSummary {
   sentCount: number | null;
   totalCount: number | null;
+  failedCount?: number | null;
+  skippedCount?: number | null;
+  inProgressCount?: number | null;
+  openCount?: number | null;
+  uniqueRecipientCount?: number | null;
+  journeyInstanceCount?: number | null;
+  deliveryRowCount?: number | null;
+  failureReasons?: CampaignFailureReasonSummary[] | null;
+  deliveredRate?: number | null;
+  ctr?: number | null;
   progressPercent: number | null;
+}
+
+export interface CampaignFailureReasonSummary {
+  reason: string;
+  count: number;
 }
 
 export interface CampaignListMetricSummary {
@@ -117,6 +146,9 @@ export interface CampaignListMetricSummary {
   reachedCount?: number | null;
   journeyCount?: number | null;
   attributionMode?: CampaignGoalAttributionMode | null;
+  traceGoalEventCount?: number | null;
+  untracedGoalEventCount?: number | null;
+  sourceEventsWithoutUserCount?: number | null;
 }
 
 export interface CampaignListOwnerSummary {
@@ -147,6 +179,9 @@ export interface GetCampaignsOverviewParams {
   statuses: CampaignStatus[];
   triggerTypes: CampaignEntryTriggerType[];
   quickView: CampaignQuickView | null;
+  statsPeriod: CampaignStatsPeriod;
+  statsFrom?: string;
+  statsTo?: string;
 }
 
 export interface CampaignsOverviewResponse {
@@ -226,6 +261,9 @@ export interface CampaignEditorCatalog {
   deeplinkOptions: CampaignDeeplinkOption[];
   sourceEvents: CampaignSourceEventOption[];
   goalOptions: CampaignGoalOption[];
+  defaults: {
+    eventMaxSendsPerUser: number | null;
+  };
 }
 
 export interface CampaignAudienceCriteria {
@@ -257,6 +295,7 @@ export type CampaignTriggerDefinition =
       producerKey: CampaignSourceEventProducerKey;
       entryMode: CampaignEventEntryMode;
       reentryCooldownHours: number | null;
+      maxSendsPerUser: number | null;
     }
   | {
       type: 'scheduled_recurring';

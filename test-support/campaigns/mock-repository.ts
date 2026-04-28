@@ -317,14 +317,20 @@ function buildEditorCatalog(): CampaignEditorCatalog {
     deeplinkOptions: clone(EDITOR_DEEPLINK_OPTIONS),
     sourceEvents: clone(EDITOR_SOURCE_EVENTS),
     goalOptions: clone(EDITOR_GOAL_OPTIONS),
+    defaults: {
+      eventMaxSendsPerUser: 3,
+    },
   };
 }
 
 let state = createInitialState();
 
-function statusCountKey(
-  status: CampaignStatus
-): keyof typeof state.stats | null {
+type StatusCountKey =
+  | 'activeCampaigns'
+  | 'pausedCampaigns'
+  | 'scheduledCampaigns';
+
+function statusCountKey(status: CampaignStatus): StatusCountKey | null {
   if (status === 'active') {
     return 'activeCampaigns';
   }
@@ -486,7 +492,7 @@ function buildAudienceLabel(draft: CampaignDraft): string {
     case RetentionStage.RESURRECTED:
       return 'Resurrected';
     case RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE:
-      return 'Pre-Reg Onboarding Incomplete';
+      return 'Pre-auth incomplete';
     default:
       return 'Selected cohort';
   }
@@ -573,6 +579,7 @@ function upsertOverviewItem(draft: CampaignDraft, activityLabel: string) {
     entryTriggerType: draft.trigger.type,
     audience: {
       estimate: estimate.reachableUsers,
+      currentEstimate: estimate.reachableUsers,
       label: buildAudienceLabel(draft),
     },
     timing: buildTimingSummary(
