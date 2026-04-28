@@ -20,6 +20,7 @@ import {
   Campaign,
   Chat,
   People,
+  ReceiptLong,
   ViewCarousel,
   Settings,
 } from '@mui/icons-material';
@@ -140,6 +141,22 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Control the localized promo banner shown on the app Home screen
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link href="/dashboard/revenue-ledger" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'success.dark', width: 48, height: 48, mb: 2 }}>
+                    <ReceiptLong />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Revenue Ledger
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Inspect gross revenue rows, corrections, and dispatch state
                   </Typography>
                 </CardActionArea>
               </Card>
