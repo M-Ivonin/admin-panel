@@ -51,12 +51,14 @@ const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
   channels_favorite_matches: 'Favorite matches service',
 };
 
-export const SEND_GUARD_ACTION_LABELS: Record<CampaignSendGuardAction, string> = {
-  opened_app: 'Opened app',
-  live_challenge_created: 'Created live challenge',
-  voted_for_prediction: 'Voted for prediction',
-  chat_in_ai_chat: 'Chatted in AI chat',
-};
+export const SEND_GUARD_ACTION_LABELS: Record<CampaignSendGuardAction, string> =
+  {
+    opened_app: 'Opened app',
+    match_center_opened: 'Opened match center',
+    live_challenge_created: 'Created live challenge',
+    voted_for_prediction: 'Voted for prediction',
+    chat_in_ai_chat: 'Chatted in AI chat',
+  };
 
 /**
  * Warns operators that tracked-goal runtime behavior is disabled for the draft.
@@ -220,15 +222,8 @@ function describeJourneyStep(step: CampaignJourneyStep): string {
     ? 'next day at the same local time'
     : `${step.delayMinutes ?? 0} min after the previous anchor`;
   const guard = step.sendGuards?.[0] ?? null;
-  const propertyMatches = guard?.propertyMatches ?? [];
-  const propertyLabel =
-    propertyMatches.length > 0
-      ? ` when ${propertyMatches
-          .map((match) => `${match.propertyKey} is ${String(match.expectedValue)}`)
-          .join(' and ')}`
-      : '';
   const sendGuardLabel = guard
-    ? ` · skips if ${SEND_GUARD_ACTION_LABELS[guard.action] ?? guard.action}${propertyLabel} since journey start`
+    ? ` · skips if ${SEND_GUARD_ACTION_LABELS[guard.action] ?? guard.action} since journey start`
     : '';
 
   return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h${sendGuardLabel} · stop later steps when goal is reached`;
@@ -419,30 +414,21 @@ export function getCampaignValidationSummary(
       );
     }
 
-    (step.sendGuards ?? []).forEach((guard) => {
+    const sendGuards = step.sendGuards ?? [];
+    if (sendGuards.length > 1) {
+      errors.push(`Step ${step.stepKey} supports only one send guard.`);
+    }
+
+    sendGuards.forEach((guard) => {
       if (!(guard.action in SEND_GUARD_ACTION_LABELS)) {
         errors.push(`Step ${step.stepKey} has an unsupported send guard.`);
       }
 
-      (guard.propertyMatches ?? []).forEach((match) => {
-        const hasUnsupportedShape =
-          !match.propertyKey ||
-          match.propertyKey.includes('.') ||
-          match.propertyKey.includes('[') ||
-          match.propertyKey.includes(']') ||
-          ![
-            'string',
-            'number',
-            'boolean',
-          ].includes(typeof match.expectedValue) &&
-            match.expectedValue !== null;
-
-        if (hasUnsupportedShape) {
-          errors.push(
-            `Step ${step.stepKey} has an unsupported send guard property match.`
-          );
-        }
-      });
+      if ('propertyMatches' in guard) {
+        errors.push(
+          `Step ${step.stepKey} has unsupported send guard conditions.`
+        );
+      }
     });
   });
 

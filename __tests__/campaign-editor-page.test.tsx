@@ -149,76 +149,65 @@ describe('CampaignEditorPage', () => {
     });
   });
 
-  it('adds, summarizes, and removes an Opened app send guard on a journey step', async () => {
+  it('selects, summarizes, and clears a send guard on a journey step', async () => {
     render(<CampaignEditorPage mode="create" />);
 
     await screen.findByText('Create campaign');
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
-    fireEvent.click(screen.getByRole('button', { name: 'Add send guard' }));
 
     expect(
       screen.getByText(
-        'The step is skipped if this action already happened since journey start.'
+        'Select an action that cancels this step if the user does it before send time.'
       )
     ).toBeTruthy();
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    expect(
+      await screen.findByRole('option', { name: 'No send guard' })
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('option', { name: 'Opened match center' })
+    ).toBeTruthy();
     expect(
       await screen.findByRole('option', { name: 'Chatted in AI chat' })
     ).toBeTruthy();
     fireEvent.click(
       await screen.findByRole('option', { name: 'Voted for prediction' })
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Add property match' }));
 
     expect(
       screen.getByRole('combobox', { name: 'Send guard' }).textContent
     ).toContain('Voted for prediction');
+    expect(screen.queryByText('Cancellation window')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Remove send guard' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'No send guard' })
+    );
 
     await waitFor(() => {
       expect(
         screen.queryByText(
-          'The step is skipped if this action already happened since journey start.'
+          'If this action happens after journey start and before this step is sent, the step is skipped.'
         )
       ).toBeNull();
     });
   });
 
-  it('adds and edits exact property matches on an Opened app send guard', async () => {
+  it('does not show extra send guard condition builders', async () => {
     render(<CampaignEditorPage mode="create" />);
 
     await screen.findByText('Create campaign');
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
-    fireEvent.click(screen.getByRole('button', { name: 'Add send guard' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add property match' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Opened app' }));
 
-    fireEvent.change(screen.getByLabelText('Property'), {
-      target: { value: 'trigger' },
-    });
-    fireEvent.change(screen.getByLabelText('Value'), {
-      target: { value: 'push_open' },
-    });
-
-    expect(screen.getByDisplayValue('trigger')).toBeTruthy();
-    expect(screen.getByDisplayValue('push_open')).toBeTruthy();
-
-    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Type' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'Number' }));
-    fireEvent.change(screen.getByLabelText('Value'), {
-      target: { value: '12345' },
-    });
-
-    expect(screen.getByDisplayValue('12345')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Remove property' }));
-
-    await waitFor(() => {
-      expect(screen.queryByDisplayValue('trigger')).toBeNull();
-    });
+    expect(screen.queryByText('Cancellation window')).toBeNull();
+    expect(screen.queryByText('Conditions')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add condition' })).toBeNull();
+    expect(screen.queryByText('Open source')).toBeNull();
   });
 
   it('applies a scenario template into the current builder draft', async () => {

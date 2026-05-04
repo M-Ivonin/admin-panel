@@ -350,12 +350,12 @@ The admin can configure:
 - next-day same-local-time behavior,
 - local send window,
 - per-step frequency cap,
-- one Opened app Send Guard per step.
+- one Send Guard per step.
 
 Important nuance:
 
 - The editor UI says "minimum gap after any campaign send," and the actual frequency-cap check matches that: it looks at previous live sent deliveries across **all** campaigns for the recipient, not only the current one.
-- The Opened app Send Guard is send-time only. It does not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient opened the app since the journey started.
+- Send Guards are send-time only. They do not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient performed the selected action since the journey started.
 
 ### 5.9 Step content
 
@@ -668,6 +668,10 @@ For event-based campaigns, `maxSendsPerUser` can cap how many sent live deliveri
 Per-step `frequencyCapHours` suppresses users who received a sent live delivery from **any** campaign inside the recent cap window. The check is global across all campaigns, matching what the editor UI describes as a "minimum gap after any campaign send."
 
 Note: re-entry suppression (`reentryCooldownHours`) is separate and still scoped to the same campaign only.
+
+#### Send guard
+
+Per-step `sendGuards` suppress a live delivery when the selected user action already happened after the journey started and before the step is sent. For example, a first step with a 30-minute delay and an `opened_app` send guard sends only if the user did not open the app before that delayed step activates. Each step supports one send guard action; the editor does not expose OR rules or extra property conditions. An empty Send guard dropdown value means no guard is configured for that step.
 
 #### Goal suppression
 

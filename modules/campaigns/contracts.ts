@@ -93,18 +93,13 @@ export type CampaignSourceEventProducerKey =
 export type CampaignJourneyExitRule = 'none' | 'stop_on_goal';
 export type CampaignSendGuardAction =
   | 'opened_app'
+  | 'match_center_opened'
   | 'live_challenge_created'
   | 'voted_for_prediction'
   | 'chat_in_ai_chat';
 
-export interface CampaignSendGuardPropertyMatch {
-  propertyKey: string;
-  expectedValue: string | number | boolean | null;
-}
-
 export interface CampaignSendGuard {
   action: CampaignSendGuardAction;
-  propertyMatches?: CampaignSendGuardPropertyMatch[];
 }
 
 export interface CampaignOverviewStats {

@@ -259,37 +259,32 @@ describe('campaign selectors', () => {
     expect(canScheduleCampaign(draft)).toBe(true);
   });
 
-  it('summarizes Opened app send guards on journey steps', () => {
+  it('summarizes Match center opened send guards on journey steps', () => {
     const draft = createEmptyCampaignDraft();
-    draft.journey.steps[0].sendGuards = [{ action: 'opened_app' }];
+    draft.journey.steps[0].sendGuards = [{ action: 'match_center_opened' }];
 
     const reviewModel = buildCampaignReviewModel(draft);
     const summary = getCampaignValidationSummary(draft);
 
     expect(reviewModel.journey[0].value).toContain(
-      'skips if Opened app since journey start'
+      'skips if Opened match center since journey start'
     );
     expect(summary.errors).not.toContain(
       'Step step_1 has an unsupported send guard.'
     );
   });
 
-  it('summarizes exact property matches on send guards', () => {
+  it('rejects multiple send guards on one journey step', () => {
     const draft = createEmptyCampaignDraft();
     draft.journey.steps[0].sendGuards = [
-      {
-        action: 'opened_app',
-        propertyMatches: [
-          { propertyKey: 'trigger', expectedValue: 'push_open' },
-          { propertyKey: 'deviceKey', expectedValue: 'device-1' },
-        ],
-      },
+      { action: 'opened_app' },
+      { action: 'match_center_opened' },
     ];
 
-    const reviewModel = buildCampaignReviewModel(draft);
+    const summary = getCampaignValidationSummary(draft);
 
-    expect(reviewModel.journey[0].value).toContain(
-      'skips if Opened app when trigger is push_open and deviceKey is device-1 since journey start'
+    expect(summary.errors).toContain(
+      'Step step_1 supports only one send guard.'
     );
   });
 
@@ -329,7 +324,7 @@ describe('campaign selectors', () => {
     );
   });
 
-  it('rejects unsupported send guard property match shapes', () => {
+  it('rejects unsupported send guard conditions', () => {
     const draft = createEmptyCampaignDraft();
     draft.journey.steps[0].sendGuards = [
       {
@@ -337,13 +332,13 @@ describe('campaign selectors', () => {
         propertyMatches: [
           { propertyKey: 'device.meta', expectedValue: 'ios' },
         ],
-      },
+      } as any,
     ];
 
     const summary = getCampaignValidationSummary(draft);
 
     expect(summary.errors).toContain(
-      'Step step_1 has an unsupported send guard property match.'
+      'Step step_1 has unsupported send guard conditions.'
     );
   });
 

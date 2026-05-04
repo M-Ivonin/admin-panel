@@ -170,32 +170,4 @@ describe('campaignEditorReducer', () => {
     expect(withoutGuard.draft.journey.steps[0].sendGuards).toEqual([]);
   });
 
-  it('keeps exact property matches on a journey step send guard', () => {
-    const initialState = createCampaignEditorState(createEmptyCampaignDraft());
-
-    const withGuard = campaignEditorReducer(initialState, {
-      type: 'updateJourneyStep',
-      stepKey: 'step_1',
-      patch: {
-        sendGuards: [
-          {
-            action: 'opened_app',
-            propertyMatches: [
-              { propertyKey: 'trigger', expectedValue: 'push_open' },
-            ],
-          },
-        ],
-      },
-    });
-
-    expect(withGuard.draft.journey.steps[0].sendGuards).toEqual([
-      {
-        action: 'opened_app',
-        propertyMatches: [
-          { propertyKey: 'trigger', expectedValue: 'push_open' },
-        ],
-      },
-    ]);
-  });
-
 });

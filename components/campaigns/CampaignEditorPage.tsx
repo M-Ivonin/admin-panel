@@ -57,10 +57,10 @@ import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignGoalDefinition,
+  CampaignJourneyStep,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignSendGuardAction,
-  CampaignSendGuardPropertyMatch,
   CampaignStatus,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
@@ -131,50 +131,6 @@ const SEND_GUARD_ACTION_OPTIONS: Array<{
   action: action as CampaignSendGuardAction,
   label,
 }));
-
-type SendGuardPropertyValueType = 'string' | 'number' | 'boolean' | 'null';
-
-const SEND_GUARD_PROPERTY_VALUE_TYPE_OPTIONS: Array<{
-  value: SendGuardPropertyValueType;
-  label: string;
-}> = [
-  { value: 'string', label: 'String' },
-  { value: 'number', label: 'Number' },
-  { value: 'boolean', label: 'Boolean' },
-  { value: 'null', label: 'Null' },
-];
-
-function getSendGuardPropertyValueType(
-  value: CampaignSendGuardPropertyMatch['expectedValue']
-): SendGuardPropertyValueType {
-  if (value === null) {
-    return 'null';
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return typeof value;
-  }
-
-  return 'string';
-}
-
-function getDefaultSendGuardPropertyValue(
-  type: SendGuardPropertyValueType
-): CampaignSendGuardPropertyMatch['expectedValue'] {
-  if (type === 'number') {
-    return 0;
-  }
-
-  if (type === 'boolean') {
-    return true;
-  }
-
-  if (type === 'null') {
-    return null;
-  }
-
-  return '';
-}
 
 interface CampaignEditorPageProps {
   mode: 'create' | 'edit';
@@ -1291,68 +1247,61 @@ export function CampaignEditorPage({
     });
   }
 
-  function updateStepSendGuardPropertyMatches(
-    stepKey: string,
-    propertyMatches: CampaignSendGuardPropertyMatch[]
-  ) {
-    const step = state.draft.journey.steps.find(
-      (candidate) => candidate.stepKey === stepKey
-    );
-    const action = step?.sendGuards?.[0]?.action ?? 'opened_app';
+  function renderStepSendGuardControls(step: CampaignJourneyStep): ReactNode {
+    const guard = step.sendGuards?.[0] ?? null;
+    const selectedAction = guard?.action ?? '';
 
-    dispatch({
-      type: 'updateJourneyStep',
-      stepKey,
-      patch: {
-        sendGuards: [
-          {
-            action,
-            ...(propertyMatches.length > 0 ? { propertyMatches } : {}),
-          },
-        ],
-      },
-    });
-  }
+    return (
+      <Stack spacing={1.25}>
+        <Box sx={{ minWidth: 0 }}>
+          <FormControl fullWidth>
+            <InputLabel id={`campaign-send-guard-${step.stepKey}`} shrink>
+              Send guard
+            </InputLabel>
+            <Select
+              labelId={`campaign-send-guard-${step.stepKey}`}
+              label="Send guard"
+              value={selectedAction}
+              displayEmpty
+              renderValue={(selected) => {
+                const action = selected as CampaignSendGuardAction | '';
 
-  function updateStepSendGuardPropertyMatch(
-    stepKey: string,
-    index: number,
-    patch: Partial<CampaignSendGuardPropertyMatch>
-  ) {
-    const step = state.draft.journey.steps.find(
-      (candidate) => candidate.stepKey === stepKey
-    );
-    const propertyMatches = [
-      ...(step?.sendGuards?.[0]?.propertyMatches ?? []),
-    ];
-    propertyMatches[index] = {
-      propertyKey: propertyMatches[index]?.propertyKey ?? '',
-      expectedValue: propertyMatches[index]?.expectedValue ?? '',
-      ...patch,
-    };
+                return action
+                  ? (SEND_GUARD_ACTION_LABELS[action] ?? action)
+                  : 'No send guard';
+              }}
+              onChange={(event) => {
+                const action = event.target.value as
+                  | CampaignSendGuardAction
+                  | '';
 
-    updateStepSendGuardPropertyMatches(stepKey, propertyMatches);
-  }
-
-  function addStepSendGuardPropertyMatch(stepKey: string) {
-    const step = state.draft.journey.steps.find(
-      (candidate) => candidate.stepKey === stepKey
-    );
-    updateStepSendGuardPropertyMatches(stepKey, [
-      ...(step?.sendGuards?.[0]?.propertyMatches ?? []),
-      { propertyKey: '', expectedValue: '' },
-    ]);
-  }
-
-  function removeStepSendGuardPropertyMatch(stepKey: string, index: number) {
-    const step = state.draft.journey.steps.find(
-      (candidate) => candidate.stepKey === stepKey
-    );
-    updateStepSendGuardPropertyMatches(
-      stepKey,
-      (step?.sendGuards?.[0]?.propertyMatches ?? []).filter(
-        (_, candidateIndex) => candidateIndex !== index
-      )
+                dispatch({
+                  type: 'updateJourneyStep',
+                  stepKey: step.stepKey,
+                  patch: {
+                    sendGuards: action ? [{ action }] : [],
+                  },
+                });
+              }}
+            >
+              <MenuItem value="">No send guard</MenuItem>
+              {SEND_GUARD_ACTION_OPTIONS.map((option) => (
+                <MenuItem key={option.action} value={option.action}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mt: 0.75, color: COLORS.textSecondary }}
+          >
+            {guard
+              ? 'If this action happens after journey start and before this step is sent, the step is skipped.'
+              : 'Select an action that cancels this step if the user does it before send time.'}
+          </Typography>
+        </Box>
+      </Stack>
     );
   }
 
@@ -2491,6 +2440,10 @@ export function CampaignEditorPage({
                             <Stack
                               direction={{ xs: 'column', md: 'row' }}
                               spacing={2}
+                              alignItems={{
+                                xs: 'stretch',
+                                md: 'flex-start',
+                              }}
                             >
                               <TextField
                                 label="Minimum gap after any campaign send (hours)"
@@ -2510,272 +2463,16 @@ export function CampaignEditorPage({
                                   })
                                 }
                                 fullWidth
+                                sx={{ flex: { md: '1 1 0' } }}
                               />
-                            </Stack>
-
-                            <Stack spacing={1.5}>
-                              {(step.sendGuards ?? []).length > 0 ? (
-                                <>
-                                  <Stack
-                                    direction={{ xs: 'column', md: 'row' }}
-                                    spacing={2}
-                                    alignItems={{
-                                      xs: 'stretch',
-                                      md: 'flex-start',
-                                    }}
-                                  >
-                                    <FormControl fullWidth>
-                                      <InputLabel
-                                        id={`campaign-send-guard-${step.stepKey}`}
-                                        shrink
-                                      >
-                                        Send guard
-                                      </InputLabel>
-                                      <Select
-                                        labelId={`campaign-send-guard-${step.stepKey}`}
-                                        label="Send guard"
-                                        value={
-                                          step.sendGuards?.[0]?.action ??
-                                          'opened_app'
-                                        }
-                                        onChange={(event) =>
-                                          dispatch({
-                                            type: 'updateJourneyStep',
-                                            stepKey: step.stepKey,
-                                            patch: {
-                                              sendGuards: [
-                                                {
-                                                  action: event.target
-                                                    .value as CampaignSendGuardAction,
-                                                  propertyMatches:
-                                                    step.sendGuards?.[0]
-                                                      ?.propertyMatches ?? [],
-                                                },
-                                              ],
-                                            },
-                                          })
-                                        }
-                                      >
-                                        {SEND_GUARD_ACTION_OPTIONS.map(
-                                          (option) => (
-                                            <MenuItem
-                                              key={option.action}
-                                              value={option.action}
-                                            >
-                                              {option.label}
-                                            </MenuItem>
-                                          )
-                                        )}
-                                      </Select>
-                                      <FormHelperText>
-                                        The step is skipped if this action
-                                        already happened since journey start.
-                                      </FormHelperText>
-                                    </FormControl>
-                                    <Button
-                                      color="error"
-                                      startIcon={<Delete />}
-                                      onClick={() =>
-                                        dispatch({
-                                          type: 'updateJourneyStep',
-                                          stepKey: step.stepKey,
-                                          patch: { sendGuards: [] },
-                                        })
-                                      }
-                                    >
-                                      Remove send guard
-                                    </Button>
-                                  </Stack>
-
-                                  <Stack spacing={1}>
-                                    {(step.sendGuards?.[0]?.propertyMatches ??
-                                      []).map((match, matchIndex) => {
-                                      const valueType =
-                                        getSendGuardPropertyValueType(
-                                          match.expectedValue
-                                        );
-
-                                      return (
-                                        <Stack
-                                          key={`${step.stepKey}-guard-match-${matchIndex}`}
-                                          direction={{
-                                            xs: 'column',
-                                            md: 'row',
-                                          }}
-                                          spacing={1}
-                                        >
-                                          <TextField
-                                            label="Property"
-                                            value={match.propertyKey}
-                                            helperText="Top-level event property"
-                                            onChange={(event) =>
-                                              updateStepSendGuardPropertyMatch(
-                                                step.stepKey,
-                                                matchIndex,
-                                                {
-                                                  propertyKey:
-                                                    event.target.value,
-                                                }
-                                              )
-                                            }
-                                            fullWidth
-                                          />
-                                          <FormControl sx={{ minWidth: 132 }}>
-                                            <InputLabel
-                                              id={`campaign-send-guard-property-type-${step.stepKey}-${matchIndex}`}
-                                            >
-                                              Type
-                                            </InputLabel>
-                                            <Select
-                                              labelId={`campaign-send-guard-property-type-${step.stepKey}-${matchIndex}`}
-                                              label="Type"
-                                              value={valueType}
-                                              onChange={(event) =>
-                                                updateStepSendGuardPropertyMatch(
-                                                  step.stepKey,
-                                                  matchIndex,
-                                                  {
-                                                    expectedValue:
-                                                      getDefaultSendGuardPropertyValue(
-                                                        event.target
-                                                          .value as SendGuardPropertyValueType
-                                                      ),
-                                                  }
-                                                )
-                                              }
-                                            >
-                                              {SEND_GUARD_PROPERTY_VALUE_TYPE_OPTIONS.map(
-                                                (option) => (
-                                                  <MenuItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                  >
-                                                    {option.label}
-                                                  </MenuItem>
-                                                )
-                                              )}
-                                            </Select>
-                                            <FormHelperText>
-                                              Value type
-                                            </FormHelperText>
-                                          </FormControl>
-                                          {valueType === 'boolean' ? (
-                                            <FormControl fullWidth>
-                                              <InputLabel
-                                                id={`campaign-send-guard-property-value-${step.stepKey}-${matchIndex}`}
-                                              >
-                                                Value
-                                              </InputLabel>
-                                              <Select
-                                                labelId={`campaign-send-guard-property-value-${step.stepKey}-${matchIndex}`}
-                                                label="Value"
-                                                value={
-                                                  match.expectedValue
-                                                    ? 'true'
-                                                    : 'false'
-                                                }
-                                                onChange={(event) =>
-                                                  updateStepSendGuardPropertyMatch(
-                                                    step.stepKey,
-                                                    matchIndex,
-                                                    {
-                                                      expectedValue:
-                                                        event.target.value ===
-                                                        'true',
-                                                    }
-                                                  )
-                                                }
-                                              >
-                                                <MenuItem value="true">
-                                                  True
-                                                </MenuItem>
-                                                <MenuItem value="false">
-                                                  False
-                                                </MenuItem>
-                                              </Select>
-                                              <FormHelperText>
-                                                Exact match
-                                              </FormHelperText>
-                                            </FormControl>
-                                          ) : (
-                                            <TextField
-                                              label="Value"
-                                              type={
-                                                valueType === 'number'
-                                                  ? 'number'
-                                                  : 'text'
-                                              }
-                                              value={
-                                                valueType === 'null'
-                                                  ? 'null'
-                                                  : String(
-                                                      match.expectedValue ?? ''
-                                                    )
-                                              }
-                                              helperText="Exact match"
-                                              disabled={valueType === 'null'}
-                                              onChange={(event) =>
-                                                updateStepSendGuardPropertyMatch(
-                                                  step.stepKey,
-                                                  matchIndex,
-                                                  {
-                                                    expectedValue:
-                                                      valueType === 'number'
-                                                        ? Number(
-                                                            event.target.value
-                                                          )
-                                                        : event.target.value,
-                                                  }
-                                                )
-                                              }
-                                              fullWidth
-                                            />
-                                          )}
-                                          <Button
-                                            color="error"
-                                            startIcon={<Delete />}
-                                            onClick={() =>
-                                              removeStepSendGuardPropertyMatch(
-                                                step.stepKey,
-                                                matchIndex
-                                              )
-                                            }
-                                          >
-                                            Remove property
-                                          </Button>
-                                        </Stack>
-                                      );
-                                    })}
-                                    <Button
-                                      variant="text"
-                                      onClick={() =>
-                                        addStepSendGuardPropertyMatch(
-                                          step.stepKey
-                                        )
-                                      }
-                                    >
-                                      Add property match
-                                    </Button>
-                                  </Stack>
-                                </>
-                              ) : (
-                                <Button
-                                  variant="outlined"
-                                  onClick={() =>
-                                    dispatch({
-                                      type: 'updateJourneyStep',
-                                      stepKey: step.stepKey,
-                                      patch: {
-                                        sendGuards: [
-                                          { action: 'opened_app' },
-                                        ],
-                                      },
-                                    })
-                                  }
-                                >
-                                  Add send guard
-                                </Button>
-                              )}
+                              <Box
+                                sx={{
+                                  flex: { md: '1 1 0' },
+                                  minWidth: 0,
+                                }}
+                              >
+                                {renderStepSendGuardControls(step)}
+                              </Box>
                             </Stack>
 
                             <FormHelperText sx={{ mt: 0 }}>
@@ -3396,10 +3093,10 @@ export function CampaignEditorPage({
                 <CircularProgress size={16} color="inherit" />
                 <span>Scheduling...</span>
               </Stack>
+            ) : state.draft.id === null || state.isDirty ? (
+              'Save and schedule'
             ) : (
-              state.draft.id === null || state.isDirty
-                ? 'Save and schedule'
-                : 'Confirm schedule'
+              'Confirm schedule'
             )}
           </Button>
         </DialogActions>
