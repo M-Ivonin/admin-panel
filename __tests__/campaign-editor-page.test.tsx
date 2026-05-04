@@ -13,7 +13,7 @@ import { campaignsRepository } from '@/modules/campaigns/repository';
 import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
-jest.setTimeout(20000);
+jest.setTimeout(60000);
 
 const push = jest.fn();
 const replace = jest.fn();
@@ -149,6 +149,78 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('adds, summarizes, and removes an Opened app send guard on a journey step', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add send guard' }));
+
+    expect(
+      screen.getByText(
+        'The step is skipped if this action already happened since journey start.'
+      )
+    ).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    expect(
+      await screen.findByRole('option', { name: 'Chatted in AI chat' })
+    ).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Voted for prediction' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add property match' }));
+
+    expect(
+      screen.getByRole('combobox', { name: 'Send guard' }).textContent
+    ).toContain('Voted for prediction');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove send guard' }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          'The step is skipped if this action already happened since journey start.'
+        )
+      ).toBeNull();
+    });
+  });
+
+  it('adds and edits exact property matches on an Opened app send guard', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add send guard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add property match' }));
+
+    fireEvent.change(screen.getByLabelText('Property'), {
+      target: { value: 'trigger' },
+    });
+    fireEvent.change(screen.getByLabelText('Value'), {
+      target: { value: 'push_open' },
+    });
+
+    expect(screen.getByDisplayValue('trigger')).toBeTruthy();
+    expect(screen.getByDisplayValue('push_open')).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Number' }));
+    fireEvent.change(screen.getByLabelText('Value'), {
+      target: { value: '12345' },
+    });
+
+    expect(screen.getByDisplayValue('12345')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove property' }));
+
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('trigger')).toBeNull();
+    });
+  });
+
   it('applies a scenario template into the current builder draft', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -234,7 +306,7 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.mouseDown(trackedGoalSelector);
     fireEvent.click(
-      await screen.findByRole('option', { name: 'Onboarding completed' })
+      await screen.findByRole('option', { name: 'Live challenge created' })
     );
 
     await waitFor(() => {

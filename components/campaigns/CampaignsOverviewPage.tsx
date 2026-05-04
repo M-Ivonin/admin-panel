@@ -343,8 +343,16 @@ function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
 }
 
 function formatFailureReason(reason: string): string {
-  return reason
-    .trim()
+  const trimmed = reason.trim();
+
+  if (trimmed.startsWith('send_guard_matched:')) {
+    const action = trimmed.slice('send_guard_matched:'.length);
+    return `Send Guard matched: ${action
+      .replace(/_/g, ' ')
+      .replace(/\s+/g, ' ')}`;
+  }
+
+  return trimmed
     .replace(/_/g, ' ')
     .replace(/([:;,.])(?=\S)/g, '$1 ')
     .replace(/\s+/g, ' ');
@@ -503,7 +511,7 @@ function FailureReasonsLine({ item }: { item: CampaignListItem }) {
           mb: 0.35,
         }}
       >
-        Failure reasons
+        Failure / skip reasons
       </Typography>
       <Typography
         sx={{

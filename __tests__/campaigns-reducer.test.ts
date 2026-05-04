@@ -146,4 +146,56 @@ describe('campaignEditorReducer', () => {
     expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
   });
 
+  it('adds and removes an Opened app send guard on a journey step', () => {
+    const initialState = createCampaignEditorState(createEmptyCampaignDraft());
+
+    const withGuard = campaignEditorReducer(initialState, {
+      type: 'updateJourneyStep',
+      stepKey: 'step_1',
+      patch: {
+        sendGuards: [{ action: 'opened_app' }],
+      },
+    });
+    const withoutGuard = campaignEditorReducer(withGuard, {
+      type: 'updateJourneyStep',
+      stepKey: 'step_1',
+      patch: {
+        sendGuards: [],
+      },
+    });
+
+    expect(withGuard.draft.journey.steps[0].sendGuards).toEqual([
+      { action: 'opened_app' },
+    ]);
+    expect(withoutGuard.draft.journey.steps[0].sendGuards).toEqual([]);
+  });
+
+  it('keeps exact property matches on a journey step send guard', () => {
+    const initialState = createCampaignEditorState(createEmptyCampaignDraft());
+
+    const withGuard = campaignEditorReducer(initialState, {
+      type: 'updateJourneyStep',
+      stepKey: 'step_1',
+      patch: {
+        sendGuards: [
+          {
+            action: 'opened_app',
+            propertyMatches: [
+              { propertyKey: 'trigger', expectedValue: 'push_open' },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(withGuard.draft.journey.steps[0].sendGuards).toEqual([
+      {
+        action: 'opened_app',
+        propertyMatches: [
+          { propertyKey: 'trigger', expectedValue: 'push_open' },
+        ],
+      },
+    ]);
+  });
+
 });

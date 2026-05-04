@@ -336,6 +336,7 @@ Each step stores:
 - `sendWindowEnd`
 - `exitRule`
 - `frequencyCapHours`
+- optional `sendGuards`
 
 In practice, some of these are fixed by the current system:
 
@@ -348,11 +349,13 @@ The admin can configure:
 - delay minutes,
 - next-day same-local-time behavior,
 - local send window,
-- per-step frequency cap.
+- per-step frequency cap,
+- one Opened app Send Guard per step.
 
 Important nuance:
 
 - The editor UI says "minimum gap after any campaign send," and the actual frequency-cap check matches that: it looks at previous live sent deliveries across **all** campaigns for the recipient, not only the current one.
+- The Opened app Send Guard is send-time only. It does not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient opened the app since the journey started.
 
 ### 5.9 Step content
 
@@ -845,12 +848,14 @@ Before a push is sent, the executor can mark the row as terminal for several rea
 - `reentry_cooldown`
 - `frequency_cap`
 - `goal_already_reached`
+- `send_guard_matched:*`
 
 Important nuance:
 
 - Send-time audience revalidation intentionally disables goal, re-entry, and frequency-cap logic during the generic "still matches audience" check.
 - Those suppressions are evaluated separately afterward.
 - Re-entry is checked again before send against earlier materialized journey instances for the same user and campaign. Same-journey later steps are not suppressed by this check.
+- Send Guards run after goal checks, so stop-on-goal remains stronger. Test sends ignore Send Guards.
 
 ### 12.4 Rendering and push payload
 

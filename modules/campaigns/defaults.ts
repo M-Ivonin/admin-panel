@@ -74,6 +74,7 @@ export function createJourneyStep(order: number): CampaignJourneyStep {
     sendWindowEnd: '22:00',
     exitRule: 'stop_on_goal',
     frequencyCapHours: 24,
+    sendGuards: [],
   };
 }
 

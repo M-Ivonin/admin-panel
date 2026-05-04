@@ -230,7 +230,10 @@ describe('CampaignsOverviewPage', () => {
               uniqueRecipientCount: 2,
               journeyInstanceCount: 2,
               deliveryRowCount: 4,
-              failureReasons: [{ reason: 'invalid_fcm_token', count: 1 }],
+              failureReasons: [
+                { reason: 'invalid_fcm_token', count: 1 },
+                { reason: 'send_guard_matched:opened_app', count: 2 },
+              ],
             },
             metric: {
               label: 'goal',
@@ -272,8 +275,9 @@ describe('CampaignsOverviewPage', () => {
       expect(screen.getByText('Users with messages')).toBeTruthy();
       expect(screen.getByText('Campaign starts')).toBeTruthy();
       expect(screen.getByText('Message attempts')).toBeTruthy();
-      expect(screen.getByText('Failure reasons')).toBeTruthy();
-      expect(screen.getByText('invalid fcm token: 1')).toBeTruthy();
+      expect(screen.getByText('Failure / skip reasons')).toBeTruthy();
+      expect(screen.getByText(/invalid fcm token: 1/)).toBeTruthy();
+      expect(screen.getByText(/Send Guard matched: opened app: 2/)).toBeTruthy();
       expect(screen.getByText('Traced goal events')).toBeTruthy();
       expect(screen.getByText('Untraced matching events')).toBeTruthy();
       expect(screen.getByText('Source events without user')).toBeTruthy();

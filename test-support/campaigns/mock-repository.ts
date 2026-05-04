@@ -238,6 +238,24 @@ const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
     attributionMode: 'global_state_event',
   },
   {
+    goalKey: 'live_challenge_created:global_state_event',
+    label: 'Live challenge created',
+    eventKey: 'live_challenge_created',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'voted_for_prediction:global_state_event',
+    label: 'Voted for prediction',
+    eventKey: 'voted_for_prediction',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'chat_in_ai_chat:global_state_event',
+    label: 'Chat in AI chat',
+    eventKey: 'chat_in_ai_chat',
+    attributionMode: 'global_state_event',
+  },
+  {
     goalKey: 'stage_reactivated:global_state_event',
     label: 'Reactivated after 7-29 days',
     eventKey: 'stage_reactivated',

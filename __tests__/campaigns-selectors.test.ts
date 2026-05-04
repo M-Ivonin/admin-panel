@@ -6,6 +6,7 @@ import {
   createScheduledCampaignTrigger,
 } from '@/modules/campaigns/defaults';
 import {
+  buildCampaignReviewModel,
   canScheduleCampaign,
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
@@ -256,6 +257,94 @@ describe('campaign selectors', () => {
     };
 
     expect(canScheduleCampaign(draft)).toBe(true);
+  });
+
+  it('summarizes Opened app send guards on journey steps', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.journey.steps[0].sendGuards = [{ action: 'opened_app' }];
+
+    const reviewModel = buildCampaignReviewModel(draft);
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(reviewModel.journey[0].value).toContain(
+      'skips if Opened app since journey start'
+    );
+    expect(summary.errors).not.toContain(
+      'Step step_1 has an unsupported send guard.'
+    );
+  });
+
+  it('summarizes exact property matches on send guards', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.journey.steps[0].sendGuards = [
+      {
+        action: 'opened_app',
+        propertyMatches: [
+          { propertyKey: 'trigger', expectedValue: 'push_open' },
+          { propertyKey: 'deviceKey', expectedValue: 'device-1' },
+        ],
+      },
+    ];
+
+    const reviewModel = buildCampaignReviewModel(draft);
+
+    expect(reviewModel.journey[0].value).toContain(
+      'skips if Opened app when trigger is push_open and deviceKey is device-1 since journey start'
+    );
+  });
+
+  it('summarizes backend activation send guards on journey steps', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.journey.steps[0].sendGuards = [
+      { action: 'voted_for_prediction' },
+    ];
+
+    const reviewModel = buildCampaignReviewModel(draft);
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(reviewModel.journey[0].value).toContain(
+      'skips if Voted for prediction since journey start'
+    );
+    expect(summary.errors).not.toContain(
+      'Step step_1 has an unsupported send guard.'
+    );
+  });
+
+  it('summarizes new backend activation tracked goals', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.goalDefinition = {
+      eventKey: 'chat_in_ai_chat',
+      attributionMode: 'global_state_event',
+    };
+
+    const reviewModel = buildCampaignReviewModel(draft);
+
+    expect(reviewModel.basics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Tracked goal',
+          value: 'Chatted in AI chat',
+        }),
+      ])
+    );
+  });
+
+  it('rejects unsupported send guard property match shapes', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.journey.steps[0].sendGuards = [
+      {
+        action: 'opened_app',
+        propertyMatches: [
+          { propertyKey: 'device.meta', expectedValue: 'ios' },
+        ],
+      },
+    ];
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain(
+      'Step step_1 has an unsupported send guard property match.'
+    );
   });
 
   it('allows scheduling when selected locales need review but are not missing', () => {

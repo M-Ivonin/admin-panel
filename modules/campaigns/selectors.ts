@@ -9,6 +9,7 @@ import type {
   CampaignJourneyStep,
   CampaignLocale,
   CampaignReadiness,
+  CampaignSendGuardAction,
   CampaignStepLocaleContent,
 } from '@/modules/campaigns/contracts';
 import { CampaignEditorStep } from '@/modules/campaigns/reducer';
@@ -28,6 +29,9 @@ const SOURCE_EVENT_LABELS: Record<string, string> = {
   subscription_started: 'Started subscription',
   subscription_renewed: 'Renewed subscription',
   in_app_purchase_completed: 'Completed in-app purchase',
+  live_challenge_created: 'Created live challenge',
+  voted_for_prediction: 'Voted for prediction',
+  chat_in_ai_chat: 'Chatted in AI chat',
   daily_streak_reminder: 'Daily streak reminder',
   weekly_quest_urgency: 'Weekly quest urgency',
   favorite_match_kickoff: 'Favorite match kickoff',
@@ -45,6 +49,13 @@ const SOURCE_EVENT_LABELS: Record<string, string> = {
 const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
   crm_source_events: 'CRM integration events',
   channels_favorite_matches: 'Favorite matches service',
+};
+
+export const SEND_GUARD_ACTION_LABELS: Record<CampaignSendGuardAction, string> = {
+  opened_app: 'Opened app',
+  live_challenge_created: 'Created live challenge',
+  voted_for_prediction: 'Voted for prediction',
+  chat_in_ai_chat: 'Chatted in AI chat',
 };
 
 /**
@@ -208,8 +219,19 @@ function describeJourneyStep(step: CampaignJourneyStep): string {
   const delayLabel = step.sameLocalTimeNextDay
     ? 'next day at the same local time'
     : `${step.delayMinutes ?? 0} min after the previous anchor`;
+  const guard = step.sendGuards?.[0] ?? null;
+  const propertyMatches = guard?.propertyMatches ?? [];
+  const propertyLabel =
+    propertyMatches.length > 0
+      ? ` when ${propertyMatches
+          .map((match) => `${match.propertyKey} is ${String(match.expectedValue)}`)
+          .join(' and ')}`
+      : '';
+  const sendGuardLabel = guard
+    ? ` · skips if ${SEND_GUARD_ACTION_LABELS[guard.action] ?? guard.action}${propertyLabel} since journey start`
+    : '';
 
-  return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h · stop later steps when goal is reached`;
+  return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h${sendGuardLabel} · stop later steps when goal is reached`;
 }
 
 /**
@@ -396,6 +418,32 @@ export function getCampaignValidationSummary(
         `Step ${step.order} must anchor to ${expectedAnchor.replace('_', ' ')}.`
       );
     }
+
+    (step.sendGuards ?? []).forEach((guard) => {
+      if (!(guard.action in SEND_GUARD_ACTION_LABELS)) {
+        errors.push(`Step ${step.stepKey} has an unsupported send guard.`);
+      }
+
+      (guard.propertyMatches ?? []).forEach((match) => {
+        const hasUnsupportedShape =
+          !match.propertyKey ||
+          match.propertyKey.includes('.') ||
+          match.propertyKey.includes('[') ||
+          match.propertyKey.includes(']') ||
+          ![
+            'string',
+            'number',
+            'boolean',
+          ].includes(typeof match.expectedValue) &&
+            match.expectedValue !== null;
+
+        if (hasUnsupportedShape) {
+          errors.push(
+            `Step ${step.stepKey} has an unsupported send guard property match.`
+          );
+        }
+      });
+    });
   });
 
   if (
@@ -581,7 +629,8 @@ export function buildCampaignReviewModel(
       {
         label: 'Tracked goal',
         value: draft.goalDefinition
-          ? `${draft.goalDefinition.eventKey} (${draft.goalDefinition.attributionMode})`
+          ? (SOURCE_EVENT_LABELS[draft.goalDefinition.eventKey] ??
+            `${draft.goalDefinition.eventKey} (${draft.goalDefinition.attributionMode})`)
           : 'None',
       },
       {
