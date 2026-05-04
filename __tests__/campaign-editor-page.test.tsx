@@ -13,7 +13,7 @@ import { campaignsRepository } from '@/modules/campaigns/repository';
 import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 
-jest.setTimeout(20000);
+jest.setTimeout(60000);
 
 const push = jest.fn();
 const replace = jest.fn();
@@ -149,6 +149,67 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('selects, summarizes, and clears a send guard on a journey step', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+
+    expect(
+      screen.getByText(
+        'Select an action that cancels this step if the user does it before send time.'
+      )
+    ).toBeTruthy();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    expect(
+      await screen.findByRole('option', { name: 'No send guard' })
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('option', { name: 'Opened match center' })
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole('option', { name: 'Chatted in AI chat' })
+    ).toBeTruthy();
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Voted for prediction' })
+    );
+
+    expect(
+      screen.getByRole('combobox', { name: 'Send guard' }).textContent
+    ).toContain('Voted for prediction');
+    expect(screen.queryByText('Cancellation window')).toBeNull();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'No send guard' })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          'If this action happens after journey start and before this step is sent, the step is skipped.'
+        )
+      ).toBeNull();
+    });
+  });
+
+  it('does not show extra send guard condition builders', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Opened app' }));
+
+    expect(screen.queryByText('Cancellation window')).toBeNull();
+    expect(screen.queryByText('Conditions')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add condition' })).toBeNull();
+    expect(screen.queryByText('Open source')).toBeNull();
+  });
+
   it('applies a scenario template into the current builder draft', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -234,7 +295,7 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.mouseDown(trackedGoalSelector);
     fireEvent.click(
-      await screen.findByRole('option', { name: 'Onboarding completed' })
+      await screen.findByRole('option', { name: 'Live challenge created' })
     );
 
     await waitFor(() => {

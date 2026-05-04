@@ -57,8 +57,10 @@ import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignGoalDefinition,
+  CampaignJourneyStep,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
+  CampaignSendGuardAction,
   CampaignStatus,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
@@ -81,6 +83,7 @@ import {
   getCampaignLocaleReadiness,
   getCampaignValidationSummary,
   MISSING_TRACKED_GOAL_WARNING,
+  SEND_GUARD_ACTION_LABELS,
 } from '@/modules/campaigns/selectors';
 import {
   buildCampaignScheduleRule,
@@ -120,6 +123,14 @@ const STEP_LABELS: Record<CampaignEditorStep, string> = {
   [CampaignEditorStep.STEP_CONTENT]: 'Step Content',
   [CampaignEditorStep.REVIEW]: 'Review',
 };
+
+const SEND_GUARD_ACTION_OPTIONS: Array<{
+  action: CampaignSendGuardAction;
+  label: string;
+}> = Object.entries(SEND_GUARD_ACTION_LABELS).map(([action, label]) => ({
+  action: action as CampaignSendGuardAction,
+  label,
+}));
 
 interface CampaignEditorPageProps {
   mode: 'create' | 'edit';
@@ -1234,6 +1245,64 @@ export function CampaignEditorPage({
       step: nextStep,
       deeplinkTarget: null,
     });
+  }
+
+  function renderStepSendGuardControls(step: CampaignJourneyStep): ReactNode {
+    const guard = step.sendGuards?.[0] ?? null;
+    const selectedAction = guard?.action ?? '';
+
+    return (
+      <Stack spacing={1.25}>
+        <Box sx={{ minWidth: 0 }}>
+          <FormControl fullWidth>
+            <InputLabel id={`campaign-send-guard-${step.stepKey}`} shrink>
+              Send guard
+            </InputLabel>
+            <Select
+              labelId={`campaign-send-guard-${step.stepKey}`}
+              label="Send guard"
+              value={selectedAction}
+              displayEmpty
+              renderValue={(selected) => {
+                const action = selected as CampaignSendGuardAction | '';
+
+                return action
+                  ? (SEND_GUARD_ACTION_LABELS[action] ?? action)
+                  : 'No send guard';
+              }}
+              onChange={(event) => {
+                const action = event.target.value as
+                  | CampaignSendGuardAction
+                  | '';
+
+                dispatch({
+                  type: 'updateJourneyStep',
+                  stepKey: step.stepKey,
+                  patch: {
+                    sendGuards: action ? [{ action }] : [],
+                  },
+                });
+              }}
+            >
+              <MenuItem value="">No send guard</MenuItem>
+              {SEND_GUARD_ACTION_OPTIONS.map((option) => (
+                <MenuItem key={option.action} value={option.action}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mt: 0.75, color: COLORS.textSecondary }}
+          >
+            {guard
+              ? 'If this action happens after journey start and before this step is sent, the step is skipped.'
+              : 'Select an action that cancels this step if the user does it before send time.'}
+          </Typography>
+        </Box>
+      </Stack>
+    );
   }
 
   function goToStep(direction: 'back' | 'next') {
@@ -2371,6 +2440,10 @@ export function CampaignEditorPage({
                             <Stack
                               direction={{ xs: 'column', md: 'row' }}
                               spacing={2}
+                              alignItems={{
+                                xs: 'stretch',
+                                md: 'flex-start',
+                              }}
                             >
                               <TextField
                                 label="Minimum gap after any campaign send (hours)"
@@ -2390,7 +2463,16 @@ export function CampaignEditorPage({
                                   })
                                 }
                                 fullWidth
+                                sx={{ flex: { md: '1 1 0' } }}
                               />
+                              <Box
+                                sx={{
+                                  flex: { md: '1 1 0' },
+                                  minWidth: 0,
+                                }}
+                              >
+                                {renderStepSendGuardControls(step)}
+                              </Box>
                             </Stack>
 
                             <FormHelperText sx={{ mt: 0 }}>
@@ -3011,10 +3093,10 @@ export function CampaignEditorPage({
                 <CircularProgress size={16} color="inherit" />
                 <span>Scheduling...</span>
               </Stack>
+            ) : state.draft.id === null || state.isDirty ? (
+              'Save and schedule'
             ) : (
-              state.draft.id === null || state.isDirty
-                ? 'Save and schedule'
-                : 'Confirm schedule'
+              'Confirm schedule'
             )}
           </Button>
         </DialogActions>

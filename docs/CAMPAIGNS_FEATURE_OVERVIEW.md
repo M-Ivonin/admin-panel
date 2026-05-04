@@ -336,6 +336,7 @@ Each step stores:
 - `sendWindowEnd`
 - `exitRule`
 - `frequencyCapHours`
+- optional `sendGuards`
 
 In practice, some of these are fixed by the current system:
 
@@ -348,11 +349,13 @@ The admin can configure:
 - delay minutes,
 - next-day same-local-time behavior,
 - local send window,
-- per-step frequency cap.
+- per-step frequency cap,
+- one Send Guard per step.
 
 Important nuance:
 
 - The editor UI says "minimum gap after any campaign send," and the actual frequency-cap check matches that: it looks at previous live sent deliveries across **all** campaigns for the recipient, not only the current one.
+- Send Guards are send-time only. They do not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient performed the selected action since the journey started.
 
 ### 5.9 Step content
 
@@ -666,6 +669,10 @@ Per-step `frequencyCapHours` suppresses users who received a sent live delivery 
 
 Note: re-entry suppression (`reentryCooldownHours`) is separate and still scoped to the same campaign only.
 
+#### Send guard
+
+Per-step `sendGuards` suppress a live delivery when the selected user action already happened after the journey started and before the step is sent. For example, a first step with a 30-minute delay and an `opened_app` send guard sends only if the user did not open the app before that delayed step activates. Each step supports one send guard action; the editor does not expose OR rules or extra property conditions. An empty Send guard dropdown value means no guard is configured for that step.
+
 #### Goal suppression
 
 Goal suppression is mandatory and not user-configurable.
@@ -845,12 +852,14 @@ Before a push is sent, the executor can mark the row as terminal for several rea
 - `reentry_cooldown`
 - `frequency_cap`
 - `goal_already_reached`
+- `send_guard_matched:*`
 
 Important nuance:
 
 - Send-time audience revalidation intentionally disables goal, re-entry, and frequency-cap logic during the generic "still matches audience" check.
 - Those suppressions are evaluated separately afterward.
 - Re-entry is checked again before send against earlier materialized journey instances for the same user and campaign. Same-journey later steps are not suppressed by this check.
+- Send Guards run after goal checks, so stop-on-goal remains stronger. Test sends ignore Send Guards.
 
 ### 12.4 Rendering and push payload
 

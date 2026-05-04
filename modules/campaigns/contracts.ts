@@ -70,6 +70,9 @@ export type CampaignSourceEventKey =
   | 'subscription_started'
   | 'subscription_renewed'
   | 'in_app_purchase_completed'
+  | 'live_challenge_created'
+  | 'voted_for_prediction'
+  | 'chat_in_ai_chat'
   | 'daily_streak_reminder'
   | 'weekly_quest_urgency'
   | 'favorite_match_kickoff'
@@ -88,6 +91,16 @@ export type CampaignSourceEventProducerKey =
   | 'channels_favorite_matches';
 
 export type CampaignJourneyExitRule = 'none' | 'stop_on_goal';
+export type CampaignSendGuardAction =
+  | 'opened_app'
+  | 'match_center_opened'
+  | 'live_challenge_created'
+  | 'voted_for_prediction'
+  | 'chat_in_ai_chat';
+
+export interface CampaignSendGuard {
+  action: CampaignSendGuardAction;
+}
 
 export interface CampaignOverviewStats {
   activeCampaigns: number;
@@ -319,6 +332,7 @@ export interface CampaignJourneyStep {
   sendWindowEnd: string;
   exitRule: CampaignJourneyExitRule;
   frequencyCapHours: number | null;
+  sendGuards?: CampaignSendGuard[];
 }
 
 export interface CampaignJourneyDefinition {
