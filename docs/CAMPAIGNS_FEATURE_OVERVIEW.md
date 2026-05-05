@@ -269,6 +269,7 @@ Saved templates can be deleted from the UI. Shipped templates cannot.
 
 Important nuance:
 
+- The shared contract supports `push`, `in_app`, and `hybrid` channel wire values, but the current backend runtime executes only `push`.
 - When a template is applied, the frontend marks the audience as `template_segment` with `sourceSegmentId = template.id`.
 - This metadata is later used to block "save as template" for template-derived campaigns and to prevent scheduling another live campaign from the same template.
 
@@ -338,6 +339,7 @@ Each step stores:
 - `sendWindowEnd`
 - `exitRule`
 - `frequencyCapHours`
+- `inAppExpirationMinutes`
 - optional `sendGuards`
 
 In practice, some of these are fixed by the current system:
@@ -352,10 +354,12 @@ The admin can configure:
 - next-day same-local-time behavior,
 - local send window,
 - per-step frequency cap,
+- in-app expiration in minutes,
 - one Send Guard per step.
 
 Important nuance:
 
+- `inAppExpirationMinutes` defaults to `1440` when omitted and must stay between `1` and `10080`. It is stored on each journey step for the future in-app contract; no in-app fetch/render runtime exists in this issue.
 - The editor UI says "minimum gap after any campaign send," and the actual frequency-cap check matches that: it looks at previous live sent deliveries across **all** campaigns for the recipient, not only the current one.
 - Send Guards are send-time only. They do not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient performed the selected action since the journey started.
 
