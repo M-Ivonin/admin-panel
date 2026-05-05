@@ -31,7 +31,12 @@ export type CampaignQualificationMode = 'when_user_matches_audience';
 export type CampaignEventEntryMode = 'first_eligible_event';
 export type CampaignTimezoneMode = 'user_local';
 
-export type CampaignTokenKey = 'first_name' | 'favorite_team' | 'bonus_points';
+export type CampaignTokenKey =
+  | 'first_name'
+  | 'favorite_team'
+  | 'home'
+  | 'away'
+  | 'bonus_points';
 
 export type CampaignDeeplinkTarget =
   | 'continue_onboarding'
@@ -335,6 +340,10 @@ export interface CampaignJourneyStep {
   sendGuards?: CampaignSendGuard[];
 }
 
+export interface CampaignJourneyStepDraft extends CampaignJourneyStep {
+  localizedDeliveryContent: Record<CampaignLocale, CampaignStepLocaleContent>;
+}
+
 export interface CampaignJourneyDefinition {
   steps: CampaignJourneyStep[];
 }
@@ -359,6 +368,10 @@ export interface CampaignGoalOption {
 export interface CampaignStepLocaleContent {
   title: string;
   body: string;
+  variants?: Array<{
+    title: string;
+    body: string;
+  }>;
   fallbackFirstName: string;
   deeplinkTarget: CampaignDeeplinkTarget | null;
 }
@@ -445,6 +458,14 @@ export interface ArchiveCampaignRequest {
 }
 
 export interface ArchiveCampaignResponse {
+  campaign: CampaignDraft;
+}
+
+export interface PauseCampaignRequest {
+  confirm: true;
+}
+
+export interface PauseCampaignResponse {
   campaign: CampaignDraft;
 }
 

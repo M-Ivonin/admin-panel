@@ -95,6 +95,79 @@ describe('CampaignEditorPage', () => {
     expect(screen.getByText('No follow-up action')).toBeTruthy();
   });
 
+  it('shows and persists localized message variants', async () => {
+    const updateCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'updateCampaignDraft'
+    );
+
+    render(
+      <CampaignEditorPage mode="edit" campaignId="cmp_favorite_match_kickoff" />
+    );
+
+    await screen.findByDisplayValue('favorite_match_kickoff');
+
+    fireEvent.click(screen.getByText('Step Content'));
+
+    expect(screen.queryByLabelText('Fallback push title')).toBeNull();
+    expect(screen.queryByLabelText('Fallback push body')).toBeNull();
+    expect(screen.queryByLabelText('Push title')).toBeNull();
+    expect(screen.queryByLabelText('Push body')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Insert token' })).toBeTruthy();
+    expect(
+      (screen.getByLabelText('Variant 1 title') as HTMLInputElement).value
+    ).toBe('{{home}} vs {{away}} starts soon.');
+    expect(
+      (screen.getByLabelText('Variant 2 title') as HTMLInputElement).value
+    ).toBe('Kickoff in 15 min.');
+    expect(
+      (screen.getByLabelText('Variant 3 body') as HTMLTextAreaElement).value
+    ).toBe('Starts now. Be ready.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Insert token' }));
+    expect(screen.getByRole('button', { name: 'Home team' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Away team' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Away team' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Insert token' })).toBeNull();
+    });
+    expect(
+      (screen.getByLabelText('Variant 1 title') as HTMLInputElement).value
+    ).toBe('{{home}} vs {{away}} starts soon.{{away}}');
+
+    fireEvent.change(screen.getByLabelText('Variant 2 title'), {
+      target: { value: 'Kickoff is close.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+
+    expect(
+      (screen.getByLabelText('Variant 2 title') as HTMLInputElement).value
+    ).toBe('Empieza en 15 min.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
+        'cmp_favorite_match_kickoff',
+        expect.objectContaining({
+          content: expect.objectContaining({
+            step_1: expect.objectContaining({
+              en: expect.objectContaining({
+                variants: expect.arrayContaining([
+                  expect.objectContaining({
+                    title: 'Kickoff is close.',
+                    body: '{{home}} vs {{away}}.',
+                  }),
+                ]),
+              }),
+            }),
+          }),
+        })
+      );
+    });
+  });
+
   it('persists drafts even when different follow-up actions are configured across steps', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -272,9 +345,7 @@ describe('CampaignEditorPage', () => {
     pushBodyInput.setSelectionRange(6, 6);
     fireEvent.select(pushBodyInput);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Insert token in body' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Insert token' }));
     fireEvent.click(await screen.findByRole('button', { name: 'First name' }));
 
     await waitFor(() => {
@@ -841,22 +912,23 @@ describe('CampaignEditorPage', () => {
 
     await screen.findByDisplayValue('onboarding_not_completed');
 
-    fireEvent.mouseDown(
-      screen.getByRole('combobox', { name: 'Tracked goal' })
-    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tracked goal' }));
     fireEvent.click(
       await screen.findByRole('option', { name: 'Rewards wallet opened' })
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and restart' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(
       screen.getByText(
-        'Your latest changes will be saved first, then the campaign will be scheduled.'
+        'Your latest changes will be saved first, then the campaign will restart from the updated version.'
       )
     ).toBeTruthy();
+    expect(
+      screen.getByText(/Pending sends from the older version/i)
+    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and restart' }));
 
     await waitFor(() => {
       expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
@@ -875,9 +947,39 @@ describe('CampaignEditorPage', () => {
       );
     });
 
-    expect(
-      updateCampaignDraftSpy.mock.invocationCallOrder[0]
-    ).toBeLessThan(scheduleCampaignSpy.mock.invocationCallOrder[0]);
+    expect(updateCampaignDraftSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      scheduleCampaignSpy.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('pauses an active campaign from the editor', async () => {
+    const pauseCampaignSpy = jest.spyOn(campaignsRepository, 'pauseCampaign');
+
+    render(
+      <CampaignEditorPage
+        mode="edit"
+        campaignId="cmp_onboarding_not_completed"
+      />
+    );
+
+    await screen.findByDisplayValue('onboarding_not_completed');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause campaign' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Pause campaign',
+      })
+    );
+
+    await waitFor(() => {
+      expect(pauseCampaignSpy).toHaveBeenCalledWith(
+        'cmp_onboarding_not_completed',
+        { confirm: true }
+      );
+      expect(screen.getByText(/Campaign paused successfully/i)).toBeTruthy();
+      expect(screen.getByText('Paused')).toBeTruthy();
+    });
   });
 
   it('navigates to the saved draft when scheduling fails after the create-flow save', async () => {
@@ -923,7 +1025,9 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
 
-    expect((await screen.findAllByText('Schedule failed')).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText('Schedule failed')).length
+    ).toBeGreaterThan(0);
     expect(replace).toHaveBeenCalledWith('/dashboard/campaigns/cmp_local_001');
   });
 
@@ -1001,13 +1105,13 @@ describe('CampaignEditorPage', () => {
       screen.queryByRole('option', { name: 'Became at-risk monthly user' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Became inactive 30+ days' })
+      screen.queryByRole('option', { name: 'Became inactive 25+ days' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Reactivated after 7-29 days' })
+      screen.queryByRole('option', { name: 'Reactivated after 7-24 days' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Reactivated after 30+ days' })
+      screen.queryByRole('option', { name: 'Reactivated after 25+ days' })
     ).toBeNull();
   });
 

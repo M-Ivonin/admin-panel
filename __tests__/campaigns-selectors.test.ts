@@ -58,21 +58,41 @@ describe('campaign selectors', () => {
     expect(canScheduleCampaign(draft)).toBe(false);
   });
 
-  it('blocks event-based campaigns when max sends per user is not positive', () => {
+  it('blocks event-based campaigns when max sends per user is negative', () => {
     const draft = createEmptyCampaignDraft();
+    draft.name = 'Event-based';
+    draft.goal = 'Open app';
+    draft.content.step_1.en = {
+      title: 'Open app',
+      body: 'Welcome back',
+      fallbackFirstName: 'there',
+      deeplinkTarget: 'open_match_center',
+    };
+    draft.content.step_1.es = {
+      title: 'Abre la app',
+      body: 'Bienvenido',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: 'open_match_center',
+    };
+    draft.content.step_1.pt = {
+      title: 'Abra o app',
+      body: 'Bem-vindo',
+      fallbackFirstName: 'amigo',
+      deeplinkTarget: 'open_match_center',
+    };
     draft.trigger = {
       type: 'event_based',
       eventKey: 'app_opened',
       producerKey: 'crm_source_events',
       entryMode: 'first_eligible_event',
       reentryCooldownHours: 24,
-      maxSendsPerUser: 0,
+      maxSendsPerUser: -1,
     };
 
     const summary = getCampaignValidationSummary(draft);
 
     expect(summary.errors).toContain(
-      'Event-based campaigns require a positive max sends per user value.'
+      'Event-based campaigns require a non-negative max sends per user value.'
     );
   });
 
