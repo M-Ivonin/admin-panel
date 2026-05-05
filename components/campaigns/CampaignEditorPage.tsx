@@ -44,6 +44,7 @@ import {
   Archive,
   Delete,
   Edit,
+  PauseCircle,
   Save,
   Science,
 } from '@mui/icons-material';
@@ -78,6 +79,7 @@ import {
   buildCampaignReviewModel,
   canArchiveCampaign,
   canContinueCampaignStep,
+  canPauseCampaign,
   canScheduleCampaign,
   canSendTestCampaign,
   getCampaignLocaleReadiness,
@@ -244,6 +246,70 @@ function buildTemplatePayload(
 
 function formatStatus(status: CampaignStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getPrimaryRunActionLabel(draft: CampaignDraft): string {
+  if (draft.status === 'paused') {
+    return draft.id === null || draft.updatedAt === null
+      ? 'Schedule Campaign'
+      : 'Resume Campaign';
+  }
+
+  if (draft.status === 'active') {
+    return 'Save and restart';
+  }
+
+  return 'Schedule Campaign';
+}
+
+function getScheduleDialogTitle(draft: CampaignDraft): string {
+  if (draft.status === 'paused') {
+    return 'Resume campaign';
+  }
+
+  if (draft.status === 'active') {
+    return 'Restart campaign';
+  }
+
+  return 'Schedule campaign';
+}
+
+function getScheduleConfirmLabel(draft: CampaignDraft, isDirty: boolean) {
+  if (draft.status === 'paused') {
+    return isDirty ? 'Save and resume' : 'Resume campaign';
+  }
+
+  if (draft.status === 'active') {
+    return 'Save and restart';
+  }
+
+  return draft.id === null || isDirty
+    ? 'Save and schedule'
+    : 'Confirm schedule';
+}
+
+function getScheduleSuccessMessage(statusBeforeAction: CampaignStatus): string {
+  if (statusBeforeAction === 'paused') {
+    return 'Campaign resumed successfully.';
+  }
+
+  if (statusBeforeAction === 'active') {
+    return 'Campaign restarted successfully.';
+  }
+
+  return 'Campaign scheduled successfully.';
+}
+
+function getSchedulePersistNotice(draft: CampaignDraft): string {
+  if (draft.status === 'active') {
+    return 'Your latest changes will be saved first, then the campaign will restart from the updated version.';
+  }
+
+  if (draft.status === 'paused') {
+    return 'Your latest changes will be saved first, then the campaign will resume.';
+  }
+
+  return 'Your latest changes will be saved first, then the campaign will be scheduled.';
 }
 
 function formatScheduleResultTimestamp(timestamp: string): string {
@@ -523,11 +589,11 @@ function getSourceEventLabel(eventKey: string): string {
     case 'stage_at_risk_mau':
       return 'Became at-risk monthly user';
     case 'stage_dead_user':
-      return 'Became inactive 30+ days';
+      return 'Became inactive 25+ days';
     case 'stage_reactivated':
-      return 'Reactivated after 7-29 days';
+      return 'Reactivated after 7-24 days';
     case 'stage_resurrected':
-      return 'Reactivated after 30+ days';
+      return 'Reactivated after 25+ days';
     default:
       return eventKey;
   }
@@ -1007,6 +1073,7 @@ export function CampaignEditorPage({
 
   async function handleSchedule() {
     let persistedDraftId: string | null = null;
+    const statusBeforeAction = state.draft.status;
 
     try {
       setError(null);
@@ -1036,7 +1103,7 @@ export function CampaignEditorPage({
         type: 'markActionSuccess',
         kind: 'schedule',
         draft: response.campaign,
-        message: 'Campaign scheduled successfully.',
+        message: getScheduleSuccessMessage(statusBeforeAction),
         warnings: getScheduleSuccessWarnings(
           response.campaign,
           response.firstSendAt
@@ -1054,6 +1121,38 @@ export function CampaignEditorPage({
       );
     } finally {
       setIsScheduling(false);
+    }
+  }
+
+  async function handlePause() {
+    if (!state.draft.id) {
+      return;
+    }
+
+    try {
+      const saved = state.isDirty
+        ? await persistDraft({ message: null, navigateOnCreate: false })
+        : state.draft;
+      const response = await campaignsRepository.pauseCampaign(saved.id!, {
+        confirm: true,
+      });
+
+      dispatch({
+        type: 'closeDialog',
+        dialog: 'pauseCampaign',
+      });
+      dispatch({
+        type: 'markActionSuccess',
+        kind: 'pause',
+        draft: response.campaign,
+        message: 'Campaign paused successfully.',
+      });
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : 'Failed to pause campaign'
+      );
     }
   }
 
@@ -1360,6 +1459,12 @@ export function CampaignEditorPage({
   const canSaveTemplate =
     templateBlockingErrors.length === 0 &&
     (!isTemplateDerivedCampaign || templateBeingEdited !== null);
+  const primaryRunActionLabel = getPrimaryRunActionLabel(state.draft);
+  const scheduleConfirmLabel = getScheduleConfirmLabel(
+    state.draft,
+    state.isDirty
+  );
+  const scheduleDialogTitle = getScheduleDialogTitle(state.draft);
 
   if (loading) {
     return (
@@ -1551,7 +1656,7 @@ export function CampaignEditorPage({
                 onClick={handleSave}
                 sx={{ color: COLORS.textPrimary }}
               >
-                Save draft
+                {mode === 'create' ? 'Save draft' : 'Save changes'}
               </Button>
             }
           >
@@ -2071,8 +2176,8 @@ export function CampaignEditorPage({
                               label="Max sends per user"
                               type="number"
                               value={eventBasedTrigger.maxSendsPerUser ?? ''}
-                              helperText="Leave empty to use the backend default."
-                              inputProps={{ min: 1 }}
+                              helperText="Leave empty to use the backend default. Use 0 for no campaign-level limit."
+                              inputProps={{ min: 0 }}
                               onChange={(event) =>
                                 dispatch({
                                   type: 'changeTrigger',
@@ -2895,7 +3000,18 @@ export function CampaignEditorPage({
                   onClick={handleOpenScheduleDialog}
                   sx={{ bgcolor: COLORS.accent, color: COLORS.textPrimary }}
                 >
-                  Schedule Campaign
+                  {primaryRunActionLabel}
+                </Button>
+                <Button
+                  startIcon={<PauseCircle />}
+                  variant="outlined"
+                  disabled={!canPauseCampaign(state.draft)}
+                  onClick={() =>
+                    dispatch({ type: 'openDialog', dialog: 'pauseCampaign' })
+                  }
+                  sx={{ color: COLORS.textPrimary, borderColor: COLORS.stroke }}
+                >
+                  Pause campaign
                 </Button>
                 <Button
                   startIcon={<Archive />}
@@ -3056,20 +3172,23 @@ export function CampaignEditorPage({
           dispatch({ type: 'closeDialog', dialog: 'schedule' });
         }}
       >
-        <DialogTitle>Schedule campaign</DialogTitle>
+        <DialogTitle>{scheduleDialogTitle}</DialogTitle>
         <DialogContent>
           <Typography sx={{ mt: 1 }}>
-            {state.draft.trigger.type === 'scheduled_recurring'
-              ? state.draft.trigger.maxOccurrences &&
-                state.draft.trigger.maxOccurrences > 1
-                ? 'This will schedule the recurring campaign from the chosen start date. Each occurrence re-enters the full journey from step 1 for eligible users.'
-                : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
-              : 'This will schedule the current trigger + journey definition for live delivery.'}
+            {state.draft.status === 'active'
+              ? 'This saves the current definition and restarts live planning from the updated version. Pending sends from the older version will not be sent.'
+              : state.draft.status === 'paused'
+                ? 'This resumes live planning from the current campaign definition.'
+                : state.draft.trigger.type === 'scheduled_recurring'
+                  ? state.draft.trigger.maxOccurrences &&
+                    state.draft.trigger.maxOccurrences > 1
+                    ? 'This will schedule the recurring campaign from the chosen start date. Each occurrence re-enters the full journey from step 1 for eligible users.'
+                    : 'This will schedule a one-time journey occurrence from the chosen start date for eligible users.'
+                  : 'This will schedule the current trigger + journey definition for live delivery.'}
           </Typography>
           {state.draft.id === null || state.isDirty ? (
             <Typography sx={{ mt: 2, color: COLORS.textSecondary }}>
-              Your latest changes will be saved first, then the campaign will
-              be scheduled.
+              {getSchedulePersistNotice(state.draft)}
             </Typography>
           ) : null}
           {error ? (
@@ -3093,11 +3212,42 @@ export function CampaignEditorPage({
                 <CircularProgress size={16} color="inherit" />
                 <span>Scheduling...</span>
               </Stack>
-            ) : state.draft.id === null || state.isDirty ? (
-              'Save and schedule'
             ) : (
-              'Confirm schedule'
+              scheduleConfirmLabel
             )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={state.dialogs.pauseCampaign}
+        onClose={() =>
+          dispatch({ type: 'closeDialog', dialog: 'pauseCampaign' })
+        }
+      >
+        <DialogTitle>Pause campaign</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mt: 1 }}>
+            This stops new planning and keeps pending live sends from being
+            claimed until the campaign is resumed.
+          </Typography>
+          {state.isDirty ? (
+            <Typography sx={{ mt: 2, color: COLORS.textSecondary }}>
+              Your latest changes will be saved first, then the campaign will be
+              paused.
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() =>
+              dispatch({ type: 'closeDialog', dialog: 'pauseCampaign' })
+            }
+          >
+            Cancel
+          </Button>
+          <Button color="warning" onClick={handlePause}>
+            Pause campaign
           </Button>
         </DialogActions>
       </Dialog>

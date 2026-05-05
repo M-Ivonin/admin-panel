@@ -13,6 +13,8 @@ import type {
   EstimateAudienceRequest,
   EstimateAudienceResponse,
   GetCampaignsOverviewParams,
+  PauseCampaignRequest,
+  PauseCampaignResponse,
   SaveSegmentRequest,
   SaveSegmentResponse,
   SaveTemplateRequest,
@@ -327,4 +329,20 @@ export async function archiveCampaign(
   });
 
   return parseAdminResponse(response, 'Failed to archive campaign');
+}
+
+/**
+ * Pauses the specified campaign.
+ */
+export async function pauseCampaign(
+  id: string,
+  input: PauseCampaignRequest
+): Promise<PauseCampaignResponse> {
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/${id}/pause`,
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return parseAdminResponse(response, 'Failed to pause campaign');
 }

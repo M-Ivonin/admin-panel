@@ -32,6 +32,7 @@ export interface CampaignEditorDialogs {
   schedule: boolean;
   discardChanges: boolean;
   archiveCampaign: boolean;
+  pauseCampaign: boolean;
   tokenPicker: boolean;
 }
 
@@ -47,7 +48,7 @@ interface CampaignEditorTokenSelection {
 }
 
 export interface CampaignEditorActionResult {
-  kind: 'save' | 'template' | 'test' | 'schedule' | 'archive';
+  kind: 'save' | 'template' | 'test' | 'schedule' | 'archive' | 'pause';
   message: string;
   warnings?: string[];
 }
@@ -195,6 +196,7 @@ const DEFAULT_DIALOGS: CampaignEditorDialogs = {
   schedule: false,
   discardChanges: false,
   archiveCampaign: false,
+  pauseCampaign: false,
   tokenPicker: false,
 };
 
@@ -366,7 +368,8 @@ export function campaignEditorReducer(
           journey: templateDefinition.journey,
           content: templateDefinition.content,
         },
-        templateDefinition.journey.steps[0]?.stepKey ?? state.activeContentStepKey
+        templateDefinition.journey.steps[0]?.stepKey ??
+          state.activeContentStepKey
       );
     }
     case 'updateAudienceCriteria':

@@ -22,6 +22,7 @@ At a high level, the feature lets the team:
 - reuse shipped or saved scenario templates,
 - send traced test pushes,
 - schedule a campaign for live runtime execution,
+- pause and resume live campaign planning,
 - archive a campaign to stop further planning and sending.
 
 ## 2. Current scope and important realities
@@ -40,7 +41,7 @@ The current implementation is narrower than the raw type contracts may suggest.
 - If an older draft contains a legacy unsupported non-null deeplink, the editor renders it as a legacy unsupported value so the admin can replace or clear it.
 - The backend accepts only shipped tracked-goal pairs from the goal catalog and validates them independently from step deeplink choices.
 - The builder exposes templates, but it does not currently expose a saved-segment picker or a save-segment action even though the backend and frontend repository already support them.
-- `paused` exists as a campaign status in the contract and overview UI filters, but there is no pause/resume action in the current editor flow.
+- `paused` campaigns can be resumed from the editor. Resuming uses the same live-planning confirmation flow as scheduling.
 
 ## 3. High-level architecture
 
@@ -108,6 +109,7 @@ Tracked-goal campaigns can define `rewardPoints`.
 - The backend writes the credit through the points ledger with idempotency, so duplicate goal events do not create duplicate credits for the same campaign journey.
 - The rewarded amount is snapshotted onto sent deliveries, so later campaign edits do not retroactively change what an already-sent push pays out.
 - For trace-required CTA goals such as match-center or rewards-wallet opens, the reward is tied to the push delivery trace.
+- Send Test uses the same trace-required reward path for test deliveries, so tapping a test push can verify that the mobile reward confirmation appears.
 
 ## 5. Admin-panel experience
 
@@ -268,7 +270,7 @@ Saved templates can be deleted from the UI. Shipped templates cannot.
 Important nuance:
 
 - When a template is applied, the frontend marks the audience as `template_segment` with `sourceSegmentId = template.id`.
-- This metadata is later used to block "save as template" for template-derived campaigns.
+- This metadata is later used to block "save as template" for template-derived campaigns and to prevent scheduling another live campaign from the same template.
 
 ### 5.7 Trigger step
 
@@ -416,6 +418,7 @@ Frontend action gates:
   - validation has no errors,
   - every selected audience locale is not `missing`
 - Archive Campaign is enabled when the campaign exists and is not archived.
+- Pause Campaign is enabled when the campaign exists and is active or scheduled.
 
 Important nuances:
 
@@ -472,6 +475,7 @@ Admin access is currently guarded by:
 | `POST`   | `/campaigns/admin/:id/send-test`     | Insert and execute traced test deliveries |
 | `POST`   | `/campaigns/admin/:id/schedule`      | Schedule or activate live runtime         |
 | `POST`   | `/campaigns/admin/:id/archive`       | Archive a campaign                        |
+| `POST`   | `/campaigns/admin/:id/pause`         | Pause a live campaign                     |
 
 ## 7. Persistence model
 
@@ -1065,7 +1069,9 @@ Important nuance:
 
 ### 15.5 Paused
 
-`paused` exists in the shared model and overview filters, but no current admin flow sets a campaign to paused or resumes it.
+Pausing sets `status = paused` and clears the next planner tick. The planner does not pick paused campaigns, and live pending deliveries are not claimed while the campaign is paused.
+
+The editor shows Pause Campaign for active and scheduled campaigns. A paused campaign can be resumed with Resume Campaign, which restarts live planning from the current campaign definition.
 
 ## 16. Shipped catalog content
 
@@ -1077,10 +1083,10 @@ The backend seeds these catalog segments in the database:
 | ----------------------------- | ------------------------------------------------------------------------------- |
 | `seg_new_users_setup_dropoff` | Pre-registration users who started onboarding but did not finish within 30 days |
 | `seg_at_risk_wau`             | Inactive today, active 1-6 days ago                                             |
-| `seg_at_risk_mau`             | Inactive this week, active 7-29 days ago                                        |
-| `seg_dead_user`               | Inactive for 30+ days                                                           |
-| `seg_reactivated`             | First day back after 7-29 inactive days                                         |
-| `seg_resurrected`             | First day back after 30+ inactive days                                          |
+| `seg_at_risk_mau`             | Inactive this week, active 7-24 days ago                                        |
+| `seg_dead_user`               | Inactive for 25+ days                                                           |
+| `seg_reactivated`             | First day back after 7-24 inactive days                                         |
+| `seg_resurrected`             | First day back after 25+ inactive days                                          |
 
 ### 16.2 Shipped scenario templates
 
@@ -1093,7 +1099,7 @@ The backend seeds these scenario templates in the database:
 | Onboarding completed activation | Event based         | 1 step  | Drive first match center open after setup |
 | At-risk WAU retention           | State based         | 1 step  | Bring back at-risk weekly users           |
 | At-risk MAU retention           | Scheduled recurring | 1 step  | Bring back at-risk monthly users          |
-| Dead user winback               | Scheduled recurring | 1 step  | Bring back users inactive for 30+ days    |
+| Dead user winback               | Scheduled recurring | 1 step  | Bring back users inactive for 25+ days    |
 
 ## 17. Notable implementation nuances and caveats
 

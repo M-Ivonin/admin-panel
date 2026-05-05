@@ -135,7 +135,7 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
   {
     id: 'cmp_stage_dead_user',
     name: 'stage_dead_user',
-    goal: 'Bring back 30+ day inactive users',
+    goal: 'Bring back 25+ day inactive users',
     channel: 'push',
     status: 'scheduled',
     entryTriggerType: 'scheduled_recurring',
@@ -161,7 +161,7 @@ const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
     },
     metric: {
       label: 'goal',
-      value: 'Bring back 30+ day inactive users',
+      value: 'Bring back 25+ day inactive users',
       traceGoalEventCount: 0,
       untracedGoalEventCount: 0,
       sourceEventsWithoutUserCount: 0,
@@ -261,7 +261,7 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
     id: 'seg_at_risk_mau',
     name: 'At-risk MAU',
     description:
-      'Inactive today and the last 1-6 days, but active during the last 7-29 days.',
+      'Inactive today and the last 1-6 days, but active during the last 7-24 days.',
     audienceEstimate: 7800,
     audienceDefinition: {
       segmentSource: 'saved_segment',
@@ -282,7 +282,7 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
   {
     id: 'seg_dead_user',
     name: 'Dead Users',
-    description: 'Inactive for 30+ days.',
+    description: 'Inactive for 25+ days.',
     audienceEstimate: 5320,
     audienceDefinition: {
       segmentSource: 'saved_segment',
@@ -303,7 +303,7 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
   {
     id: 'seg_reactivated',
     name: 'Reactivated',
-    description: 'First day back after 7-29 days away.',
+    description: 'First day back after 7-24 days away.',
     audienceEstimate: 4120,
     audienceDefinition: {
       segmentSource: 'saved_segment',
@@ -324,7 +324,7 @@ const SAVED_SEGMENTS: CampaignSavedSegmentSummary[] = [
   {
     id: 'seg_resurrected',
     name: 'Resurrected',
-    description: 'First day back after 30+ days away.',
+    description: 'First day back after 25+ days away.',
     audienceEstimate: 2800,
     audienceDefinition: {
       segmentSource: 'saved_segment',
@@ -516,30 +516,66 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
         eventKey: 'favorite_match_kickoff',
         producerKey: 'channels_favorite_matches',
         entryMode: 'first_eligible_event',
-        reentryCooldownHours: 24,
-        maxSendsPerUser: 3,
+        reentryCooldownHours: 0,
+        maxSendsPerUser: 0,
       },
       journey: {
-        steps: [{ ...createJourneyStep(1), delayMinutes: 0 }],
+        steps: [
+          { ...createJourneyStep(1), delayMinutes: 0, frequencyCapHours: 0 },
+        ],
       },
       content: {
         step_1: {
           ...createBlankStepLocaleMap('open_match_center'),
           en: {
-            title: '{{favorite_team}} kicks off soon',
-            body: 'Open match center before the first whistle.',
+            title: '{{home}} vs {{away}} starts soon.',
+            body: 'Check insights before kickoff.',
+            variants: [
+              {
+                title: '{{home}} vs {{away}} starts soon.',
+                body: 'Check insights before kickoff.',
+              },
+              {
+                title: 'Kickoff in 15 min.',
+                body: '{{home}} vs {{away}}.',
+              },
+              {
+                title: '{{home}} vs {{away}}.',
+                body: 'Starts now. Be ready.',
+              },
+            ],
             fallbackFirstName: 'there',
             deeplinkTarget: 'open_match_center',
           },
           es: {
-            title: '{{favorite_team}} empieza pronto',
-            body: 'Abre el match center antes del pitazo inicial.',
+            title: '{{home}} vs {{away}} empieza pronto.',
+            body: 'Mira los insights antes.',
+            variants: [
+              {
+                title: '{{home}} vs {{away}} empieza pronto.',
+                body: 'Mira los insights antes.',
+              },
+              {
+                title: 'Empieza en 15 min.',
+                body: '{{home}} vs {{away}}.',
+              },
+            ],
             fallbackFirstName: 'amigo',
             deeplinkTarget: 'open_match_center',
           },
           pt: {
-            title: '{{favorite_team}} comeca em breve',
-            body: 'Abra o match center antes do apito inicial.',
+            title: '{{home}} vs {{away}} começa em breve.',
+            body: 'Veja os insights antes.',
+            variants: [
+              {
+                title: '{{home}} vs {{away}} começa em breve.',
+                body: 'Veja os insights antes.',
+              },
+              {
+                title: 'Começa em 15 min.',
+                body: '{{home}} vs {{away}}.',
+              },
+            ],
             fallbackFirstName: 'amigo',
             deeplinkTarget: 'open_match_center',
           },
@@ -648,30 +684,30 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
           eventKey: 'favorite_match_kickoff',
           producerKey: 'channels_favorite_matches',
           entryMode: 'first_eligible_event',
-          reentryCooldownHours: 24,
-          maxSendsPerUser: 3,
+          reentryCooldownHours: 0,
+          maxSendsPerUser: 0,
         },
         journey: {
-          steps: [firstStep],
+          steps: [{ ...firstStep, frequencyCapHours: 0 }],
         },
         content: {
           step_1: {
             ...createBlankStepLocaleMap('open_match_center'),
             en: {
-              title: '{{favorite_team}} kicks off in 15 min',
-              body: 'Go to match center before the first whistle.',
+              title: '{{home}} vs {{away}} starts soon.',
+              body: 'Check insights before kickoff.',
               fallbackFirstName: 'there',
               deeplinkTarget: 'open_match_center',
             },
             es: {
-              title: '{{favorite_team}} empieza en 15 min',
-              body: 'Ve al centro del partido antes del pitazo inicial.',
+              title: '{{home}} vs {{away}} empieza pronto.',
+              body: 'Mira los insights antes.',
               fallbackFirstName: 'amigo',
               deeplinkTarget: 'open_match_center',
             },
             pt: {
-              title: '{{favorite_team}} comeca em 15 min',
-              body: 'Abra o match center antes do apito inicial.',
+              title: '{{home}} vs {{away}} começa em breve.',
+              body: 'Veja os insights antes.',
               fallbackFirstName: 'amigo',
               deeplinkTarget: 'open_match_center',
             },
@@ -728,7 +764,7 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
       cmp_stage_dead_user: {
         id: 'cmp_stage_dead_user',
         name: 'stage_dead_user',
-        goal: 'Bring back 30+ day inactive users',
+        goal: 'Bring back 25+ day inactive users',
         channel: 'push',
         status: 'scheduled',
         audience: {

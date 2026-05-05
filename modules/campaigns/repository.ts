@@ -10,6 +10,7 @@ import {
   getCampaignDraft,
   getCampaignEditorCatalog,
   getCampaignsOverview,
+  pauseCampaign,
   saveCampaignSegment,
   saveCampaignTemplate,
   scheduleCampaign,
@@ -27,6 +28,8 @@ import type {
   EstimateAudienceRequest,
   EstimateAudienceResponse,
   GetCampaignsOverviewParams,
+  PauseCampaignRequest,
+  PauseCampaignResponse,
   SaveSegmentRequest,
   SaveSegmentResponse,
   SaveTemplateRequest,
@@ -94,6 +97,11 @@ export type ArchiveCampaignMethod = (
   input: ArchiveCampaignRequest
 ) => Promise<ArchiveCampaignResponse>;
 
+export type PauseCampaignMethod = (
+  id: string,
+  input: PauseCampaignRequest
+) => Promise<PauseCampaignResponse>;
+
 export interface CampaignsRepository {
   getCampaignsOverview: GetCampaignsOverviewMethod;
   getEditorCatalog: GetCampaignEditorCatalogMethod;
@@ -108,6 +116,7 @@ export interface CampaignsRepository {
   sendTestCampaign: SendCampaignTestMethod;
   scheduleCampaign: ScheduleCampaignMethod;
   archiveCampaign: ArchiveCampaignMethod;
+  pauseCampaign: PauseCampaignMethod;
 }
 
 export const campaignsRepository: CampaignsRepository = {
@@ -124,4 +133,5 @@ export const campaignsRepository: CampaignsRepository = {
   sendTestCampaign: sendCampaignTest,
   scheduleCampaign,
   archiveCampaign,
+  pauseCampaign,
 };

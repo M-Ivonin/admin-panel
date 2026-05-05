@@ -841,22 +841,23 @@ describe('CampaignEditorPage', () => {
 
     await screen.findByDisplayValue('onboarding_not_completed');
 
-    fireEvent.mouseDown(
-      screen.getByRole('combobox', { name: 'Tracked goal' })
-    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tracked goal' }));
     fireEvent.click(
       await screen.findByRole('option', { name: 'Rewards wallet opened' })
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and restart' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(
       screen.getByText(
-        'Your latest changes will be saved first, then the campaign will be scheduled.'
+        'Your latest changes will be saved first, then the campaign will restart from the updated version.'
       )
     ).toBeTruthy();
+    expect(
+      screen.getByText(/Pending sends from the older version/i)
+    ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save and restart' }));
 
     await waitFor(() => {
       expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
@@ -875,9 +876,39 @@ describe('CampaignEditorPage', () => {
       );
     });
 
-    expect(
-      updateCampaignDraftSpy.mock.invocationCallOrder[0]
-    ).toBeLessThan(scheduleCampaignSpy.mock.invocationCallOrder[0]);
+    expect(updateCampaignDraftSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      scheduleCampaignSpy.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('pauses an active campaign from the editor', async () => {
+    const pauseCampaignSpy = jest.spyOn(campaignsRepository, 'pauseCampaign');
+
+    render(
+      <CampaignEditorPage
+        mode="edit"
+        campaignId="cmp_onboarding_not_completed"
+      />
+    );
+
+    await screen.findByDisplayValue('onboarding_not_completed');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause campaign' }));
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Pause campaign',
+      })
+    );
+
+    await waitFor(() => {
+      expect(pauseCampaignSpy).toHaveBeenCalledWith(
+        'cmp_onboarding_not_completed',
+        { confirm: true }
+      );
+      expect(screen.getByText(/Campaign paused successfully/i)).toBeTruthy();
+      expect(screen.getByText('Paused')).toBeTruthy();
+    });
   });
 
   it('navigates to the saved draft when scheduling fails after the create-flow save', async () => {
@@ -923,7 +954,9 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule Campaign' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save and schedule' }));
 
-    expect((await screen.findAllByText('Schedule failed')).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText('Schedule failed')).length
+    ).toBeGreaterThan(0);
     expect(replace).toHaveBeenCalledWith('/dashboard/campaigns/cmp_local_001');
   });
 
@@ -1001,13 +1034,13 @@ describe('CampaignEditorPage', () => {
       screen.queryByRole('option', { name: 'Became at-risk monthly user' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Became inactive 30+ days' })
+      screen.queryByRole('option', { name: 'Became inactive 25+ days' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Reactivated after 7-29 days' })
+      screen.queryByRole('option', { name: 'Reactivated after 7-24 days' })
     ).toBeNull();
     expect(
-      screen.queryByRole('option', { name: 'Reactivated after 30+ days' })
+      screen.queryByRole('option', { name: 'Reactivated after 25+ days' })
     ).toBeNull();
   });
 

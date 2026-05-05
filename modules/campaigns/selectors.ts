@@ -41,9 +41,9 @@ const SOURCE_EVENT_LABELS: Record<string, string> = {
   live_challenge_results: 'Live challenge results available',
   stage_at_risk_wau: 'Became at-risk weekly user',
   stage_at_risk_mau: 'Became at-risk monthly user',
-  stage_dead_user: 'Became inactive 30+ days',
-  stage_reactivated: 'Reactivated after 7-29 days',
-  stage_resurrected: 'Reactivated after 30+ days',
+  stage_dead_user: 'Became inactive 25+ days',
+  stage_reactivated: 'Reactivated after 7-24 days',
+  stage_resurrected: 'Reactivated after 25+ days',
 };
 
 const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
@@ -204,9 +204,12 @@ function describeTriggerDetails(draft: CampaignDraft): string {
     const sourceLabel =
       SOURCE_EVENT_SOURCE_LABELS[draft.trigger.producerKey] ??
       draft.trigger.producerKey;
-    const maxSendsLabel = draft.trigger.maxSendsPerUser
-      ? `${draft.trigger.maxSendsPerUser} send(s) per user`
-      : 'backend default send limit';
+    let maxSendsLabel = 'backend default send limit';
+    if (draft.trigger.maxSendsPerUser === 0) {
+      maxSendsLabel = 'no campaign-level send limit';
+    } else if (draft.trigger.maxSendsPerUser) {
+      maxSendsLabel = `${draft.trigger.maxSendsPerUser} send(s) per user`;
+    }
 
     return `${eventLabel} from ${sourceLabel}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s). ${maxSendsLabel}.`;
   }
@@ -288,32 +291,45 @@ export function getCampaignLocaleReadiness(
  */
 export function getUsedCampaignTokens(
   draft: CampaignDraft
-): Array<'{{first_name}}' | '{{favorite_team}}' | '{{bonus_points}}'> {
+): Array<
+  | '{{first_name}}'
+  | '{{favorite_team}}'
+  | '{{home}}'
+  | '{{away}}'
+  | '{{bonus_points}}'
+> {
   const tokens = new Set<
-    '{{first_name}}' | '{{favorite_team}}' | '{{bonus_points}}'
+    | '{{first_name}}'
+    | '{{favorite_team}}'
+    | '{{home}}'
+    | '{{away}}'
+    | '{{bonus_points}}'
   >();
 
   Object.values(draft.content).forEach((stepContent) => {
     (Object.keys(stepContent) as CampaignLocale[]).forEach((locale) => {
-      extractTokens(stepContent[locale].title).forEach((token) => {
-        if (
-          token === '{{first_name}}' ||
-          token === '{{favorite_team}}' ||
-          token === '{{bonus_points}}'
-        ) {
-          tokens.add(token);
-        }
-      });
+      const content = stepContent[locale];
+      const copyBlocks = [
+        { title: content.title, body: content.body },
+        ...(content.variants ?? []),
+      ];
 
-      extractTokens(stepContent[locale].body).forEach((token) => {
-        if (
-          token === '{{first_name}}' ||
-          token === '{{favorite_team}}' ||
-          token === '{{bonus_points}}'
-        ) {
-          tokens.add(token);
-        }
-      });
+      copyBlocks
+        .flatMap((copy) => [
+          ...extractTokens(copy.title),
+          ...extractTokens(copy.body),
+        ])
+        .forEach((token) => {
+          if (
+            token === '{{first_name}}' ||
+            token === '{{favorite_team}}' ||
+            token === '{{home}}' ||
+            token === '{{away}}' ||
+            token === '{{bonus_points}}'
+          ) {
+            tokens.add(token);
+          }
+        });
     });
   });
 
@@ -478,10 +494,10 @@ export function getCampaignValidationSummary(
     draft.trigger.maxSendsPerUser !== null &&
     draft.trigger.maxSendsPerUser !== undefined &&
     (!Number.isInteger(draft.trigger.maxSendsPerUser) ||
-      draft.trigger.maxSendsPerUser <= 0)
+      draft.trigger.maxSendsPerUser < 0)
   ) {
     errors.push(
-      'Event-based campaigns require a positive max sends per user value.'
+      'Event-based campaigns require a non-negative max sends per user value.'
     );
   }
 
@@ -594,6 +610,16 @@ export function canScheduleCampaign(draft: CampaignDraft): boolean {
  */
 export function canArchiveCampaign(draft: CampaignDraft): boolean {
   return draft.id !== null && draft.status !== 'archived';
+}
+
+/**
+ * Returns whether the draft can be paused.
+ */
+export function canPauseCampaign(draft: CampaignDraft): boolean {
+  return (
+    draft.id !== null &&
+    (draft.status === 'active' || draft.status === 'scheduled')
+  );
 }
 
 /**

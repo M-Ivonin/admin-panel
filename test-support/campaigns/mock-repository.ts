@@ -87,6 +87,20 @@ const EDITOR_TOKENS: CampaignTokenDefinition[] = [
     description: 'Inserts the current favorite team name.',
   },
   {
+    key: 'home',
+    token: '{{home}}',
+    label: 'Home team',
+    requiresFallback: false,
+    description: 'Inserts the home team name from the source event.',
+  },
+  {
+    key: 'away',
+    token: '{{away}}',
+    label: 'Away team',
+    requiresFallback: false,
+    description: 'Inserts the away team name from the source event.',
+  },
+  {
     key: 'bonus_points',
     token: '{{bonus_points}}',
     label: 'Bonus points',
@@ -257,13 +271,13 @@ const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
   },
   {
     goalKey: 'stage_reactivated:global_state_event',
-    label: 'Reactivated after 7-29 days',
+    label: 'Reactivated after 7-24 days',
     eventKey: 'stage_reactivated',
     attributionMode: 'global_state_event',
   },
   {
     goalKey: 'stage_resurrected:global_state_event',
-    label: 'Reactivated after 30+ days',
+    label: 'Reactivated after 25+ days',
     eventKey: 'stage_resurrected',
     attributionMode: 'global_state_event',
   },
@@ -915,6 +929,30 @@ export const mockCampaignsRepository: CampaignsRepository = {
     }
 
     upsertOverviewItem(updatedDraft, 'Archived just now');
+
+    return {
+      campaign: clone(updatedDraft),
+    };
+  },
+
+  async pauseCampaign(id) {
+    const draft = state.drafts[id];
+
+    if (!draft) {
+      throw new Error('Campaign not found');
+    }
+
+    if (draft.status !== 'active' && draft.status !== 'scheduled') {
+      throw new Error('Campaign cannot be paused');
+    }
+
+    const previousStatus = draft.status;
+    const updatedDraft = clone(draft);
+    updatedDraft.status = 'paused';
+    updatedDraft.updatedAt = nextTimestampIso(1);
+    state.drafts[id] = updatedDraft;
+    incrementStatusCounts(previousStatus, 'paused');
+    upsertOverviewItem(updatedDraft, 'Paused just now');
 
     return {
       campaign: clone(updatedDraft),
