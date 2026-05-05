@@ -2,6 +2,8 @@
  * Repository boundary for all campaigns admin interactions.
  */
 
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
+import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-payload';
 import {
   archiveCampaign,
   createCampaignDraft,
@@ -102,36 +104,199 @@ export type PauseCampaignMethod = (
   input: PauseCampaignRequest
 ) => Promise<PauseCampaignResponse>;
 
+export interface ScheduleCampaignDraftResult
+  extends ScheduleCampaignResponse {
+  persistedDraftId: string;
+}
+
+export type ScheduleCampaignDraftMethod = (
+  draft: CampaignDraft
+) => Promise<ScheduleCampaignDraftResult>;
+
+export interface SendCampaignTestDraftResult extends SendTestCampaignResponse {
+  persistedDraft: CampaignDraft;
+}
+
+export type SendCampaignTestDraftMethod = (
+  draft: CampaignDraft,
+  input: SendTestCampaignRequest
+) => Promise<SendCampaignTestDraftResult>;
+
+export interface PauseCampaignDraftResult extends PauseCampaignResponse {
+  persistedDraftId: string;
+}
+
+export type PauseCampaignDraftMethod = (
+  draft: CampaignDraft
+) => Promise<PauseCampaignDraftResult>;
+
+export interface SaveCampaignDraftResult {
+  draft: CampaignDraft;
+  wasCreated: boolean;
+}
+
+export type SaveCampaignDraftMethod = (
+  draft: CampaignDraft
+) => Promise<SaveCampaignDraftResult>;
+
+export interface LoadCampaignEditorInput {
+  mode: 'create' | 'edit';
+  campaignId?: string;
+}
+
+export interface LoadCampaignEditorResult {
+  catalog: CampaignEditorCatalog;
+  draft: CampaignDraft;
+  lastPersistedDraft: CampaignDraft | null;
+}
+
+export type LoadCampaignEditorMethod = (
+  input: LoadCampaignEditorInput
+) => Promise<LoadCampaignEditorResult>;
+
+export class CampaignEditorActionError extends Error {
+  persistedDraftId: string | null;
+
+  constructor(message: string, options?: { persistedDraftId?: string | null }) {
+    super(message);
+    this.name = 'CampaignEditorActionError';
+    this.persistedDraftId = options?.persistedDraftId ?? null;
+  }
+}
+
 export interface CampaignsRepository {
   getCampaignsOverview: GetCampaignsOverviewMethod;
+  loadEditor: LoadCampaignEditorMethod;
   getEditorCatalog: GetCampaignEditorCatalogMethod;
   getCampaign: GetCampaignDraftMethod;
   createCampaignDraft: CreateCampaignDraftMethod;
   updateCampaignDraft: UpdateCampaignDraftMethod;
+  saveDraft: SaveCampaignDraftMethod;
   estimateAudience: EstimateCampaignAudienceMethod;
   saveSegment: SaveCampaignSegmentMethod;
   saveTemplate: SaveCampaignTemplateMethod;
   updateTemplate: UpdateCampaignTemplateMethod;
   deleteTemplate: DeleteCampaignTemplateMethod;
   sendTestCampaign: SendCampaignTestMethod;
+  sendTestDraft: SendCampaignTestDraftMethod;
   scheduleCampaign: ScheduleCampaignMethod;
+  scheduleDraft: ScheduleCampaignDraftMethod;
   archiveCampaign: ArchiveCampaignMethod;
   pauseCampaign: PauseCampaignMethod;
+  pauseDraft: PauseCampaignDraftMethod;
+}
+
+async function persistCampaignDraft(draft: CampaignDraft): Promise<CampaignDraft> {
+  const payload = buildUpsertCampaignDraftPayload(draft);
+
+  return draft.id === null
+    ? createCampaignDraft(payload)
+    : updateCampaignDraft(draft.id, payload);
 }
 
 export const campaignsRepository: CampaignsRepository = {
   getCampaignsOverview,
+  async loadEditor(input) {
+    const catalog = await getCampaignEditorCatalog();
+
+    if (input.mode === 'edit' && input.campaignId) {
+      const draft = await getCampaignDraft(input.campaignId);
+
+      return {
+        catalog,
+        draft,
+        lastPersistedDraft: draft,
+      };
+    }
+
+    return {
+      catalog,
+      draft: createEmptyCampaignDraft(),
+      lastPersistedDraft: null,
+    };
+  },
   getEditorCatalog: getCampaignEditorCatalog,
   getCampaign: getCampaignDraft,
   createCampaignDraft,
   updateCampaignDraft,
+  async saveDraft(draft) {
+    const savedDraft = await persistCampaignDraft(draft);
+
+    return {
+      draft: savedDraft,
+      wasCreated: draft.id === null,
+    };
+  },
   estimateAudience: estimateCampaignAudience,
   saveSegment: saveCampaignSegment,
   saveTemplate: saveCampaignTemplate,
   updateTemplate: updateCampaignTemplate,
   deleteTemplate: deleteCampaignTemplate,
   sendTestCampaign: sendCampaignTest,
+  async sendTestDraft(draft, input) {
+    const persistedDraft = await persistCampaignDraft(draft);
+
+    let response: SendTestCampaignResponse;
+    try {
+      response = await sendCampaignTest(persistedDraft.id!, input);
+    } catch (error) {
+      throw toCampaignEditorActionError(error, persistedDraft.id);
+    }
+
+    return {
+      ...response,
+      persistedDraft,
+    };
+  },
   scheduleCampaign,
+  async scheduleDraft(draft) {
+    const savedDraft = await persistCampaignDraft(draft);
+    let response: ScheduleCampaignResponse;
+    try {
+      response = await scheduleCampaign(savedDraft.id!, {
+        confirm: true,
+      });
+    } catch (error) {
+      throw toCampaignEditorActionError(error, savedDraft.id);
+    }
+
+    return {
+      ...response,
+      persistedDraftId: savedDraft.id!,
+    };
+  },
   archiveCampaign,
   pauseCampaign,
+  async pauseDraft(draft) {
+    const persistedDraft = await persistCampaignDraft(draft);
+    let response: PauseCampaignResponse;
+    try {
+      response = await pauseCampaign(persistedDraft.id!, {
+        confirm: true,
+      });
+    } catch (error) {
+      throw toCampaignEditorActionError(error, persistedDraft.id);
+    }
+
+    return {
+      ...response,
+      persistedDraftId: persistedDraft.id!,
+    };
+  },
 };
+
+function toCampaignEditorActionError(
+  error: unknown,
+  persistedDraftId: string | null
+): CampaignEditorActionError {
+  if (error instanceof CampaignEditorActionError) {
+    return error;
+  }
+
+  const message =
+    error instanceof Error && error.message.trim().length > 0
+      ? error.message
+      : 'Campaign editor action failed';
+
+  return new CampaignEditorActionError(message, { persistedDraftId });
+}

@@ -54,11 +54,11 @@ import { getStoredAuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { CampaignAudienceUserPickerDialog } from '@/components/campaigns/CampaignAudienceUserPickerDialog';
 import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
+import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-payload';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
-  CampaignGoalDefinition,
   CampaignJourneyStepDraft,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
@@ -67,10 +67,7 @@ import type {
   CampaignStatus,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
-import {
-  createEmptyCampaignDraft,
-  createScheduledCampaignTrigger,
-} from '@/modules/campaigns/defaults';
+import { createScheduledCampaignTrigger } from '@/modules/campaigns/defaults';
 import {
   getCampaignJourneyStepDraft,
   getCampaignJourneyStepDrafts,
@@ -151,12 +148,14 @@ interface CampaignEditorTextSelection {
   locale: CampaignLocale;
   start: number;
   end: number;
+  variantIndex?: number | null;
 }
 
 interface PendingTokenFocus {
   stepKey: string;
   locale: CampaignLocale;
   field: CampaignEditorTextField;
+  variantIndex?: number | null;
   cursor: number;
 }
 
@@ -182,32 +181,6 @@ function getPreferredTestRecipients(
   return authorizedUserEmail;
 }
 
-function buildUpsertPayload(draft: CampaignDraft): UpsertCampaignDraftRequest {
-  return {
-    name: draft.name,
-    goal: draft.goal,
-    goalDefinition: normalizeGoalDefinition(draft.goalDefinition),
-    channel: draft.channel,
-    audience: draft.audience,
-    trigger: draft.trigger,
-    journey: draft.journey,
-    content: draft.content,
-  };
-}
-
-function normalizeGoalDefinition(
-  goalDefinition: CampaignGoalDefinition | null
-): CampaignGoalDefinition | null {
-  if (!goalDefinition) {
-    return null;
-  }
-
-  return {
-    ...goalDefinition,
-    rewardPoints: goalDefinition.rewardPoints ?? 0,
-  };
-}
-
 function hasSameAudienceRules(
   left: CampaignDraft['audience'],
   right: CampaignDraft['audience']
@@ -222,7 +195,7 @@ function buildTemplatePayload(
   draft: CampaignDraft,
   sourceTemplate: CampaignScenarioTemplateSummary | null
 ): UpsertCampaignDraftRequest {
-  const payload = buildUpsertPayload(draft);
+  const payload = buildUpsertCampaignDraftPayload(draft);
 
   if (payload.audience.segmentSource !== 'template_segment') {
     return payload;
@@ -361,6 +334,20 @@ function formatRecurringScheduleStartDate(
   }).format(parsedDate);
 }
 
+function getPersistedDraftIdFromError(error: unknown): string | null {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'persistedDraftId' in error &&
+    (typeof error.persistedDraftId === 'string' ||
+      error.persistedDraftId === null)
+  ) {
+    return error.persistedDraftId;
+  }
+
+  return null;
+}
+
 function getScheduleSuccessWarnings(
   campaign: CampaignDraft,
   firstSendAt: string
@@ -409,7 +396,7 @@ function SectionCard({
   children,
   action,
 }: {
-  title: string;
+  title?: string;
   children: ReactNode;
   action?: ReactNode;
 }) {
@@ -423,19 +410,23 @@ function SectionCard({
         border: `1px solid ${COLORS.stroke}`,
       }}
     >
-      <Stack
-        direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ mb: 1.5 }}
-      >
-        <Typography
-          sx={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 700 }}
+      {title || action ? (
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ mb: 1.5 }}
         >
-          {title}
-        </Typography>
-        {action}
-      </Stack>
+          {title ? (
+            <Typography
+              sx={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 700 }}
+            >
+              {title}
+            </Typography>
+          ) : null}
+          {action}
+        </Stack>
+      ) : null}
       {children}
     </Paper>
   );
@@ -668,14 +659,12 @@ export function CampaignEditorPage({
   const [templateBeingEdited, setTemplateBeingEdited] =
     useState<CampaignScenarioTemplateSummary | null>(null);
   const contentInputRefs = useRef<
-    Record<CampaignEditorTextField, CampaignEditorTextInputElement | null>
-  >({
-    title: null,
-    body: null,
-  });
+    Record<string, CampaignEditorTextInputElement | null>
+  >({});
   const contentSelectionRef = useRef<
     Partial<Record<CampaignEditorTextField, CampaignEditorTextSelection>>
   >({});
+  const activeContentFieldRef = useRef<CampaignEditorTextField>('title');
   const pendingTokenFocusRef = useRef<PendingTokenFocus | null>(null);
   const authorizedUserEmail =
     user?.email?.trim() ?? storedAuthUser?.email?.trim() ?? '';
@@ -712,31 +701,20 @@ export function CampaignEditorPage({
       setError(null);
 
       try {
-        const catalog = await campaignsRepository.getEditorCatalog();
+        const editorData = await campaignsRepository.loadEditor({
+          mode,
+          campaignId,
+        });
         if (cancelled) {
           return;
         }
 
-        if (mode === 'edit' && campaignId) {
-          const draft = await campaignsRepository.getCampaign(campaignId);
-          if (cancelled) {
-            return;
-          }
-
-          dispatch({
-            type: 'loadDraft',
-            draft,
-            catalog,
-            lastPersistedDraft: draft,
-          });
-        } else {
-          dispatch({
-            type: 'loadDraft',
-            draft: createEmptyCampaignDraft(),
-            catalog,
-            lastPersistedDraft: null,
-          });
-        }
+        dispatch({
+          type: 'loadDraft',
+          draft: editorData.draft,
+          catalog: editorData.catalog,
+          lastPersistedDraft: editorData.lastPersistedDraft,
+        });
 
         setIsInitialized(true);
       } catch (loadError) {
@@ -805,37 +783,54 @@ export function CampaignEditorPage({
 
   function storeContentSelection(
     field: CampaignEditorTextField,
-    selection: Pick<CampaignEditorTextSelection, 'start' | 'end'>
+    selection: Pick<CampaignEditorTextSelection, 'start' | 'end'>,
+    variantIndex?: number | null
   ) {
+    activeContentFieldRef.current = field;
     contentSelectionRef.current[field] = {
       stepKey: state.activeContentStepKey,
       locale: activeLocale,
       start: selection.start,
       end: selection.end,
+      variantIndex: variantIndex ?? null,
     };
+  }
+
+  function getContentInputKey(
+    field: CampaignEditorTextField,
+    variantIndex?: number | null
+  ): string {
+    return typeof variantIndex === 'number'
+      ? `variant:${variantIndex}:${field}`
+      : field;
   }
 
   function captureContentSelection(
     field: CampaignEditorTextField,
-    input?: CampaignEditorTextInputElement | null
+    input?: CampaignEditorTextInputElement | null,
+    variantIndex?: number | null
   ): CampaignEditorTextSelection | null {
-    const resolvedInput = input ?? contentInputRefs.current[field];
+    const resolvedInput =
+      input ??
+      contentInputRefs.current[getContentInputKey(field, variantIndex)];
     if (!resolvedInput) {
       return null;
     }
 
     const selection = getInputSelection(resolvedInput);
-    storeContentSelection(field, selection);
+    storeContentSelection(field, selection, variantIndex);
 
     return contentSelectionRef.current[field] ?? null;
   }
 
   function handleContentSelection(
     field: CampaignEditorTextField,
-    event: SyntheticEvent<CampaignEditorTextInputElement>
+    event: SyntheticEvent<CampaignEditorTextInputElement>,
+    variantIndex?: number | null
   ) {
-    contentInputRefs.current[field] = event.currentTarget;
-    captureContentSelection(field, event.currentTarget);
+    contentInputRefs.current[getContentInputKey(field, variantIndex)] =
+      event.currentTarget;
+    captureContentSelection(field, event.currentTarget, variantIndex);
   }
 
   function handleStepContentChange(
@@ -844,7 +839,7 @@ export function CampaignEditorPage({
   ) {
     const value = event.target.value;
 
-    contentInputRefs.current[field] = event.currentTarget;
+    contentInputRefs.current[getContentInputKey(field)] = event.currentTarget;
     storeContentSelection(field, getInputSelection(event.currentTarget));
     dispatch({
       type: 'updateJourneyStepDeliveryContent',
@@ -863,6 +858,9 @@ export function CampaignEditorPage({
     const variants = [...(activeStepContent?.variants ?? [])];
     const currentVariant = variants[index] ?? { title: '', body: '' };
 
+    contentInputRefs.current[getContentInputKey(field, index)] =
+      event.currentTarget;
+    storeContentSelection(field, getInputSelection(event.currentTarget), index);
     variants[index] = {
       ...currentVariant,
       [field]: value,
@@ -912,7 +910,18 @@ export function CampaignEditorPage({
   }
 
   function openTokenPicker(field: CampaignEditorTextField) {
-    captureContentSelection(field);
+    const storedSelection = contentSelectionRef.current[field];
+    const hasVariants = Boolean(activeStepContent?.variants?.length);
+    const variantIndex =
+      hasVariants &&
+      storedSelection?.stepKey === state.activeContentStepKey &&
+      storedSelection.locale === activeLocale
+        ? (storedSelection.variantIndex ?? 0)
+        : hasVariants
+          ? 0
+          : null;
+
+    captureContentSelection(field, undefined, variantIndex);
     dispatch({
       type: 'openDialog',
       dialog: 'tokenPicker',
@@ -920,8 +929,13 @@ export function CampaignEditorPage({
         stepKey: state.activeContentStepKey,
         locale: activeLocale,
         field,
+        variantIndex,
       },
     });
+  }
+
+  function openTokenPickerForActiveField() {
+    openTokenPicker(activeContentFieldRef.current);
   }
 
   function handleInsertToken(token: string) {
@@ -934,11 +948,22 @@ export function CampaignEditorPage({
     const selection =
       storedSelection &&
       storedSelection.stepKey === state.tokenTarget.stepKey &&
-      storedSelection.locale === state.tokenTarget.locale
+      storedSelection.locale === state.tokenTarget.locale &&
+      (storedSelection.variantIndex ?? null) ===
+        (state.tokenTarget.variantIndex ?? null)
         ? storedSelection
-        : captureContentSelection(state.tokenTarget.field);
+        : captureContentSelection(
+            state.tokenTarget.field,
+            undefined,
+            state.tokenTarget.variantIndex
+          );
     const fallbackCursor =
-      contentInputRefs.current[state.tokenTarget.field]?.value.length ?? 0;
+      contentInputRefs.current[
+        getContentInputKey(
+          state.tokenTarget.field,
+          state.tokenTarget.variantIndex
+        )
+      ]?.value.length ?? 0;
     const insertionStart = selection?.start ?? fallbackCursor;
     const cursor = insertionStart + token.length;
 
@@ -952,6 +977,7 @@ export function CampaignEditorPage({
       locale: state.tokenTarget.locale,
       field: state.tokenTarget.field,
       token,
+      variantIndex: state.tokenTarget.variantIndex,
       selection: selection
         ? {
             start: selection.start,
@@ -975,7 +1001,10 @@ export function CampaignEditorPage({
       return;
     }
 
-    const input = contentInputRefs.current[pending.field];
+    const input =
+      contentInputRefs.current[
+        getContentInputKey(pending.field, pending.variantIndex)
+      ];
     if (!input) {
       return;
     }
@@ -989,6 +1018,7 @@ export function CampaignEditorPage({
         locale: pending.locale,
         start: pending.cursor,
         end: pending.cursor,
+        variantIndex: pending.variantIndex ?? null,
       };
     }, 0);
 
@@ -1041,14 +1071,9 @@ export function CampaignEditorPage({
         ? 'Draft saved successfully.'
         : options.message;
     const navigateOnCreate = options?.navigateOnCreate ?? true;
-    const payload = buildUpsertPayload(state.draft);
-    const saved =
-      state.draft.id === null
-        ? await campaignsRepository.createCampaignDraft(payload)
-        : await campaignsRepository.updateCampaignDraft(
-            state.draft.id,
-            payload
-          );
+    const { draft: saved, wasCreated } = await campaignsRepository.saveDraft(
+      state.draft
+    );
 
     dispatch({
       type: 'markSaveSuccess',
@@ -1056,19 +1081,11 @@ export function CampaignEditorPage({
       message,
     });
 
-    if (navigateOnCreate && state.draft.id === null && saved.id) {
+    if (navigateOnCreate && wasCreated && saved.id) {
       router.replace(`/dashboard/campaigns/${saved.id}`);
     }
 
     return saved;
-  }
-
-  async function ensurePersistedDraft(): Promise<CampaignDraft> {
-    if (state.draft.id !== null && !state.isDirty) {
-      return state.draft;
-    }
-
-    return persistDraft();
   }
 
   async function handleSave() {
@@ -1102,11 +1119,13 @@ export function CampaignEditorPage({
 
     try {
       setIsSendingTest(true);
-      const saved = await ensurePersistedDraft();
-      const response = await campaignsRepository.sendTestCampaign(saved.id!, {
+      const response = await campaignsRepository.sendTestDraft(state.draft, {
         recipients: normalizedTestRecipients,
         locale: testLocale,
       });
+      if (state.draft.id === null && response.persistedDraft.id) {
+        router.replace(`/dashboard/campaigns/${response.persistedDraft.id}`);
+      }
 
       dispatch({
         type: 'closeDialog',
@@ -1136,21 +1155,11 @@ export function CampaignEditorPage({
     try {
       setError(null);
       setIsScheduling(true);
-      const shouldPersistBeforeScheduling =
-        state.draft.id === null || state.isDirty;
-      const saved = shouldPersistBeforeScheduling
-        ? await persistDraft({
-            message: null,
-            navigateOnCreate: false,
-          })
-        : state.draft;
-      persistedDraftId = saved.id;
-      const response = await campaignsRepository.scheduleCampaign(saved.id!, {
-        confirm: true,
-      });
+      const response = await campaignsRepository.scheduleDraft(state.draft);
+      persistedDraftId = response.persistedDraftId;
 
-      if (state.draft.id === null && saved.id) {
-        router.replace(`/dashboard/campaigns/${saved.id}`);
+      if (state.draft.id === null && response.persistedDraftId) {
+        router.replace(`/dashboard/campaigns/${response.persistedDraftId}`);
       }
 
       dispatch({
@@ -1168,6 +1177,8 @@ export function CampaignEditorPage({
         ),
       });
     } catch (actionError) {
+      persistedDraftId = getPersistedDraftIdFromError(actionError);
+
       if (state.draft.id === null && persistedDraftId) {
         router.replace(`/dashboard/campaigns/${persistedDraftId}`);
       }
@@ -1188,12 +1199,7 @@ export function CampaignEditorPage({
     }
 
     try {
-      const saved = state.isDirty
-        ? await persistDraft({ message: null, navigateOnCreate: false })
-        : state.draft;
-      const response = await campaignsRepository.pauseCampaign(saved.id!, {
-        confirm: true,
-      });
+      const response = await campaignsRepository.pauseDraft(state.draft);
 
       dispatch({
         type: 'closeDialog',
@@ -2710,91 +2716,85 @@ export function CampaignEditorPage({
                     </Stack>
                   </SectionCard>
 
-                  <SectionCard title="Step content">
+                  <SectionCard>
                     {activeStepContent ? (
                       <Stack spacing={2}>
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            variant="outlined"
-                            onClick={() => openTokenPicker('title')}
-                          >
-                            Insert token in title
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            onClick={() => openTokenPicker('body')}
-                          >
-                            Insert token in body
-                          </Button>
-                        </Stack>
-
-                        <TextField
-                          label={
-                            activeStepContent.variants?.length
-                              ? 'Fallback push title'
-                              : 'Push title'
-                          }
-                          value={activeStepContent.title}
-                          inputRef={(element) => {
-                            contentInputRefs.current.title = element;
-                          }}
-                          inputProps={{
-                            onClick: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('title', event),
-                            onKeyUp: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('title', event),
-                            onSelect: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('title', event),
-                          }}
-                          onChange={(event) =>
-                            handleStepContentChange('title', event)
-                          }
-                          fullWidth
-                        />
-                        <TextField
-                          label={
-                            activeStepContent.variants?.length
-                              ? 'Fallback push body'
-                              : 'Push body'
-                          }
-                          value={activeStepContent.body}
-                          inputRef={(element) => {
-                            contentInputRefs.current.body = element;
-                          }}
-                          inputProps={{
-                            onClick: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('body', event),
-                            onKeyUp: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('body', event),
-                            onSelect: (
-                              event: SyntheticEvent<CampaignEditorTextInputElement>
-                            ) => handleContentSelection('body', event),
-                          }}
-                          onChange={(event) =>
-                            handleStepContentChange('body', event)
-                          }
-                          multiline
-                          minRows={4}
-                          fullWidth
-                        />
+                        {!activeStepContent.variants?.length ? (
+                          <>
+                            <TextField
+                              label="Push title"
+                              value={activeStepContent.title}
+                              inputRef={(element) => {
+                                contentInputRefs.current.title = element;
+                              }}
+                              inputProps={{
+                                onClick: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('title', event),
+                                onKeyUp: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('title', event),
+                                onSelect: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('title', event),
+                              }}
+                              onChange={(event) =>
+                                handleStepContentChange('title', event)
+                              }
+                              fullWidth
+                            />
+                            <TextField
+                              label="Push body"
+                              value={activeStepContent.body}
+                              inputRef={(element) => {
+                                contentInputRefs.current.body = element;
+                              }}
+                              inputProps={{
+                                onClick: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('body', event),
+                                onKeyUp: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('body', event),
+                                onSelect: (
+                                  event: SyntheticEvent<CampaignEditorTextInputElement>
+                                ) => handleContentSelection('body', event),
+                              }}
+                              onChange={(event) =>
+                                handleStepContentChange('body', event)
+                              }
+                              multiline
+                              minRows={4}
+                              fullWidth
+                            />
+                          </>
+                        ) : null}
                         <Stack spacing={1.5}>
                           <Stack
                             direction="row"
                             spacing={1}
                             alignItems="center"
-                            justifyContent="space-between"
                           >
-                            <Typography
-                              variant="subtitle2"
-                              sx={{ color: COLORS.textPrimary }}
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{ flex: 1 }}
                             >
-                              Message variants
-                            </Typography>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ color: COLORS.textPrimary }}
+                              >
+                                Message variants
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={openTokenPickerForActiveField}
+                              >
+                                Insert token
+                              </Button>
+                            </Stack>
                             <Button
                               variant="outlined"
                               size="small"
@@ -2846,6 +2846,37 @@ export function CampaignEditorPage({
                                       <TextField
                                         label={`Variant ${index + 1} title`}
                                         value={variant.title}
+                                        inputRef={(element) => {
+                                          contentInputRefs.current[
+                                            getContentInputKey('title', index)
+                                          ] = element;
+                                        }}
+                                        inputProps={{
+                                          onClick: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'title',
+                                              event,
+                                              index
+                                            ),
+                                          onKeyUp: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'title',
+                                              event,
+                                              index
+                                            ),
+                                          onSelect: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'title',
+                                              event,
+                                              index
+                                            ),
+                                        }}
                                         onChange={(event) =>
                                           handleStepContentVariantChange(
                                             index,
@@ -2858,6 +2889,37 @@ export function CampaignEditorPage({
                                       <TextField
                                         label={`Variant ${index + 1} body`}
                                         value={variant.body}
+                                        inputRef={(element) => {
+                                          contentInputRefs.current[
+                                            getContentInputKey('body', index)
+                                          ] = element;
+                                        }}
+                                        inputProps={{
+                                          onClick: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'body',
+                                              event,
+                                              index
+                                            ),
+                                          onKeyUp: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'body',
+                                              event,
+                                              index
+                                            ),
+                                          onSelect: (
+                                            event: SyntheticEvent<CampaignEditorTextInputElement>
+                                          ) =>
+                                            handleContentSelection(
+                                              'body',
+                                              event,
+                                              index
+                                            ),
+                                        }}
                                         onChange={(event) =>
                                           handleStepContentVariantChange(
                                             index,
@@ -3484,6 +3546,14 @@ export function CampaignEditorPage({
                 key={token.key}
                 variant="outlined"
                 onClick={() => handleInsertToken(token.token)}
+                sx={{
+                  color: COLORS.textPrimary,
+                  borderColor: COLORS.textPrimary,
+                  '&:hover': {
+                    borderColor: COLORS.textPrimary,
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                  },
+                }}
               >
                 {token.label}
               </Button>

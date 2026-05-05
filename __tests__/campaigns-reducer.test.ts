@@ -83,6 +83,36 @@ describe('campaignEditorReducer', () => {
     expect(nextState.isDirty).toBe(true);
   });
 
+  it('inserts a token into a message variant', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.content.step_1.en.variants = [
+      {
+        title: '{{home}} starts soon',
+        body: 'Open the match',
+      },
+    ];
+    const initialState = createCampaignEditorState(draft);
+
+    const nextState = campaignEditorReducer(initialState, {
+      type: 'insertToken',
+      stepKey: 'step_1',
+      locale: 'en',
+      field: 'title',
+      token: '{{away}}',
+      variantIndex: 0,
+      selection: {
+        start: 8,
+        end: 8,
+      },
+    });
+
+    expect(nextState.draft.content.step_1.en.variants?.[0].title).toBe(
+      '{{home}}{{away}} starts soon'
+    );
+    expect(nextState.draft.content.step_1.en.title).toBe('');
+    expect(nextState.isDirty).toBe(true);
+  });
+
   it('resets dirty state after a save success and supports explicit reset', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 

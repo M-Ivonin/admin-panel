@@ -3,6 +3,8 @@
  */
 
 import { RetentionStage } from '@/lib/api/users';
+import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
+import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-payload';
 import type {
   ArchiveCampaignResponse,
   CampaignAudienceDefinition,
@@ -35,7 +37,9 @@ import {
   createInitialScenarioTemplates,
   createSavedSegmentDefinitionMap,
 } from '@/test-support/campaigns/mock-data';
-import { type CampaignsRepository } from '@/modules/campaigns/repository';
+import {
+  type CampaignsRepository,
+} from '@/modules/campaigns/repository';
 import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,
@@ -666,6 +670,21 @@ function toDraft(
   };
 }
 
+function toUpsertCampaignDraftRequest(
+  draft: CampaignDraft
+): UpsertCampaignDraftRequest {
+  return buildUpsertCampaignDraftPayload(draft);
+}
+
+function createPersistedDraftError(
+  message: string,
+  persistedDraftId: string | null
+): Error & { persistedDraftId: string | null } {
+  return Object.assign(new Error(message), {
+    persistedDraftId,
+  });
+}
+
 /**
  * Resets the in-memory repository to the seeded state for tests and live validation.
  */
@@ -718,6 +737,26 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
+  async loadEditor(input) {
+    const catalog = buildEditorCatalog();
+
+    if (input.mode === 'edit' && input.campaignId) {
+      const draft = await this.getCampaign(input.campaignId);
+
+      return {
+        catalog,
+        draft,
+        lastPersistedDraft: clone(draft),
+      };
+    }
+
+    return {
+      catalog,
+      draft: createEmptyCampaignDraft(),
+      lastPersistedDraft: null,
+    };
+  },
+
   async getEditorCatalog() {
     return buildEditorCatalog();
   },
@@ -763,6 +802,21 @@ export const mockCampaignsRepository: CampaignsRepository = {
     upsertOverviewItem(draft, 'Updated just now');
 
     return clone(draft);
+  },
+
+  async saveDraft(draft) {
+    const savedDraft =
+      draft.id === null
+        ? await this.createCampaignDraft(toUpsertCampaignDraftRequest(draft))
+        : await this.updateCampaignDraft(
+            draft.id,
+            toUpsertCampaignDraftRequest(draft)
+          );
+
+    return {
+      draft: savedDraft,
+      wasCreated: draft.id === null,
+    };
   },
 
   async estimateAudience(input: EstimateAudienceRequest) {
@@ -873,7 +927,28 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async scheduleCampaign(id): Promise<ScheduleCampaignResponse> {
+  async sendTestDraft(draft, input) {
+    const persistedDraft = (
+      await this.saveDraft(draft)
+    ).draft;
+    let response: SendTestCampaignResponse;
+    try {
+      response = await this.sendTestCampaign(persistedDraft.id!, input);
+    } catch (error) {
+      throw createPersistedDraftError(
+        error instanceof Error ? error.message : 'Failed to send campaign test',
+        persistedDraft.id
+      );
+    }
+
+    return {
+      ...response,
+      persistedDraft,
+    };
+  },
+
+  async scheduleCampaign(id, _input?): Promise<ScheduleCampaignResponse> {
+    void _input;
     const draft = state.drafts[id];
 
     if (!draft) {
@@ -911,7 +986,30 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async archiveCampaign(id): Promise<ArchiveCampaignResponse> {
+  async scheduleDraft(draft) {
+    const savedDraft = (
+      await this.saveDraft(draft)
+    ).draft;
+    let response: ScheduleCampaignResponse;
+    try {
+      response = await this.scheduleCampaign(savedDraft.id!, {
+        confirm: true,
+      });
+    } catch (error) {
+      throw createPersistedDraftError(
+        error instanceof Error ? error.message : 'Failed to schedule campaign',
+        savedDraft.id
+      );
+    }
+
+    return {
+      ...response,
+      persistedDraftId: savedDraft.id!,
+    };
+  },
+
+  async archiveCampaign(id, _input?): Promise<ArchiveCampaignResponse> {
+    void _input;
     const draft = state.drafts[id];
 
     if (!draft) {
@@ -935,7 +1033,8 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async pauseCampaign(id) {
+  async pauseCampaign(id, _input?) {
+    void _input;
     const draft = state.drafts[id];
 
     if (!draft) {
@@ -956,6 +1055,28 @@ export const mockCampaignsRepository: CampaignsRepository = {
 
     return {
       campaign: clone(updatedDraft),
+    };
+  },
+
+  async pauseDraft(draft) {
+    const persistedDraft = (
+      await this.saveDraft(draft)
+    ).draft;
+    let response: { campaign: CampaignDraft };
+    try {
+      response = await this.pauseCampaign(persistedDraft.id!, {
+        confirm: true,
+      });
+    } catch (error) {
+      throw createPersistedDraftError(
+        error instanceof Error ? error.message : 'Failed to pause campaign',
+        persistedDraft.id
+      );
+    }
+
+    return {
+      ...response,
+      persistedDraftId: persistedDraft.id!,
     };
   },
 };

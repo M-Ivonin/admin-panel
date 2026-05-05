@@ -109,6 +109,11 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.click(screen.getByText('Step Content'));
 
+    expect(screen.queryByLabelText('Fallback push title')).toBeNull();
+    expect(screen.queryByLabelText('Fallback push body')).toBeNull();
+    expect(screen.queryByLabelText('Push title')).toBeNull();
+    expect(screen.queryByLabelText('Push body')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Insert token' })).toBeTruthy();
     expect(
       (screen.getByLabelText('Variant 1 title') as HTMLInputElement).value
     ).toBe('{{home}} vs {{away}} starts soon.');
@@ -119,6 +124,18 @@ describe('CampaignEditorPage', () => {
       (screen.getByLabelText('Variant 3 body') as HTMLTextAreaElement).value
     ).toBe('Starts now. Be ready.');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Insert token' }));
+    expect(screen.getByRole('button', { name: 'Home team' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Away team' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Away team' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Insert token' })).toBeNull();
+    });
+    expect(
+      (screen.getByLabelText('Variant 1 title') as HTMLInputElement).value
+    ).toBe('{{home}} vs {{away}} starts soon.{{away}}');
+
     fireEvent.change(screen.getByLabelText('Variant 2 title'), {
       target: { value: 'Kickoff is close.' },
     });
@@ -128,7 +145,7 @@ describe('CampaignEditorPage', () => {
       (screen.getByLabelText('Variant 2 title') as HTMLInputElement).value
     ).toBe('Empieza en 15 min.');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
       expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
@@ -328,9 +345,7 @@ describe('CampaignEditorPage', () => {
     pushBodyInput.setSelectionRange(6, 6);
     fireEvent.select(pushBodyInput);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Insert token in body' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Insert token' }));
     fireEvent.click(await screen.findByRole('button', { name: 'First name' }));
 
     await waitFor(() => {

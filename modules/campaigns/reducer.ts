@@ -48,6 +48,7 @@ export interface CampaignEditorTokenTarget {
   stepKey: string;
   locale: CampaignLocale;
   field: 'title' | 'body';
+  variantIndex?: number | null;
 }
 
 interface CampaignEditorTokenSelection {
@@ -139,6 +140,7 @@ export type CampaignEditorAction =
       locale: CampaignLocale;
       field: 'title' | 'body';
       token: string;
+      variantIndex?: number | null;
       selection?: CampaignEditorTokenSelection;
     }
   | {
@@ -435,14 +437,39 @@ export function campaignEditorReducer(
         )
       );
     case 'insertToken': {
+      const currentContent = getCampaignJourneyStepDraft(
+        state.draft,
+        action.stepKey
+      )?.localizedDeliveryContent[action.locale];
+      const variantIndex =
+        typeof action.variantIndex === 'number' ? action.variantIndex : null;
+      const currentVariant =
+        variantIndex !== null ? currentContent?.variants?.[variantIndex] : null;
       const currentValue =
-        getCampaignJourneyStepDraft(state.draft, action.stepKey)
-          ?.localizedDeliveryContent[action.locale]?.[action.field] ?? '';
+        variantIndex !== null
+          ? (currentVariant?.[action.field] ?? '')
+          : (currentContent?.[action.field] ?? '');
       const nextValue = insertTokenAtSelection({
         value: currentValue,
         token: action.token,
         selection: action.selection,
       });
+      const patch =
+        variantIndex !== null
+          ? {
+              variants: (currentContent?.variants ?? []).map(
+                (variant, index) =>
+                  index === variantIndex
+                    ? {
+                        ...variant,
+                        [action.field]: nextValue,
+                      }
+                    : variant
+              ),
+            }
+          : {
+              [action.field]: nextValue,
+            };
 
       return markDirty(
         state,
@@ -450,9 +477,7 @@ export function campaignEditorReducer(
           state.draft,
           action.stepKey,
           action.locale,
-          {
-            [action.field]: nextValue,
-          }
+          patch
         )
       );
     }
