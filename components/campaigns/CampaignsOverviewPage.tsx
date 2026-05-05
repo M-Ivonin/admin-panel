@@ -339,7 +339,7 @@ function getCtrHelper(stats: CampaignsOverviewResponse['stats']): string {
 }
 
 function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
-  return `${stats.reachInProgress.toLocaleString('en-US')} pending or sending`;
+  return `${stats.reachInProgress.toLocaleString('en-US')} queued or available`;
 }
 
 function formatFailureReason(reason: string): string {
@@ -375,6 +375,16 @@ function formatFailureReasons(item: CampaignListItem): string | null {
     .join(' · ');
 }
 
+function formatChannelLabel(channel: CampaignListItem['channel']): string {
+  if (channel === 'in_app') {
+    return 'In-App';
+  }
+
+  return channel
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (value) => value.toUpperCase());
+}
+
 function getOutcomeHint(item: CampaignListItem): string {
   if (item.metric.label === 'goal') {
     if (item.metric.attributionMode === 'trace_required_response') {
@@ -391,7 +401,7 @@ const KPI_HINTS = {
   activeCampaigns:
     'Counts campaigns by status across all campaigns, not just the rows currently shown by filters.',
   deliveredToday:
-    'Delivered today is messages successfully sent today. Failed today is messages that failed today.',
+    'Delivered today is messages sent or shown today. Failed today is messages that failed today.',
   deliveryRate:
     'Share of finished send attempts that were delivered instead of failed. Waiting and skipped messages are not included.',
   avgCtr:
@@ -402,7 +412,7 @@ const KPI_HINTS = {
 
 const ROW_HINTS = {
   audience:
-    'People who match this campaign audience right now and can currently receive push messages.',
+    'People who match this campaign audience right now and can currently receive campaign messages.',
   timing:
     'The next time this campaign is expected to check users or send messages.',
   progress:
@@ -410,15 +420,15 @@ const ROW_HINTS = {
   progressCompletion:
     'Delivered messages compared with all message attempts created by this campaign.',
   audienceNow:
-    'People who match the audience rules now and still have push notifications available.',
+    'People who match the audience rules now and can currently receive campaign messages.',
   delivered:
-    'Messages successfully sent to users.',
+    'Messages sent or shown to users.',
   failed:
     'Messages that could not be sent successfully.',
   queued:
-    'Messages waiting to be sent or being sent now.',
+    'Messages waiting, being sent, or available in-app now.',
   skipped:
-    'Messages the campaign decided not to send.',
+    'Messages the campaign skipped before delivery or after expiration.',
   opened:
     'Delivered messages that users opened.',
   deliveryRate:
@@ -1202,6 +1212,14 @@ export function CampaignsOverviewPage() {
                               bgcolor: `${getStatusColor(item.status)}22`,
                               color: getStatusColor(item.status),
                               textTransform: 'capitalize',
+                            }}
+                          />
+                          <Chip
+                            label={formatChannelLabel(item.channel)}
+                            size="small"
+                            sx={{
+                              bgcolor: '#171717',
+                              color: COLORS.textSecondary,
                             }}
                           />
                           <Chip
