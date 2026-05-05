@@ -41,6 +41,7 @@ import {
 } from '@mui/material';
 import {
   ArrowBack,
+  Add,
   Archive,
   Delete,
   Edit,
@@ -58,18 +59,22 @@ import type {
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignGoalDefinition,
-  CampaignJourneyStep,
+  CampaignJourneyStepDraft,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignSendGuardAction,
+  CampaignStepLocaleContent,
   CampaignStatus,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
 import {
   createEmptyCampaignDraft,
-  createJourneyStep,
   createScheduledCampaignTrigger,
 } from '@/modules/campaigns/defaults';
+import {
+  getCampaignJourneyStepDraft,
+  getCampaignJourneyStepDrafts,
+} from '@/modules/campaigns/journey-step-draft';
 import {
   CampaignEditorStep,
   campaignEditorReducer,
@@ -82,7 +87,6 @@ import {
   canPauseCampaign,
   canScheduleCampaign,
   canSendTestCampaign,
-  getCampaignLocaleReadiness,
   getCampaignValidationSummary,
   MISSING_TRACKED_GOAL_WARNING,
   SEND_GUARD_ACTION_LABELS,
@@ -684,16 +688,13 @@ export function CampaignEditorPage({
     () => getCampaignValidationSummary(state.draft),
     [state.draft]
   );
-  const readiness = useMemo(
-    () =>
-      getCampaignLocaleReadiness(
-        state.draft.content,
-        state.draft.audience.criteria.locales
-      ),
-    [state.draft.audience.criteria.locales, state.draft.content]
-  );
+  const readiness = validation.readiness;
   const reviewModel = useMemo(
     () => buildCampaignReviewModel(state.draft),
+    [state.draft]
+  );
+  const journeyStepDrafts = useMemo(
+    () => getCampaignJourneyStepDrafts(state.draft),
     [state.draft]
   );
 
@@ -846,10 +847,67 @@ export function CampaignEditorPage({
     contentInputRefs.current[field] = event.currentTarget;
     storeContentSelection(field, getInputSelection(event.currentTarget));
     dispatch({
-      type: 'updateStepLocaleContent',
+      type: 'updateJourneyStepDeliveryContent',
       stepKey: state.activeContentStepKey,
       locale: activeLocale,
       patch: field === 'title' ? { title: value } : { body: value },
+    });
+  }
+
+  function handleStepContentVariantChange(
+    index: number,
+    field: CampaignEditorTextField,
+    event: ChangeEvent<CampaignEditorTextInputElement>
+  ) {
+    const value = event.target.value;
+    const variants = [...(activeStepContent?.variants ?? [])];
+    const currentVariant = variants[index] ?? { title: '', body: '' };
+
+    variants[index] = {
+      ...currentVariant,
+      [field]: value,
+    };
+
+    dispatch({
+      type: 'updateJourneyStepDeliveryContent',
+      stepKey: state.activeContentStepKey,
+      locale: activeLocale,
+      patch: { variants },
+    });
+  }
+
+  function addStepContentVariant() {
+    const variants = [...(activeStepContent?.variants ?? [])];
+
+    dispatch({
+      type: 'updateJourneyStepDeliveryContent',
+      stepKey: state.activeContentStepKey,
+      locale: activeLocale,
+      patch: {
+        variants: [
+          ...variants,
+          {
+            title: activeStepContent?.title ?? '',
+            body: activeStepContent?.body ?? '',
+          },
+        ],
+      },
+    });
+  }
+
+  function removeStepContentVariant(index: number) {
+    const variants = (activeStepContent?.variants ?? []).filter(
+      (_, variantIndex) => variantIndex !== index
+    );
+    const patch: Partial<CampaignStepLocaleContent> = {
+      variants: variants.length > 0 ? variants : undefined,
+    };
+
+    dispatch({
+      type: 'updateJourneyStepDeliveryContent',
+      stepKey: state.activeContentStepKey,
+      locale: activeLocale,
+      patch,
     });
   }
 
@@ -1337,16 +1395,15 @@ export function CampaignEditorPage({
   }
 
   function addJourneyStep() {
-    const nextStep = createJourneyStep(state.draft.journey.steps.length + 1);
-
     dispatch({
       type: 'appendJourneyStep',
-      step: nextStep,
       deeplinkTarget: null,
     });
   }
 
-  function renderStepSendGuardControls(step: CampaignJourneyStep): ReactNode {
+  function renderStepSendGuardControls(
+    step: CampaignJourneyStepDraft
+  ): ReactNode {
     const guard = step.sendGuards?.[0] ?? null;
     const selectedAction = guard?.action ?? '';
 
@@ -1375,7 +1432,7 @@ export function CampaignEditorPage({
                   | '';
 
                 dispatch({
-                  type: 'updateJourneyStep',
+                  type: 'updateJourneyStepDraft',
                   stepKey: step.stepKey,
                   patch: {
                     sendGuards: action ? [{ action }] : [],
@@ -1417,8 +1474,10 @@ export function CampaignEditorPage({
     dispatch({ type: 'setActiveStep', step: nextStep });
   }
 
-  const activeStepContent =
-    state.draft.content[state.activeContentStepKey]?.[activeLocale];
+  const activeStepContent = getCampaignJourneyStepDraft(
+    state.draft,
+    state.activeContentStepKey
+  )?.localizedDeliveryContent[activeLocale];
   const goalRewardPoints = state.draft.goalDefinition?.rewardPoints ?? 0;
   const stateBasedTrigger =
     state.draft.trigger.type === 'state_based' ? state.draft.trigger : null;
@@ -2433,7 +2492,7 @@ export function CampaignEditorPage({
                     }
                   >
                     <Stack spacing={2}>
-                      {state.draft.journey.steps.map((step) => (
+                      {journeyStepDrafts.map((step) => (
                         <Paper
                           key={step.stepKey}
                           sx={{
@@ -2494,7 +2553,7 @@ export function CampaignEditorPage({
                                 }
                                 onChange={(event) =>
                                   dispatch({
-                                    type: 'updateJourneyStep',
+                                    type: 'updateJourneyStepDraft',
                                     stepKey: step.stepKey,
                                     patch: {
                                       delayMinutes:
@@ -2517,7 +2576,7 @@ export function CampaignEditorPage({
                                 value={step.sendWindowStart}
                                 onChange={(event) =>
                                   dispatch({
-                                    type: 'updateJourneyStep',
+                                    type: 'updateJourneyStepDraft',
                                     stepKey: step.stepKey,
                                     patch: {
                                       sendWindowStart: event.target.value,
@@ -2531,7 +2590,7 @@ export function CampaignEditorPage({
                                 value={step.sendWindowEnd}
                                 onChange={(event) =>
                                   dispatch({
-                                    type: 'updateJourneyStep',
+                                    type: 'updateJourneyStepDraft',
                                     stepKey: step.stepKey,
                                     patch: {
                                       sendWindowEnd: event.target.value,
@@ -2557,7 +2616,7 @@ export function CampaignEditorPage({
                                 helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
                                 onChange={(event) =>
                                   dispatch({
-                                    type: 'updateJourneyStep',
+                                    type: 'updateJourneyStepDraft',
                                     stepKey: step.stepKey,
                                     patch: {
                                       frequencyCapHours:
@@ -2591,7 +2650,7 @@ export function CampaignEditorPage({
                                   checked={step.sameLocalTimeNextDay}
                                   onChange={(event) =>
                                     dispatch({
-                                      type: 'updateJourneyStep',
+                                      type: 'updateJourneyStepDraft',
                                       stepKey: step.stepKey,
                                       patch: {
                                         sameLocalTimeNextDay:
@@ -2620,7 +2679,7 @@ export function CampaignEditorPage({
                       flexWrap="wrap"
                       useFlexGap
                     >
-                      {state.draft.journey.steps.map((step) => (
+                      {journeyStepDrafts.map((step) => (
                         <StepButton
                           key={step.stepKey}
                           label={`Step ${step.order}`}
@@ -2670,7 +2729,11 @@ export function CampaignEditorPage({
                         </Stack>
 
                         <TextField
-                          label="Push title"
+                          label={
+                            activeStepContent.variants?.length
+                              ? 'Fallback push title'
+                              : 'Push title'
+                          }
                           value={activeStepContent.title}
                           inputRef={(element) => {
                             contentInputRefs.current.title = element;
@@ -2692,7 +2755,11 @@ export function CampaignEditorPage({
                           fullWidth
                         />
                         <TextField
-                          label="Push body"
+                          label={
+                            activeStepContent.variants?.length
+                              ? 'Fallback push body'
+                              : 'Push body'
+                          }
                           value={activeStepContent.body}
                           inputRef={(element) => {
                             contentInputRefs.current.body = element;
@@ -2715,12 +2782,110 @@ export function CampaignEditorPage({
                           minRows={4}
                           fullWidth
                         />
+                        <Stack spacing={1.5}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            justifyContent="space-between"
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ color: COLORS.textPrimary }}
+                            >
+                              Message variants
+                            </Typography>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<Add fontSize="small" />}
+                              onClick={addStepContentVariant}
+                            >
+                              Add variant
+                            </Button>
+                          </Stack>
+
+                          {activeStepContent.variants?.length ? (
+                            <Stack spacing={1.5}>
+                              {activeStepContent.variants.map(
+                                (variant, index) => (
+                                  <Paper
+                                    key={index}
+                                    variant="outlined"
+                                    sx={{
+                                      p: 2,
+                                      backgroundColor: COLORS.surface,
+                                      borderColor: COLORS.stroke,
+                                      borderRadius: 2,
+                                    }}
+                                  >
+                                    <Stack spacing={1.5}>
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        justifyContent="space-between"
+                                      >
+                                        <Typography
+                                          variant="body2"
+                                          sx={{ color: COLORS.textSecondary }}
+                                        >
+                                          Variant {index + 1}
+                                        </Typography>
+                                        <IconButton
+                                          aria-label={`Remove variant ${
+                                            index + 1
+                                          }`}
+                                          size="small"
+                                          onClick={() =>
+                                            removeStepContentVariant(index)
+                                          }
+                                        >
+                                          <Delete fontSize="small" />
+                                        </IconButton>
+                                      </Stack>
+                                      <TextField
+                                        label={`Variant ${index + 1} title`}
+                                        value={variant.title}
+                                        onChange={(event) =>
+                                          handleStepContentVariantChange(
+                                            index,
+                                            'title',
+                                            event
+                                          )
+                                        }
+                                        fullWidth
+                                      />
+                                      <TextField
+                                        label={`Variant ${index + 1} body`}
+                                        value={variant.body}
+                                        onChange={(event) =>
+                                          handleStepContentVariantChange(
+                                            index,
+                                            'body',
+                                            event
+                                          )
+                                        }
+                                        multiline
+                                        minRows={2}
+                                        fullWidth
+                                      />
+                                    </Stack>
+                                  </Paper>
+                                )
+                              )}
+                            </Stack>
+                          ) : (
+                            <Typography sx={{ color: COLORS.textSecondary }}>
+                              No variants configured.
+                            </Typography>
+                          )}
+                        </Stack>
                         <TextField
                           label="Fallback first name"
                           value={activeStepContent.fallbackFirstName}
                           onChange={(event) =>
                             dispatch({
-                              type: 'updateStepLocaleContent',
+                              type: 'updateJourneyStepDeliveryContent',
                               stepKey: state.activeContentStepKey,
                               locale: activeLocale,
                               patch: { fallbackFirstName: event.target.value },
@@ -2959,7 +3124,7 @@ export function CampaignEditorPage({
                 Trigger: {reviewModel.trigger[0]?.value}
               </Typography>
               <Typography sx={{ color: COLORS.textSecondary }}>
-                Journey steps: {state.draft.journey.steps.length}
+                Journey steps: {journeyStepDrafts.length}
               </Typography>
 
               <Divider sx={{ borderColor: COLORS.stroke }} />

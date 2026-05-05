@@ -1,10 +1,10 @@
-import { createJourneyStep } from '@/modules/campaigns/defaults';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
   CampaignEditorStep,
   campaignEditorReducer,
   createCampaignEditorState,
 } from '@/modules/campaigns/reducer';
+import { getCampaignJourneyStepDrafts } from '@/modules/campaigns/journey-step-draft';
 
 describe('campaignEditorReducer', () => {
   it('changes the top-level trigger through the shared draft', () => {
@@ -38,12 +38,10 @@ describe('campaignEditorReducer', () => {
 
     const withStepTwo = campaignEditorReducer(initialState, {
       type: 'appendJourneyStep',
-      step: createJourneyStep(2),
       deeplinkTarget: null,
     });
     const withStepThree = campaignEditorReducer(withStepTwo, {
       type: 'appendJourneyStep',
-      step: createJourneyStep(3),
       deeplinkTarget: null,
     });
     const afterDelete = campaignEditorReducer(withStepThree, {
@@ -51,18 +49,14 @@ describe('campaignEditorReducer', () => {
       stepKey: 'step_2',
     });
 
-    expect(withStepThree.draft.journey.steps.map((step) => step.stepKey)).toEqual([
-      'step_1',
-      'step_2',
-      'step_3',
-    ]);
-    expect(afterDelete.draft.journey.steps.map((step) => step.stepKey)).toEqual([
-      'step_1',
-      'step_3',
-    ]);
+    expect(
+      withStepThree.draft.journey.steps.map((step) => step.stepKey)
+    ).toEqual(['step_1', 'step_2', 'step_3']);
+    expect(afterDelete.draft.journey.steps.map((step) => step.stepKey)).toEqual(
+      ['step_1', 'step_3']
+    );
     expect(afterDelete.draft.journey.steps.map((step) => step.order)).toEqual([
-      1,
-      2,
+      1, 2,
     ]);
   });
 
@@ -84,7 +78,7 @@ describe('campaignEditorReducer', () => {
     });
 
     expect(nextState.draft.content.step_1.en.title).toBe(
-      'Welcome {{first_name}}back',
+      'Welcome {{first_name}}back'
     );
     expect(nextState.isDirty).toBe(true);
   });
@@ -136,7 +130,6 @@ describe('campaignEditorReducer', () => {
     const initialState = createCampaignEditorState(initialDraft);
     const nextState = campaignEditorReducer(initialState, {
       type: 'appendJourneyStep',
-      step: createJourneyStep(2),
       deeplinkTarget: null,
     });
 
@@ -146,28 +139,41 @@ describe('campaignEditorReducer', () => {
     expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
   });
 
-  it('adds and removes an Opened app send guard on a journey step', () => {
+  it('updates timing, Send Guard, and localized Delivery content through a journey step draft', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 
-    const withGuard = campaignEditorReducer(initialState, {
-      type: 'updateJourneyStep',
+    const withTimingAndGuard = campaignEditorReducer(initialState, {
+      type: 'updateJourneyStepDraft',
       stepKey: 'step_1',
       patch: {
+        delayMinutes: 45,
         sendGuards: [{ action: 'opened_app' }],
       },
     });
-    const withoutGuard = campaignEditorReducer(withGuard, {
-      type: 'updateJourneyStep',
+    const withDeliveryContent = campaignEditorReducer(withTimingAndGuard, {
+      type: 'updateJourneyStepDeliveryContent',
+      stepKey: 'step_1',
+      locale: 'en',
+      patch: {
+        title: 'Welcome back',
+        body: 'Open the app to continue',
+      },
+    });
+    const withoutGuard = campaignEditorReducer(withDeliveryContent, {
+      type: 'updateJourneyStepDraft',
       stepKey: 'step_1',
       patch: {
         sendGuards: [],
       },
     });
+    const [stepDraft] = getCampaignJourneyStepDrafts(withDeliveryContent.draft);
 
-    expect(withGuard.draft.journey.steps[0].sendGuards).toEqual([
-      { action: 'opened_app' },
-    ]);
+    expect(stepDraft.delayMinutes).toBe(45);
+    expect(stepDraft.sendGuards).toEqual([{ action: 'opened_app' }]);
+    expect(stepDraft.localizedDeliveryContent.en).toMatchObject({
+      title: 'Welcome back',
+      body: 'Open the app to continue',
+    });
     expect(withoutGuard.draft.journey.steps[0].sendGuards).toEqual([]);
   });
-
 });

@@ -340,6 +340,10 @@ export interface CampaignJourneyStep {
   sendGuards?: CampaignSendGuard[];
 }
 
+export interface CampaignJourneyStepDraft extends CampaignJourneyStep {
+  localizedDeliveryContent: Record<CampaignLocale, CampaignStepLocaleContent>;
+}
+
 export interface CampaignJourneyDefinition {
   steps: CampaignJourneyStep[];
 }

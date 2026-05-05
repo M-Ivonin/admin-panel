@@ -7,17 +7,25 @@ import type {
   CampaignDraft,
   CampaignEditorCatalog,
   CampaignGoalDefinition,
-  CampaignJourneyStep,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignTriggerDefinition,
   EstimateAudienceResponse,
 } from '@/modules/campaigns/contracts';
 import {
-  createBlankStepLocaleMap,
   createScheduledCampaignTrigger,
   createEmptyCampaignDraft,
 } from '@/modules/campaigns/defaults';
+import {
+  appendCampaignJourneyStepDraft,
+  changeCampaignJourneyStepDeeplink,
+  getCampaignJourneyStepDraft,
+  getFirstJourneyStepKey,
+  removeCampaignJourneyStepDraft,
+  updateCampaignJourneyStepDeliveryContent,
+  updateCampaignJourneyStepDraft,
+  type CampaignJourneyStepDraftPatch,
+} from '@/modules/campaigns/journey-step-draft';
 
 export enum CampaignEditorStep {
   AUDIENCE = 'audience',
@@ -108,7 +116,6 @@ export type CampaignEditorAction =
     }
   | {
       type: 'appendJourneyStep';
-      step: CampaignJourneyStep;
       deeplinkTarget: CampaignDeeplinkTarget | null;
     }
   | {
@@ -116,12 +123,12 @@ export type CampaignEditorAction =
       stepKey: string;
     }
   | {
-      type: 'updateJourneyStep';
+      type: 'updateJourneyStepDraft';
       stepKey: string;
-      patch: Partial<Omit<CampaignJourneyStep, 'stepKey'>>;
+      patch: CampaignJourneyStepDraftPatch;
     }
   | {
-      type: 'updateStepLocaleContent';
+      type: 'updateJourneyStepDeliveryContent';
       stepKey: string;
       locale: CampaignLocale;
       patch: Partial<CampaignDraft['content'][string][CampaignLocale]>;
@@ -208,20 +215,6 @@ function cloneDraft(draft: CampaignDraft): CampaignDraft {
   return cloneValue(draft);
 }
 
-function getFirstStepKey(draft: CampaignDraft): string {
-  return draft.journey.steps[0]?.stepKey ?? 'step_1';
-}
-
-function normalizeJourneySteps(
-  steps: CampaignJourneyStep[]
-): CampaignJourneyStep[] {
-  return steps.map((step, index) => ({
-    ...step,
-    order: index + 1,
-    anchor: index === 0 ? { type: 'trigger' } : { type: 'previous_step' },
-  }));
-}
-
 function normalizeNewScheduledTrigger(
   trigger: CampaignTriggerDefinition
 ): CampaignTriggerDefinition {
@@ -274,7 +267,7 @@ export function createCampaignEditorState(
     catalog,
     estimate: null,
     activeStep: CampaignEditorStep.AUDIENCE,
-    activeContentStepKey: getFirstStepKey(initialDraft),
+    activeContentStepKey: getFirstJourneyStepKey(initialDraft),
     isDirty: false,
     dialogs: { ...DEFAULT_DIALOGS },
     tokenTarget: null,
@@ -313,7 +306,7 @@ export function campaignEditorReducer(
         draft: nextDraft,
         catalog: action.catalog ?? state.catalog,
         activeStep: action.activeStep ?? state.activeStep,
-        activeContentStepKey: getFirstStepKey(nextDraft),
+        activeContentStepKey: getFirstJourneyStepKey(nextDraft),
         estimate: null,
         isDirty: false,
         dialogs: { ...DEFAULT_DIALOGS },
@@ -399,98 +392,69 @@ export function campaignEditorReducer(
         ...state.draft,
         trigger: action.trigger,
       });
-    case 'appendJourneyStep':
-      return markDirty(
-        state,
-        {
-          ...state.draft,
-          journey: {
-            steps: [...state.draft.journey.steps, action.step],
-          },
-          content: {
-            ...state.draft.content,
-            [action.step.stepKey]: createBlankStepLocaleMap(
-              action.deeplinkTarget
-            ),
-          },
-        },
-        action.step.stepKey
+    case 'appendJourneyStep': {
+      const nextDraft = appendCampaignJourneyStepDraft(
+        state.draft,
+        action.deeplinkTarget
       );
+      const nextStepKey =
+        nextDraft.journey.steps[nextDraft.journey.steps.length - 1]?.stepKey ??
+        getFirstJourneyStepKey(nextDraft);
+
+      return markDirty(state, nextDraft, nextStepKey);
+    }
     case 'removeJourneyStep': {
-      const nextSteps = normalizeJourneySteps(
-        state.draft.journey.steps.filter(
-          (step) => step.stepKey !== action.stepKey
-        )
+      const nextDraft = removeCampaignJourneyStepDraft(
+        state.draft,
+        action.stepKey
       );
-      const nextContent = Object.fromEntries(
-        Object.entries(state.draft.content).filter(
-          ([stepKey]) => stepKey !== action.stepKey
-        )
-      ) as CampaignDraft['content'];
       const nextActiveStepKey =
         state.activeContentStepKey === action.stepKey
-          ? (nextSteps[0]?.stepKey ?? getFirstStepKey(state.draft))
+          ? getFirstJourneyStepKey(nextDraft)
           : state.activeContentStepKey;
 
+      return markDirty(state, nextDraft, nextActiveStepKey);
+    }
+    case 'updateJourneyStepDraft':
       return markDirty(
         state,
-        {
-          ...state.draft,
-          journey: {
-            steps: nextSteps,
-          },
-          content: nextContent,
-        },
-        nextActiveStepKey
+        updateCampaignJourneyStepDraft(
+          state.draft,
+          action.stepKey,
+          action.patch
+        )
       );
-    }
-    case 'updateJourneyStep':
-      return markDirty(state, {
-        ...state.draft,
-        journey: {
-          steps: state.draft.journey.steps.map((step) =>
-            step.stepKey === action.stepKey
-              ? { ...step, ...action.patch }
-              : step
-          ),
-        },
-      });
-    case 'updateStepLocaleContent':
-      return markDirty(state, {
-        ...state.draft,
-        content: {
-          ...state.draft.content,
-          [action.stepKey]: {
-            ...state.draft.content[action.stepKey],
-            [action.locale]: {
-              ...state.draft.content[action.stepKey][action.locale],
-              ...action.patch,
-            },
-          },
-        },
-      });
+    case 'updateJourneyStepDeliveryContent':
+      return markDirty(
+        state,
+        updateCampaignJourneyStepDeliveryContent(
+          state.draft,
+          action.stepKey,
+          action.locale,
+          action.patch
+        )
+      );
     case 'insertToken': {
       const currentValue =
-        state.draft.content[action.stepKey][action.locale][action.field];
+        getCampaignJourneyStepDraft(state.draft, action.stepKey)
+          ?.localizedDeliveryContent[action.locale]?.[action.field] ?? '';
       const nextValue = insertTokenAtSelection({
         value: currentValue,
         token: action.token,
         selection: action.selection,
       });
 
-      return markDirty(state, {
-        ...state.draft,
-        content: {
-          ...state.draft.content,
-          [action.stepKey]: {
-            ...state.draft.content[action.stepKey],
-            [action.locale]: {
-              ...state.draft.content[action.stepKey][action.locale],
-              [action.field]: nextValue,
-            },
-          },
-        },
-      });
+      return markDirty(
+        state,
+        updateCampaignJourneyStepDeliveryContent(
+          state.draft,
+          action.stepKey,
+          action.locale,
+          {
+            [action.field]: nextValue,
+          }
+        )
+      );
     }
     case 'changeGoalDefinition':
       return markDirty(state, {
@@ -498,19 +462,15 @@ export function campaignEditorReducer(
         goalDefinition: action.goalDefinition,
       });
     case 'changeDeeplink':
-      return markDirty(state, {
-        ...state.draft,
-        content: {
-          ...state.draft.content,
-          [action.stepKey]: {
-            ...state.draft.content[action.stepKey],
-            [action.locale]: {
-              ...state.draft.content[action.stepKey][action.locale],
-              deeplinkTarget: action.target,
-            },
-          },
-        },
-      });
+      return markDirty(
+        state,
+        changeCampaignJourneyStepDeeplink(
+          state.draft,
+          action.stepKey,
+          action.locale,
+          action.target
+        )
+      );
     case 'openDialog':
       return {
         ...state,
@@ -539,7 +499,7 @@ export function campaignEditorReducer(
       return {
         ...state,
         draft: nextDraft,
-        activeContentStepKey: getFirstStepKey(nextDraft),
+        activeContentStepKey: getFirstJourneyStepKey(nextDraft),
         isDirty: false,
         lastActionResult: action.message
           ? {
@@ -555,7 +515,7 @@ export function campaignEditorReducer(
       return {
         ...state,
         draft: nextDraft,
-        activeContentStepKey: getFirstStepKey(nextDraft),
+        activeContentStepKey: getFirstJourneyStepKey(nextDraft),
         isDirty: action.draft ? false : state.isDirty,
         lastActionResult: {
           kind: action.kind,
@@ -581,7 +541,7 @@ export function campaignEditorReducer(
       return {
         ...state,
         draft: nextDraft,
-        activeContentStepKey: getFirstStepKey(nextDraft),
+        activeContentStepKey: getFirstJourneyStepKey(nextDraft),
         estimate: null,
         isDirty: false,
         dialogs: {

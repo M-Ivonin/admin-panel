@@ -696,18 +696,52 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
             en: {
               title: '{{home}} vs {{away}} starts soon.',
               body: 'Check insights before kickoff.',
+              variants: [
+                {
+                  title: '{{home}} vs {{away}} starts soon.',
+                  body: 'Check insights before kickoff.',
+                },
+                {
+                  title: 'Kickoff in 15 min.',
+                  body: '{{home}} vs {{away}}.',
+                },
+                {
+                  title: '{{home}} vs {{away}}.',
+                  body: 'Starts now. Be ready.',
+                },
+              ],
               fallbackFirstName: 'there',
               deeplinkTarget: 'open_match_center',
             },
             es: {
               title: '{{home}} vs {{away}} empieza pronto.',
               body: 'Mira los insights antes.',
+              variants: [
+                {
+                  title: '{{home}} vs {{away}} empieza pronto.',
+                  body: 'Mira los insights antes.',
+                },
+                {
+                  title: 'Empieza en 15 min.',
+                  body: '{{home}} vs {{away}}.',
+                },
+              ],
               fallbackFirstName: 'amigo',
               deeplinkTarget: 'open_match_center',
             },
             pt: {
               title: '{{home}} vs {{away}} começa em breve.',
               body: 'Veja os insights antes.',
+              variants: [
+                {
+                  title: '{{home}} vs {{away}} começa em breve.',
+                  body: 'Veja os insights antes.',
+                },
+                {
+                  title: 'Começa em 15 min.',
+                  body: '{{home}} vs {{away}}.',
+                },
+              ],
               fallbackFirstName: 'amigo',
               deeplinkTarget: 'open_match_center',
             },

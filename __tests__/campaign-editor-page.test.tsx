@@ -95,6 +95,62 @@ describe('CampaignEditorPage', () => {
     expect(screen.getByText('No follow-up action')).toBeTruthy();
   });
 
+  it('shows and persists localized message variants', async () => {
+    const updateCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'updateCampaignDraft'
+    );
+
+    render(
+      <CampaignEditorPage mode="edit" campaignId="cmp_favorite_match_kickoff" />
+    );
+
+    await screen.findByDisplayValue('favorite_match_kickoff');
+
+    fireEvent.click(screen.getByText('Step Content'));
+
+    expect(
+      (screen.getByLabelText('Variant 1 title') as HTMLInputElement).value
+    ).toBe('{{home}} vs {{away}} starts soon.');
+    expect(
+      (screen.getByLabelText('Variant 2 title') as HTMLInputElement).value
+    ).toBe('Kickoff in 15 min.');
+    expect(
+      (screen.getByLabelText('Variant 3 body') as HTMLTextAreaElement).value
+    ).toBe('Starts now. Be ready.');
+
+    fireEvent.change(screen.getByLabelText('Variant 2 title'), {
+      target: { value: 'Kickoff is close.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'ES' }));
+
+    expect(
+      (screen.getByLabelText('Variant 2 title') as HTMLInputElement).value
+    ).toBe('Empieza en 15 min.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(updateCampaignDraftSpy).toHaveBeenCalledWith(
+        'cmp_favorite_match_kickoff',
+        expect.objectContaining({
+          content: expect.objectContaining({
+            step_1: expect.objectContaining({
+              en: expect.objectContaining({
+                variants: expect.arrayContaining([
+                  expect.objectContaining({
+                    title: 'Kickoff is close.',
+                    body: '{{home}} vs {{away}}.',
+                  }),
+                ]),
+              }),
+            }),
+          }),
+        })
+      );
+    });
+  });
+
   it('persists drafts even when different follow-up actions are configured across steps', async () => {
     render(<CampaignEditorPage mode="create" />);
 

@@ -6,12 +6,16 @@ import { RetentionStage } from '@/lib/api/users';
 import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import type {
   CampaignDraft,
-  CampaignJourneyStep,
+  CampaignJourneyStepDraft,
   CampaignLocale,
   CampaignReadiness,
   CampaignSendGuardAction,
   CampaignStepLocaleContent,
 } from '@/modules/campaigns/contracts';
+import {
+  getCampaignJourneyStepDrafts,
+  getMissingJourneyStepContentKeys,
+} from '@/modules/campaigns/journey-step-draft';
 import { CampaignEditorStep } from '@/modules/campaigns/reducer';
 import {
   describeCampaignScheduleRule,
@@ -130,21 +134,48 @@ function getLocaleWarnings(
   content: CampaignStepLocaleContent
 ): string[] {
   const warnings: string[] = [];
-  const usedTokens = [
-    ...extractTokens(content.title),
-    ...extractTokens(content.body),
+  const variants = content.variants ?? [];
+  const copyBlocks = [
+    { title: content.title, body: content.body },
+    ...variants,
   ];
+  const usedTokens = copyBlocks.flatMap((copy) => [
+    ...extractTokens(copy.title),
+    ...extractTokens(copy.body),
+  ]);
 
-  if (!hasMeaningfulText(content.title) && !hasMeaningfulText(content.body)) {
+  if (
+    !copyBlocks.some(
+      (copy) => hasMeaningfulText(copy.title) || hasMeaningfulText(copy.body)
+    )
+  ) {
     warnings.push(`Step ${stepKey} · locale ${locale.toUpperCase()} is empty.`);
     return warnings;
   }
 
-  if (!hasMeaningfulText(content.title) || !hasMeaningfulText(content.body)) {
+  if (
+    variants.length === 0 &&
+    (!hasMeaningfulText(content.title) || !hasMeaningfulText(content.body))
+  ) {
     warnings.push(
       `Step ${stepKey} · locale ${locale.toUpperCase()} still needs title and body copy.`
     );
   }
+
+  variants.forEach((variant, index) => {
+    const hasAnyText =
+      hasMeaningfulText(variant.title) || hasMeaningfulText(variant.body);
+    if (
+      hasAnyText &&
+      (!hasMeaningfulText(variant.title) || !hasMeaningfulText(variant.body))
+    ) {
+      warnings.push(
+        `Step ${stepKey} · locale ${locale.toUpperCase()} variant ${
+          index + 1
+        } still needs title and body copy.`
+      );
+    }
+  });
 
   if (
     usedTokens.includes('{{first_name}}') &&
@@ -220,7 +251,7 @@ function describeTriggerDetails(draft: CampaignDraft): string {
   });
 }
 
-function describeJourneyStep(step: CampaignJourneyStep): string {
+function describeJourneyStep(step: CampaignJourneyStepDraft): string {
   const delayLabel = step.sameLocalTimeNextDay
     ? 'next day at the same local time'
     : `${step.delayMinutes ?? 0} min after the previous anchor`;
@@ -286,6 +317,31 @@ export function getCampaignLocaleReadiness(
   return aggregate;
 }
 
+function getCampaignJourneyStepDraftReadiness(
+  stepDrafts: CampaignJourneyStepDraft[],
+  locales: CampaignLocale[]
+): Record<CampaignLocale, CampaignReadiness> {
+  const aggregate: Record<CampaignLocale, CampaignReadiness> = {
+    en: 'ready',
+    es: 'ready',
+    pt: 'ready',
+  };
+
+  stepDrafts.forEach((stepDraft) => {
+    const readiness = getCampaignStepLocaleReadiness(
+      stepDraft.localizedDeliveryContent
+    );
+    locales.forEach((locale) => {
+      aggregate[locale] = combineReadiness(
+        aggregate[locale],
+        readiness[locale]
+      );
+    });
+  });
+
+  return aggregate;
+}
+
 /**
  * Lists all tokens referenced across all step content blocks.
  */
@@ -306,9 +362,11 @@ export function getUsedCampaignTokens(
     | '{{bonus_points}}'
   >();
 
-  Object.values(draft.content).forEach((stepContent) => {
-    (Object.keys(stepContent) as CampaignLocale[]).forEach((locale) => {
-      const content = stepContent[locale];
+  getCampaignJourneyStepDrafts(draft).forEach((stepDraft) => {
+    (
+      Object.keys(stepDraft.localizedDeliveryContent) as CampaignLocale[]
+    ).forEach((locale) => {
+      const content = stepDraft.localizedDeliveryContent[locale];
       const copyBlocks = [
         { title: content.title, body: content.body },
         ...(content.variants ?? []),
@@ -345,20 +403,26 @@ export function getCampaignValidationSummary(
   const errors: string[] = [];
   const warnings: string[] = [];
   const selectedLocales = draft.audience.criteria.locales;
+  const stepDrafts = getCampaignJourneyStepDrafts(draft);
+  const missingContentStepKeys = new Set(
+    getMissingJourneyStepContentKeys(draft)
+  );
 
   if (draft.goalDefinition === null) {
     warnings.push(MISSING_TRACKED_GOAL_WARNING);
   }
 
   const stepReadiness = Object.fromEntries(
-    Object.entries(draft.content).map(([stepKey, stepContent]) => [
-      stepKey,
-      (Object.keys(stepContent) as CampaignLocale[]).reduce(
+    stepDrafts.map((stepDraft) => [
+      stepDraft.stepKey,
+      (
+        Object.keys(stepDraft.localizedDeliveryContent) as CampaignLocale[]
+      ).reduce(
         (accumulator, locale) => {
-          const localeContent = stepContent[locale];
+          const localeContent = stepDraft.localizedDeliveryContent[locale];
           const localeWarnings = getLocaleWarnings(
             locale,
-            stepKey,
+            stepDraft.stepKey,
             localeContent
           );
           if (selectedLocales.includes(locale)) {
@@ -382,7 +446,10 @@ export function getCampaignValidationSummary(
       ),
     ])
   ) as Record<string, Record<CampaignLocale, CampaignReadiness>>;
-  const readiness = getCampaignLocaleReadiness(draft.content, selectedLocales);
+  const readiness = getCampaignJourneyStepDraftReadiness(
+    stepDrafts,
+    selectedLocales
+  );
   const usedTokens = getUsedCampaignTokens(draft);
 
   if (!hasMeaningfulText(draft.name)) {
@@ -417,7 +484,7 @@ export function getCampaignValidationSummary(
   }
 
   const stepKeySet = new Set<string>();
-  draft.journey.steps.forEach((step, index) => {
+  stepDrafts.forEach((step, index) => {
     if (stepKeySet.has(step.stepKey)) {
       errors.push(`Duplicate journey step key: ${step.stepKey}.`);
     }
@@ -501,8 +568,8 @@ export function getCampaignValidationSummary(
     );
   }
 
-  draft.journey.steps.forEach((step) => {
-    if (!draft.content[step.stepKey]) {
+  stepDrafts.forEach((step) => {
+    if (missingContentStepKeys.has(step.stepKey)) {
       errors.push(`Missing content map for ${step.stepKey}.`);
       return;
     }
@@ -518,14 +585,16 @@ export function getCampaignValidationSummary(
 
   if (
     usedTokens.includes('{{first_name}}') &&
-    Object.values(draft.content).some((stepContent) =>
+    stepDrafts.some((stepDraft) =>
       selectedLocales.some(
         (locale) =>
           [
-            ...extractTokens(stepContent[locale].title),
-            ...extractTokens(stepContent[locale].body),
+            ...extractTokens(stepDraft.localizedDeliveryContent[locale].title),
+            ...extractTokens(stepDraft.localizedDeliveryContent[locale].body),
           ].includes('{{first_name}}') &&
-          !hasMeaningfulText(stepContent[locale].fallbackFirstName)
+          !hasMeaningfulText(
+            stepDraft.localizedDeliveryContent[locale].fallbackFirstName
+          )
       )
     )
   ) {
@@ -629,6 +698,7 @@ export function buildCampaignReviewModel(
   draft: CampaignDraft
 ): CampaignReviewModel {
   const validation = getCampaignValidationSummary(draft);
+  const stepDrafts = getCampaignJourneyStepDrafts(draft);
   const selectedUserIds = draft.audience.criteria.userIds ?? [];
   const localeList = draft.audience.criteria.locales
     .map((locale) => locale.toUpperCase())
@@ -679,11 +749,11 @@ export function buildCampaignReviewModel(
       { label: 'Trigger', value: formatTrigger(draft) },
       { label: 'Details', value: describeTriggerDetails(draft) },
     ],
-    journey: draft.journey.steps.map((step) => ({
+    journey: stepDrafts.map((step) => ({
       label: `Step ${step.order}`,
       value: describeJourneyStep(step),
     })),
-    content: draft.journey.steps.flatMap((step) =>
+    content: stepDrafts.flatMap((step) =>
       draft.audience.criteria.locales.map((locale) => ({
         label: `Step ${step.order} · ${locale.toUpperCase()}`,
         value:
