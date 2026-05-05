@@ -286,6 +286,162 @@ describe('CampaignsOverviewPage', () => {
     }
   });
 
+  it('renders in-app exposure, action opens, and expired diagnostics', async () => {
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        stats: {
+          activeCampaigns: 1,
+          pausedCampaigns: 0,
+          scheduledCampaigns: 0,
+          sentToday: 0,
+          deliveredRate: 100,
+          avgCtr: 50,
+          ctrDeltaVsPrev7d: 0,
+          reachInProgress: 1,
+        },
+        items: [
+          {
+            id: 'cmp_in_app',
+            name: 'In-app exposure campaign',
+            goal: 'Open rewards wallet',
+            channel: 'in_app',
+            status: 'active',
+            entryTriggerType: 'state_based',
+            audience: {
+              estimate: 4,
+              currentEstimate: 4,
+              label: 'Current Users',
+            },
+            timing: {
+              label: 'Next send',
+              timestamp: '2026-04-17T10:00:00.000Z',
+            },
+            progress: {
+              sentCount: 2,
+              totalCount: 4,
+              failedCount: 0,
+              skippedCount: 1,
+              inProgressCount: 1,
+              openCount: 1,
+              deliveredRate: 100,
+              ctr: 50,
+              progressPercent: 50,
+              failureReasons: [{ reason: 'in_app_expired', count: 1 }],
+            },
+            metric: {
+              label: 'ctr',
+              value: '50.0%',
+            },
+            owner: {
+              ownerName: 'CRM bot',
+              activityLabel: 'Active',
+            },
+            updatedAt: '2026-04-17T09:00:00.000Z',
+            localeReadiness: {
+              en: 'ready',
+            },
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      expect(await screen.findByText('In-app exposure campaign')).toBeTruthy();
+      expect(screen.getByText('In-App')).toBeTruthy();
+      expect(screen.getByText(/in app expired: 1/)).toBeTruthy();
+      expect(screen.getAllByText('Delivered').length).toBeGreaterThan(0);
+      expect(screen.getByText('2')).toBeTruthy();
+      expect(screen.getByText('Opened')).toBeTruthy();
+      expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+      expect(screen.getByText('CTR')).toBeTruthy();
+      expect(screen.getAllByText('50%').length).toBeGreaterThan(0);
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
+  it('renders hybrid as one aggregate channel without path breakdown', async () => {
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        stats: {
+          activeCampaigns: 1,
+          pausedCampaigns: 0,
+          scheduledCampaigns: 0,
+          sentToday: 0,
+          deliveredRate: 80,
+          avgCtr: 50,
+          ctrDeltaVsPrev7d: 0,
+          reachInProgress: 1,
+        },
+        items: [
+          {
+            id: 'cmp_hybrid',
+            name: 'Hybrid rewards campaign',
+            goal: 'Open rewards wallet',
+            channel: 'hybrid',
+            status: 'active',
+            entryTriggerType: 'state_based',
+            audience: {
+              estimate: 6,
+              currentEstimate: 6,
+              label: 'Current Users',
+            },
+            timing: {
+              label: 'Next send',
+              timestamp: '2026-04-17T10:00:00.000Z',
+            },
+            progress: {
+              sentCount: 4,
+              totalCount: 6,
+              failedCount: 1,
+              skippedCount: 0,
+              inProgressCount: 1,
+              openCount: 2,
+              deliveredRate: 80,
+              ctr: 50,
+              progressPercent: 66.7,
+              failureReasons: [{ reason: 'invalid_fcm_token', count: 1 }],
+            },
+            metric: {
+              label: 'ctr',
+              value: '50.0%',
+            },
+            owner: {
+              ownerName: 'CRM bot',
+              activityLabel: 'Active',
+            },
+            updatedAt: '2026-04-17T09:00:00.000Z',
+            localeReadiness: {
+              en: 'ready',
+            },
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      expect(await screen.findByText('Hybrid rewards campaign')).toBeTruthy();
+      expect(screen.getByText('Hybrid')).toBeTruthy();
+      expect(screen.queryByText(/Push vs In-App/i)).toBeNull();
+      expect(screen.queryByText(/Push path/i)).toBeNull();
+      expect(screen.queryByText(/In-App path/i)).toBeNull();
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
   it('shows locale readiness only for selected campaign locales', async () => {
     const overviewSpy = jest
       .spyOn(campaignsRepository, 'getCampaignsOverview')

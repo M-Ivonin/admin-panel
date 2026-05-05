@@ -3,6 +3,7 @@ import type {
   CampaignGoalDefinition,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
+import { withInAppExpirationDefault } from '@/modules/campaigns/journey-step-draft';
 
 export function normalizeCampaignGoalDefinition(
   goalDefinition: CampaignGoalDefinition | null
@@ -27,7 +28,9 @@ export function buildUpsertCampaignDraftPayload(
     channel: draft.channel,
     audience: draft.audience,
     trigger: draft.trigger,
-    journey: draft.journey,
+    journey: {
+      steps: draft.journey.steps.map(withInAppExpirationDefault),
+    },
     content: draft.content,
   };
 }

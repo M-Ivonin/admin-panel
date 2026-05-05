@@ -12,6 +12,8 @@ import type {
   CampaignStepLocaleContent,
 } from '@/modules/campaigns/contracts';
 
+export const DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES = 1440;
+
 export type CampaignJourneyStepDraftPatch = Partial<
   Omit<CampaignJourneyStep, 'stepKey' | 'order' | 'anchor'>
 >;
@@ -58,6 +60,7 @@ export function createJourneyStep(order: number): CampaignJourneyStep {
     sendWindowEnd: '22:00',
     exitRule: 'stop_on_goal',
     frequencyCapHours: 24,
+    inAppExpirationMinutes: DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
     sendGuards: [],
   };
 }
@@ -83,7 +86,7 @@ export function getCampaignJourneyStepDrafts(
   draft: Pick<CampaignDraft, 'journey' | 'content'>
 ): CampaignJourneyStepDraft[] {
   return draft.journey.steps.map((step) => ({
-    ...step,
+    ...withInAppExpirationDefault(step),
     localizedDeliveryContent:
       draft.content[step.stepKey] ?? createBlankStepLocaleMap(null),
   }));
@@ -170,7 +173,9 @@ export function updateCampaignJourneyStepDraft(
     ...draft,
     journey: {
       steps: draft.journey.steps.map((step) =>
-        step.stepKey === stepKey ? { ...step, ...patch } : step
+        step.stepKey === stepKey
+          ? withInAppExpirationDefault({ ...step, ...patch })
+          : withInAppExpirationDefault(step)
       ),
     },
   };
@@ -224,6 +229,9 @@ function materializeJourneyStep(
     sendWindowEnd: stepDraft.sendWindowEnd,
     exitRule: stepDraft.exitRule,
     frequencyCapHours: stepDraft.frequencyCapHours,
+    inAppExpirationMinutes:
+      stepDraft.inAppExpirationMinutes ??
+      DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
     sendGuards: stepDraft.sendGuards,
   };
 }
@@ -232,10 +240,20 @@ function normalizeJourneySteps(
   steps: CampaignJourneyStep[]
 ): CampaignJourneyStep[] {
   return steps.map((step, index) => ({
-    ...step,
+    ...withInAppExpirationDefault(step),
     order: index + 1,
     anchor: index === 0 ? { type: 'trigger' } : { type: 'previous_step' },
   }));
+}
+
+export function withInAppExpirationDefault(
+  step: CampaignJourneyStep
+): CampaignJourneyStep {
+  return {
+    ...step,
+    inAppExpirationMinutes:
+      step.inAppExpirationMinutes ?? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
+  };
 }
 
 function getNextJourneyStepKey(draft: Pick<CampaignDraft, 'journey'>): string {

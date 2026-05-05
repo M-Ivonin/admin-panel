@@ -127,6 +127,36 @@ describe('campaignsRepository editor adapter', () => {
     });
   });
 
+  it('passes hybrid testChannel through after saving the draft', async () => {
+    const draft = {
+      ...createEmptyCampaignDraft(),
+      id: 'cmp_existing_001',
+      channel: 'hybrid' as const,
+    };
+    const savedDraft = {
+      ...draft,
+      updatedAt: '2026-05-05T10:00:00.000Z',
+    };
+
+    mockedUpdateCampaignDraft.mockResolvedValue(savedDraft);
+    mockedSendCampaignTest.mockResolvedValue({
+      acceptedAt: '2026-05-05T11:00:00.000Z',
+      warnings: [],
+    });
+
+    await campaignsRepository.sendTestDraft(draft, {
+      recipients: ['admin@example.com'],
+      locale: 'en',
+      testChannel: 'in_app',
+    });
+
+    expect(mockedSendCampaignTest).toHaveBeenCalledWith('cmp_existing_001', {
+      recipients: ['admin@example.com'],
+      locale: 'en',
+      testChannel: 'in_app',
+    });
+  });
+
   it('updates an existing draft before pausing it', async () => {
     const draft = {
       ...createEmptyCampaignDraft(),

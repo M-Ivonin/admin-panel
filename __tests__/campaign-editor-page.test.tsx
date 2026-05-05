@@ -616,6 +616,89 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('requires and submits a concrete hybrid send-test path', async () => {
+    window.localStorage.setItem(
+      'user',
+      JSON.stringify({
+        id: 'admin-user-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+      })
+    );
+    const sendTestCampaignSpy = jest.spyOn(
+      campaignsRepository,
+      'sendTestCampaign'
+    );
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Campaign Spec Local' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Recover onboarding completion' },
+    });
+
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Delivery channel' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'Hybrid',
+      })
+    );
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.change(screen.getByLabelText('In-App expiration (minutes)'), {
+      target: { value: '60' },
+    });
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.click(screen.getByRole('button', { name: 'Step 1' }));
+    fireEvent.change(screen.getByLabelText('Push title'), {
+      target: { value: 'Hello {{first_name}}' },
+    });
+    fireEvent.change(screen.getByLabelText('Push body'), {
+      target: { value: 'Finish setup now' },
+    });
+    fireEvent.change(screen.getByLabelText('Fallback first name'), {
+      target: { value: 'there' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }));
+
+    expect(
+      (screen.getByRole('button', { name: 'Send test' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Test delivery path' })
+    );
+    fireEvent.click(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'In-App',
+      })
+    );
+
+    expect(
+      (screen.getByRole('button', { name: 'Send test' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }));
+
+    await waitFor(() => {
+      expect(sendTestCampaignSpy).toHaveBeenCalledWith('cmp_local_001', {
+        recipients: ['admin@example.com'],
+        locale: 'en',
+        testChannel: 'in_app',
+      });
+    });
+  });
+
   it('shows progress while send-test is in flight', async () => {
     window.localStorage.setItem(
       'user',

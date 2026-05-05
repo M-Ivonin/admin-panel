@@ -97,7 +97,9 @@ export type CampaignEditorAction =
     }
   | {
       type: 'updateBasics';
-      patch: Partial<Pick<CampaignDraft, 'name' | 'goal' | 'goalDefinition'>>;
+      patch: Partial<
+        Pick<CampaignDraft, 'name' | 'goal' | 'goalDefinition' | 'channel'>
+      >;
     }
   | {
       type: 'applyScenarioTemplate';
