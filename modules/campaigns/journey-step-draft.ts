@@ -246,14 +246,13 @@ function normalizeJourneySteps(
   }));
 }
 
-function withInAppExpirationDefault(
+export function withInAppExpirationDefault(
   step: CampaignJourneyStep
 ): CampaignJourneyStep {
   return {
     ...step,
     inAppExpirationMinutes:
-      step.inAppExpirationMinutes ??
-      DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
+      step.inAppExpirationMinutes ?? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
   };
 }
 

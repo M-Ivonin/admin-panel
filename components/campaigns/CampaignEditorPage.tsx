@@ -70,6 +70,7 @@ import type {
 } from '@/modules/campaigns/contracts';
 import { createScheduledCampaignTrigger } from '@/modules/campaigns/defaults';
 import {
+  DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
   getCampaignJourneyStepDraft,
   getCampaignJourneyStepDrafts,
 } from '@/modules/campaigns/journey-step-draft';
@@ -1065,7 +1066,7 @@ export function CampaignEditorPage({
     return () => {
       cancelled = true;
     };
-  }, [isInitialized, state.draft.audience]);
+  }, [isInitialized, state.draft.audience, state.draft.channel]);
 
   async function persistDraft(options?: {
     message?: string | null;
@@ -2673,7 +2674,10 @@ export function CampaignEditorPage({
                               <TextField
                                 label="In-App expiration (minutes)"
                                 type="number"
-                                value={step.inAppExpirationMinutes ?? 1440}
+                                value={
+                                  step.inAppExpirationMinutes ??
+                                  DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
+                                }
                                 helperText="Defaults to 24 hours."
                                 onChange={(event) =>
                                   dispatch({
@@ -2682,7 +2686,7 @@ export function CampaignEditorPage({
                                     patch: {
                                       inAppExpirationMinutes:
                                         event.target.value === ''
-                                          ? 1440
+                                          ? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
                                           : Number(event.target.value),
                                     },
                                   })
