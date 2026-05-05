@@ -57,6 +57,7 @@ import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-payload';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
+  CampaignChannel,
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignJourneyStepDraft,
@@ -652,6 +653,9 @@ export function CampaignEditorPage({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
+  const [hybridTestChannel, setHybridTestChannel] = useState<
+    Extract<CampaignChannel, 'push' | 'in_app'> | ''
+  >('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] =
@@ -1103,6 +1107,7 @@ export function CampaignEditorPage({
     setTestRecipients((currentRecipients) =>
       getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
     );
+    setHybridTestChannel('');
     dispatch({ type: 'openDialog', dialog: 'sendTest' });
   }
 
@@ -1119,9 +1124,15 @@ export function CampaignEditorPage({
 
     try {
       setIsSendingTest(true);
-      const response = await campaignsRepository.sendTestDraft(state.draft, {
+      const sendTestInput = {
         recipients: normalizedTestRecipients,
         locale: testLocale,
+        ...(state.draft.channel === 'hybrid' && hybridTestChannel
+          ? { testChannel: hybridTestChannel }
+          : {}),
+      };
+      const response = await campaignsRepository.sendTestDraft(state.draft, {
+        ...sendTestInput,
       });
       if (state.draft.id === null && response.persistedDraft.id) {
         router.replace(`/dashboard/campaigns/${response.persistedDraft.id}`);
@@ -1750,6 +1761,29 @@ export function CampaignEditorPage({
                   fullWidth
                 />
               </Stack>
+
+              <FormControl fullWidth>
+                <InputLabel id="campaign-delivery-channel-label">
+                  Delivery channel
+                </InputLabel>
+                <Select
+                  labelId="campaign-delivery-channel-label"
+                  label="Delivery channel"
+                  value={state.draft.channel}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'updateBasics',
+                      patch: {
+                        channel: event.target.value as CampaignChannel,
+                      },
+                    })
+                  }
+                >
+                  <MenuItem value="push">Push</MenuItem>
+                  <MenuItem value="in_app">In-App</MenuItem>
+                  <MenuItem value="hybrid">Hybrid</MenuItem>
+                </Select>
+              </FormControl>
 
               <FormControl fullWidth>
                 <InputLabel id="campaign-tracked-goal-label" shrink>
@@ -2635,6 +2669,26 @@ export function CampaignEditorPage({
                                 fullWidth
                                 sx={{ flex: { md: '1 1 0' } }}
                               />
+                              <TextField
+                                label="In-App expiration (minutes)"
+                                type="number"
+                                value={step.inAppExpirationMinutes ?? 1440}
+                                helperText="Defaults to 24 hours."
+                                onChange={(event) =>
+                                  dispatch({
+                                    type: 'updateJourneyStepDraft',
+                                    stepKey: step.stepKey,
+                                    patch: {
+                                      inAppExpirationMinutes:
+                                        event.target.value === ''
+                                          ? 1440
+                                          : Number(event.target.value),
+                                    },
+                                  })
+                                }
+                                fullWidth
+                                sx={{ flex: { md: '1 1 0' } }}
+                              />
                               <Box
                                 sx={{
                                   flex: { md: '1 1 0' },
@@ -3348,7 +3402,10 @@ export function CampaignEditorPage({
               fullWidth
             />
             <FormControl fullWidth>
+              <InputLabel id="campaign-test-locale-label">Locale</InputLabel>
               <Select
+                labelId="campaign-test-locale-label"
+                label="Locale"
                 value={testLocale}
                 onChange={(event) =>
                   setTestLocale(event.target.value as CampaignLocale)
@@ -3362,6 +3419,33 @@ export function CampaignEditorPage({
                 ))}
               </Select>
             </FormControl>
+            {state.draft.channel === 'hybrid' ? (
+              <FormControl fullWidth required error={!hybridTestChannel}>
+                <InputLabel id="campaign-hybrid-test-channel-label">
+                  Test delivery path
+                </InputLabel>
+                <Select
+                  labelId="campaign-hybrid-test-channel-label"
+                  label="Test delivery path"
+                  value={hybridTestChannel}
+                  onChange={(event) =>
+                    setHybridTestChannel(
+                      event.target.value as Extract<
+                        CampaignChannel,
+                        'push' | 'in_app'
+                      >
+                    )
+                  }
+                  disabled={isSendingTest}
+                >
+                  <MenuItem value="push">Push</MenuItem>
+                  <MenuItem value="in_app">In-App</MenuItem>
+                </Select>
+                <FormHelperText>
+                  Choose one delivery path for this Hybrid test.
+                </FormHelperText>
+              </FormControl>
+            ) : null}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -3375,7 +3459,11 @@ export function CampaignEditorPage({
           </Button>
           <Button
             onClick={handleSendTest}
-            disabled={normalizedTestRecipients.length === 0 || isSendingTest}
+            disabled={
+              normalizedTestRecipients.length === 0 ||
+              isSendingTest ||
+              (state.draft.channel === 'hybrid' && !hybridTestChannel)
+            }
           >
             {isSendingTest ? (
               <Stack direction="row" spacing={1} alignItems="center">

@@ -438,6 +438,7 @@ export interface DeleteTemplateResponse {
 export interface SendTestCampaignRequest {
   recipients: string[];
   locale: CampaignLocale;
+  testChannel?: Extract<CampaignChannel, 'push' | 'in_app'>;
 }
 
 export interface SendTestCampaignResponse {

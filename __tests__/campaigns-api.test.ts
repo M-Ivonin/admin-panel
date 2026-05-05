@@ -137,6 +137,24 @@ describe('campaigns API helpers', () => {
     });
   });
 
+  it('serializes a selected hybrid send-test path', async () => {
+    await sendCampaignTest('cmp_hybrid', {
+      recipients: ['spec@local.test'],
+      locale: 'en',
+      testChannel: 'in_app',
+    });
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/campaigns/admin/cmp_hybrid/send-test',
+      method: 'POST',
+      body: JSON.stringify({
+        recipients: ['spec@local.test'],
+        locale: 'en',
+        testChannel: 'in_app',
+      }),
+    });
+  });
+
   it('calls the expected paths and methods for catalog, draft, and action helpers', async () => {
     const draft = createEmptyCampaignDraft();
 
