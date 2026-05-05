@@ -1046,6 +1046,7 @@ export function CampaignEditorPage({
     async function estimateAudience() {
       try {
         const estimate = await campaignsRepository.estimateAudience({
+          channel: state.draft.channel,
           audience: state.draft.audience,
         });
 

@@ -398,6 +398,7 @@ export interface CampaignDraft {
 }
 
 export interface EstimateAudienceRequest {
+  channel?: CampaignChannel;
   audience: CampaignAudienceDefinition;
 }
 
