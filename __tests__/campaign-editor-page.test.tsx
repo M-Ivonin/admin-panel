@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
-import { getUser, getUsers } from '@/lib/api/users';
+import { getUser, getUsers, type User } from '@/lib/api/users';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
@@ -57,6 +57,38 @@ function createDeferred<T>() {
   });
 
   return { promise, resolve, reject };
+}
+
+function createCampaignUser(
+  id: string,
+  name: string,
+  email: string
+): User {
+  return {
+    id,
+    email,
+    name_app: name,
+    name_tg: null,
+    telegram_username: null,
+    telegram_id: null,
+    phone_number: null,
+    timezone: 'UTC',
+    first_seen_at: null,
+    last_active_at: null,
+    previous_active_at: null,
+    app_user_id: null,
+    sessions: 1,
+    lifecycle_state: 'NEW',
+    retentionStage: undefined,
+    language: 'en',
+    termsAndPoliciesAccepted: true,
+    totalXp: 0,
+    totalPoints: 0,
+    level: 1,
+    levelName: 'Rookie',
+    subscription: null,
+    partnerId: null,
+  };
 }
 
 describe('CampaignEditorPage', () => {
@@ -629,6 +661,10 @@ describe('CampaignEditorPage', () => {
       campaignsRepository,
       'sendTestCampaign'
     );
+    const createCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'createCampaignDraft'
+    );
 
     render(<CampaignEditorPage mode="create" />);
 
@@ -651,8 +687,11 @@ describe('CampaignEditorPage', () => {
     );
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
-    fireEvent.change(screen.getByLabelText('In-App expiration (minutes)'), {
-      target: { value: '60' },
+    fireEvent.change(screen.getByLabelText('Minimum gap (hours)'), {
+      target: { value: '2.5' },
+    });
+    fireEvent.change(screen.getByLabelText('In-App expiration (hours)'), {
+      target: { value: '1.5' },
     });
 
     fireEvent.click(screen.getByText('Step Content'));
@@ -691,6 +730,18 @@ describe('CampaignEditorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send test' }));
 
     await waitFor(() => {
+      expect(createCampaignDraftSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          journey: expect.objectContaining({
+            steps: [
+              expect.objectContaining({
+                frequencyCapHours: 2.5,
+                inAppExpirationMinutes: 90,
+              }),
+            ],
+          }),
+        })
+      );
       expect(sendTestCampaignSpy).toHaveBeenCalledWith('cmp_local_001', {
         recipients: ['admin@example.com'],
         locale: 'en',
@@ -1308,6 +1359,76 @@ describe('CampaignEditorPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Alex')).toBeTruthy();
+    });
+  });
+
+  it('removes a specific audience user optimistically while selected users reload', async () => {
+    const alex = createCampaignUser('user-1', 'Alex', 'alex@example.com');
+    const maria = createCampaignUser('user-2', 'Maria', 'maria@example.com');
+
+    mockedGetUsers.mockResolvedValue({
+      users: [alex, maria],
+      total: 2,
+      page: 1,
+      limit: 25,
+      totalPages: 1,
+      retentionCounts: {
+        NEW: 2,
+        CURRENT: 0,
+        AT_RISK_WAU: 0,
+        AT_RISK_MAU: 0,
+        DEAD: 0,
+        REACTIVATED: 0,
+        RESURRECTED: 0,
+        PRE_REG_ONBOARDING_INCOMPLETE: 0,
+      },
+    });
+    mockedGetUser.mockImplementation(async (userId) =>
+      userId === maria.id ? maria : alex
+    );
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add users' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Alex alex@example.com' })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Maria maria@example.com' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply users' }));
+
+    await waitForElementToBeRemoved(() => screen.queryByText('Select users'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Alex')).toBeTruthy();
+      expect(screen.getByText('Maria')).toBeTruthy();
+    });
+
+    const reloadedMaria = createDeferred<User>();
+    mockedGetUser.mockImplementation((userId) =>
+      userId === maria.id ? reloadedMaria.promise : Promise.resolve(alex)
+    );
+
+    const alexChip = screen
+      .getAllByText('Alex')
+      .map((element) => element.closest('.MuiChip-root'))
+      .find((element): element is Element => element !== null);
+    const deleteIcon = alexChip?.querySelector('.MuiChip-deleteIcon');
+
+    expect(deleteIcon).toBeTruthy();
+    fireEvent.click(deleteIcon as Element);
+
+    expect(screen.queryByText('Alex')).toBeNull();
+    expect(screen.getByText('Maria')).toBeTruthy();
+
+    reloadedMaria.resolve(maria);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Alex')).toBeNull();
+      expect(screen.getByText('Maria')).toBeTruthy();
     });
   });
 

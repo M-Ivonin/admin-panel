@@ -514,6 +514,14 @@ function getAudienceUserLabel(user: User): string {
   );
 }
 
+function orderKnownAudienceUsers(userIds: string[], users: User[]): User[] {
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
+  return userIds
+    .map((userId) => usersById.get(userId))
+    .filter((user): user is User => user !== undefined);
+}
+
 function formatTriggerTypeLabel(
   trigger: CampaignDraft['trigger']['type']
 ): string {
@@ -630,6 +638,20 @@ function parseRewardPoints(value: string): number {
   }
 
   return parsed;
+}
+
+function formatMinutesAsHours(minutes: number): number {
+  return Number((minutes / 60).toFixed(4));
+}
+
+function parseHoursAsMinutes(hours: string): number {
+  const parsed = Number(hours);
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES;
+  }
+
+  return parsed * 60;
 }
 
 export function CampaignEditorPage({
@@ -752,6 +774,10 @@ export function CampaignEditorPage({
       setSelectedUsers([]);
       return;
     }
+
+    setSelectedUsers((currentUsers) =>
+      orderKnownAudienceUsers(userIds, currentUsers)
+    );
 
     async function loadSelectedUsers() {
       const users = await Promise.all(
@@ -1413,6 +1439,20 @@ export function CampaignEditorPage({
     });
   }
 
+  function removeAudienceUser(userId: string) {
+    setSelectedUsers((currentUsers) =>
+      currentUsers.filter((user) => user.id !== userId)
+    );
+    dispatch({
+      type: 'updateAudienceCriteria',
+      patch: {
+        userIds: state.draft.audience.criteria.userIds.filter(
+          (selectedUserId) => selectedUserId !== userId
+        ),
+      },
+    });
+  }
+
   function addJourneyStep() {
     dispatch({
       type: 'appendJourneyStep',
@@ -1942,17 +1982,7 @@ export function CampaignEditorPage({
                             <Chip
                               key={user.id}
                               label={getAudienceUserLabel(user)}
-                              onDelete={() =>
-                                dispatch({
-                                  type: 'updateAudienceCriteria',
-                                  patch: {
-                                    userIds:
-                                      state.draft.audience.criteria.userIds.filter(
-                                        (userId) => userId !== user.id
-                                      ),
-                                  },
-                                })
-                              }
+                              onDelete={() => removeAudienceUser(user.id)}
                               sx={{
                                 bgcolor: COLORS.soft,
                                 color: COLORS.textPrimary,
@@ -2643,66 +2673,82 @@ export function CampaignEditorPage({
                               />
                             </Stack>
 
-                            <Stack
-                              direction={{ xs: 'column', md: 'row' }}
-                              spacing={2}
-                              alignItems={{
-                                xs: 'stretch',
-                                md: 'flex-start',
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: '1fr',
+                                  md: 'repeat(2, minmax(0, 1fr))',
+                                },
+                                gap: 2,
+                                alignItems: 'start',
                               }}
                             >
-                              <TextField
-                                label="Minimum gap after any campaign send (hours)"
-                                type="number"
-                                value={step.frequencyCapHours ?? ''}
-                                helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
-                                onChange={(event) =>
-                                  dispatch({
-                                    type: 'updateJourneyStepDraft',
-                                    stepKey: step.stepKey,
-                                    patch: {
-                                      frequencyCapHours:
-                                        event.target.value === ''
-                                          ? null
-                                          : Number(event.target.value),
-                                    },
-                                  })
-                                }
-                                fullWidth
-                                sx={{ flex: { md: '1 1 0' } }}
-                              />
-                              <TextField
-                                label="In-App expiration (minutes)"
-                                type="number"
-                                value={
-                                  step.inAppExpirationMinutes ??
-                                  DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
-                                }
-                                helperText="Defaults to 24 hours."
-                                onChange={(event) =>
-                                  dispatch({
-                                    type: 'updateJourneyStepDraft',
-                                    stepKey: step.stepKey,
-                                    patch: {
-                                      inAppExpirationMinutes:
-                                        event.target.value === ''
-                                          ? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
-                                          : Number(event.target.value),
-                                    },
-                                  })
-                                }
-                                fullWidth
-                                sx={{ flex: { md: '1 1 0' } }}
-                              />
                               <Box
                                 sx={{
-                                  flex: { md: '1 1 0' },
+                                  display: 'grid',
+                                  gridTemplateColumns: {
+                                    xs: '1fr',
+                                    sm: 'repeat(2, minmax(0, 1fr))',
+                                  },
+                                  gap: 2,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <TextField
+                                  label="Minimum gap (hours)"
+                                  type="number"
+                                  value={step.frequencyCapHours ?? ''}
+                                  helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
+                                  inputProps={{ step: 'any', min: 0 }}
+                                  onChange={(event) =>
+                                    dispatch({
+                                      type: 'updateJourneyStepDraft',
+                                      stepKey: step.stepKey,
+                                      patch: {
+                                        frequencyCapHours:
+                                          event.target.value === ''
+                                            ? null
+                                            : Number(event.target.value),
+                                      },
+                                    })
+                                  }
+                                  fullWidth
+                                />
+                                <TextField
+                                  label="In-App expiration (hours)"
+                                  type="number"
+                                  value={formatMinutesAsHours(
+                                    step.inAppExpirationMinutes ??
+                                      DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
+                                  )}
+                                  helperText="Defaults to 24 hours."
+                                  inputProps={{ step: 'any', min: 0 }}
+                                  onChange={(event) =>
+                                    dispatch({
+                                      type: 'updateJourneyStepDraft',
+                                      stepKey: step.stepKey,
+                                      patch: {
+                                        inAppExpirationMinutes:
+                                          event.target.value === ''
+                                            ? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
+                                            : parseHoursAsMinutes(
+                                                event.target.value
+                                              ),
+                                      },
+                                    })
+                                  }
+                                  fullWidth
+                                />
+                              </Box>
+                              <Box
+                                sx={{
                                   minWidth: 0,
                                 }}
                               >
                                 {renderStepSendGuardControls(step)}
                               </Box>
-                            </Stack>
+                            </Box>
 
                             <FormHelperText sx={{ mt: 0 }}>
                               Later steps stop automatically once the campaign
