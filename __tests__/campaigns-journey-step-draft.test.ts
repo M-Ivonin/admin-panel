@@ -39,6 +39,33 @@ describe('campaign journey step draft module', () => {
     });
   });
 
+  it('defaults and materializes in-app expiration on every Journey step', () => {
+    const draft = createEmptyCampaignDraft();
+    const withStepTwo = appendCampaignJourneyStepDraft(draft, null);
+    const withEditedExpiration = updateCampaignJourneyStepDraft(
+      withStepTwo,
+      'step_2',
+      {
+        inAppExpirationMinutes: 60,
+      }
+    );
+
+    expect(withEditedExpiration.journey.steps).toEqual([
+      expect.objectContaining({
+        stepKey: 'step_1',
+        inAppExpirationMinutes: 1440,
+      }),
+      expect.objectContaining({
+        stepKey: 'step_2',
+        inAppExpirationMinutes: 60,
+      }),
+    ]);
+    expect(getCampaignJourneyStepDrafts(withEditedExpiration)[1]).toMatchObject({
+      stepKey: 'step_2',
+      inAppExpirationMinutes: 60,
+    });
+  });
+
   it('adds and removes Journey step drafts without orphaning Delivery content', () => {
     const draft = createEmptyCampaignDraft();
     const withStepTwo = appendCampaignJourneyStepDraft(

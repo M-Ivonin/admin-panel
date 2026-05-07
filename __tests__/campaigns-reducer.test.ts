@@ -204,6 +204,15 @@ describe('campaignEditorReducer', () => {
       title: 'Welcome back',
       body: 'Open the app to continue',
     });
+    expect(
+      campaignEditorReducer(withDeliveryContent, {
+        type: 'updateJourneyStepDraft',
+        stepKey: 'step_1',
+        patch: {
+          inAppExpirationMinutes: 90,
+        },
+      }).draft.journey.steps[0].inAppExpirationMinutes
+    ).toBe(90);
     expect(withoutGuard.draft.journey.steps[0].sendGuards).toEqual([]);
   });
 });

@@ -103,6 +103,58 @@ describe('campaigns API helpers', () => {
     });
   });
 
+  it('serializes the delivery channel and step expiration contract for draft saves', async () => {
+    const draft = {
+      ...createEmptyCampaignDraft(),
+      channel: 'hybrid' as const,
+    };
+
+    await createCampaignDraft({
+      name: draft.name,
+      goal: draft.goal,
+      goalDefinition: draft.goalDefinition,
+      channel: draft.channel,
+      audience: draft.audience,
+      trigger: draft.trigger,
+      journey: draft.journey,
+      content: draft.content,
+    });
+
+    const call = (adminAuthFetch as jest.Mock).mock.calls[0][0];
+
+    expect(call.path).toBe('/campaigns/admin');
+    expect(call.method).toBe('POST');
+    expect(JSON.parse(call.body)).toMatchObject({
+      channel: 'hybrid',
+      journey: {
+        steps: [
+          {
+            stepKey: 'step_1',
+            inAppExpirationMinutes: 1440,
+          },
+        ],
+      },
+    });
+  });
+
+  it('serializes a selected hybrid send-test path', async () => {
+    await sendCampaignTest('cmp_hybrid', {
+      recipients: ['spec@local.test'],
+      locale: 'en',
+      testChannel: 'in_app',
+    });
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/campaigns/admin/cmp_hybrid/send-test',
+      method: 'POST',
+      body: JSON.stringify({
+        recipients: ['spec@local.test'],
+        locale: 'en',
+        testChannel: 'in_app',
+      }),
+    });
+  });
+
   it('calls the expected paths and methods for catalog, draft, and action helpers', async () => {
     const draft = createEmptyCampaignDraft();
 

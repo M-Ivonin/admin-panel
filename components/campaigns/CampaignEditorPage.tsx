@@ -57,6 +57,7 @@ import { CAMPAIGN_GOAL_REWARD_POINTS_MAX } from '@/modules/campaigns/contracts';
 import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-payload';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
+  CampaignChannel,
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignJourneyStepDraft,
@@ -69,6 +70,7 @@ import type {
 } from '@/modules/campaigns/contracts';
 import { createScheduledCampaignTrigger } from '@/modules/campaigns/defaults';
 import {
+  DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES,
   getCampaignJourneyStepDraft,
   getCampaignJourneyStepDrafts,
 } from '@/modules/campaigns/journey-step-draft';
@@ -512,6 +514,14 @@ function getAudienceUserLabel(user: User): string {
   );
 }
 
+function orderKnownAudienceUsers(userIds: string[], users: User[]): User[] {
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
+  return userIds
+    .map((userId) => usersById.get(userId))
+    .filter((user): user is User => user !== undefined);
+}
+
 function formatTriggerTypeLabel(
   trigger: CampaignDraft['trigger']['type']
 ): string {
@@ -630,6 +640,20 @@ function parseRewardPoints(value: string): number {
   return parsed;
 }
 
+function formatMinutesAsHours(minutes: number): number {
+  return Number((minutes / 60).toFixed(4));
+}
+
+function parseHoursAsMinutes(hours: string): number {
+  const parsed = Number(hours);
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES;
+  }
+
+  return parsed * 60;
+}
+
 export function CampaignEditorPage({
   mode,
   campaignId,
@@ -652,6 +676,9 @@ export function CampaignEditorPage({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
+  const [hybridTestChannel, setHybridTestChannel] = useState<
+    Extract<CampaignChannel, 'push' | 'in_app'> | ''
+  >('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isUserPickerOpen, setIsUserPickerOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] =
@@ -747,6 +774,10 @@ export function CampaignEditorPage({
       setSelectedUsers([]);
       return;
     }
+
+    setSelectedUsers((currentUsers) =>
+      orderKnownAudienceUsers(userIds, currentUsers)
+    );
 
     async function loadSelectedUsers() {
       const users = await Promise.all(
@@ -1042,6 +1073,7 @@ export function CampaignEditorPage({
     async function estimateAudience() {
       try {
         const estimate = await campaignsRepository.estimateAudience({
+          channel: state.draft.channel,
           audience: state.draft.audience,
         });
 
@@ -1060,7 +1092,7 @@ export function CampaignEditorPage({
     return () => {
       cancelled = true;
     };
-  }, [isInitialized, state.draft.audience]);
+  }, [isInitialized, state.draft.audience, state.draft.channel]);
 
   async function persistDraft(options?: {
     message?: string | null;
@@ -1103,6 +1135,7 @@ export function CampaignEditorPage({
     setTestRecipients((currentRecipients) =>
       getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
     );
+    setHybridTestChannel('');
     dispatch({ type: 'openDialog', dialog: 'sendTest' });
   }
 
@@ -1119,9 +1152,15 @@ export function CampaignEditorPage({
 
     try {
       setIsSendingTest(true);
-      const response = await campaignsRepository.sendTestDraft(state.draft, {
+      const sendTestInput = {
         recipients: normalizedTestRecipients,
         locale: testLocale,
+        ...(state.draft.channel === 'hybrid' && hybridTestChannel
+          ? { testChannel: hybridTestChannel }
+          : {}),
+      };
+      const response = await campaignsRepository.sendTestDraft(state.draft, {
+        ...sendTestInput,
       });
       if (state.draft.id === null && response.persistedDraft.id) {
         router.replace(`/dashboard/campaigns/${response.persistedDraft.id}`);
@@ -1397,6 +1436,20 @@ export function CampaignEditorPage({
     dispatch({
       type: 'updateAudienceCriteria',
       patch: { locales: nextLocales },
+    });
+  }
+
+  function removeAudienceUser(userId: string) {
+    setSelectedUsers((currentUsers) =>
+      currentUsers.filter((user) => user.id !== userId)
+    );
+    dispatch({
+      type: 'updateAudienceCriteria',
+      patch: {
+        userIds: state.draft.audience.criteria.userIds.filter(
+          (selectedUserId) => selectedUserId !== userId
+        ),
+      },
     });
   }
 
@@ -1752,6 +1805,29 @@ export function CampaignEditorPage({
               </Stack>
 
               <FormControl fullWidth>
+                <InputLabel id="campaign-delivery-channel-label">
+                  Delivery channel
+                </InputLabel>
+                <Select
+                  labelId="campaign-delivery-channel-label"
+                  label="Delivery channel"
+                  value={state.draft.channel}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'updateBasics',
+                      patch: {
+                        channel: event.target.value as CampaignChannel,
+                      },
+                    })
+                  }
+                >
+                  <MenuItem value="push">Push</MenuItem>
+                  <MenuItem value="in_app">In-App</MenuItem>
+                  <MenuItem value="hybrid">Hybrid</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl fullWidth>
                 <InputLabel id="campaign-tracked-goal-label" shrink>
                   Tracked goal
                 </InputLabel>
@@ -1906,17 +1982,7 @@ export function CampaignEditorPage({
                             <Chip
                               key={user.id}
                               label={getAudienceUserLabel(user)}
-                              onDelete={() =>
-                                dispatch({
-                                  type: 'updateAudienceCriteria',
-                                  patch: {
-                                    userIds:
-                                      state.draft.audience.criteria.userIds.filter(
-                                        (userId) => userId !== user.id
-                                      ),
-                                  },
-                                })
-                              }
+                              onDelete={() => removeAudienceUser(user.id)}
                               sx={{
                                 bgcolor: COLORS.soft,
                                 color: COLORS.textPrimary,
@@ -2607,43 +2673,82 @@ export function CampaignEditorPage({
                               />
                             </Stack>
 
-                            <Stack
-                              direction={{ xs: 'column', md: 'row' }}
-                              spacing={2}
-                              alignItems={{
-                                xs: 'stretch',
-                                md: 'flex-start',
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: '1fr',
+                                  md: 'repeat(2, minmax(0, 1fr))',
+                                },
+                                gap: 2,
+                                alignItems: 'start',
                               }}
                             >
-                              <TextField
-                                label="Minimum gap after any campaign send (hours)"
-                                type="number"
-                                value={step.frequencyCapHours ?? ''}
-                                helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
-                                onChange={(event) =>
-                                  dispatch({
-                                    type: 'updateJourneyStepDraft',
-                                    stepKey: step.stepKey,
-                                    patch: {
-                                      frequencyCapHours:
-                                        event.target.value === ''
-                                          ? null
-                                          : Number(event.target.value),
-                                    },
-                                  })
-                                }
-                                fullWidth
-                                sx={{ flex: { md: '1 1 0' } }}
-                              />
                               <Box
                                 sx={{
-                                  flex: { md: '1 1 0' },
+                                  display: 'grid',
+                                  gridTemplateColumns: {
+                                    xs: '1fr',
+                                    sm: 'repeat(2, minmax(0, 1fr))',
+                                  },
+                                  gap: 2,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <TextField
+                                  label="Minimum gap (hours)"
+                                  type="number"
+                                  value={step.frequencyCapHours ?? ''}
+                                  helperText="If the user received another live step from this campaign inside this window, this step will be skipped."
+                                  inputProps={{ step: 'any', min: 0 }}
+                                  onChange={(event) =>
+                                    dispatch({
+                                      type: 'updateJourneyStepDraft',
+                                      stepKey: step.stepKey,
+                                      patch: {
+                                        frequencyCapHours:
+                                          event.target.value === ''
+                                            ? null
+                                            : Number(event.target.value),
+                                      },
+                                    })
+                                  }
+                                  fullWidth
+                                />
+                                <TextField
+                                  label="In-App expiration (hours)"
+                                  type="number"
+                                  value={formatMinutesAsHours(
+                                    step.inAppExpirationMinutes ??
+                                      DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
+                                  )}
+                                  helperText="Defaults to 24 hours."
+                                  inputProps={{ step: 'any', min: 0 }}
+                                  onChange={(event) =>
+                                    dispatch({
+                                      type: 'updateJourneyStepDraft',
+                                      stepKey: step.stepKey,
+                                      patch: {
+                                        inAppExpirationMinutes:
+                                          event.target.value === ''
+                                            ? DEFAULT_CAMPAIGN_IN_APP_EXPIRATION_MINUTES
+                                            : parseHoursAsMinutes(
+                                                event.target.value
+                                              ),
+                                      },
+                                    })
+                                  }
+                                  fullWidth
+                                />
+                              </Box>
+                              <Box
+                                sx={{
                                   minWidth: 0,
                                 }}
                               >
                                 {renderStepSendGuardControls(step)}
                               </Box>
-                            </Stack>
+                            </Box>
 
                             <FormHelperText sx={{ mt: 0 }}>
                               Later steps stop automatically once the campaign
@@ -3348,7 +3453,10 @@ export function CampaignEditorPage({
               fullWidth
             />
             <FormControl fullWidth>
+              <InputLabel id="campaign-test-locale-label">Locale</InputLabel>
               <Select
+                labelId="campaign-test-locale-label"
+                label="Locale"
                 value={testLocale}
                 onChange={(event) =>
                   setTestLocale(event.target.value as CampaignLocale)
@@ -3362,6 +3470,33 @@ export function CampaignEditorPage({
                 ))}
               </Select>
             </FormControl>
+            {state.draft.channel === 'hybrid' ? (
+              <FormControl fullWidth required error={!hybridTestChannel}>
+                <InputLabel id="campaign-hybrid-test-channel-label">
+                  Test delivery path
+                </InputLabel>
+                <Select
+                  labelId="campaign-hybrid-test-channel-label"
+                  label="Test delivery path"
+                  value={hybridTestChannel}
+                  onChange={(event) =>
+                    setHybridTestChannel(
+                      event.target.value as Extract<
+                        CampaignChannel,
+                        'push' | 'in_app'
+                      >
+                    )
+                  }
+                  disabled={isSendingTest}
+                >
+                  <MenuItem value="push">Push</MenuItem>
+                  <MenuItem value="in_app">In-App</MenuItem>
+                </Select>
+                <FormHelperText>
+                  Choose one delivery path for this Hybrid test.
+                </FormHelperText>
+              </FormControl>
+            ) : null}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -3375,7 +3510,11 @@ export function CampaignEditorPage({
           </Button>
           <Button
             onClick={handleSendTest}
-            disabled={normalizedTestRecipients.length === 0 || isSendingTest}
+            disabled={
+              normalizedTestRecipients.length === 0 ||
+              isSendingTest ||
+              (state.draft.channel === 'hybrid' && !hybridTestChannel)
+            }
           >
             {isSendingTest ? (
               <Stack direction="row" spacing={1} alignItems="center">

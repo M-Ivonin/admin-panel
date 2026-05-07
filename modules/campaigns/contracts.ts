@@ -13,7 +13,7 @@ export type CampaignStatus =
   | 'paused'
   | 'archived';
 
-export type CampaignChannel = 'push';
+export type CampaignChannel = 'push' | 'in_app' | 'hybrid';
 export type CampaignLocale = 'en' | 'es' | 'pt';
 export type CampaignReadiness = 'ready' | 'warning' | 'missing';
 
@@ -337,6 +337,7 @@ export interface CampaignJourneyStep {
   sendWindowEnd: string;
   exitRule: CampaignJourneyExitRule;
   frequencyCapHours: number | null;
+  inAppExpirationMinutes: number;
   sendGuards?: CampaignSendGuard[];
 }
 
@@ -397,6 +398,7 @@ export interface CampaignDraft {
 }
 
 export interface EstimateAudienceRequest {
+  channel?: CampaignChannel;
   audience: CampaignAudienceDefinition;
 }
 
@@ -437,6 +439,7 @@ export interface DeleteTemplateResponse {
 export interface SendTestCampaignRequest {
   recipients: string[];
   locale: CampaignLocale;
+  testChannel?: Extract<CampaignChannel, 'push' | 'in_app'>;
 }
 
 export interface SendTestCampaignResponse {
@@ -473,7 +476,7 @@ export interface UpsertCampaignDraftRequest {
   name: string;
   goal: string;
   goalDefinition: CampaignGoalDefinition | null;
-  channel: 'push';
+  channel: CampaignChannel;
   audience: CampaignAudienceDefinition;
   trigger: CampaignTriggerDefinition;
   journey: CampaignJourneyDefinition;
