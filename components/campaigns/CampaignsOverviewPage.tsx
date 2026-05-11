@@ -32,7 +32,8 @@ import type {
 } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 
-const PAGE_SIZE_OPTIONS = [4, 8, 12];
+const DEFAULT_ROWS_PER_PAGE = 10;
+const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const STATUS_OPTIONS: Array<{ value: CampaignStatus; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -570,7 +571,7 @@ function FilterSection({
 export function CampaignsOverviewPage() {
   const router = useRouter();
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(4);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_ROWS_PER_PAGE);
   const [search, setSearch] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<CampaignStatus[]>(
     () => DEFAULT_SELECTED_STATUSES
