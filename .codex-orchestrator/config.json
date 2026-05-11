@@ -45,7 +45,10 @@
   "runner": {
     "workspaceRoot": ".codex-orchestrator/workspaces",
     "maxParallelChildren": 3,
-    "stateDir": ".codex-orchestrator/state"
+    "stateDir": ".codex-orchestrator/state",
+    "worktreeCleanup": {
+      "enabled": true
+    }
   },
   "codex": {
     "adapter": "codex-cli",
