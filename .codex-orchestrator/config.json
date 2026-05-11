@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "github": {
+    "owner": "M-Ivonin",
+    "repo": "admin-panel",
+    "prepareLabels": "create-missing",
+    "labels": {
+      "auto": {
+        "name": "agent:auto",
+        "color": "0E8A16",
+        "description": "Scoped autonomous Codex implementation"
+      },
+      "planAuto": {
+        "name": "agent:plan-auto",
+        "color": "5319E7",
+        "description": "Autonomous Codex planning and issue-tree execution"
+      },
+      "running": {
+        "name": "agent:running",
+        "color": "1D76DB",
+        "description": "Codex orchestration is currently running"
+      },
+      "blocked": {
+        "name": "agent:blocked",
+        "color": "B60205",
+        "description": "Codex orchestration is blocked and needs maintainer input"
+      },
+      "manual": {
+        "name": "agent:manual",
+        "color": "BFDADC",
+        "description": "Issue is reserved for manual work"
+      },
+      "review": {
+        "name": "agent:review",
+        "color": "FBCA04",
+        "description": "Codex work is ready for human review"
+      },
+      "child": {
+        "name": "agent:child",
+        "color": "C2E0C6",
+        "description": "Child issue owned by an autonomous parent issue tree"
+      }
+    }
+  },
+  "runner": {
+    "workspaceRoot": ".codex-orchestrator/workspaces",
+    "maxParallelChildren": 3,
+    "stateDir": ".codex-orchestrator/state"
+  },
+  "codex": {
+    "adapter": "codex-cli",
+    "command": "codex",
+    "args": [
+      "exec",
+      "--cd",
+      "${worktreePath}",
+      "--sandbox",
+      "workspace-write",
+      "--add-dir",
+      "${stateDir}",
+      "-c",
+      "sandbox_workspace_write.network_access=true",
+      "--output-last-message",
+      "${reportPath}",
+      "-"
+    ],
+    "timeoutMs": 1800000,
+    "promptFileEnv": "CODEX_ORCHESTRATOR_PROMPT_FILE",
+    "reportFileEnv": "CODEX_ORCHESTRATOR_REPORT_FILE"
+  },
+  "project": {
+    "configDir": ".codex-orchestrator",
+    "promptsDir": ".codex-orchestrator/prompts"
+  },
+  "workflows": {
+    "prd": {
+      "skillName": "to-prd",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/prd.md"
+    },
+    "issueBreakdown": {
+      "skillName": "to-issues",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/issue-breakdown.md"
+    },
+    "breakdownReview": {
+      "skillName": "issue-breakdown-review",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/breakdown-review.md"
+    },
+    "triage": {
+      "skillName": "triage",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/triage.md"
+    },
+    "scopedImplementation": {
+      "skillName": "spec-implementer",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/scoped-implementation.md"
+    },
+    "issueTreeOrchestration": {
+      "skillName": "issue-orchestrator",
+      "source": "package-owned-prompt-fallback",
+      "promptPath": ".codex-orchestrator/prompts/workflows/issue-tree-orchestration.md"
+    }
+  },
+  "checks": {
+    "typecheck": "npm run typecheck",
+    "test": "npm test"
+  },
+  "reviewGates": {
+    "visualProof": {
+      "enabled": true,
+      "artifactDir": ".codex-orchestrator/proofs",
+      "issueTextPatterns": [
+        "\\bUI\\b",
+        "frontend",
+        "responsive",
+        "layout",
+        "visual",
+        "screenshot",
+        "скриншот",
+        "скріншот",
+        "viewport",
+        "dark theme",
+        "мобіл",
+        "mobile"
+      ],
+      "changedPathGlobs": [
+        "src/frontend/**",
+        "frontend/**",
+        "app/**",
+        "pages/**",
+        "components/**"
+      ],
+      "requiredValidationPatterns": [
+        "BrowserUse",
+        "Playwright",
+        "screenshot",
+        "visual",
+        "viewport"
+      ],
+      "blockOnSkippedPatterns": [
+        "BrowserUse",
+        "Playwright",
+        "browser",
+        "screenshot",
+        "visual",
+        "viewport",
+        "dev server"
+      ],
+      "minScreenshotArtifacts": 1,
+      "runnerValidationCommand": "",
+      "runnerTimeoutMs": 900000,
+      "envPassthrough": []
+    },
+    "quality": {
+      "enabled": true,
+      "runtimeChangedPathGlobs": [
+        "src/**",
+        "app/**",
+        "pages/**",
+        "components/**",
+        "lib/**",
+        "packages/**",
+        "*.js",
+        "*.jsx",
+        "*.ts",
+        "*.tsx",
+        "*.mjs",
+        "*.cjs"
+      ],
+      "testChangedPathGlobs": [
+        "test/**",
+        "tests/**",
+        "__tests__/**",
+        "*.test.*",
+        "*.spec.*",
+        "src/**/*.test.*",
+        "src/**/*.spec.*"
+      ],
+      "tdd": {
+        "enabled": true,
+        "requireTestChange": true,
+        "requiredValidationPatterns": [
+          "red.*green",
+          "fail(?:ed|ing)?.*pass(?:ed|ing)?",
+          "test.*fail(?:ed|ing)?.*test.*pass(?:ed|ing)?"
+        ]
+      },
+      "cleanupReview": {
+        "enabled": true,
+        "runtimeFileThreshold": 3,
+        "requiredValidationPatterns": [
+          "\\$?cleanup-review",
+          "cleanup review"
+        ]
+      },
+      "codeReview": {
+        "enabled": true,
+        "requiredValidationPatterns": [
+          "\\$?code-review",
+          "code review"
+        ]
+      }
+    }
+  },
+  "deny": {
+    "secretFiles": [
+      ".env",
+      ".env.*"
+    ],
+    "destructiveDbOrCache": true,
+    "productionDeployOrRelease": true,
+    "additionalPathGlobs": []
+  },
+  "branches": {
+    "base": "main",
+    "scopedIssue": "codex/issue-${issueNumber}",
+    "issueTree": "codex/tree-${parentIssueNumber}"
+  },
+  "pullRequests": {
+    "scopedIssueTitle": "Codex: issue #${issueNumber}",
+    "issueTreeTitle": "Codex: parent issue #${parentIssueNumber}"
+  },
+  "issueClassification": {
+    "promotionCriteria": [
+      "api-contract",
+      "dto-or-schema",
+      "persistence",
+      "auth-or-permissions",
+      "billing",
+      "background-job",
+      "shared-state",
+      "multi-service",
+      "three-or-more-runtime-files"
+    ],
+    "clarificationGate": "block-and-comment"
+  }
+}
