@@ -5,6 +5,7 @@ export type RevenueLedgerStore = 'google_play' | 'app_store';
 export type RevenueLedgerEventType =
   | 'initial_subscription'
   | 'subscription_renewal'
+  | 'subscription_canceled'
   | 'subscription_recovered'
   | 'subscription_restarted'
   | 'consumable_purchase'

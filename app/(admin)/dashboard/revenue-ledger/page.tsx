@@ -69,6 +69,7 @@ const EVENT_TYPE_OPTIONS: Array<{
 }> = [
   { value: 'initial_subscription', label: 'Initial subscription' },
   { value: 'subscription_renewal', label: 'Subscription renewal' },
+  { value: 'subscription_canceled', label: 'Subscription canceled' },
   { value: 'subscription_recovered', label: 'Subscription recovered' },
   { value: 'subscription_restarted', label: 'Subscription restarted' },
   { value: 'consumable_purchase', label: 'Consumable purchase' },
