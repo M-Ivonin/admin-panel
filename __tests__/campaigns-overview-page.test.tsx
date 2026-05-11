@@ -30,6 +30,22 @@ describe('CampaignsOverviewPage', () => {
     push.mockReset();
   });
 
+  it('loads 10 campaigns by default', async () => {
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText('onboarding_not_completed');
+
+      expect(overviewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10 })
+      );
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
   it('renders the seeded rows and changes visible items through status, type, and quick-view filters', async () => {
     render(<CampaignsOverviewPage />);
 
