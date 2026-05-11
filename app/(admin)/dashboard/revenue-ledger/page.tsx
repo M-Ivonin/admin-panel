@@ -29,6 +29,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, Clear, Refresh } from '@mui/icons-material';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { RevenueLedgerAccessGate } from '@/modules/revenue-ledger/RevenueLedgerAccessGate';
 import {
   PaginatedRevenueLedgerEntriesResponse,
   RevenueLedgerBusinessStatus,
@@ -68,6 +69,8 @@ const EVENT_TYPE_OPTIONS: Array<{
 }> = [
   { value: 'initial_subscription', label: 'Initial subscription' },
   { value: 'subscription_renewal', label: 'Subscription renewal' },
+  { value: 'subscription_recovered', label: 'Subscription recovered' },
+  { value: 'subscription_restarted', label: 'Subscription restarted' },
   { value: 'consumable_purchase', label: 'Consumable purchase' },
   { value: 'refund', label: 'Refund' },
   { value: 'voided', label: 'Voided' },
@@ -178,13 +181,13 @@ function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
 }
 
 function getStatusChipColor(
-  status: RevenueLedgerBusinessStatus,
+  status: RevenueLedgerBusinessStatus
 ): 'default' | 'success' | 'warning' {
   return status === 'recorded' ? 'success' : 'warning';
 }
 
 function getDirectionChipColor(
-  direction: RevenueLedgerDirection,
+  direction: RevenueLedgerDirection
 ): 'default' | 'success' | 'error' {
   if (direction === 'positive') {
     return 'success';
@@ -198,7 +201,7 @@ function getDirectionChipColor(
 }
 
 function getTenjinChipColor(
-  status: TenjinSdkDispatchStatus,
+  status: TenjinSdkDispatchStatus
 ): 'default' | 'success' | 'warning' | 'error' {
   if (status === 'client_reported_sent') {
     return 'success';
@@ -227,12 +230,14 @@ function getIdentityLines(entry: RevenueLedgerEntry): string[] {
   return [
     entry.orderId ? `Order: ${entry.orderId}` : null,
     entry.transactionId ? `Tx: ${entry.transactionId}` : null,
-    entry.originalTransactionId ? `Original: ${entry.originalTransactionId}` : null,
+    entry.originalTransactionId
+      ? `Original: ${entry.originalTransactionId}`
+      : null,
     entry.purchaseToken ? `Token: ${entry.purchaseToken}` : null,
   ].filter((value): value is string => Boolean(value));
 }
 
-export default function RevenueLedgerPage() {
+function RevenueLedgerContent() {
   const [items, setItems] = useState<RevenueLedgerEntry[]>([]);
   const [summary, setSummary] = useState<RevenueLedgerSummary>(EMPTY_SUMMARY);
   const [total, setTotal] = useState(0);
@@ -302,7 +307,7 @@ export default function RevenueLedgerPage() {
       dateRange,
       sortBy,
       sortOrder,
-    ],
+    ]
   );
 
   useEffect(() => {
@@ -334,7 +339,7 @@ export default function RevenueLedgerPage() {
         setError(
           loadError instanceof Error
             ? loadError.message
-            : 'Failed to load revenue ledger',
+            : 'Failed to load revenue ledger'
         );
       } finally {
         if (active) {
@@ -372,8 +377,7 @@ export default function RevenueLedgerPage() {
     };
 
   const handleDateChange =
-    (key: keyof typeof dateRange) =>
-    (event: ChangeEvent<HTMLInputElement>) => {
+    (key: keyof typeof dateRange) => (event: ChangeEvent<HTMLInputElement>) => {
       setDateRange((current) => ({
         ...current,
         [key]: event.target.value,
@@ -383,9 +387,7 @@ export default function RevenueLedgerPage() {
 
   const handleSort = (field: RevenueLedgerSortField) => {
     if (sortBy === field) {
-      setSortOrder((currentOrder) =>
-        currentOrder === 'asc' ? 'desc' : 'asc',
-      );
+      setSortOrder((currentOrder) => (currentOrder === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(field);
       setSortOrder('desc');
@@ -414,525 +416,546 @@ export default function RevenueLedgerPage() {
   };
 
   return (
-    <ProtectedRoute>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box
-            sx={{
-              maxWidth: 1440,
-              mx: 'auto',
-              px: { xs: 2, sm: 3, lg: 4 },
-              py: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Link href="/dashboard">
-              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-                Back
-              </Button>
-            </Link>
-            <Typography variant="h5" fontWeight="bold" color="text.primary">
-              Revenue Ledger
-            </Typography>
-          </Box>
-        </Paper>
-
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Box
           sx={{
             maxWidth: 1440,
             mx: 'auto',
             px: { xs: 2, sm: 3, lg: 4 },
-            py: 4,
+            py: 2,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            flexWrap: 'wrap',
           }}
         >
+          <Link href="/dashboard">
+            <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
+              Back
+            </Button>
+          </Link>
+          <Typography variant="h5" fontWeight="bold" color="text.primary">
+            Revenue Ledger
+          </Typography>
+        </Box>
+      </Paper>
+
+      <Box
+        sx={{
+          maxWidth: 1440,
+          mx: 'auto',
+          px: { xs: 2, sm: 3, lg: 4 },
+          py: 4,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              lg: 'repeat(5, 1fr)',
+            },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Paper sx={{ p: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Entries
+            </Typography>
+            <Typography variant="h4" fontWeight={700}>
+              {summary.totalEntries}
+            </Typography>
+          </Paper>
+
+          <Paper sx={{ p: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Positive
+            </Typography>
+            <Typography variant="h4" fontWeight={700}>
+              {summary.recordedPositiveCount}
+            </Typography>
+          </Paper>
+
+          <Paper sx={{ p: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Negative
+            </Typography>
+            <Typography variant="h4" fontWeight={700}>
+              {summary.recordedNegativeCount}
+            </Typography>
+          </Paper>
+
+          <Paper sx={{ p: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Skipped
+            </Typography>
+            <Typography variant="h4" fontWeight={700}>
+              {summary.skippedCount}
+            </Typography>
+          </Paper>
+
+          <Paper sx={{ p: 2.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Missing Amount
+            </Typography>
+            <Typography variant="h4" fontWeight={700}>
+              {summary.missingAmountCount}
+            </Typography>
+          </Paper>
+        </Box>
+
+        {summary.byCurrency.length > 0 && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                md: 'repeat(2, 1fr)',
+                lg: 'repeat(3, 1fr)',
+              },
+              gap: 2,
+              mb: 3,
+            }}
+          >
+            {summary.byCurrency.map((currencySummary) => (
+              <Paper key={currencySummary.currency} sx={{ p: 2.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {currencySummary.currency}
+                </Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  {formatAmount(
+                    currencySummary.netGrossAmount,
+                    currencySummary.currency
+                  )}
+                </Typography>
+                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="success.main">
+                    +
+                    {formatAmount(
+                      currencySummary.positiveGrossAmount,
+                      currencySummary.currency
+                    )}{' '}
+                    ({currencySummary.positiveCount})
+                  </Typography>
+                  <Typography variant="caption" color="error.main">
+                    {formatAmount(
+                      currencySummary.negativeGrossAmount,
+                      currencySummary.currency
+                    )}{' '}
+                    ({currencySummary.negativeCount})
+                  </Typography>
+                </Stack>
+              </Paper>
+            ))}
+          </Box>
+        )}
+
+        <Paper sx={{ p: 2.5, mb: 3 }}>
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
                 sm: 'repeat(2, 1fr)',
-                lg: 'repeat(5, 1fr)',
+                lg: 'repeat(4, 1fr)',
               },
               gap: 2,
-              mb: 3,
             }}
           >
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Entries
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.totalEntries}
-              </Typography>
-            </Paper>
+            <FormControl fullWidth size="small">
+              <InputLabel id="ledger-store-label">Store</InputLabel>
+              <Select
+                labelId="ledger-store-label"
+                label="Store"
+                value={store}
+                onChange={(event) => {
+                  setStore(event.target.value as RevenueLedgerStore | '');
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">All</MenuItem>
+                {STORE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Positive
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.recordedPositiveCount}
-              </Typography>
-            </Paper>
+            <FormControl fullWidth size="small">
+              <InputLabel id="ledger-event-type-label">Event type</InputLabel>
+              <Select<RevenueLedgerEventType[]>
+                multiple
+                labelId="ledger-event-type-label"
+                label="Event type"
+                value={eventTypes}
+                input={<OutlinedInput label="Event type" />}
+                renderValue={(selected) =>
+                  renderSelectChips(selected as string[])
+                }
+                onChange={(
+                  event: SelectChangeEvent<RevenueLedgerEventType[]>
+                ) => {
+                  setEventTypes(
+                    getSelectValue(
+                      event.target.value
+                    ) as RevenueLedgerEventType[]
+                  );
+                  setPage(0);
+                }}
+              >
+                {EVENT_TYPE_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Negative
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.recordedNegativeCount}
-              </Typography>
-            </Paper>
+            <FormControl fullWidth size="small">
+              <InputLabel id="ledger-direction-label">Direction</InputLabel>
+              <Select<RevenueLedgerDirection[]>
+                multiple
+                labelId="ledger-direction-label"
+                label="Direction"
+                value={directions}
+                input={<OutlinedInput label="Direction" />}
+                renderValue={(selected) =>
+                  renderSelectChips(selected as string[])
+                }
+                onChange={(
+                  event: SelectChangeEvent<RevenueLedgerDirection[]>
+                ) => {
+                  setDirections(
+                    getSelectValue(
+                      event.target.value
+                    ) as RevenueLedgerDirection[]
+                  );
+                  setPage(0);
+                }}
+              >
+                {DIRECTION_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Skipped
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.skippedCount}
-              </Typography>
-            </Paper>
+            <FormControl fullWidth size="small">
+              <InputLabel id="ledger-business-status-label">
+                Business status
+              </InputLabel>
+              <Select<RevenueLedgerBusinessStatus[]>
+                multiple
+                labelId="ledger-business-status-label"
+                label="Business status"
+                value={businessStatuses}
+                input={<OutlinedInput label="Business status" />}
+                renderValue={(selected) =>
+                  renderSelectChips(selected as string[])
+                }
+                onChange={(
+                  event: SelectChangeEvent<RevenueLedgerBusinessStatus[]>
+                ) => {
+                  setBusinessStatuses(
+                    getSelectValue(
+                      event.target.value
+                    ) as RevenueLedgerBusinessStatus[]
+                  );
+                  setPage(0);
+                }}
+              >
+                {BUSINESS_STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Missing Amount
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.missingAmountCount}
-              </Typography>
-            </Paper>
+            <FormControl fullWidth size="small">
+              <InputLabel id="ledger-tenjin-status-label">
+                Tenjin status
+              </InputLabel>
+              <Select<TenjinSdkDispatchStatus[]>
+                multiple
+                labelId="ledger-tenjin-status-label"
+                label="Tenjin status"
+                value={tenjinDispatchStatuses}
+                input={<OutlinedInput label="Tenjin status" />}
+                renderValue={(selected) =>
+                  renderSelectChips(selected as string[])
+                }
+                onChange={(
+                  event: SelectChangeEvent<TenjinSdkDispatchStatus[]>
+                ) => {
+                  setTenjinDispatchStatuses(
+                    getSelectValue(
+                      event.target.value
+                    ) as TenjinSdkDispatchStatus[]
+                  );
+                  setPage(0);
+                }}
+              >
+                {TENJIN_STATUS_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Product ID"
+              size="small"
+              value={identityFilters.productId}
+              onChange={handleIdentityFilterChange('productId')}
+            />
+            <TextField
+              label="User ID"
+              size="small"
+              value={identityFilters.userId}
+              onChange={handleIdentityFilterChange('userId')}
+            />
+            <TextField
+              label="Order ID"
+              size="small"
+              value={identityFilters.orderId}
+              onChange={handleIdentityFilterChange('orderId')}
+            />
+            <TextField
+              label="Purchase token"
+              size="small"
+              value={identityFilters.purchaseToken}
+              onChange={handleIdentityFilterChange('purchaseToken')}
+            />
+            <TextField
+              label="Transaction ID"
+              size="small"
+              value={identityFilters.transactionId}
+              onChange={handleIdentityFilterChange('transactionId')}
+            />
+            <TextField
+              label="Original transaction ID"
+              size="small"
+              value={identityFilters.originalTransactionId}
+              onChange={handleIdentityFilterChange('originalTransactionId')}
+            />
+            <TextField
+              label="From"
+              type="datetime-local"
+              size="small"
+              value={dateRange.dateFrom}
+              onChange={handleDateChange('dateFrom')}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="To"
+              type="datetime-local"
+              size="small"
+              value={dateRange.dateTo}
+              onChange={handleDateChange('dateTo')}
+              InputLabelProps={{ shrink: true }}
+            />
           </Box>
 
-          {summary.byCurrency.length > 0 && (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  md: 'repeat(2, 1fr)',
-                  lg: 'repeat(3, 1fr)',
-                },
-                gap: 2,
-                mb: 3,
-              }}
+          <Stack direction="row" spacing={1.5} sx={{ mt: 2 }} flexWrap="wrap">
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Refresh />}
+              onClick={() => setRefreshNonce((current) => current + 1)}
             >
-              {summary.byCurrency.map((currencySummary) => (
-                <Paper key={currencySummary.currency} sx={{ p: 2.5 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {currencySummary.currency}
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {formatAmount(
-                      currencySummary.netGrossAmount,
-                      currencySummary.currency,
-                    )}
-                  </Typography>
-                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                    <Typography variant="caption" color="success.main">
-                      +{formatAmount(
-                        currencySummary.positiveGrossAmount,
-                        currencySummary.currency,
-                      )}{' '}
-                      ({currencySummary.positiveCount})
-                    </Typography>
-                    <Typography variant="caption" color="error.main">
-                      {formatAmount(
-                        currencySummary.negativeGrossAmount,
-                        currencySummary.currency,
-                      )}{' '}
-                      ({currencySummary.negativeCount})
-                    </Typography>
-                  </Stack>
-                </Paper>
-              ))}
-            </Box>
-          )}
-
-          <Paper sx={{ p: 2.5, mb: 3 }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, 1fr)',
-                  lg: 'repeat(4, 1fr)',
-                },
-                gap: 2,
-              }}
+              Refresh
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Clear />}
+              disabled={!hasActiveFilters}
+              onClick={resetFilters}
             >
-              <FormControl fullWidth size="small">
-                <InputLabel id="ledger-store-label">Store</InputLabel>
-                <Select
-                  labelId="ledger-store-label"
-                  label="Store"
-                  value={store}
-                  onChange={(event) => {
-                    setStore(event.target.value as RevenueLedgerStore | '');
-                    setPage(0);
-                  }}
+              Clear
+            </Button>
+          </Stack>
+        </Paper>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell
+                  sortDirection={sortBy === 'createdAt' ? sortOrder : false}
                 >
-                  <MenuItem value="">All</MenuItem>
-                  {STORE_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <InputLabel id="ledger-event-type-label">Event type</InputLabel>
-                <Select<RevenueLedgerEventType[]>
-                  multiple
-                  labelId="ledger-event-type-label"
-                  label="Event type"
-                  value={eventTypes}
-                  input={<OutlinedInput label="Event type" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
-                  onChange={(event: SelectChangeEvent<RevenueLedgerEventType[]>) => {
-                    setEventTypes(
-                      getSelectValue(event.target.value) as RevenueLedgerEventType[],
-                    );
-                    setPage(0);
-                  }}
+                  <TableSortLabel
+                    active={sortBy === 'createdAt'}
+                    direction={sortBy === 'createdAt' ? sortOrder : 'desc'}
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    {SORT_LABELS.createdAt}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell
+                  sortDirection={sortBy === 'eventTime' ? sortOrder : false}
                 >
-                  {EVENT_TYPE_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <InputLabel id="ledger-direction-label">Direction</InputLabel>
-                <Select<RevenueLedgerDirection[]>
-                  multiple
-                  labelId="ledger-direction-label"
-                  label="Direction"
-                  value={directions}
-                  input={<OutlinedInput label="Direction" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
-                  onChange={(event: SelectChangeEvent<RevenueLedgerDirection[]>) => {
-                    setDirections(
-                      getSelectValue(event.target.value) as RevenueLedgerDirection[],
-                    );
-                    setPage(0);
-                  }}
+                  <TableSortLabel
+                    active={sortBy === 'eventTime'}
+                    direction={sortBy === 'eventTime' ? sortOrder : 'desc'}
+                    onClick={() => handleSort('eventTime')}
+                  >
+                    {SORT_LABELS.eventTime}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Store</TableCell>
+                <TableCell>Event type</TableCell>
+                <TableCell>Direction</TableCell>
+                <TableCell
+                  sortDirection={sortBy === 'grossAmount' ? sortOrder : false}
                 >
-                  {DIRECTION_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <InputLabel id="ledger-business-status-label">
-                  Business status
-                </InputLabel>
-                <Select<RevenueLedgerBusinessStatus[]>
-                  multiple
-                  labelId="ledger-business-status-label"
-                  label="Business status"
-                  value={businessStatuses}
-                  input={<OutlinedInput label="Business status" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
-                  onChange={(
-                    event: SelectChangeEvent<RevenueLedgerBusinessStatus[]>,
-                  ) => {
-                    setBusinessStatuses(
-                      getSelectValue(
-                        event.target.value,
-                      ) as RevenueLedgerBusinessStatus[],
-                    );
-                    setPage(0);
-                  }}
-                >
-                  {BUSINESS_STATUS_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl fullWidth size="small">
-                <InputLabel id="ledger-tenjin-status-label">
-                  Tenjin status
-                </InputLabel>
-                <Select<TenjinSdkDispatchStatus[]>
-                  multiple
-                  labelId="ledger-tenjin-status-label"
-                  label="Tenjin status"
-                  value={tenjinDispatchStatuses}
-                  input={<OutlinedInput label="Tenjin status" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
-                  onChange={(
-                    event: SelectChangeEvent<TenjinSdkDispatchStatus[]>,
-                  ) => {
-                    setTenjinDispatchStatuses(
-                      getSelectValue(
-                        event.target.value,
-                      ) as TenjinSdkDispatchStatus[],
-                    );
-                    setPage(0);
-                  }}
-                >
-                  {TENJIN_STATUS_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                label="Product ID"
-                size="small"
-                value={identityFilters.productId}
-                onChange={handleIdentityFilterChange('productId')}
-              />
-              <TextField
-                label="User ID"
-                size="small"
-                value={identityFilters.userId}
-                onChange={handleIdentityFilterChange('userId')}
-              />
-              <TextField
-                label="Order ID"
-                size="small"
-                value={identityFilters.orderId}
-                onChange={handleIdentityFilterChange('orderId')}
-              />
-              <TextField
-                label="Purchase token"
-                size="small"
-                value={identityFilters.purchaseToken}
-                onChange={handleIdentityFilterChange('purchaseToken')}
-              />
-              <TextField
-                label="Transaction ID"
-                size="small"
-                value={identityFilters.transactionId}
-                onChange={handleIdentityFilterChange('transactionId')}
-              />
-              <TextField
-                label="Original transaction ID"
-                size="small"
-                value={identityFilters.originalTransactionId}
-                onChange={handleIdentityFilterChange('originalTransactionId')}
-              />
-              <TextField
-                label="From"
-                type="datetime-local"
-                size="small"
-                value={dateRange.dateFrom}
-                onChange={handleDateChange('dateFrom')}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label="To"
-                type="datetime-local"
-                size="small"
-                value={dateRange.dateTo}
-                onChange={handleDateChange('dateTo')}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-
-            <Stack direction="row" spacing={1.5} sx={{ mt: 2 }} flexWrap="wrap">
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<Refresh />}
-                onClick={() => setRefreshNonce((current) => current + 1)}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Clear />}
-                disabled={!hasActiveFilters}
-                onClick={resetFilters}
-              >
-                Clear
-              </Button>
-            </Stack>
-          </Paper>
-
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-
-          <TableContainer component={Paper}>
-            <Table size="small">
-              <TableHead>
+                  <TableSortLabel
+                    active={sortBy === 'grossAmount'}
+                    direction={sortBy === 'grossAmount' ? sortOrder : 'desc'}
+                    onClick={() => handleSort('grossAmount')}
+                  >
+                    {SORT_LABELS.grossAmount}
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>Product ID</TableCell>
+                <TableCell>Business status</TableCell>
+                <TableCell>Tenjin status</TableCell>
+                <TableCell>Order / Transaction</TableCell>
+                <TableCell>User ID</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {isLoading && (
                 <TableRow>
-                  <TableCell sortDirection={sortBy === 'createdAt' ? sortOrder : false}>
-                    <TableSortLabel
-                      active={sortBy === 'createdAt'}
-                      direction={sortBy === 'createdAt' ? sortOrder : 'desc'}
-                      onClick={() => handleSort('createdAt')}
-                    >
-                      {SORT_LABELS.createdAt}
-                    </TableSortLabel>
+                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={28} />
                   </TableCell>
-                  <TableCell sortDirection={sortBy === 'eventTime' ? sortOrder : false}>
-                    <TableSortLabel
-                      active={sortBy === 'eventTime'}
-                      direction={sortBy === 'eventTime' ? sortOrder : 'desc'}
-                      onClick={() => handleSort('eventTime')}
-                    >
-                      {SORT_LABELS.eventTime}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>Store</TableCell>
-                  <TableCell>Event type</TableCell>
-                  <TableCell>Direction</TableCell>
-                  <TableCell sortDirection={sortBy === 'grossAmount' ? sortOrder : false}>
-                    <TableSortLabel
-                      active={sortBy === 'grossAmount'}
-                      direction={sortBy === 'grossAmount' ? sortOrder : 'desc'}
-                      onClick={() => handleSort('grossAmount')}
-                    >
-                      {SORT_LABELS.grossAmount}
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell>Product ID</TableCell>
-                  <TableCell>Business status</TableCell>
-                  <TableCell>Tenjin status</TableCell>
-                  <TableCell>Order / Transaction</TableCell>
-                  <TableCell>User ID</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {isLoading && (
-                  <TableRow>
-                    <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                      <CircularProgress size={28} />
-                    </TableCell>
-                  </TableRow>
-                )}
+              )}
 
-                {!isLoading && !error && items.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                      <Typography color="text.secondary">
-                        No ledger rows match the current filters
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
+              {!isLoading && !error && items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                    <Typography color="text.secondary">
+                      No ledger rows match the current filters
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
 
-                {!isLoading &&
-                  items.map((entry) => {
-                    const identityLines = getIdentityLines(entry);
+              {!isLoading &&
+                items.map((entry) => {
+                  const identityLines = getIdentityLines(entry);
 
-                    return (
-                      <TableRow key={entry.id} hover>
-                        <TableCell sx={{ minWidth: 180 }}>
-                          <Typography variant="body2">
-                            {formatDateTime(entry.createdAt)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ minWidth: 180 }}>
-                          {formatDateTime(entry.eventTime)}
-                        </TableCell>
-                        <TableCell>{formatEnumLabel(entry.store)}</TableCell>
-                        <TableCell>{formatEnumLabel(entry.eventType)}</TableCell>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={formatEnumLabel(entry.direction)}
-                            color={getDirectionChipColor(entry.direction)}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {formatAmount(entry.grossAmount, entry.currency)}
-                        </TableCell>
-                        <TableCell sx={{ maxWidth: 220 }}>
-                          <Typography variant="body2" noWrap>
-                            {entry.productId}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={formatEnumLabel(entry.businessStatus)}
-                            color={getStatusChipColor(entry.businessStatus)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            label={formatEnumLabel(entry.tenjinDispatchStatus)}
-                            color={getTenjinChipColor(
-                              entry.tenjinDispatchStatus,
-                            )}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell sx={{ minWidth: 240, maxWidth: 360 }}>
-                          {identityLines.length > 0 ? (
-                            identityLines.map((line) => (
-                              <Typography
-                                key={line}
-                                variant="caption"
-                                display="block"
-                                sx={{ wordBreak: 'break-all' }}
-                              >
-                                {line}
-                              </Typography>
-                            ))
-                          ) : (
-                            <Typography color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ maxWidth: 220 }}>
-                          <Typography
-                            variant="caption"
-                            sx={{ wordBreak: 'break-all' }}
-                          >
-                            {entry.userId ?? '-'}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-            <TablePagination
-              component="div"
-              count={total}
-              page={page}
-              rowsPerPage={rowsPerPage}
-              rowsPerPageOptions={PAGE_SIZE_OPTIONS}
-              onPageChange={(_event, nextPage) => setPage(nextPage)}
-              onRowsPerPageChange={(event) => {
-                setRowsPerPage(Number(event.target.value));
-                setPage(0);
-              }}
-            />
-          </TableContainer>
-        </Box>
+                  return (
+                    <TableRow key={entry.id} hover>
+                      <TableCell sx={{ minWidth: 180 }}>
+                        <Typography variant="body2">
+                          {formatDateTime(entry.createdAt)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 180 }}>
+                        {formatDateTime(entry.eventTime)}
+                      </TableCell>
+                      <TableCell>{formatEnumLabel(entry.store)}</TableCell>
+                      <TableCell>{formatEnumLabel(entry.eventType)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={formatEnumLabel(entry.direction)}
+                          color={getDirectionChipColor(entry.direction)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {formatAmount(entry.grossAmount, entry.currency)}
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 220 }}>
+                        <Typography variant="body2" noWrap>
+                          {entry.productId}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={formatEnumLabel(entry.businessStatus)}
+                          color={getStatusChipColor(entry.businessStatus)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          label={formatEnumLabel(entry.tenjinDispatchStatus)}
+                          color={getTenjinChipColor(entry.tenjinDispatchStatus)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 240, maxWidth: 360 }}>
+                        {identityLines.length > 0 ? (
+                          identityLines.map((line) => (
+                            <Typography
+                              key={line}
+                              variant="caption"
+                              display="block"
+                              sx={{ wordBreak: 'break-all' }}
+                            >
+                              {line}
+                            </Typography>
+                          ))
+                        ) : (
+                          <Typography color="text.secondary">-</Typography>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 220 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ wordBreak: 'break-all' }}
+                        >
+                          {entry.userId ?? '-'}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+            onPageChange={(_event, nextPage) => setPage(nextPage)}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(Number(event.target.value));
+              setPage(0);
+            }}
+          />
+        </TableContainer>
       </Box>
+    </Box>
+  );
+}
+
+export default function RevenueLedgerPage() {
+  return (
+    <ProtectedRoute>
+      <RevenueLedgerAccessGate>
+        <RevenueLedgerContent />
+      </RevenueLedgerAccessGate>
     </ProtectedRoute>
   );
 }

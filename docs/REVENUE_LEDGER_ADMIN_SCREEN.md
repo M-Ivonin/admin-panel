@@ -14,6 +14,19 @@ The screen reads only through:
 
 Backend access requires JWT authentication and a backend admin email check.
 
+## Password Gate
+
+The admin screen is also protected by a page-level password gate before ledger
+data is requested from the backend.
+
+Configure the password with the server-side environment variable
+`REVENUE_LEDGER_PASSWORD`.
+
+Successful unlocks set an httpOnly cookie for 8 hours. The cookie is bound to
+the current admin access token and validated through the local admin-panel route
+`/api/revenue-ledger-access`; browser code does not read the password or the
+cookie value directly.
+
 ## Filters
 
 The UI sends exact filters only:
