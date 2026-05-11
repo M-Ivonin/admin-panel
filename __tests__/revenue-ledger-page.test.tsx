@@ -1,9 +1,20 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import RevenueLedgerPage from '@/app/(admin)/dashboard/revenue-ledger/page';
 import { getRevenueLedgerEntries } from '@/lib/api/revenue-ledger';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock('@/modules/revenue-ledger/RevenueLedgerAccessGate', () => ({
+  RevenueLedgerAccessGate: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 jest.mock('next/link', () => ({
@@ -98,7 +109,7 @@ describe('RevenueLedgerPage', () => {
         limit: 50,
         sortBy: 'createdAt',
         sortOrder: 'desc',
-      }),
+      })
     );
   });
 
@@ -107,7 +118,7 @@ describe('RevenueLedgerPage', () => {
     (getRevenueLedgerEntries as jest.Mock).mockReturnValueOnce(
       new Promise((resolve) => {
         resolveRequest = resolve;
-      }),
+      })
     );
 
     render(<RevenueLedgerPage />);
@@ -126,7 +137,7 @@ describe('RevenueLedgerPage', () => {
     });
 
     expect(
-      await screen.findByText('No ledger rows match the current filters'),
+      await screen.findByText('No ledger rows match the current filters')
     ).toBeTruthy();
   });
 
@@ -139,7 +150,7 @@ describe('RevenueLedgerPage', () => {
 
     expect(await screen.findByText('Forbidden')).toBeTruthy();
     expect(
-      screen.queryByText('No ledger rows match the current filters'),
+      screen.queryByText('No ledger rows match the current filters')
     ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Order ID'), {
@@ -151,7 +162,7 @@ describe('RevenueLedgerPage', () => {
         expect.objectContaining({
           page: 1,
           orderId: 'order-1',
-        }),
+        })
       );
     });
   });
