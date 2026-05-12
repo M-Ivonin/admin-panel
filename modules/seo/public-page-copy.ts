@@ -126,19 +126,19 @@ export function getPublicPageSeoCopy(
   if (pageKey === 'home') {
     const homeCopy: Record<Locale, PublicSeoCopy> = {
       en: {
-        title: 'AI Football Predictions & Match Insights',
+        title: 'AI Football Insights & Match Analysis',
         description:
-          'Get AI-powered football and soccer predictions, match analysis, and real-time insights. Track teams, players, and matches with SirBro.',
+          'Get AI-powered football and soccer real-time insights, match analysis, player and team stats across top leagues including Premier League, La Liga, Serie A, Bundesliga, MLS, and more — all in one app.',
       },
       es: {
-        title: 'Predicciones de Fútbol con IA y Análisis de Partidos | SirBro',
+        title: 'Insights de Fútbol con IA y Análisis de Partidos | SirBro',
         description:
-          'Descubre predicciones de fútbol con IA, análisis de partidos e insights en tiempo real. Sigue equipos, jugadores y ligas con SirBro.',
+          'Obtén insights de fútbol con IA en tiempo real, análisis de partidos, estadísticas de jugadores y equipos en ligas como Premier League, La Liga, Serie A, Bundesliga, MLS y más — todo en una sola app.',
       },
       pt: {
-        title: 'Previsões de Futebol com IA e Análise de Partidas | SirBro',
+        title: 'Insights de Futebol com IA e Análise de Partidas | SirBro',
         description:
-          'Acesse previsões de futebol com IA, análise de jogos e insights em tempo real. Acompanhe times, jogadores e ligas com SirBro.',
+          'Acesse insights de futebol com IA em tempo real, análise de partidas, estatísticas de jogadores e times nas principais ligas como Premier League, La Liga, Serie A, Bundesliga, MLS e mais — tudo em um só app.',
       },
     };
 
