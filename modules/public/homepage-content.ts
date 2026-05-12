@@ -127,11 +127,11 @@ const homepageContent: Record<Locale, HomepageContent> = {
   en: {
     hero: {
       chips: ['AI football insights', 'Live match analysis'],
-      title: 'AI Football Predictions, Insights & Match Analysis — Without the Noise',
+      title: 'AI Football Insights & Match Analysis — Without the Noise',
       description:
         'Most people follow games. Few understand them. SirBro turns live match data, player form, and tactical context into clear, fast football insights.',
       proof:
-        'Get AI-powered football and soccer predictions, match analysis, team stats, and real-time insights across top leagues including Premier League, La Liga, Serie A, Bundesliga, MLS, and more — all in one app.',
+        'Get AI-powered football and soccer real-time insights, match analysis, player and team stats across top leagues including Premier League, La Liga, Serie A, Bundesliga, MLS, and more — all in one app.',
       trustLine:
         'For entertainment purposes only. We don’t take bets. We analyze the game.',
       openAppLabel: 'Open App',
@@ -154,10 +154,10 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'Football is not random. It only looks that way if you don’t see the signals.',
       items: [
         {
-          title: 'AI Football Predictions',
+          title: 'AI Football Insights',
           description:
-            'Get structured predictions based on data, not opinion — from safe scenarios to higher-risk outcomes.',
-          accentLabel: 'Prediction engine',
+            'Get structured insights based on data, not opinion — from safe scenarios to higher-risk outcomes.',
+          accentLabel: 'Insights engine',
           accentValue: 'Data-first',
           lines: ['Structured outcomes', 'Scenario-based reads', 'Opinion-free analysis'],
         },
@@ -233,7 +233,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       eyebrow: 'Features',
       title: 'Everything you need for football insights in one place',
       features: [
-        'AI-powered football predictions',
+        'AI-powered football and soccer insights',
         'Live match tracking and timeline',
         'Team and player performance stats',
         'Tactical analysis and momentum indicators',
@@ -451,7 +451,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       title: 'Football insights — explained simply',
       items: [
         {
-          question: 'How does SirBro generate football predictions?',
+          question: 'How does SirBro generate football and soccer insights?',
           answer:
             'SirBro analyzes historical data, live match events, player performance, and tactical patterns to identify likely outcomes.',
         },
@@ -489,13 +489,13 @@ const homepageContent: Record<Locale, HomepageContent> = {
   },
   es: {
     hero: {
-      chips: ['Predicciones de fútbol con IA', 'Análisis de partidos'],
+      chips: ['Insights de fútbol con IA', 'Análisis de partidos'],
       title:
-        'Predicciones de Fútbol con IA, Análisis de Partidos e Insights — Sin Ruido',
+        'Insights de Fútbol con IA y Análisis de Partidos — Sin Ruido',
       description:
         'La mayoría sigue los partidos. Pocos los entienden. SirBro transforma datos en vivo, forma de jugadores y contexto táctico en insights claros y rápidos.',
       proof:
-        'Obtén predicciones de fútbol con IA, análisis de partidos, estadísticas de equipos y insights en tiempo real en ligas como Premier League, La Liga, Serie A, Bundesliga, MLS y más — todo en una sola app.',
+        'Obtén insights de fútbol con IA en tiempo real, análisis de partidos, estadísticas de jugadores y equipos en ligas como Premier League, La Liga, Serie A, Bundesliga, MLS y más — todo en una sola app.',
       trustLine:
         'Solo para fines de entretenimiento. No aceptamos apuestas. Analizamos el juego.',
       openAppLabel: 'Descargar App',
@@ -518,10 +518,10 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'El fútbol no es aleatorio. Solo lo parece si no ves las señales.',
       items: [
         {
-          title: 'Predicciones de fútbol con IA',
+          title: 'Insights de fútbol con IA',
           description:
-            'Obtén predicciones estructuradas basadas en datos — desde escenarios más seguros hasta más variables.',
-          accentLabel: 'Motor de predicción',
+            'Obtén insights estructurados basados en datos, no en opiniones — desde escenarios más seguros hasta resultados de mayor riesgo.',
+          accentLabel: 'Motor de insights',
           accentValue: 'Datos primero',
           lines: ['Resultados estructurados', 'Lecturas por escenario', 'Análisis sin ruido'],
         },
@@ -596,7 +596,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       eyebrow: 'Funciones',
       title: 'Todo lo que necesitas para entender el fútbol en un solo lugar',
       features: [
-        'Predicciones de fútbol con IA',
+        'Insights de fútbol con IA',
         'Seguimiento de partidos en vivo',
         'Estadísticas de equipos y jugadores',
         'Análisis táctico y señales de momentum',
@@ -813,7 +813,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       title: 'Insights de fútbol — explicados simple',
       items: [
         {
-          question: '¿Cómo genera SirBro las predicciones?',
+          question: '¿Cómo genera SirBro insights de fútbol?',
           answer:
             'Analiza datos históricos, eventos en vivo y rendimiento de jugadores.',
         },
@@ -849,13 +849,13 @@ const homepageContent: Record<Locale, HomepageContent> = {
   },
   pt: {
     hero: {
-      chips: ['Previsões de futebol com IA', 'Análise de partidas'],
+      chips: ['Insights de futebol com IA', 'Análise de partidas'],
       title:
-        'Previsões de Futebol com IA, Análise de Partidas e Insights — Sem Ruído',
+        'Insights de Futebol com IA e Análise de Partidas — Sem Ruído',
       description:
         'A maioria acompanha os jogos. Poucos entendem. O SirBro transforma dados ao vivo, forma dos jogadores e contexto tático em insights claros e rápidos.',
       proof:
-        'Acesse previsões de futebol com IA, análise de partidas, estatísticas de times e insights em tempo real nas principais ligas como Premier League, La Liga, Serie A, Bundesliga, MLS e mais — tudo em um só app.',
+        'Acesse insights de futebol com IA em tempo real, análise de partidas, estatísticas de jogadores e times nas principais ligas como Premier League, La Liga, Serie A, Bundesliga, MLS e mais — tudo em um só app.',
       trustLine:
         'Apenas para entretenimento. Não aceitamos apostas. Analisamos o jogo.',
       openAppLabel: 'Baixar App',
@@ -878,10 +878,10 @@ const homepageContent: Record<Locale, HomepageContent> = {
         'O futebol não é aleatório. Só parece se você não vê os sinais.',
       items: [
         {
-          title: 'Previsões de futebol com IA',
+          title: 'Insights de futebol com IA',
           description:
-            'Previsões estruturadas baseadas em dados — de cenários mais seguros a mais variáveis.',
-          accentLabel: 'Motor de previsão',
+            'Insights estruturados baseados em dados, não em opinião — de cenários seguros a resultados de maior risco.',
+          accentLabel: 'Motor de insights',
           accentValue: 'Dados primeiro',
           lines: ['Resultados estruturados', 'Leituras por cenário', 'Análise sem ruído'],
         },
@@ -955,7 +955,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       eyebrow: 'Recursos',
       title: 'Tudo que você precisa para entender futebol',
       features: [
-        'Previsões com IA',
+        'Insights de futebol com IA',
         'Acompanhamento de partidas ao vivo',
         'Estatísticas de times e jogadores',
         'Análise tática e indicadores de momentum',
@@ -1172,7 +1172,7 @@ const homepageContent: Record<Locale, HomepageContent> = {
       title: 'Insights de futebol — simples e direto',
       items: [
         {
-          question: 'Como o SirBro gera previsões?',
+          question: 'Como o SirBro gera insights de futebol?',
           answer:
             'Analisa dados históricos, eventos ao vivo e desempenho.',
         },
