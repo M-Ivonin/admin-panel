@@ -1,8 +1,14 @@
+import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { AppDocumentShell } from '@/components/providers/AppDocumentShell';
 import { PublicLocaleSync } from '@/components/providers/PublicLocaleSync';
 import { i18n } from '@/lib/i18n/config';
+import { sirbroSiteIcons } from '@/modules/seo/site-icons';
 import '../globals.css';
+
+export const metadata: Metadata = {
+  icons: sirbroSiteIcons,
+};
 
 export default async function PublicRootLayout({
   children,
@@ -11,9 +17,11 @@ export default async function PublicRootLayout({
 }) {
   const requestHeaders = await headers();
   const requestLocale = requestHeaders.get('x-app-locale');
-  const locale = requestLocale && i18n.locales.includes(requestLocale as (typeof i18n.locales)[number])
-    ? requestLocale
-    : i18n.defaultLocale;
+  const locale =
+    requestLocale &&
+    i18n.locales.includes(requestLocale as (typeof i18n.locales)[number])
+      ? requestLocale
+      : i18n.defaultLocale;
 
   return (
     <AppDocumentShell lang={locale} bodySuffix={<PublicLocaleSync />}>
