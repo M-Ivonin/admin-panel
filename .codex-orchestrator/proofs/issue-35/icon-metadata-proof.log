@@ -1,0 +1,7 @@
+{
+  "shortcutIcon": true,
+  "icon": true,
+  "appleTouchIcon": true,
+  "manifestTouchIcon": true,
+  "faviconIsIco": true
+}
