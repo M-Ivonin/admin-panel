@@ -8,7 +8,8 @@ import type {
 
 const LOCAL_API_BASE_URL = 'http://localhost:3001/v1';
 const DEV_API_BASE_URL =
-  process.env.NEXT_PUBLIC_DEV_API_BASE_URL || 'https://api-dev.tipsterbro.com/v1';
+  process.env.NEXT_PUBLIC_DEV_API_BASE_URL ||
+  'https://api-dev.tipsterbro.com/v1';
 const PROD_API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.API_BASE_URL ||
@@ -16,9 +17,7 @@ const PROD_API_BASE_URL =
 
 function isLocalhost(hostname: string) {
   return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1'
+    hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
   );
 }
 
@@ -41,6 +40,16 @@ function resolveApiBaseUrl() {
   }
 
   return PROD_API_BASE_URL;
+}
+
+function parseCsvEnv(value: string | undefined, fallback: string[]) {
+  const entries = (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const merged = entries.length > 0 ? entries : fallback;
+
+  return Array.from(new Set(merged));
 }
 
 export function getPublicAppConfig(): PublicAppConfig {
@@ -66,15 +75,28 @@ export function getAdminAppConfig(): AdminAppConfig {
 }
 
 export function getDeepLinkConfig(): DeepLinkConfig {
+  const iosBundle = process.env.IOS_BUNDLE_ID || 'ai.levantem.sirbro';
+  const androidPackageName =
+    process.env.ANDROID_PACKAGE_NAME || 'ai.levantem.sirbro';
+
   return {
     appCustomScheme: process.env.APP_CUSTOM_SCHEME || 'sirbro',
     appHost: process.env.APP_HOST || 'sirbro.com',
     iosAppStoreUrl:
-      process.env.IOS_APP_STORE_URL || 'https://apps.apple.com/us/app/sirbro/id6753070536',
-    iosBundle: process.env.IOS_BUNDLE_ID || 'ai.levantem.sirbro',
+      process.env.IOS_APP_STORE_URL ||
+      'https://apps.apple.com/us/app/sirbro/id6753070536',
+    iosBundle,
+    iosBundles: parseCsvEnv(process.env.IOS_BUNDLE_IDS, [
+      iosBundle,
+      'ai.levantem.tipsterbro',
+    ]),
     iosTeamId: process.env.IOS_TEAM_ID || 'PLACEHOLDER_TEAM_ID',
     androidPlayUrl: process.env.ANDROID_PLAY_URL || '',
-    androidPackageName: process.env.ANDROID_PACKAGE_NAME || 'ai.levantem.sirbro',
+    androidPackageName,
+    androidPackageNames: parseCsvEnv(process.env.ANDROID_PACKAGE_NAMES, [
+      androidPackageName,
+      'ai.levantem.tipsterbro',
+    ]),
   };
 }
 
@@ -82,7 +104,8 @@ export function getClientDeepLinkConfig(): ClientDeepLinkConfig {
   return {
     appCustomScheme: process.env.NEXT_PUBLIC_APP_CUSTOM_SCHEME || 'sirbro',
     iosAppStoreUrl:
-      process.env.NEXT_PUBLIC_IOS_APP_STORE_URL || 'https://apps.apple.com/us/app/sirbro/id6753070536',
+      process.env.NEXT_PUBLIC_IOS_APP_STORE_URL ||
+      'https://apps.apple.com/us/app/sirbro/id6753070536',
     androidPlayUrl: process.env.NEXT_PUBLIC_ANDROID_PLAY_URL || '',
   };
 }

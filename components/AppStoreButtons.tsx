@@ -5,13 +5,16 @@ import Box from '@mui/material/Box';
 import AppleIcon from '@mui/icons-material/Apple';
 import { alpha } from '@mui/material/styles';
 import { getClientConfig } from '@/lib/config';
+import type { ClientDeepLinkConfig } from '@/modules/config/contracts';
 
 export const AppStoreButtons = ({
   alignment = 'center',
+  config,
 }: {
   alignment?: 'start' | 'center';
+  config?: Pick<ClientDeepLinkConfig, 'androidPlayUrl' | 'iosAppStoreUrl'>;
 }) => {
-  const config = getClientConfig();
+  const resolvedConfig = config ?? getClientConfig();
 
   const justifyContent = alignment === 'start' ? 'flex-start' : 'center';
 
@@ -26,11 +29,11 @@ export const AppStoreButtons = ({
         width: '100%',
       }}
     >
-      {config.androidPlayUrl && (
+      {resolvedConfig.androidPlayUrl && (
         <Button
           variant="outlined"
           size="large"
-          href={config.androidPlayUrl}
+          href={resolvedConfig.androidPlayUrl}
           target="_blank"
           rel="noopener noreferrer"
           startIcon={
@@ -65,11 +68,11 @@ export const AppStoreButtons = ({
         </Button>
       )}
 
-      {config.iosAppStoreUrl && (
+      {resolvedConfig.iosAppStoreUrl && (
         <Button
           variant="contained"
           size="large"
-          href={config.iosAppStoreUrl}
+          href={resolvedConfig.iosAppStoreUrl}
           target="_blank"
           rel="noopener noreferrer"
           startIcon={<AppleIcon />}

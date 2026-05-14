@@ -17,9 +17,11 @@ export interface DeepLinkConfig {
   appHost: string;
   iosAppStoreUrl: string;
   iosBundle: string;
+  iosBundles: string[];
   iosTeamId: string;
   androidPlayUrl: string;
   androidPackageName: string;
+  androidPackageNames: string[];
 }
 
 export interface ClientDeepLinkConfig {
