@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -8,6 +8,11 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   FormControl,
   InputLabel,
   MenuItem,
@@ -27,10 +32,17 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Clear, Refresh } from '@mui/icons-material';
+import {
+  ArrowBack,
+  Clear,
+  ManageSearch,
+  Refresh,
+  RestartAlt,
+} from '@mui/icons-material';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RevenueLedgerAccessGate } from '@/modules/revenue-ledger/RevenueLedgerAccessGate';
 import {
+  AdminTenjinDispatchRetryDiagnostics,
   PaginatedRevenueLedgerEntriesResponse,
   RevenueLedgerBusinessStatus,
   RevenueLedgerDirection,
@@ -43,6 +55,8 @@ import {
   RevenueLedgerSummary,
   TenjinSdkDispatchStatus,
   getRevenueLedgerEntries,
+  getTenjinDispatchRetryDiagnostics,
+  reopenTenjinDispatchRetry,
 } from '@/lib/api/revenue-ledger';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -156,6 +170,20 @@ function formatDateTime(value: string | null): string {
   });
 }
 
+function formatNullableValue(
+  value: string | number | boolean | null | undefined
+) {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+
+  return String(value);
+}
+
 function formatAmount(amount: string | null, currency: string | null): string {
   if (!amount || !currency) {
     return '-';
@@ -238,6 +266,31 @@ function getIdentityLines(entry: RevenueLedgerEntry): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
+function getDispatchTokenIssueCount(
+  diagnostics: AdminTenjinDispatchRetryDiagnostics
+): number | undefined {
+  return diagnostics.dispatchTokenIssueCount ?? diagnostics.token.issueCount;
+}
+
+function TenjinDiagnosticLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | boolean | null | undefined;
+}) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+        {formatNullableValue(value)}
+      </Typography>
+    </Box>
+  );
+}
+
 function RevenueLedgerContent() {
   const [items, setItems] = useState<RevenueLedgerEntry[]>([]);
   const [summary, setSummary] = useState<RevenueLedgerSummary>(EMPTY_SUMMARY);
@@ -272,6 +325,18 @@ function RevenueLedgerContent() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<RevenueLedgerEntry | null>(
+    null
+  );
+  const [diagnostics, setDiagnostics] =
+    useState<AdminTenjinDispatchRetryDiagnostics | null>(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
+  const [isReopenConfirmOpen, setIsReopenConfirmOpen] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [reopenSuccess, setReopenSuccess] = useState<string | null>(null);
+  const diagnosticsRequestIdRef = useRef(0);
 
   const filters = useMemo<RevenueLedgerFilters>(
     () => ({
@@ -415,6 +480,92 @@ function RevenueLedgerContent() {
     setSortOrder(DEFAULT_SORT_ORDER);
     setPage(0);
   };
+
+  const loadTenjinDiagnostics = async (ledgerId: string) => {
+    const requestId = diagnosticsRequestIdRef.current + 1;
+    diagnosticsRequestIdRef.current = requestId;
+    setIsDiagnosticsLoading(true);
+    setDiagnosticsError(null);
+    setReopenSuccess(null);
+
+    try {
+      const response = await getTenjinDispatchRetryDiagnostics(ledgerId);
+      if (diagnosticsRequestIdRef.current !== requestId) {
+        return;
+      }
+      setDiagnostics(response);
+    } catch (loadError) {
+      if (diagnosticsRequestIdRef.current !== requestId) {
+        return;
+      }
+      setDiagnostics(null);
+      setDiagnosticsError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'Failed to load Tenjin retry diagnostics'
+      );
+    } finally {
+      if (diagnosticsRequestIdRef.current === requestId) {
+        setIsDiagnosticsLoading(false);
+      }
+    }
+  };
+
+  const openTenjinDiagnostics = (entry: RevenueLedgerEntry) => {
+    setSelectedEntry(entry);
+    setDiagnostics(null);
+    setDiagnosticsError(null);
+    setReopenSuccess(null);
+    setIsDiagnosticsOpen(true);
+    void loadTenjinDiagnostics(entry.id);
+  };
+
+  const closeTenjinDiagnostics = () => {
+    diagnosticsRequestIdRef.current += 1;
+    setIsDiagnosticsOpen(false);
+    setIsReopenConfirmOpen(false);
+  };
+
+  const handleReopenTenjinRetry = async () => {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setIsReopening(true);
+    setDiagnosticsError(null);
+    setReopenSuccess(null);
+
+    try {
+      const response = await reopenTenjinDispatchRetry(selectedEntry.id);
+      setDiagnostics(response);
+      setSelectedEntry((current) =>
+        current?.id === selectedEntry.id
+          ? {
+              ...current,
+              businessStatus: response.businessStatus,
+              tenjinDispatchStatus: response.tenjinDispatchStatus,
+              dispatchSkipReason: null,
+              lastDispatchError: null,
+            }
+          : current
+      );
+      setReopenSuccess('Row reopened for future client retry.');
+      setIsReopenConfirmOpen(false);
+      setRefreshNonce((current) => current + 1);
+    } catch (reopenError) {
+      setDiagnosticsError(
+        reopenError instanceof Error
+          ? reopenError.message
+          : 'Failed to reopen Tenjin retry'
+      );
+    } finally {
+      setIsReopening(false);
+    }
+  };
+
+  const canShowReopenAction =
+    diagnostics?.retryEligibility.eligible &&
+    diagnostics.nextAction !== 'reopened_for_client_retry';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -836,12 +987,13 @@ function RevenueLedgerContent() {
                 <TableCell>Tenjin status</TableCell>
                 <TableCell>Order / Transaction</TableCell>
                 <TableCell>User ID</TableCell>
+                <TableCell>Tenjin retry</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={28} />
                   </TableCell>
                 </TableRow>
@@ -849,7 +1001,7 @@ function RevenueLedgerContent() {
 
               {!isLoading && !error && items.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary">
                       No ledger rows match the current filters
                     </Typography>
@@ -928,6 +1080,16 @@ function RevenueLedgerContent() {
                           {entry.userId ?? '-'}
                         </Typography>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ManageSearch />}
+                          onClick={() => openTenjinDiagnostics(entry)}
+                        >
+                          Inspect
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -947,6 +1109,251 @@ function RevenueLedgerContent() {
           />
         </TableContainer>
       </Box>
+
+      <Dialog
+        open={isDiagnosticsOpen}
+        onClose={closeTenjinDiagnostics}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Tenjin Retry Diagnostics</DialogTitle>
+        <DialogContent dividers>
+          {selectedEntry && (
+            <Stack spacing={2.5}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Ledger row
+                </Typography>
+                <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                  {selectedEntry.id}
+                </Typography>
+              </Box>
+
+              {isDiagnosticsLoading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={28} />
+                </Box>
+              )}
+
+              {diagnosticsError && (
+                <Alert severity="error">{diagnosticsError}</Alert>
+              )}
+
+              {reopenSuccess && (
+                <Alert severity="success">{reopenSuccess}</Alert>
+              )}
+
+              {diagnostics && (
+                <>
+                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                    <Chip
+                      label={
+                        diagnostics.retryEligibility.eligible
+                          ? 'Eligible'
+                          : 'Not eligible'
+                      }
+                      color={
+                        diagnostics.retryEligibility.eligible
+                          ? 'success'
+                          : 'warning'
+                      }
+                    />
+                    <Chip
+                      label={formatEnumLabel(diagnostics.tenjinDispatchStatus)}
+                      color={getTenjinChipColor(
+                        diagnostics.tenjinDispatchStatus
+                      )}
+                      variant="outlined"
+                    />
+                    <Chip
+                      label={`Token ${formatEnumLabel(diagnostics.token.state)}`}
+                      variant="outlined"
+                    />
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, 1fr)',
+                        md: 'repeat(3, 1fr)',
+                      },
+                      gap: 2,
+                    }}
+                  >
+                    <TenjinDiagnosticLine
+                      label="Reason"
+                      value={diagnostics.retryEligibility.reason}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Next action"
+                      value={formatEnumLabel(diagnostics.nextAction)}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Business status"
+                      value={formatEnumLabel(diagnostics.businessStatus)}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Gross snapshot"
+                      value={diagnostics.grossSnapshotAvailable}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Issue count"
+                      value={getDispatchTokenIssueCount(diagnostics)}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Has token"
+                      value={diagnostics.token.hasToken}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Token issued"
+                      value={formatDateTime(diagnostics.token.issuedAt)}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Token expires"
+                      value={formatDateTime(diagnostics.token.expiresAt)}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Token expired"
+                      value={diagnostics.token.isExpired}
+                    />
+                  </Box>
+
+                  <Divider />
+
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, 1fr)',
+                      },
+                      gap: 2,
+                    }}
+                  >
+                    <TenjinDiagnosticLine
+                      label="Event time"
+                      value={formatDateTime(
+                        diagnostics.eventTime ?? selectedEntry.eventTime
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Created time"
+                      value={formatDateTime(
+                        diagnostics.createdAt ?? selectedEntry.createdAt
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Updated time"
+                      value={formatDateTime(
+                        diagnostics.updatedAt ?? selectedEntry.updatedAt
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="SDK call started"
+                      value={formatDateTime(
+                        diagnostics.sdkCallStartedAt ?? null
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Client reported sent"
+                      value={formatDateTime(
+                        diagnostics.clientReportedSentAt ?? null
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Client reported failed"
+                      value={formatDateTime(
+                        diagnostics.clientReportedFailedAt ?? null
+                      )}
+                    />
+                    <TenjinDiagnosticLine
+                      label="Last dispatch error"
+                      value={
+                        diagnostics.lastDispatchError ??
+                        selectedEntry.lastDispatchError
+                      }
+                    />
+                    <TenjinDiagnosticLine
+                      label="Dispatch skip reason"
+                      value={
+                        diagnostics.dispatchSkipReason ??
+                        selectedEntry.dispatchSkipReason
+                      }
+                    />
+                    <TenjinDiagnosticLine
+                      label="Skip reason"
+                      value={diagnostics.skipReason ?? selectedEntry.skipReason}
+                    />
+                  </Box>
+
+                  {!canShowReopenAction && (
+                    <Alert severity="info">
+                      {diagnostics.retryEligibility.eligible
+                        ? 'This row is ready for a future client retry.'
+                        : `Reopen is blocked: ${formatEnumLabel(
+                            diagnostics.nextAction
+                          )}.`}
+                    </Alert>
+                  )}
+                </>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTenjinDiagnostics}>Close</Button>
+          {canShowReopenAction && (
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<RestartAlt />}
+              onClick={() => setIsReopenConfirmOpen(true)}
+              disabled={isReopening}
+            >
+              Reopen client retry
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={isReopenConfirmOpen}
+        onClose={() => setIsReopenConfirmOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Confirm Tenjin retry reopen</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Alert severity="warning">
+              This only resets the existing ledger row for a future iOS client
+              retry. It does not send revenue to Tenjin from the admin panel.
+            </Alert>
+            <Typography variant="body2">
+              Confirm only when the diagnostics show this row is still before
+              the Tenjin SDK call boundary.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsReopenConfirmOpen(false)}
+            disabled={isReopening}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleReopenTenjinRetry}
+            disabled={isReopening}
+          >
+            {isReopening ? 'Reopening...' : 'Confirm reopen'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

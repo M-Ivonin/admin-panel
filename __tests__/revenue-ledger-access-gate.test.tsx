@@ -55,7 +55,7 @@ describe('RevenueLedgerAccessGate', () => {
     );
 
     expect(await screen.findByText('Revenue Ledger access')).toBeTruthy();
-    expect(screen.queryByText('Ledger table')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ledger table')).toBeNull();
 
     fireEvent.change(await screen.findByLabelText(/Password/), {
       target: { value: 'ledger-secret' },
@@ -102,6 +102,6 @@ describe('RevenueLedgerAccessGate', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Enter' }));
 
     expect(await screen.findByText('Invalid password.')).toBeTruthy();
-    expect(screen.queryByText('Ledger table')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ledger table')).toBeNull();
   });
 });
