@@ -22,7 +22,9 @@ Explicit requirement: **Follow existing code style: Before generating code, look
 
 ## 4. Context7 MCP
 
-- Use Context7 MCP for latest Next.js/React/MUI/library docs and API changes.
+- Use Context7 MCP only when the task genuinely requires precise, current Next.js/React/MUI/library docs or API changes that cannot be confidently answered from local code, lockfiles, tests, examples, or existing docs.
+- Prefer local inspection first: read the app code, package manifest / lockfile, tests, examples, and docs before reaching for external library docs.
+- Do not use Context7 MCP for routine Next.js/React/MUI coding, simple refactors, repository-specific behavior, or facts already visible in the project.
 - Explicitly notify the user whenever Context7 MCP was used and what was checked.
 - If Context7 MCP is unavailable:
   - State that it is unavailable.
