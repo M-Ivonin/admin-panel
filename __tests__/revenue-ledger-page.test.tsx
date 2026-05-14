@@ -4,9 +4,14 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
-import RevenueLedgerPage from '@/app/(admin)/dashboard/revenue-ledger/page';
-import { getRevenueLedgerEntries } from '@/lib/api/revenue-ledger';
+import RevenueLedgerPage from '../app/(admin)/dashboard/revenue-ledger/page';
+import {
+  getRevenueLedgerEntries,
+  getTenjinDispatchRetryDiagnostics,
+  reopenTenjinDispatchRetry,
+} from '@/lib/api/revenue-ledger';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -30,6 +35,8 @@ jest.mock('next/link', () => ({
 
 jest.mock('@/lib/api/revenue-ledger', () => ({
   getRevenueLedgerEntries: jest.fn(),
+  getTenjinDispatchRetryDiagnostics: jest.fn(),
+  reopenTenjinDispatchRetry: jest.fn(),
 }));
 
 const emptySummary = {
@@ -92,6 +99,8 @@ const populatedResponse = {
 describe('RevenueLedgerPage', () => {
   beforeEach(() => {
     (getRevenueLedgerEntries as jest.Mock).mockReset();
+    (getTenjinDispatchRetryDiagnostics as jest.Mock).mockReset();
+    (reopenTenjinDispatchRetry as jest.Mock).mockReset();
     (getRevenueLedgerEntries as jest.Mock).mockResolvedValue(populatedResponse);
   });
 
@@ -151,7 +160,7 @@ describe('RevenueLedgerPage', () => {
     expect(await screen.findByText('Forbidden')).toBeTruthy();
     expect(
       screen.queryByText('No ledger rows match the current filters')
-    ).not.toBeInTheDocument();
+    ).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Order ID'), {
       target: { value: 'order-1' },
@@ -165,5 +174,126 @@ describe('RevenueLedgerPage', () => {
         })
       );
     });
+  });
+
+  it('loads Tenjin retry diagnostics and reopens an eligible row after confirmation', async () => {
+    (getTenjinDispatchRetryDiagnostics as jest.Mock).mockResolvedValue({
+      ledgerId: 'ledger-1',
+      businessStatus: 'recorded',
+      tenjinDispatchStatus: 'expired_without_client_report',
+      grossSnapshotAvailable: true,
+      dispatchTokenIssueCount: 1,
+      sdkCallStartedAt: null,
+      token: {
+        state: 'expired',
+        hasToken: true,
+        issuedAt: '2026-04-27T10:01:00.000Z',
+        expiresAt: '2026-04-27T10:16:00.000Z',
+        isExpired: true,
+      },
+      retryEligibility: {
+        eligible: true,
+        reason: null,
+      },
+      nextAction: 'client_can_retry_after_app_update_or_restore',
+    });
+    (reopenTenjinDispatchRetry as jest.Mock).mockResolvedValue({
+      ledgerId: 'ledger-1',
+      businessStatus: 'recorded',
+      tenjinDispatchStatus: 'pending_client_completion',
+      grossSnapshotAvailable: true,
+      dispatchTokenIssueCount: 1,
+      token: {
+        state: 'none',
+        hasToken: false,
+        issuedAt: null,
+        expiresAt: null,
+        isExpired: false,
+      },
+      retryEligibility: {
+        eligible: true,
+        reason: null,
+      },
+      nextAction: 'reopened_for_client_retry',
+    });
+
+    render(<RevenueLedgerPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /inspect/i }));
+
+    const diagnosticsDialog = await screen.findByRole('dialog', {
+      name: 'Tenjin Retry Diagnostics',
+    });
+    expect(diagnosticsDialog).toBeTruthy();
+    expect(within(diagnosticsDialog).getByText('Eligible')).toBeTruthy();
+    expect(
+      within(diagnosticsDialog).getByText('Expired Without Client Report')
+    ).toBeTruthy();
+    expect(within(diagnosticsDialog).getByText('Issue count')).toBeTruthy();
+    expect(within(diagnosticsDialog).getByText('1')).toBeTruthy();
+    expect(
+      within(diagnosticsDialog).getByText('SDK call started')
+    ).toBeTruthy();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /reopen client retry/i })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /confirm reopen/i }));
+
+    expect(
+      await screen.findByText('Row reopened for future client retry.')
+    ).toBeTruthy();
+    expect(reopenTenjinDispatchRetry).toHaveBeenCalledWith('ledger-1');
+    await waitFor(() => {
+      expect(getRevenueLedgerEntries).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('shows ineligible Tenjin retry diagnostics without the reopen action', async () => {
+    (getTenjinDispatchRetryDiagnostics as jest.Mock).mockResolvedValue({
+      ledgerId: 'ledger-1',
+      businessStatus: 'recorded',
+      tenjinDispatchStatus: 'sdk_call_started',
+      grossSnapshotAvailable: true,
+      dispatchTokenIssueCount: 1,
+      sdkCallStartedAt: '2026-04-27T10:12:00.000Z',
+      clientReportedSentAt: null,
+      lastDispatchError: 'Client result not reported yet',
+      token: {
+        state: 'active',
+        hasToken: true,
+        issuedAt: '2026-04-27T10:01:00.000Z',
+        expiresAt: '2026-04-27T10:16:00.000Z',
+        isExpired: false,
+      },
+      retryEligibility: {
+        eligible: false,
+        reason: 'SDK call already started; reopening could double-count.',
+      },
+      nextAction: 'sdk_call_already_started',
+    });
+
+    render(<RevenueLedgerPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /inspect/i }));
+
+    const diagnosticsDialog = await screen.findByRole('dialog', {
+      name: 'Tenjin Retry Diagnostics',
+    });
+    expect(within(diagnosticsDialog).getByText('Not eligible')).toBeTruthy();
+    expect(
+      within(diagnosticsDialog).getByText(
+        'SDK call already started; reopening could double-count.'
+      )
+    ).toBeTruthy();
+    expect(
+      within(diagnosticsDialog).getByText('Sdk Call Already Started')
+    ).toBeTruthy();
+    expect(
+      within(diagnosticsDialog).getByText('Client result not reported yet')
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /reopen client retry/i })
+    ).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repo
 
 jest.setTimeout(30000);
 
-const push = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
@@ -19,7 +19,7 @@ jest.mock('@/modules/campaigns/repository', () => {
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push,
+    push: mockPush,
     replace: jest.fn(),
   }),
 }));
@@ -27,7 +27,7 @@ jest.mock('next/navigation', () => ({
 describe('CampaignsOverviewPage', () => {
   beforeEach(() => {
     resetMockCampaignsRepository();
-    push.mockReset();
+    mockPush.mockReset();
   });
 
   it('loads 10 campaigns by default', async () => {
@@ -96,7 +96,7 @@ describe('CampaignsOverviewPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'New Campaign' }));
 
-    expect(push).toHaveBeenCalledWith('/dashboard/campaigns/new');
+    expect(mockPush).toHaveBeenCalledWith('/dashboard/campaigns/new');
   });
 
   it('opens editing only from the row Edit button and sends the selected stats period', async () => {
@@ -108,10 +108,10 @@ describe('CampaignsOverviewPage', () => {
       await screen.findByText('onboarding_not_completed');
 
       fireEvent.click(screen.getByText('onboarding_not_completed'));
-      expect(push).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getAllByRole('button', { name: /Edit/i })[0]);
-      expect(push).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         '/dashboard/campaigns/cmp_onboarding_not_completed'
       );
 
