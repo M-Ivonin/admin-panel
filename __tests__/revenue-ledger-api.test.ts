@@ -1,11 +1,19 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
-import { getRevenueLedgerEntries } from '@/lib/api/revenue-ledger';
+import {
+  getRevenueLedgerEntries,
+  getTenjinDispatchRetryDiagnostics,
+  reopenTenjinDispatchRetry,
+} from '@/lib/api/revenue-ledger';
 
 jest.mock('@/modules/http/admin-auth-client', () => ({
   adminAuthFetch: jest.fn(),
 }));
 
 describe('getRevenueLedgerEntries', () => {
+  beforeEach(() => {
+    (adminAuthFetch as jest.Mock).mockReset();
+  });
+
   it('serializes pagination, exact filters, and multi-value filters into query params', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -64,5 +72,79 @@ describe('getRevenueLedgerEntries', () => {
     });
 
     await expect(getRevenueLedgerEntries()).rejects.toThrow('Forbidden');
+  });
+});
+
+describe('Tenjin dispatch retry admin API', () => {
+  beforeEach(() => {
+    (adminAuthFetch as jest.Mock).mockReset();
+  });
+
+  it('loads diagnostics for one revenue ledger row without mutation', async () => {
+    const diagnostics = {
+      ledgerId: 'ledger/1',
+      businessStatus: 'recorded',
+      tenjinDispatchStatus: 'expired_without_client_report',
+      grossSnapshotAvailable: true,
+      token: {
+        state: 'expired',
+        hasToken: true,
+        issuedAt: '2026-04-27T10:01:00.000Z',
+        expiresAt: '2026-04-27T10:16:00.000Z',
+        isExpired: true,
+      },
+      retryEligibility: {
+        eligible: true,
+        reason: null,
+      },
+      nextAction: 'client_can_retry_after_app_update_or_restore',
+    };
+
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(diagnostics),
+    });
+
+    await expect(
+      getTenjinDispatchRetryDiagnostics('ledger/1')
+    ).resolves.toEqual(diagnostics);
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/revenue-ledger/admin/entries/ledger%2F1/tenjin-dispatch-retry',
+      method: 'GET',
+    });
+  });
+
+  it('posts the guarded reopen request for one revenue ledger row', async () => {
+    const diagnostics = {
+      ledgerId: 'ledger-1',
+      businessStatus: 'recorded',
+      tenjinDispatchStatus: 'pending_client_completion',
+      grossSnapshotAvailable: true,
+      token: {
+        state: 'none',
+        hasToken: false,
+        issuedAt: null,
+        expiresAt: null,
+        isExpired: false,
+      },
+      retryEligibility: {
+        eligible: true,
+        reason: null,
+      },
+      nextAction: 'reopened_for_client_retry',
+    };
+
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(diagnostics),
+    });
+
+    await expect(reopenTenjinDispatchRetry('ledger-1')).resolves.toEqual(
+      diagnostics
+    );
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/revenue-ledger/admin/entries/ledger-1/tenjin-dispatch-retry/reopen',
+      method: 'POST',
+    });
   });
 });

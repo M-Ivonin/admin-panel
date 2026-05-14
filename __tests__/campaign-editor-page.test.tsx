@@ -15,8 +15,8 @@ import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repo
 
 jest.setTimeout(60000);
 
-const push = jest.fn();
-const replace = jest.fn();
+const mockPush = jest.fn();
+const mockReplace = jest.fn();
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
@@ -30,8 +30,8 @@ jest.mock('@/modules/campaigns/repository', () => {
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push,
-    replace,
+    push: mockPush,
+    replace: mockReplace,
   }),
 }));
 
@@ -95,8 +95,8 @@ describe('CampaignEditorPage', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     resetMockCampaignsRepository();
-    push.mockReset();
-    replace.mockReset();
+    mockPush.mockReset();
+    mockReplace.mockReset();
     mockedGetUsers.mockReset();
     mockedGetUser.mockReset();
     window.localStorage.clear();
@@ -641,7 +641,7 @@ describe('CampaignEditorPage', () => {
         recipients: ['admin@example.com'],
         locale: 'en',
       });
-      expect(replace).toHaveBeenCalledWith(
+      expect(mockReplace).toHaveBeenCalledWith(
         '/dashboard/campaigns/cmp_local_001'
       );
       expect(screen.getByText(/Test accepted successfully/i)).toBeTruthy();
@@ -1162,7 +1162,9 @@ describe('CampaignEditorPage', () => {
     expect(
       (await screen.findAllByText('Schedule failed')).length
     ).toBeGreaterThan(0);
-    expect(replace).toHaveBeenCalledWith('/dashboard/campaigns/cmp_local_001');
+    expect(mockReplace).toHaveBeenCalledWith(
+      '/dashboard/campaigns/cmp_local_001'
+    );
   });
 
   it('keeps send-test disabled when there is no resolved recipient', async () => {

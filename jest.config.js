@@ -1,23 +1,32 @@
-const nextJest = require('next/jest')
-
-const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files
-  dir: './',
-})
-
-// Add any custom config to be passed to Jest
-const customJestConfig = {
+module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jsdom',
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': [
+      'babel-jest',
+      { presets: ['next/babel'] },
+    ],
+  },
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/Tactical Identity Plot/',
   ],
   moduleNameMapper: {
+    '^.+\\.module\\.(css|sass|scss)$':
+      '<rootDir>/node_modules/next/dist/build/jest/object-proxy.js',
+    '^.+\\.(css|sass|scss)$':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/styleMock.js',
+    '^.+\\.(png|jpg|jpeg|gif|webp|avif|ico|bmp)$':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/fileMock.js',
+    '^.+\\.(svg)$':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/fileMock.js',
+    '@next/font/(.*)':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/nextFontMock.js',
+    'next/font/(.*)':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/nextFontMock.js',
+    '^server-only$':
+      '<rootDir>/node_modules/next/dist/build/jest/__mocks__/empty.js',
     '^@/(.*)$': '<rootDir>/$1',
   },
 }
-
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
