@@ -37,6 +37,7 @@ import {
   RetentionStage,
   PaginatedUsersResponse,
   RetentionCounts,
+  UserLatestAppProfile,
 } from '@/lib/api/users';
 import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
 import type { CampaignRetentionStageOption } from '@/modules/campaigns/contracts';
@@ -99,6 +100,42 @@ function getRetentionChipSx(
     bgcolor: selected ? hexToRgba(color, 0.14) : 'transparent',
     '& .MuiChip-label': {
       fontWeight: selected ? 700 : 500,
+    },
+  };
+}
+
+function getAppProfileChip(
+  appProfile: UserLatestAppProfile | undefined
+): {
+  label: string;
+  color: 'default' | 'primary' | 'secondary';
+  variant: 'filled' | 'outlined';
+  sx?: Record<string, unknown>;
+} {
+  if (appProfile === 'SirBro') {
+    return {
+      label: 'SirBro',
+      color: 'primary',
+      variant: 'outlined',
+    };
+  }
+
+  if (appProfile === 'TipsterBro') {
+    return {
+      label: 'TipsterBro',
+      color: 'secondary',
+      variant: 'outlined',
+    };
+  }
+
+  return {
+    label: 'Unknown',
+    color: 'default',
+    variant: 'outlined',
+    sx: {
+      color: 'text.disabled',
+      borderColor: 'divider',
+      bgcolor: 'action.hover',
     },
   };
 }
@@ -441,6 +478,7 @@ export default function UsersPage() {
                           Status
                         </TableSortLabel>
                       </TableCell>
+                      <TableCell>App</TableCell>
                       <TableCell>
                         <TableSortLabel
                           active={sortBy === 'activePlan'}
@@ -574,6 +612,23 @@ export default function UsersPage() {
                           />
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            const appProfileChip = getAppProfileChip(
+                              user.latestAppProfile
+                            );
+
+                            return (
+                              <Chip
+                                label={appProfileChip.label}
+                                size="small"
+                                color={appProfileChip.color}
+                                variant={appProfileChip.variant}
+                                sx={appProfileChip.sx}
+                              />
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           <Chip
                             label={user.subscription?.activePlan || 'free'}
                             size="small"
@@ -655,7 +710,7 @@ export default function UsersPage() {
                     ))}
                     {users.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
                           <Typography color="text.secondary">
                             {debouncedSearch || selectedRetentionStage
                               ? 'No users found matching your filters'
