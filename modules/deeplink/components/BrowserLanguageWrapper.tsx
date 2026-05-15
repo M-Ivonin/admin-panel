@@ -8,7 +8,8 @@ import { getDictionary } from '@/lib/i18n/get-dictionary';
 import type { Translations } from '@/lib/i18n/translations';
 
 interface BrowserLanguageWrapperProps {
-  channelId: string;
+  channelId?: string;
+  appPath?: string;
   token?: string;
   config: ClientDeepLinkConfig;
   showError?: boolean;
@@ -16,11 +17,17 @@ interface BrowserLanguageWrapperProps {
 
 export function BrowserLanguageWrapper({
   channelId,
+  appPath,
   token,
   config,
   showError = false,
 }: BrowserLanguageWrapperProps) {
   const [translations, setTranslations] = useState<Translations | null>(null);
+  const resolvedAppPath =
+    appPath ??
+    `/channels/join?channelId=${encodeURIComponent(channelId ?? '')}${
+      token ? `&token=${encodeURIComponent(token)}` : ''
+    }`;
 
   useEffect(() => {
     const locale = detectBrowserLocale();
@@ -61,10 +68,12 @@ export function BrowserLanguageWrapper({
 
   return (
     <DeepLinkHandler
+      appPath={resolvedAppPath}
       channelId={channelId}
       token={token}
       config={config}
       translations={translations}
+      variant={channelId ? 'channel' : 'generic'}
     />
   );
 }
