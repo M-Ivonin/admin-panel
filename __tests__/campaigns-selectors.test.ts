@@ -40,6 +40,18 @@ describe('campaign selectors', () => {
     );
   });
 
+  it('blocks scheduling when no Target App is selected', () => {
+    const draft = createEmptyCampaignDraft();
+    draft.name = 'No app';
+    draft.goal = 'Should not schedule';
+    draft.targetApps = [];
+
+    const summary = getCampaignValidationSummary(draft);
+
+    expect(summary.errors).toContain('Select at least one Target App.');
+    expect(canScheduleCampaign(draft)).toBe(false);
+  });
+
   it('blocks scheduling when the recurrence rule is not a supported daily or weekly local-time rule', () => {
     const draft = createEmptyCampaignDraft();
     draft.name = 'Recurring';

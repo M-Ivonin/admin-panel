@@ -48,6 +48,7 @@ export function createEmptyCampaignDraft(): CampaignDraft {
     id: null,
     name: '',
     goal: '',
+    targetApps: ['SirBro'],
     goalDefinition: null,
     channel: 'push',
     status: 'draft',

@@ -123,6 +123,7 @@ export async function getCampaignsOverview(
 
   appendQueryParam(searchParams, 'statuses', params.statuses);
   appendQueryParam(searchParams, 'triggerTypes', params.triggerTypes);
+  appendQueryParam(searchParams, 'targetApps', params.targetApps ?? []);
 
   const response = await adminAuthFetch({
     path: `/campaigns/admin/overview?${searchParams.toString()}`,
