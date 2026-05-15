@@ -59,6 +59,7 @@ export const SEND_GUARD_ACTION_LABELS: Record<CampaignSendGuardAction, string> =
   {
     opened_app: 'Opened app',
     match_center_opened: 'Opened match center',
+    rewards_wallet_opened: 'Opened rewards wallet',
     live_challenge_created: 'Created live challenge',
     voted_for_prediction: 'Voted for prediction',
     chat_in_ai_chat: 'Chatted in AI chat',
@@ -263,6 +264,14 @@ function describeJourneyStep(step: CampaignJourneyStepDraft): string {
   return `Step ${step.order} · ${delayLabel} · send between ${step.sendWindowStart}-${step.sendWindowEnd} · cap ${step.frequencyCapHours ?? 'none'}h${sendGuardLabel} · stop later steps when goal is reached`;
 }
 
+function formatTargetApps(targetApps: CampaignDraft['targetApps']): string {
+  if (targetApps.length === 0) {
+    return 'None selected';
+  }
+
+  return targetApps.join(', ');
+}
+
 /**
  * Derives locale readiness from one localized step-content map.
  */
@@ -458,6 +467,10 @@ export function getCampaignValidationSummary(
 
   if (!hasMeaningfulText(draft.goal)) {
     errors.push('Campaign goal is required.');
+  }
+
+  if (draft.targetApps.length === 0) {
+    errors.push('Select at least one Target App.');
   }
 
   if (
@@ -708,6 +721,7 @@ export function buildCampaignReviewModel(
     basics: [
       { label: 'Campaign', value: draft.name || 'Untitled draft' },
       { label: 'Goal', value: draft.goal || 'No goal yet' },
+      { label: 'Target Apps', value: formatTargetApps(draft.targetApps) },
       {
         label: 'Tracked goal',
         value: draft.goalDefinition

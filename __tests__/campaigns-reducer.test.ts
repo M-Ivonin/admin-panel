@@ -5,8 +5,81 @@ import {
   createCampaignEditorState,
 } from '@/modules/campaigns/reducer';
 import { getCampaignJourneyStepDrafts } from '@/modules/campaigns/journey-step-draft';
+import type { CampaignScenarioTemplateSummary } from '@/modules/campaigns/contracts';
 
 describe('campaignEditorReducer', () => {
+  it('toggles Target Apps independently and allows an empty validation state', () => {
+    const initialState = createCampaignEditorState(createEmptyCampaignDraft());
+
+    const withTipsterBro = campaignEditorReducer(initialState, {
+      type: 'toggleTargetApp',
+      targetApp: 'TipsterBro',
+    });
+    const withoutSirBro = campaignEditorReducer(withTipsterBro, {
+      type: 'toggleTargetApp',
+      targetApp: 'SirBro',
+    });
+    const withoutAnyTargetApp = campaignEditorReducer(withoutSirBro, {
+      type: 'toggleTargetApp',
+      targetApp: 'TipsterBro',
+    });
+
+    expect(initialState.draft.targetApps).toEqual(['SirBro']);
+    expect(withTipsterBro.draft.targetApps).toEqual(['SirBro', 'TipsterBro']);
+    expect(withoutSirBro.draft.targetApps).toEqual(['TipsterBro']);
+    expect(withoutAnyTargetApp.draft.targetApps).toEqual([]);
+  });
+
+  it('keeps all locales for both apps and only English for TipsterBro-only drafts', () => {
+    const initialDraft = createEmptyCampaignDraft();
+    initialDraft.audience.criteria.locales = ['en', 'es', 'pt'];
+    const initialState = createCampaignEditorState(initialDraft);
+
+    const bothApps = campaignEditorReducer(initialState, {
+      type: 'toggleTargetApp',
+      targetApp: 'TipsterBro',
+    });
+    const tipsterBroOnly = campaignEditorReducer(bothApps, {
+      type: 'toggleTargetApp',
+      targetApp: 'SirBro',
+    });
+
+    expect(bothApps.draft.targetApps).toEqual(['SirBro', 'TipsterBro']);
+    expect(bothApps.draft.audience.criteria.locales).toEqual([
+      'en',
+      'es',
+      'pt',
+    ]);
+    expect(tipsterBroOnly.draft.targetApps).toEqual(['TipsterBro']);
+    expect(tipsterBroOnly.draft.audience.criteria.locales).toEqual(['en']);
+  });
+
+  it('preselects every compatible Target App when applying a scenario template', () => {
+    const initialDraft = createEmptyCampaignDraft();
+    const initialState = createCampaignEditorState(initialDraft);
+    const template: CampaignScenarioTemplateSummary = {
+      id: 'tpl_favorite_match_kickoff',
+      name: 'Favorite match kickoff',
+      description: 'Match-center compatible template',
+      source: 'shipped',
+      compatibleTargetApps: ['SirBro', 'TipsterBro'],
+      compatibilityReason: null,
+      definition: {
+        ...initialDraft,
+        name: 'Favorite match kickoff',
+        goal: 'Drive match-center opens',
+        targetApps: ['SirBro'],
+      },
+    };
+
+    const nextState = campaignEditorReducer(initialState, {
+      type: 'applyScenarioTemplate',
+      template,
+    });
+
+    expect(nextState.draft.targetApps).toEqual(['SirBro', 'TipsterBro']);
+  });
+
   it('changes the top-level trigger through the shared draft', () => {
     const initialState = createCampaignEditorState(createEmptyCampaignDraft());
 

@@ -37,6 +37,7 @@ describe('campaigns API helpers', () => {
       search: 'onboarding',
       statuses: ['active', 'paused'],
       triggerTypes: ['state_based', 'event_based'],
+      targetApps: ['SirBro', 'TipsterBro'],
       quickView: 'needs_attention',
       statsPeriod: 'custom',
       statsFrom: '2026-04-17T00:00:00.000Z',
@@ -44,7 +45,7 @@ describe('campaigns API helpers', () => {
     });
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
-      path: '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statsPeriod=custom&statsFrom=2026-04-17T00%3A00%3A00.000Z&statsTo=2026-04-24T23%3A59%3A59.999Z&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based',
+      path: '/campaigns/admin/overview?page=2&limit=20&search=onboarding&quickView=needs_attention&statsPeriod=custom&statsFrom=2026-04-17T00%3A00%3A00.000Z&statsTo=2026-04-24T23%3A59%3A59.999Z&statuses=active&statuses=paused&triggerTypes=state_based&triggerTypes=event_based&targetApps=SirBro&targetApps=TipsterBro',
       method: 'GET',
     });
   });
@@ -55,6 +56,7 @@ describe('campaigns API helpers', () => {
     await createCampaignDraft({
       name: draft.name,
       goal: draft.goal,
+      targetApps: draft.targetApps,
       goalDefinition: draft.goalDefinition,
       channel: draft.channel,
       audience: draft.audience,
@@ -65,6 +67,7 @@ describe('campaigns API helpers', () => {
     await updateCampaignDraft('cmp_onboarding_not_completed', {
       name: draft.name,
       goal: draft.goal,
+      targetApps: draft.targetApps,
       goalDefinition: draft.goalDefinition,
       channel: draft.channel,
       audience: draft.audience,
@@ -79,6 +82,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
+      targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -93,6 +97,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
+      targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -112,6 +117,7 @@ describe('campaigns API helpers', () => {
     await createCampaignDraft({
       name: draft.name,
       goal: draft.goal,
+      targetApps: draft.targetApps,
       goalDefinition: draft.goalDefinition,
       channel: draft.channel,
       audience: draft.audience,
@@ -141,6 +147,7 @@ describe('campaigns API helpers', () => {
     await sendCampaignTest('cmp_hybrid', {
       recipients: ['spec@local.test'],
       locale: 'en',
+      targetApp: 'SirBro',
       testChannel: 'in_app',
     });
 
@@ -150,6 +157,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         recipients: ['spec@local.test'],
         locale: 'en',
+        targetApp: 'SirBro',
         testChannel: 'in_app',
       }),
     });
@@ -171,6 +179,7 @@ describe('campaigns API helpers', () => {
       definition: {
         name: draft.name,
         goal: draft.goal,
+      targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -185,6 +194,7 @@ describe('campaigns API helpers', () => {
       definition: {
         name: draft.name,
         goal: draft.goal,
+      targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -197,6 +207,7 @@ describe('campaigns API helpers', () => {
     await sendCampaignTest('cmp_onboarding_not_completed', {
       recipients: ['spec@local.test'],
       locale: 'en',
+      targetApp: 'SirBro',
     });
     await scheduleCampaign('cmp_onboarding_not_completed', { confirm: true });
     await archiveCampaign('cmp_onboarding_not_completed', { confirm: true });
@@ -232,6 +243,7 @@ describe('campaigns API helpers', () => {
         definition: {
           name: draft.name,
           goal: draft.goal,
+      targetApps: draft.targetApps,
           goalDefinition: draft.goalDefinition,
           channel: draft.channel,
           audience: draft.audience,
@@ -250,6 +262,7 @@ describe('campaigns API helpers', () => {
         definition: {
           name: draft.name,
           goal: draft.goal,
+      targetApps: draft.targetApps,
           goalDefinition: draft.goalDefinition,
           channel: draft.channel,
           audience: draft.audience,
@@ -269,6 +282,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         recipients: ['spec@local.test'],
         locale: 'en',
+        targetApp: 'SirBro',
       }),
     });
     expect(adminAuthFetch).toHaveBeenNthCalledWith(9, {
@@ -307,6 +321,7 @@ describe('campaigns API helpers', () => {
       createCampaignDraft({
         name: draft.name,
         goal: draft.goal,
+      targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,

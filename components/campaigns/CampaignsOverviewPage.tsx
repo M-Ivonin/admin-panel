@@ -28,6 +28,7 @@ import type {
   CampaignQuickView,
   CampaignStatus,
   CampaignStatsPeriod,
+  CampaignTargetApp,
   CampaignsOverviewResponse,
 } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
@@ -57,6 +58,16 @@ const TRIGGER_OPTIONS: Array<{
   { value: 'state_based', label: 'State based' },
   { value: 'event_based', label: 'Event based' },
   { value: 'scheduled_recurring', label: 'Recurring' },
+];
+
+const TARGET_APP_OPTIONS: Array<{ value: CampaignTargetApp; label: string }> = [
+  { value: 'SirBro', label: 'SirBro' },
+  { value: 'TipsterBro', label: 'TipsterBro' },
+];
+
+const DEFAULT_SELECTED_TARGET_APPS: CampaignTargetApp[] = [
+  'SirBro',
+  'TipsterBro',
 ];
 
 const STATS_PERIOD_OPTIONS: Array<{
@@ -376,6 +387,25 @@ function formatFailureReasons(item: CampaignListItem): string | null {
     .join(' · ');
 }
 
+function formatAppBuckets(item: CampaignListItem): string | null {
+  const buckets = (item.progress.appBuckets ?? []).filter(
+    (bucket) => bucket.key !== 'aggregate' && bucket.deliveryRowCount > 0
+  );
+
+  if (buckets.length === 0) {
+    return null;
+  }
+
+  return buckets
+    .map(
+      (bucket) =>
+        `${bucket.label}: ${bucket.deliveredCount.toLocaleString('en-US')} delivered / ${bucket.deliveryRowCount.toLocaleString(
+          'en-US'
+        )} attempts`
+    )
+    .join(' · ');
+}
+
 function formatChannelLabel(channel: CampaignListItem['channel']): string {
   if (channel === 'in_app') {
     return 'In-App';
@@ -538,6 +568,28 @@ function FailureReasonsLine({ item }: { item: CampaignListItem }) {
   );
 }
 
+function AppBucketsLine({ item }: { item: CampaignListItem }) {
+  const appBuckets = formatAppBuckets(item);
+
+  if (!appBuckets) {
+    return null;
+  }
+
+  return (
+    <Typography
+      sx={{
+        color: COLORS.textSecondary,
+        fontSize: 11,
+        lineHeight: 1.45,
+        mt: 1,
+        overflowWrap: 'anywhere',
+      }}
+    >
+      {appBuckets}
+    </Typography>
+  );
+}
+
 function FilterSection({
   title,
   children,
@@ -579,6 +631,9 @@ export function CampaignsOverviewPage() {
   const [selectedTriggerTypes, setSelectedTriggerTypes] = useState<
     CampaignEntryTriggerType[]
   >([]);
+  const [selectedTargetApps, setSelectedTargetApps] = useState<
+    CampaignTargetApp[]
+  >(() => DEFAULT_SELECTED_TARGET_APPS);
   const [selectedQuickView, setSelectedQuickView] =
     useState<CampaignQuickView | null>(null);
   const [statsPeriod, setStatsPeriod] =
@@ -620,6 +675,7 @@ export function CampaignsOverviewPage() {
           search,
           statuses: selectedStatuses,
           triggerTypes: selectedTriggerTypes,
+          targetApps: selectedTargetApps,
           quickView: selectedQuickView,
           statsPeriod,
           ...statsRangeParams,
@@ -654,6 +710,7 @@ export function CampaignsOverviewPage() {
     search,
     selectedStatuses,
     selectedTriggerTypes,
+    selectedTargetApps,
     selectedQuickView,
     statsPeriod,
     statsRangeParams,
@@ -669,6 +726,9 @@ export function CampaignsOverviewPage() {
       selectedTriggerTypes.length
         ? `${selectedTriggerTypes.length} type filter(s)`
         : null,
+      selectedTargetApps.length
+        ? `${selectedTargetApps.length} app filter(s)`
+        : null,
       selectedQuickView ? '1 quick view' : null,
       statsPeriod !== 'all_time'
         ? STATS_PERIOD_OPTIONS.find((option) => option.value === statsPeriod)
@@ -677,7 +737,13 @@ export function CampaignsOverviewPage() {
     ]
       .filter(Boolean)
       .join(' · ');
-  }, [selectedQuickView, selectedStatuses, selectedTriggerTypes, statsPeriod]);
+  }, [
+    selectedQuickView,
+    selectedStatuses,
+    selectedTargetApps,
+    selectedTriggerTypes,
+    statsPeriod,
+  ]);
 
   function toggleStatus(status: CampaignStatus) {
     setPage(0);
@@ -695,6 +761,19 @@ export function CampaignsOverviewPage() {
         ? current.filter((value) => value !== triggerType)
         : [...current, triggerType]
     );
+  }
+
+  function toggleTargetApp(targetApp: CampaignTargetApp) {
+    setPage(0);
+    setSelectedTargetApps((current) => {
+      if (!current.includes(targetApp)) {
+        return [...current, targetApp];
+      }
+
+      return current.length > 1
+        ? current.filter((value) => value !== targetApp)
+        : current;
+    });
   }
 
   return (
@@ -917,7 +996,11 @@ export function CampaignsOverviewPage() {
               </FilterSection>
 
               <FilterSection title="Type">
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  sx={{ gap: 1, alignItems: 'center' }}
+                >
                   {TRIGGER_OPTIONS.map((option) => {
                     const selected = selectedTriggerTypes.includes(
                       option.value
@@ -928,6 +1011,34 @@ export function CampaignsOverviewPage() {
                         label={option.label}
                         clickable
                         onClick={() => toggleTrigger(option.value)}
+                        sx={{
+                          bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
+                          color: selected
+                            ? COLORS.textPrimary
+                            : COLORS.textSecondary,
+                          border: `1px solid ${selected ? COLORS.accent : COLORS.strokeSoft}`,
+                          borderRadius: 999,
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
+              </FilterSection>
+
+              <FilterSection title="Target Apps">
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  sx={{ gap: 1, alignItems: 'center' }}
+                >
+                  {TARGET_APP_OPTIONS.map((option) => {
+                    const selected = selectedTargetApps.includes(option.value);
+                    return (
+                      <Chip
+                        key={option.value}
+                        label={option.label}
+                        clickable
+                        onClick={() => toggleTargetApp(option.value)}
                         sx={{
                           bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
                           color: selected
@@ -1223,6 +1334,18 @@ export function CampaignsOverviewPage() {
                               color: COLORS.textSecondary,
                             }}
                           />
+                          {item.targetApps.map((targetApp) => (
+                            <Chip
+                              key={targetApp}
+                              label={targetApp}
+                              size="small"
+                              sx={{
+                                bgcolor: COLORS.accentSoft,
+                                color: COLORS.textPrimary,
+                                border: `1px solid ${COLORS.stroke}`,
+                              }}
+                            />
+                          ))}
                           <Chip
                             label={item.entryTriggerType.replace(/_/g, ' ')}
                             size="small"
@@ -1465,6 +1588,7 @@ export function CampaignsOverviewPage() {
                           ) : null}
                         </Box>
                         <FailureReasonsLine item={item} />
+                        <AppBucketsLine item={item} />
                       </Box>
 
                       <Box>

@@ -104,6 +104,7 @@ describe('campaignsRepository editor adapter', () => {
     const result = await campaignsRepository.sendTestDraft(draft, {
       recipients: ['admin@example.com'],
       locale: 'en',
+      targetApp: 'SirBro',
     });
 
     expect(mockedUpdateCampaignDraft).toHaveBeenCalledWith(
@@ -116,6 +117,7 @@ describe('campaignsRepository editor adapter', () => {
     expect(mockedSendCampaignTest).toHaveBeenCalledWith('cmp_existing_001', {
       recipients: ['admin@example.com'],
       locale: 'en',
+      targetApp: 'SirBro',
     });
     expect(mockedUpdateCampaignDraft.mock.invocationCallOrder[0]).toBeLessThan(
       mockedSendCampaignTest.mock.invocationCallOrder[0]
@@ -147,12 +149,14 @@ describe('campaignsRepository editor adapter', () => {
     await campaignsRepository.sendTestDraft(draft, {
       recipients: ['admin@example.com'],
       locale: 'en',
+      targetApp: 'SirBro',
       testChannel: 'in_app',
     });
 
     expect(mockedSendCampaignTest).toHaveBeenCalledWith('cmp_existing_001', {
       recipients: ['admin@example.com'],
       locale: 'en',
+      targetApp: 'SirBro',
       testChannel: 'in_app',
     });
   });

@@ -39,8 +39,32 @@ describe('CampaignsOverviewPage', () => {
       await screen.findByText('onboarding_not_completed');
 
       expect(overviewSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: 10 })
+        expect.objectContaining({
+          limit: 10,
+          targetApps: ['SirBro', 'TipsterBro'],
+        })
       );
+    } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
+  it('filters campaigns by target app chips', async () => {
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText('onboarding_not_completed');
+      expect(screen.getByText(/2 app filter\(s\)/i)).toBeTruthy();
+
+      fireEvent.click(screen.getByText('TipsterBro'));
+
+      await waitFor(() => {
+        expect(overviewSpy).toHaveBeenLastCalledWith(
+          expect.objectContaining({ targetApps: ['SirBro'] })
+        );
+      });
     } finally {
       overviewSpy.mockRestore();
     }
@@ -148,6 +172,7 @@ describe('CampaignsOverviewPage', () => {
             goal: 'Recover onboarding completion',
             channel: 'push',
             status: 'active',
+            targetApps: ['SirBro'],
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,
@@ -223,6 +248,7 @@ describe('CampaignsOverviewPage', () => {
             goal: 'Open match center',
             channel: 'push',
             status: 'active',
+            targetApps: ['SirBro'],
             entryTriggerType: 'state_based',
             audience: {
               estimate: 100,
@@ -323,6 +349,7 @@ describe('CampaignsOverviewPage', () => {
             goal: 'Open rewards wallet',
             channel: 'in_app',
             status: 'active',
+            targetApps: ['SirBro'],
             entryTriggerType: 'state_based',
             audience: {
               estimate: 4,
@@ -403,6 +430,7 @@ describe('CampaignsOverviewPage', () => {
             goal: 'Open rewards wallet',
             channel: 'hybrid',
             status: 'active',
+            targetApps: ['SirBro', 'TipsterBro'],
             entryTriggerType: 'state_based',
             audience: {
               estimate: 6,
@@ -479,6 +507,7 @@ describe('CampaignsOverviewPage', () => {
             goal: 'Recover onboarding completion',
             channel: 'push',
             status: 'active',
+            targetApps: ['SirBro'],
             entryTriggerType: 'state_based',
             audience: {
               estimate: 120,

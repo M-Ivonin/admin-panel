@@ -14,6 +14,7 @@ export type CampaignStatus =
   | 'archived';
 
 export type CampaignChannel = 'push' | 'in_app' | 'hybrid';
+export type CampaignTargetApp = 'SirBro' | 'TipsterBro';
 export type CampaignLocale = 'en' | 'es' | 'pt';
 export type CampaignReadiness = 'ready' | 'warning' | 'missing';
 
@@ -36,7 +37,10 @@ export type CampaignTokenKey =
   | 'favorite_team'
   | 'home'
   | 'away'
-  | 'bonus_points';
+  | 'bonus_points'
+  | 'level_name'
+  | 'next_level_name'
+  | 'xp_left';
 
 export type CampaignDeeplinkTarget =
   | 'continue_onboarding'
@@ -99,9 +103,15 @@ export type CampaignJourneyExitRule = 'none' | 'stop_on_goal';
 export type CampaignSendGuardAction =
   | 'opened_app'
   | 'match_center_opened'
+  | 'rewards_wallet_opened'
   | 'live_challenge_created'
   | 'voted_for_prediction'
   | 'chat_in_ai_chat';
+
+export interface CampaignCompatibilityMetadata {
+  compatibleTargetApps?: CampaignTargetApp[];
+  compatibilityReason?: string | null;
+}
 
 export interface CampaignSendGuard {
   action: CampaignSendGuardAction;
@@ -123,6 +133,7 @@ export interface CampaignOverviewStats {
   avgCtr: number;
   ctrDeltaVsPrev7d: number;
   reachInProgress: number;
+  appBuckets?: CampaignAppMetricsBucket[];
 }
 
 export interface CampaignListAudienceSummary {
@@ -150,11 +161,35 @@ export interface CampaignListProgressSummary {
   deliveredRate?: number | null;
   ctr?: number | null;
   progressPercent: number | null;
+  appBuckets?: CampaignAppMetricsBucket[];
 }
 
 export interface CampaignFailureReasonSummary {
   reason: string;
   count: number;
+}
+
+export type CampaignAppMetricsBucketKey =
+  | 'aggregate'
+  | CampaignTargetApp
+  | 'unknown_legacy';
+
+export interface CampaignAppMetricsBucket {
+  key: CampaignAppMetricsBucketKey;
+  label: 'Aggregate' | 'SirBro' | 'TipsterBro' | 'Unknown/Legacy';
+  deliveryRowCount: number;
+  attemptedCount: number;
+  deliveredCount: number;
+  shownCount: number;
+  openedCount: number;
+  dismissedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  inProgressCount: number;
+  ctr: number;
+  goalReachedCount: number | null;
+  journeyCount: number | null;
+  failureReasons: CampaignFailureReasonSummary[];
 }
 
 export interface CampaignListMetricSummary {
@@ -178,6 +213,7 @@ export interface CampaignListItem {
   id: string;
   name: string;
   goal: string;
+  targetApps: CampaignTargetApp[];
   channel: CampaignChannel;
   status: CampaignStatus;
   entryTriggerType: CampaignEntryTriggerType;
@@ -196,6 +232,7 @@ export interface GetCampaignsOverviewParams {
   search: string;
   statuses: CampaignStatus[];
   triggerTypes: CampaignEntryTriggerType[];
+  targetApps?: CampaignTargetApp[];
   quickView: CampaignQuickView | null;
   statsPeriod: CampaignStatsPeriod;
   statsFrom?: string;
@@ -222,7 +259,7 @@ export interface CampaignSavedSegmentSummary {
   source: 'saved_segment' | 'template_segment';
 }
 
-export interface CampaignTokenDefinition {
+export interface CampaignTokenDefinition extends CampaignCompatibilityMetadata {
   key: CampaignTokenKey;
   token: `{{${string}}}`;
   label: string;
@@ -230,13 +267,13 @@ export interface CampaignTokenDefinition {
   description: string;
 }
 
-export interface CampaignDeeplinkOption {
+export interface CampaignDeeplinkOption extends CampaignCompatibilityMetadata {
   target: CampaignDeeplinkTarget;
   label: string;
   path: string;
 }
 
-export interface CampaignSourceEventOption {
+export interface CampaignSourceEventOption extends CampaignCompatibilityMetadata {
   eventKey: CampaignSourceEventKey;
   producerKey: CampaignSourceEventProducerKey;
   label: string;
@@ -246,6 +283,7 @@ export interface CampaignSourceEventOption {
 export interface CampaignTemplateDefinition {
   name: string;
   goal: string;
+  targetApps: CampaignTargetApp[];
   goalDefinition: CampaignGoalDefinition | null;
   channel: CampaignChannel;
   audience: CampaignAudienceDefinition;
@@ -256,12 +294,18 @@ export interface CampaignTemplateDefinition {
 
 export type CampaignScenarioTemplateSource = 'shipped' | 'saved';
 
-export interface CampaignScenarioTemplateSummary {
+export interface CampaignScenarioTemplateSummary
+  extends CampaignCompatibilityMetadata {
   id: string;
   name: string;
   description: string;
   definition: CampaignTemplateDefinition;
   source: CampaignScenarioTemplateSource;
+  liveCampaign?: {
+    id: string;
+    name: string;
+    status: CampaignStatus;
+  };
 }
 
 export interface CampaignRetentionStageOption {
@@ -359,7 +403,7 @@ export interface CampaignGoalDefinition {
   rewardPoints?: number;
 }
 
-export interface CampaignGoalOption {
+export interface CampaignGoalOption extends CampaignCompatibilityMetadata {
   goalKey: string;
   label: string;
   eventKey: CampaignSourceEventKey;
@@ -386,6 +430,7 @@ export interface CampaignDraft {
   id: string | null;
   name: string;
   goal: string;
+  targetApps: CampaignTargetApp[];
   goalDefinition: CampaignGoalDefinition | null;
   channel: CampaignChannel;
   status: CampaignStatus;
@@ -439,6 +484,7 @@ export interface DeleteTemplateResponse {
 export interface SendTestCampaignRequest {
   recipients: string[];
   locale: CampaignLocale;
+  targetApp: CampaignTargetApp;
   testChannel?: Extract<CampaignChannel, 'push' | 'in_app'>;
 }
 
@@ -475,6 +521,7 @@ export interface PauseCampaignResponse {
 export interface UpsertCampaignDraftRequest {
   name: string;
   goal: string;
+  targetApps: CampaignTargetApp[];
   goalDefinition: CampaignGoalDefinition | null;
   channel: CampaignChannel;
   audience: CampaignAudienceDefinition;

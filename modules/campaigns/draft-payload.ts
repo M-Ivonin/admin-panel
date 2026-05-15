@@ -24,6 +24,7 @@ export function buildUpsertCampaignDraftPayload(
   return {
     name: draft.name,
     goal: draft.goal,
+    targetApps: draft.targetApps,
     goalDefinition: normalizeCampaignGoalDefinition(draft.goalDefinition),
     channel: draft.channel,
     audience: draft.audience,
