@@ -18,7 +18,10 @@ import {
 
 export const MOCK_TIME_ANCHOR_ISO = '2026-04-16T12:00:00.000Z';
 
-const OVERVIEW_ITEMS: CampaignsOverviewResponse['items'] = [
+const BOTH_TARGET_APPS = ['SirBro', 'TipsterBro'] as const;
+const SIR_BRO_TARGET_APP = ['SirBro'] as const;
+
+const OVERVIEW_ITEMS = [
   {
     id: 'cmp_onboarding_not_completed',
     name: 'onboarding_not_completed',
@@ -501,13 +504,16 @@ function buildMultiStepContent(
   };
 }
 
-const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
+const SCENARIO_TEMPLATES = [
   {
     id: 'tpl_onboarding_recovery',
     name: 'Onboarding recovery',
     description:
       'Three-step recovery flow for pre-registration users who did not finish setup.',
     source: 'shipped',
+    compatibleTargetApps: SIR_BRO_TARGET_APP,
+    compatibilityReason:
+      'Onboarding recovery is not compatible with TipsterBro Target Apps.',
     definition: {
       name: 'Onboarding recovery',
       goal: 'Recover onboarding completion',
@@ -542,6 +548,8 @@ const SCENARIO_TEMPLATES: CampaignScenarioTemplateSummary[] = [
     description:
       'Event-driven reminder before kickoff with a direct link into match center.',
     source: 'shipped',
+    compatibleTargetApps: BOTH_TARGET_APPS,
+    compatibilityReason: null,
     definition: {
       name: 'Favorite match kickoff',
       goal: 'Drive match-center opens',
@@ -666,7 +674,10 @@ export function createInitialCampaignsOverviewResponse(): CampaignsOverviewRespo
         ctrDeltaVsPrev7d: 2.3,
         reachInProgress: 31900,
       },
-      items: OVERVIEW_ITEMS,
+      items: OVERVIEW_ITEMS.map((item) => ({
+        ...item,
+        targetApps: 'targetApps' in item ? item.targetApps : ['SirBro'],
+      })),
       total: OVERVIEW_ITEMS.length,
       page: 1,
       limit: 10,
@@ -683,7 +694,7 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
   const secondStep = createJourneyStep(2);
   const thirdStep = createJourneyStep(3);
 
-  return JSON.parse(
+  const drafts = JSON.parse(
     JSON.stringify({
       cmp_onboarding_not_completed: {
         id: 'cmp_onboarding_not_completed',
@@ -910,6 +921,12 @@ export function createInitialCampaignDraftMap(): Record<string, CampaignDraft> {
       },
     })
   ) as Record<string, CampaignDraft>;
+
+  Object.values(drafts).forEach((draft) => {
+    draft.targetApps ??= ['SirBro'];
+  });
+
+  return drafts;
 }
 
 /**
@@ -925,9 +942,20 @@ export function createInitialSavedSegments(): CampaignSavedSegmentSummary[] {
  * Returns the seeded scenario templates consumed by the editor catalog.
  */
 export function createInitialScenarioTemplates(): CampaignScenarioTemplateSummary[] {
-  return JSON.parse(
+  const templates = JSON.parse(
     JSON.stringify(SCENARIO_TEMPLATES)
   ) as CampaignScenarioTemplateSummary[];
+
+  templates.forEach((template) => {
+    template.definition.targetApps ??= ['SirBro'];
+    template.compatibleTargetApps ??= ['SirBro'];
+    template.compatibilityReason ??=
+      template.compatibleTargetApps.includes('TipsterBro')
+        ? null
+        : `${template.name} is not compatible with TipsterBro Target Apps.`;
+  });
+
+  return templates;
 }
 
 /**

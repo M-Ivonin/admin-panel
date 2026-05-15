@@ -9,6 +9,7 @@ import type {
   CampaignGoalDefinition,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
+  CampaignTargetApp,
   CampaignTriggerDefinition,
   EstimateAudienceResponse,
 } from '@/modules/campaigns/contracts';
@@ -26,6 +27,7 @@ import {
   updateCampaignJourneyStepDraft,
   type CampaignJourneyStepDraftPatch,
 } from '@/modules/campaigns/journey-step-draft';
+import { normalizeCampaignLocalesForTargetApps } from '@/modules/campaigns/target-app-locales';
 
 export enum CampaignEditorStep {
   AUDIENCE = 'audience',
@@ -100,6 +102,10 @@ export type CampaignEditorAction =
       patch: Partial<
         Pick<CampaignDraft, 'name' | 'goal' | 'goalDefinition' | 'channel'>
       >;
+    }
+  | {
+      type: 'toggleTargetApp';
+      targetApp: CampaignTargetApp;
     }
   | {
       type: 'applyScenarioTemplate';
@@ -346,20 +352,56 @@ export function campaignEditorReducer(
         ...state.draft,
         ...action.patch,
       });
+    case 'toggleTargetApp': {
+      const selected = state.draft.targetApps.includes(action.targetApp);
+      const targetApps = selected
+        ? state.draft.targetApps.filter(
+            (targetApp) => targetApp !== action.targetApp
+          )
+        : [...state.draft.targetApps, action.targetApp];
+
+      return markDirty(state, {
+        ...state.draft,
+        targetApps,
+        audience: {
+          ...state.draft.audience,
+          criteria: {
+            ...state.draft.audience.criteria,
+            locales: normalizeCampaignLocalesForTargetApps(
+              state.draft.audience.criteria.locales,
+              targetApps
+            ),
+          },
+        },
+      });
+    }
     case 'applyScenarioTemplate': {
       const templateDefinition = cloneValue(action.template.definition);
+      const targetApps =
+        (action.template.compatibleTargetApps?.length ?? 0) > 0
+          ? Array.from(new Set(action.template.compatibleTargetApps))
+          : templateDefinition.targetApps;
+
       return markDirty(
         state,
         {
           ...state.draft,
           name: templateDefinition.name,
           goal: templateDefinition.goal,
+          targetApps,
           goalDefinition: templateDefinition.goalDefinition ?? null,
           channel: templateDefinition.channel,
           audience: {
             ...templateDefinition.audience,
             segmentSource: 'template_segment',
             sourceSegmentId: action.template.id,
+            criteria: {
+              ...templateDefinition.audience.criteria,
+              locales: normalizeCampaignLocalesForTargetApps(
+                templateDefinition.audience.criteria.locales,
+                targetApps
+              ),
+            },
           },
           trigger: normalizeNewScheduledTrigger(templateDefinition.trigger),
           journey: templateDefinition.journey,
@@ -377,6 +419,10 @@ export function campaignEditorReducer(
           criteria: {
             ...state.draft.audience.criteria,
             ...action.patch,
+            locales: normalizeCampaignLocalesForTargetApps(
+              action.patch.locales ?? state.draft.audience.criteria.locales,
+              state.draft.targetApps
+            ),
           },
         },
       });

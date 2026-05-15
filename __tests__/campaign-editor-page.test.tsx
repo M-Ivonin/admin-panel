@@ -359,6 +359,49 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('disables a scenario template when it already has an active campaign', async () => {
+    const catalog = await campaignsRepository.getEditorCatalog();
+    const nextCatalog = {
+      ...catalog,
+      scenarioTemplates: catalog.scenarioTemplates.map((template) =>
+        template.id === 'tpl_onboarding_recovery'
+          ? {
+              ...template,
+              liveCampaign: {
+                id: 'cmp_existing_live',
+                name: 'Existing onboarding recovery',
+                status: 'active' as const,
+              },
+            }
+          : template
+      ),
+    };
+
+    jest.spyOn(campaignsRepository, 'loadEditor').mockResolvedValue({
+      catalog: nextCatalog,
+      draft: createEmptyCampaignDraft(),
+      lastPersistedDraft: null,
+    });
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Scenario templates');
+
+    const onboardingTemplate = screen.getByLabelText(
+      'Apply template Onboarding recovery'
+    );
+    expect(onboardingTemplate.getAttribute('aria-disabled')).toBe('true');
+    expect(
+      screen.getByText(
+        'Active campaign already exists: Existing onboarding recovery'
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(onboardingTemplate);
+
+    expect(screen.queryByDisplayValue('Onboarding recovery')).toBeNull();
+  });
+
   it('inserts a token into the push body at the current cursor position', async () => {
     render(<CampaignEditorPage mode="create" />);
 
@@ -640,6 +683,7 @@ describe('CampaignEditorPage', () => {
       expect(sendTestCampaignSpy).toHaveBeenCalledWith('cmp_local_001', {
         recipients: ['admin@example.com'],
         locale: 'en',
+        targetApp: 'SirBro',
       });
       expect(replace).toHaveBeenCalledWith(
         '/dashboard/campaigns/cmp_local_001'
@@ -745,6 +789,7 @@ describe('CampaignEditorPage', () => {
       expect(sendTestCampaignSpy).toHaveBeenCalledWith('cmp_local_001', {
         recipients: ['admin@example.com'],
         locale: 'en',
+        targetApp: 'SirBro',
         testChannel: 'in_app',
       });
     });
@@ -1444,6 +1489,39 @@ describe('CampaignEditorPage', () => {
       expect(screen.getByText(/^EN · /)).toBeTruthy();
       expect(screen.queryByText(/^ES · /)).toBeNull();
       expect(screen.queryByText(/^PT · /)).toBeNull();
+    });
+  });
+
+  it('hides Spanish and Portuguese locales only for TipsterBro-only campaigns', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    expect(screen.getByRole('button', { name: 'ES' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'PT' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'TipsterBro' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'EN' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'ES' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'PT' })).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'SirBro' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'EN' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'ES' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'PT' })).toBeNull();
+    });
+
+    fireEvent.click(screen.getByText('Step Content'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'EN' })).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'ES' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'PT' })).toBeNull();
     });
   });
 

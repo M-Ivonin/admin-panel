@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type KeyboardEvent,
   type ReactNode,
   type SyntheticEvent,
 } from 'react';
@@ -58,6 +59,7 @@ import { buildUpsertCampaignDraftPayload } from '@/modules/campaigns/draft-paylo
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import type {
   CampaignChannel,
+  CampaignCompatibilityMetadata,
   CampaignDeeplinkTarget,
   CampaignDraft,
   CampaignJourneyStepDraft,
@@ -66,6 +68,7 @@ import type {
   CampaignSendGuardAction,
   CampaignStepLocaleContent,
   CampaignStatus,
+  CampaignTargetApp,
   UpsertCampaignDraftRequest,
 } from '@/modules/campaigns/contracts';
 import { createScheduledCampaignTrigger } from '@/modules/campaigns/defaults';
@@ -99,6 +102,7 @@ import {
   parseCampaignScheduleRule,
   withCampaignScheduleTime,
 } from '@/modules/campaigns/schedule';
+import { getAvailableCampaignLocales } from '@/modules/campaigns/target-app-locales';
 
 const COLORS = {
   canvas: '#111111',
@@ -128,6 +132,11 @@ const STEP_LABELS: Record<CampaignEditorStep, string> = {
   [CampaignEditorStep.STEP_CONTENT]: 'Step Content',
   [CampaignEditorStep.REVIEW]: 'Review',
 };
+
+const TARGET_APP_OPTIONS: Array<{ value: CampaignTargetApp; label: string }> = [
+  { value: 'SirBro', label: 'SirBro' },
+  { value: 'TipsterBro', label: 'TipsterBro' },
+];
 
 const SEND_GUARD_ACTION_OPTIONS: Array<{
   action: CampaignSendGuardAction;
@@ -547,6 +556,19 @@ function describeScenarioTemplate(
   ].join(' · ');
 }
 
+function getActiveCampaignTemplateReason(
+  template: CampaignScenarioTemplateSummary
+): string | null {
+  if (!template.liveCampaign) {
+    return null;
+  }
+
+  const campaignState =
+    template.liveCampaign.status === 'scheduled' ? 'Scheduled' : 'Active';
+
+  return `${campaignState} campaign already exists: ${template.liveCampaign.name}`;
+}
+
 function getSourceEventProducerLabel(producerKey: string): string {
   if (producerKey === 'crm_source_events') {
     return 'CRM integration events';
@@ -627,6 +649,52 @@ function getDeeplinkOptionLabel(
   return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.slice(1);
 }
 
+function isCatalogOptionCompatible(
+  option: CampaignCompatibilityMetadata,
+  targetApps: CampaignTargetApp[]
+): boolean {
+  if (!option.compatibleTargetApps?.length) {
+    return true;
+  }
+
+  return targetApps.every((targetApp) =>
+    option.compatibleTargetApps?.includes(targetApp)
+  );
+}
+
+function getCatalogCompatibilityReason(
+  option: CampaignCompatibilityMetadata,
+  targetApps: CampaignTargetApp[]
+): string | null {
+  if (isCatalogOptionCompatible(option, targetApps)) {
+    return null;
+  }
+
+  return (
+    option.compatibilityReason ??
+    `Not compatible with ${targetApps.join(', ')} Target Apps.`
+  );
+}
+
+function CatalogOptionLabel({
+  label,
+  reason,
+}: {
+  label: string;
+  reason: string | null;
+}) {
+  return (
+    <Stack spacing={0.25}>
+      <Typography sx={{ color: 'inherit', fontSize: 14 }}>{label}</Typography>
+      {reason ? (
+        <Typography sx={{ color: COLORS.warning, fontSize: 11 }}>
+          {reason}
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
 function parseRewardPoints(value: string): number {
   if (value.trim() === '') {
     return 0;
@@ -676,6 +744,8 @@ export function CampaignEditorPage({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [testLocale, setTestLocale] = useState<CampaignLocale>('en');
+  const [testTargetApp, setTestTargetApp] =
+    useState<CampaignTargetApp>('SirBro');
   const [hybridTestChannel, setHybridTestChannel] = useState<
     Extract<CampaignChannel, 'push' | 'in_app'> | ''
   >('');
@@ -699,6 +769,12 @@ export function CampaignEditorPage({
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean);
+  const availableTestTargetApps: CampaignTargetApp[] =
+    state.draft.targetApps.length > 0 ? state.draft.targetApps : ['SirBro'];
+  const availableLocales = useMemo(
+    () => getAvailableCampaignLocales(state.draft.targetApps),
+    [state.draft.targetApps]
+  );
 
   const validation = useMemo(
     () => getCampaignValidationSummary(state.draft),
@@ -719,6 +795,16 @@ export function CampaignEditorPage({
       getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
     );
   }, [authorizedUserEmail]);
+
+  useEffect(() => {
+    if (!availableLocales.includes(activeLocale)) {
+      setActiveLocale(availableLocales[0]);
+    }
+
+    if (!availableLocales.includes(testLocale)) {
+      setTestLocale(availableLocales[0]);
+    }
+  }, [activeLocale, availableLocales, testLocale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1135,6 +1221,9 @@ export function CampaignEditorPage({
     setTestRecipients((currentRecipients) =>
       getPreferredTestRecipients(currentRecipients, authorizedUserEmail)
     );
+    setTestTargetApp(
+      state.draft.targetApps.length === 1 ? state.draft.targetApps[0] : 'SirBro'
+    );
     setHybridTestChannel('');
     dispatch({ type: 'openDialog', dialog: 'sendTest' });
   }
@@ -1155,6 +1244,7 @@ export function CampaignEditorPage({
       const sendTestInput = {
         recipients: normalizedTestRecipients,
         locale: testLocale,
+        targetApp: testTargetApp,
         ...(state.draft.channel === 'hybrid' && hybridTestChannel
           ? { testChannel: hybridTestChannel }
           : {}),
@@ -1646,27 +1736,63 @@ export function CampaignEditorPage({
 
               {state.catalog.scenarioTemplates.length > 0 ? (
                 <Stack spacing={1.25}>
-                  {state.catalog.scenarioTemplates.map((template) => (
-                    <Paper
-                      key={template.id}
-                      onClick={() => applyTemplate(template)}
-                      sx={{
-                        p: 1.5,
-                        cursor: 'pointer',
-                        bgcolor: COLORS.soft,
-                        border: `1px solid ${
-                          templateBeingEdited?.id === template.id
-                            ? COLORS.accent
-                            : COLORS.stroke
-                        }`,
-                        transition:
-                          'border-color 160ms ease, transform 160ms ease',
-                        '&:hover': {
-                          borderColor: COLORS.accent,
-                          transform: 'translateY(-1px)',
-                        },
-                      }}
-                    >
+                  {state.catalog.scenarioTemplates.map((template) => {
+                    const compatibilityReason = getCatalogCompatibilityReason(
+                      template,
+                      state.draft.targetApps
+                    );
+                    const activeCampaignReason =
+                      mode === 'create'
+                        ? getActiveCampaignTemplateReason(template)
+                        : null;
+                    const disabledReason =
+                      activeCampaignReason ?? compatibilityReason;
+                    const canApplyTemplate = disabledReason === null;
+                    const applyTemplateFromCard = () => {
+                      if (canApplyTemplate) {
+                        applyTemplate(template);
+                      }
+                    };
+                    const handleTemplateKeyDown = (
+                      event: KeyboardEvent<HTMLDivElement>
+                    ) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      applyTemplateFromCard();
+                    };
+
+                    return (
+                      <Paper
+                        key={template.id}
+                        role="button"
+                        aria-label={`Apply template ${template.name}`}
+                        aria-disabled={!canApplyTemplate}
+                        tabIndex={canApplyTemplate ? 0 : -1}
+                        onClick={applyTemplateFromCard}
+                        onKeyDown={handleTemplateKeyDown}
+                        sx={{
+                          p: 1.5,
+                          cursor: canApplyTemplate ? 'pointer' : 'not-allowed',
+                          opacity: canApplyTemplate ? 1 : 0.55,
+                          bgcolor: COLORS.soft,
+                          border: `1px solid ${
+                            templateBeingEdited?.id === template.id
+                              ? COLORS.accent
+                              : COLORS.stroke
+                          }`,
+                          transition:
+                            'border-color 160ms ease, transform 160ms ease',
+                          '&:hover': canApplyTemplate
+                            ? {
+                                borderColor: COLORS.accent,
+                                transform: 'translateY(-1px)',
+                              }
+                            : undefined,
+                        }}
+                      >
                       <Stack spacing={1}>
                         <Stack
                           direction="row"
@@ -1754,9 +1880,17 @@ export function CampaignEditorPage({
                         >
                           {describeScenarioTemplate(template)}
                         </Typography>
+                        {disabledReason ? (
+                          <Typography
+                            sx={{ color: COLORS.warning, fontSize: 11 }}
+                          >
+                            {disabledReason}
+                          </Typography>
+                        ) : null}
                       </Stack>
                     </Paper>
-                  ))}
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Typography sx={{ color: COLORS.textSecondary, fontSize: 13 }}>
@@ -1779,6 +1913,45 @@ export function CampaignEditorPage({
             }
           >
             <Stack spacing={2.5}>
+              <Box>
+                <Typography
+                  sx={{
+                    color: COLORS.textPrimary,
+                    fontWeight: 700,
+                    mb: 1,
+                  }}
+                >
+                  Target Apps
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {TARGET_APP_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={
+                        state.draft.targetApps.includes(option.value)
+                          ? 'contained'
+                          : 'outlined'
+                      }
+                      onClick={() =>
+                        dispatch({
+                          type: 'toggleTargetApp',
+                          targetApp: option.value,
+                        })
+                      }
+                      sx={{
+                        bgcolor: state.draft.targetApps.includes(option.value)
+                          ? COLORS.accent
+                          : 'transparent',
+                        borderColor: COLORS.stroke,
+                        color: COLORS.textPrimary,
+                      }}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </Stack>
+              </Box>
+
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <TextField
                   label="Campaign name"
@@ -1876,11 +2049,25 @@ export function CampaignEditorPage({
                   <MenuItem value="">
                     <em>No tracked goal</em>
                   </MenuItem>
-                  {state.catalog.goalOptions.map((option) => (
-                    <MenuItem key={option.goalKey} value={option.goalKey}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
+                  {state.catalog.goalOptions.map((option) => {
+                    const compatibilityReason = getCatalogCompatibilityReason(
+                      option,
+                      state.draft.targetApps
+                    );
+
+                    return (
+                      <MenuItem
+                        key={option.goalKey}
+                        value={option.goalKey}
+                        disabled={compatibilityReason !== null}
+                      >
+                        <CatalogOptionLabel
+                          label={option.label}
+                          reason={compatibilityReason}
+                        />
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
                 <FormHelperText>
                   Select the backend event used to measure campaign success.
@@ -2044,18 +2231,16 @@ export function CampaignEditorPage({
                       Use the language groups that should receive this campaign.
                     </Typography>
                     <Stack direction="row" spacing={1}>
-                      {(['en', 'es', 'pt'] as CampaignLocale[]).map(
-                        (locale) => (
-                          <ToggleChip
-                            key={locale}
-                            label={locale.toUpperCase()}
-                            selected={state.draft.audience.criteria.locales.includes(
-                              locale
-                            )}
-                            onClick={() => toggleLocale(locale)}
-                          />
-                        )
-                      )}
+                      {availableLocales.map((locale) => (
+                        <ToggleChip
+                          key={locale}
+                          label={locale.toUpperCase()}
+                          selected={state.draft.audience.criteria.locales.includes(
+                            locale
+                          )}
+                          onClick={() => toggleLocale(locale)}
+                        />
+                      ))}
                     </Stack>
                   </SectionCard>
 
@@ -2134,7 +2319,13 @@ export function CampaignEditorPage({
                                 });
                               } else if (option.value === 'event_based') {
                                 const defaultEvent =
-                                  state.catalog.sourceEvents[0];
+                                  state.catalog.sourceEvents.find(
+                                    (sourceEvent) =>
+                                      isCatalogOptionCompatible(
+                                        sourceEvent,
+                                        state.draft.targetApps
+                                      )
+                                  ) ?? state.catalog.sourceEvents[0];
                                 dispatch({
                                   type: 'changeTrigger',
                                   trigger: {
@@ -2232,14 +2423,26 @@ export function CampaignEditorPage({
                                   )}
                                 </MenuItem>
                               ) : null}
-                              {state.catalog.sourceEvents.map((option) => (
-                                <MenuItem
-                                  key={`${option.eventKey}:${option.producerKey}`}
-                                  value={`${option.eventKey}:${option.producerKey}`}
-                                >
-                                  {option.label}
-                                </MenuItem>
-                              ))}
+                              {state.catalog.sourceEvents.map((option) => {
+                                const compatibilityReason =
+                                  getCatalogCompatibilityReason(
+                                    option,
+                                    state.draft.targetApps
+                                  );
+
+                                return (
+                                  <MenuItem
+                                    key={`${option.eventKey}:${option.producerKey}`}
+                                    value={`${option.eventKey}:${option.producerKey}`}
+                                    disabled={compatibilityReason !== null}
+                                  >
+                                    <CatalogOptionLabel
+                                      label={option.label}
+                                      reason={compatibilityReason}
+                                    />
+                                  </MenuItem>
+                                );
+                              })}
                             </Select>
                             <FormHelperText>
                               Choose the product event that should start the
@@ -2808,16 +3011,14 @@ export function CampaignEditorPage({
 
                   <SectionCard title="Locale">
                     <Stack direction="row" spacing={1}>
-                      {(['en', 'es', 'pt'] as CampaignLocale[]).map(
-                        (locale) => (
-                          <StepButton
-                            key={locale}
-                            label={locale.toUpperCase()}
-                            selected={activeLocale === locale}
-                            onClick={() => setActiveLocale(locale)}
-                          />
-                        )
-                      )}
+                      {availableLocales.map((locale) => (
+                        <StepButton
+                          key={locale}
+                          label={locale.toUpperCase()}
+                          selected={activeLocale === locale}
+                          onClick={() => setActiveLocale(locale)}
+                        />
+                      ))}
                     </Stack>
                   </SectionCard>
 
@@ -3089,14 +3290,26 @@ export function CampaignEditorPage({
                             <MenuItem value="">
                               <em>No follow-up action</em>
                             </MenuItem>
-                            {state.catalog.deeplinkOptions.map((option) => (
-                              <MenuItem
-                                key={option.target}
-                                value={option.target}
-                              >
-                                {option.label}
-                              </MenuItem>
-                            ))}
+                            {state.catalog.deeplinkOptions.map((option) => {
+                              const compatibilityReason =
+                                getCatalogCompatibilityReason(
+                                  option,
+                                  state.draft.targetApps
+                                );
+
+                              return (
+                                <MenuItem
+                                  key={option.target}
+                                  value={option.target}
+                                  disabled={compatibilityReason !== null}
+                                >
+                                  <CatalogOptionLabel
+                                    label={option.label}
+                                    reason={compatibilityReason}
+                                  />
+                                </MenuItem>
+                              );
+                            })}
                           </Select>
                           <FormHelperText>
                             Optional. Choose the screen or action the push
@@ -3453,6 +3666,26 @@ export function CampaignEditorPage({
               fullWidth
             />
             <FormControl fullWidth>
+              <InputLabel id="campaign-test-target-app-label">
+                Target App
+              </InputLabel>
+              <Select
+                labelId="campaign-test-target-app-label"
+                label="Target App"
+                value={testTargetApp}
+                onChange={(event) =>
+                  setTestTargetApp(event.target.value as CampaignTargetApp)
+                }
+                disabled={isSendingTest}
+              >
+                {availableTestTargetApps.map((targetApp) => (
+                  <MenuItem key={targetApp} value={targetApp}>
+                    {targetApp}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
               <InputLabel id="campaign-test-locale-label">Locale</InputLabel>
               <Select
                 labelId="campaign-test-locale-label"
@@ -3463,7 +3696,7 @@ export function CampaignEditorPage({
                 }
                 disabled={isSendingTest}
               >
-                {(['en', 'es', 'pt'] as CampaignLocale[]).map((locale) => (
+                {availableLocales.map((locale) => (
                   <MenuItem key={locale} value={locale}>
                     {locale.toUpperCase()}
                   </MenuItem>
@@ -3680,23 +3913,34 @@ export function CampaignEditorPage({
         <DialogTitle>Insert token</DialogTitle>
         <DialogContent>
           <Stack spacing={1.5} sx={{ mt: 1, minWidth: 320 }}>
-            {state.catalog.tokens.map((token) => (
-              <Button
-                key={token.key}
-                variant="outlined"
-                onClick={() => handleInsertToken(token.token)}
-                sx={{
-                  color: COLORS.textPrimary,
-                  borderColor: COLORS.textPrimary,
-                  '&:hover': {
+            {state.catalog.tokens.map((token) => {
+              const compatibilityReason = getCatalogCompatibilityReason(
+                token,
+                state.draft.targetApps
+              );
+
+              return (
+                <Button
+                  key={token.key}
+                  variant="outlined"
+                  disabled={compatibilityReason !== null}
+                  onClick={() => handleInsertToken(token.token)}
+                  sx={{
+                    color: COLORS.textPrimary,
                     borderColor: COLORS.textPrimary,
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                  },
-                }}
-              >
-                {token.label}
-              </Button>
-            ))}
+                    '&:hover': {
+                      borderColor: COLORS.textPrimary,
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                    },
+                  }}
+                >
+                  <CatalogOptionLabel
+                    label={token.label}
+                    reason={compatibilityReason}
+                  />
+                </Button>
+              );
+            })}
           </Stack>
         </DialogContent>
       </Dialog>
