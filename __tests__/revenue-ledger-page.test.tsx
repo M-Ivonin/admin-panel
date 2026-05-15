@@ -151,7 +151,7 @@ describe('RevenueLedgerPage', () => {
     expect(await screen.findByText('Forbidden')).toBeTruthy();
     expect(
       screen.queryByText('No ledger rows match the current filters')
-    ).not.toBeInTheDocument();
+    ).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Order ID'), {
       target: { value: 'order-1' },

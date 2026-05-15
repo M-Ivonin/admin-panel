@@ -11,6 +11,7 @@ const customJestConfig = {
   testEnvironment: 'jsdom',
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
+    '<rootDir>/.codex-orchestrator/',
     '<rootDir>/node_modules/',
     '<rootDir>/Tactical Identity Plot/',
   ],

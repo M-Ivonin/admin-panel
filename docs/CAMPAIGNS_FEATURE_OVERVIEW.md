@@ -619,7 +619,7 @@ Actual eligibility is based on:
 - retention stages,
 - optional explicit user IDs,
 - locale groups,
-- non-empty FCM token,
+- push reachability: active installation token first, with legacy user FCM token fallback,
 - suppression rules.
 
 `segmentSource` and `sourceSegmentId` do not currently change runtime eligibility by themselves.
