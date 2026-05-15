@@ -14,6 +14,8 @@ export interface UserSubscription {
   autoRenewing: boolean;
 }
 
+export type UserLatestAppProfile = 'SirBro' | 'TipsterBro' | null;
+
 export interface User {
   id: string;
   telegram_id: string | null;
@@ -38,6 +40,7 @@ export interface User {
   levelName: string;
   subscription: UserSubscription | null;
   partnerId: string | null;
+  latestAppProfile?: UserLatestAppProfile;
 }
 
 export enum RetentionStage {
