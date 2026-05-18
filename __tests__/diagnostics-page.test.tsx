@@ -193,7 +193,7 @@ describe('RemoteDiagnosticsPage', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows diagnostics to dashboard admins even when backend read capability is false', async () => {
+  it('keeps diagnostics fully usable even when backend capabilities are false', async () => {
     (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
       canRead: false,
       canWrite: false,
@@ -204,10 +204,11 @@ describe('RemoteDiagnosticsPage', () => {
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
     expect(getDiagnosticsPolicies).toHaveBeenCalledWith({ activeOnly: true });
-    expect(screen.getByText(/Write access required/i)).toBeTruthy();
+    expect(screen.queryByText(/Write access required/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
   });
 
-  it('shows active policies, audit entries, target dropdowns, and hides trace without canTrace', async () => {
+  it('shows active policies, audit entries, target dropdowns, and trace mode', async () => {
     process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL =
       'https://grafana.example.com/explore';
 
@@ -255,6 +256,7 @@ describe('RemoteDiagnosticsPage', () => {
         'global_sample',
       ].every((targetType) => screen.getByRole('option', { name: targetType }))
     ).toBe(true);
+    expect(screen.getByRole('option', { name: 'trace' })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Target type'), {
       target: { value: 'platform' },
     });
@@ -271,7 +273,6 @@ describe('RemoteDiagnosticsPage', () => {
     expect(
       within(environment).getByRole('option', { name: 'production' })
     ).toBeTruthy();
-    expect(screen.queryByRole('option', { name: 'trace' })).toBeNull();
   });
 
   it('updates backend log forwarding from the header without creating a policy', async () => {

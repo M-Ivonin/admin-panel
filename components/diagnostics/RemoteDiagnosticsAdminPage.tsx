@@ -23,7 +23,6 @@ import {
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
   getDiagnosticsAudit,
-  getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
   getDiagnosticsTtlLimitMinutes,
@@ -75,8 +74,8 @@ const DEFAULT_TARGET_OPTIONS: DiagnosticsTargetOptionsResponse = {
 };
 const DEFAULT_CAPABILITIES: DiagnosticsCapabilities = {
   canRead: true,
-  canWrite: false,
-  canTrace: false,
+  canWrite: true,
+  canTrace: true,
 };
 
 const ENVIRONMENTS: DiagnosticsEnvironment[] = ['local', 'dev', 'production'];
@@ -582,13 +581,12 @@ export function RemoteDiagnosticsAdminPage() {
 
     async function loadInitialState() {
       try {
-        const nextCapabilities = await getDiagnosticsCapabilities();
         if (isMounted) {
-          setCapabilities({ ...nextCapabilities, canRead: true });
+          setCapabilities(DEFAULT_CAPABILITIES);
         }
       } catch {
-        // Reading diagnostics is available to every dashboard admin. If the
-        // capabilities endpoint is stale or unavailable, keep writes disabled.
+        // Diagnostics is available to every dashboard admin. If the
+        // capabilities endpoint is stale or unavailable, keep full page access.
       }
 
       try {
