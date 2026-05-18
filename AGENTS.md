@@ -1,47 +1,37 @@
 # AGENTS.md
 
-## 1. Project Scope
+## Purpose
 
-This file contains app-specific instructions for `/admin-panel` (Next.js web app).
-Global monorepo rules are in `/Users/serhiimytakii/Projects/Levantem/AGENTS.md`.
+This is the first-read routing layer for `/admin-panel`, the Next.js admin and public web app. Global workspace rules live in `/Users/serhiimytakii/Projects/Levantem/AGENTS.md`.
 
-## 2. Stack and Conventions
+## Start Here
 
-- Framework: `Next.js` (App Router)
-- Language: TypeScript
-- UI: `@mui/material` + existing local component patterns
-- Lint/format: project ESLint and Prettier config
+- For detailed execution, validation, Context7, and documentation workflow, read `docs/agents/execution-routing.md`.
+- For public/admin/deeplink/content architecture, read `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md` before changing route groups, SEO, sitemap/robots, content contracts, or HTTP boundaries.
+- Check related feature docs under `docs/` before implementation.
 
-## 3. Follow Existing Code Style (Mandatory)
+## Stack Map
 
-- Inspect similar modules in `/admin-panel/app`, `/admin-panel/components`, and `/admin-panel/lib` before editing.
-- Match existing patterns for route handlers, utility functions, and UI composition.
-- Reuse current libraries and helpers before introducing new dependencies.
+- Framework: `Next.js` App Router.
+- Language: TypeScript.
+- UI: `@mui/material` plus existing local component patterns.
+- Quality sources: `package.json`, `.eslintrc.json`, `tsconfig.json`, `jest.config.js`.
 
-Explicit requirement: **Follow existing code style: Before generating code, look at similar modules in the project. See what styles, patterns, libraries are applied. Use the same in your code.**
+## Non-Negotiables
 
-## 4. Context7 MCP
+- Inspect similar modules in `app`, `components`, `modules`, or `lib` before editing.
+- Reuse existing helpers, route patterns, repositories, and UI conventions before adding dependencies.
+- Avoid new `any`; `.eslintrc.json` treats `@typescript-eslint/no-explicit-any` as a warning.
+- Do not mix public, admin-auth, and deeplink runtime boundaries; route through the owners listed in `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`.
 
-- Use Context7 MCP only when the task genuinely requires precise, current Next.js/React/MUI/library docs or API changes that cannot be confidently answered from local code, lockfiles, tests, examples, or existing docs.
-- Prefer local inspection first: read the app code, package manifest / lockfile, tests, examples, and docs before reaching for external library docs.
-- Do not use Context7 MCP for routine Next.js/React/MUI coding, simple refactors, repository-specific behavior, or facts already visible in the project.
-- Explicitly notify the user whenever Context7 MCP was used and what was checked.
-- If Context7 MCP is unavailable:
-  - State that it is unavailable.
-  - Fall back to official docs/changelogs for the relevant library.
-  - Continue with the safest compatible implementation and call out uncertainty.
+## Quality And Boundary Preflight
 
-## 5. Documentation-First Workflow
+When changing imports, modules, route groups, HTTP clients, content repositories, SEO builders, sitemap/robots, scripts, or cross-module wiring:
 
-- Check `/Users/serhiimytakii/Projects/Levantem/admin-panel/docs` first for related feature docs.
-- If `/admin-panel/docs` does not exist, review `/Users/serhiimytakii/Projects/Levantem/admin-panel/README.md` and create `/admin-panel/docs` when introducing non-trivial new features.
-- After implementation, update existing docs or add a new doc.
-- Include updated/created doc paths in the final response.
+1. Read the owning source-of-truth doc/config first: usually `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`, `package.json`, `.eslintrc.json`, and the nearby module files.
+2. After code changes, run the smallest relevant guard from `package.json`: `npm run lint`, targeted `npm test`, `npm run typecheck`, `npm run build`, or `npm run verify:stage`.
+3. For public routing, SEO, sitemap, robots, or deeplink changes, include the relevant `npm run smoke:routes` profile from the architecture doc.
 
-## 6. Runtime Errors Check (Mandatory End-of-Task)
+## Final Response
 
-- Run `npm run build`.
-- Run `npm run lint` when code changes.
-- Run `npm run test` when behavior covered by tests changes.
-- If service is already running, check existing logs/terminal output first and do not start duplicate `next dev`/`next start` processes.
-- Report verification steps and unresolved errors in the final response.
+State what changed, what was verified, which docs changed, and any unresolved errors or skipped checks.
