@@ -30,7 +30,6 @@ import {
   type DiagnosticsAuditEntry,
   type DiagnosticsBackendLogMode,
   type DiagnosticsBackendLogSetting,
-  type DiagnosticsCapabilities,
   type DiagnosticsCategory,
   type DiagnosticsEnvironment,
   type DiagnosticsMode,
@@ -71,11 +70,6 @@ const DEFAULT_TARGET_OPTIONS: DiagnosticsTargetOptionsResponse = {
   recentUsers: [],
   recentDevices: [],
   appVersionBuilds: [],
-};
-const DEFAULT_CAPABILITIES: DiagnosticsCapabilities = {
-  canRead: true,
-  canWrite: true,
-  canTrace: true,
 };
 
 const ENVIRONMENTS: DiagnosticsEnvironment[] = ['local', 'dev', 'production'];
@@ -247,6 +241,14 @@ function normalizeTargetOptions(
     recentDevices: options.recentDevices ?? [],
     appVersionBuilds: options.appVersionBuilds ?? [],
   };
+}
+
+function readErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Failed to load diagnostics.';
+}
+
+function isForbiddenError(error: unknown) {
+  return readErrorMessage(error).toLowerCase() === 'forbidden';
 }
 
 function buildTarget(form: FormState): DiagnosticsTarget {
@@ -509,8 +511,6 @@ function AuditList({ entries }: { entries: DiagnosticsAuditEntry[] }) {
 }
 
 export function RemoteDiagnosticsAdminPage() {
-  const [capabilities, setCapabilities] =
-    useState<DiagnosticsCapabilities>(DEFAULT_CAPABILITIES);
   const [activePolicies, setActivePolicies] = useState<DiagnosticsPolicy[]>([]);
   const [auditEntries, setAuditEntries] = useState<DiagnosticsAuditEntry[]>([]);
   const [targetOptions, setTargetOptions] =
@@ -531,8 +531,7 @@ export function RemoteDiagnosticsAdminPage() {
     () => getDiagnosticsTtlLimitMinutes(form.mode, form.targetType),
     [form.mode, form.targetType]
   );
-  const canUseTrace =
-    capabilities?.canTrace && isTraceTargetType(form.targetType);
+  const canUseTrace = isTraceTargetType(form.targetType);
   const appVersions = useMemo(
     () => [
       ...new Set(
@@ -551,17 +550,40 @@ export function RemoteDiagnosticsAdminPage() {
 
   const loadData = useCallback(async () => {
     const [activeResponse, auditResponse, optionsResponse, backendLogResponse] =
-      await Promise.all([
+      await Promise.allSettled([
         getDiagnosticsPolicies({ activeOnly: true }),
         getDiagnosticsAudit({ limit: 5 }),
         getDiagnosticsTargetOptions(),
         getDiagnosticsBackendLogSetting(),
       ]);
 
-    setActivePolicies(activeResponse.items);
-    setAuditEntries(auditResponse.items);
-    setTargetOptions(normalizeTargetOptions(optionsResponse));
-    setBackendLogSetting(backendLogResponse);
+    const loadErrors: string[] = [];
+
+    if (activeResponse.status === 'fulfilled') {
+      setActivePolicies(activeResponse.value.items);
+    } else if (!isForbiddenError(activeResponse.reason)) {
+      loadErrors.push(readErrorMessage(activeResponse.reason));
+    }
+
+    if (auditResponse.status === 'fulfilled') {
+      setAuditEntries(auditResponse.value.items);
+    } else if (!isForbiddenError(auditResponse.reason)) {
+      loadErrors.push(readErrorMessage(auditResponse.reason));
+    }
+
+    if (optionsResponse.status === 'fulfilled') {
+      setTargetOptions(normalizeTargetOptions(optionsResponse.value));
+    } else if (!isForbiddenError(optionsResponse.reason)) {
+      loadErrors.push(readErrorMessage(optionsResponse.reason));
+    }
+
+    if (backendLogResponse.status === 'fulfilled') {
+      setBackendLogSetting(backendLogResponse.value);
+    } else if (!isForbiddenError(backendLogResponse.reason)) {
+      loadErrors.push(readErrorMessage(backendLogResponse.reason));
+    }
+
+    setErrors([...new Set(loadErrors)]);
   }, []);
 
   useEffect(() => {
@@ -580,15 +602,6 @@ export function RemoteDiagnosticsAdminPage() {
     let isMounted = true;
 
     async function loadInitialState() {
-      try {
-        if (isMounted) {
-          setCapabilities(DEFAULT_CAPABILITIES);
-        }
-      } catch {
-        // Diagnostics is available to every dashboard admin. If the
-        // capabilities endpoint is stale or unavailable, keep full page access.
-      }
-
       try {
         await loadData();
       } catch (error) {
@@ -786,7 +799,7 @@ export function RemoteDiagnosticsAdminPage() {
                 event.target.value as DiagnosticsBackendLogMode
               )
             }
-            disabled={!capabilities.canWrite || isMutating}
+            disabled={isMutating}
             sx={{ minWidth: 180 }}
           >
             {BACKEND_LOG_MODES.map((mode) => (
@@ -813,11 +826,6 @@ export function RemoteDiagnosticsAdminPage() {
             <Typography variant="h6" color="text.primary" gutterBottom>
               Create policy
             </Typography>
-            {!capabilities.canWrite && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Write access required to create or disable diagnostics policies.
-              </Alert>
-            )}
             {form.targetType === 'global_sample' && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 Global sample policies affect random users. Keep the sample rate
@@ -841,7 +849,6 @@ export function RemoteDiagnosticsAdminPage() {
                   onChange={(event) =>
                     updateForm('mode', event.target.value as DiagnosticsMode)
                   }
-                  disabled={!capabilities.canWrite}
                 >
                   {(['errors', 'info', 'debug'] as DiagnosticsMode[]).map(
                     (mode) => (
@@ -864,7 +871,6 @@ export function RemoteDiagnosticsAdminPage() {
                       ? `Max ${ttlLimit} minutes`
                       : 'Backend validates future expiry'
                   }
-                  disabled={!capabilities.canWrite}
                 />
               </Stack>
 
@@ -879,7 +885,6 @@ export function RemoteDiagnosticsAdminPage() {
                       event.target.value as DiagnosticsTargetType
                     )
                   }
-                  disabled={!capabilities.canWrite}
                 >
                   {TARGET_TYPES.map((targetType) => (
                     <option key={targetType.value} value={targetType.value}>
@@ -901,7 +906,6 @@ export function RemoteDiagnosticsAdminPage() {
                     onChange={(_, values) =>
                       updateForm('deviceIds', normalizeChipValues(values))
                     }
-                    disabled={!capabilities.canWrite}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -928,7 +932,6 @@ export function RemoteDiagnosticsAdminPage() {
                         normalizeChipValues(values, { lowercase: true })
                       )
                     }
-                    disabled={!capabilities.canWrite}
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -952,7 +955,6 @@ export function RemoteDiagnosticsAdminPage() {
                         ? 'No platforms found from analytics devices'
                         : undefined
                     }
-                    disabled={!capabilities.canWrite}
                   >
                     <option value="">Select platform</option>
                     {targetOptions.platforms.map((platform) => (
@@ -977,7 +979,6 @@ export function RemoteDiagnosticsAdminPage() {
                           ? 'No versions found from analytics devices'
                           : undefined
                       }
-                      disabled={!capabilities.canWrite}
                     >
                       <option value="">Select app version</option>
                       {appVersions.map((appVersion) => (
@@ -999,7 +1000,7 @@ export function RemoteDiagnosticsAdminPage() {
                           ? 'No builds found for this version'
                           : undefined
                       }
-                      disabled={!capabilities.canWrite || !form.appVersion}
+                      disabled={!form.appVersion}
                     >
                       <option value="">Select build number</option>
                       {buildNumbers.map((buildNumber) => (
@@ -1024,7 +1025,6 @@ export function RemoteDiagnosticsAdminPage() {
                       event.target.value as DiagnosticsEnvironment
                     )
                   }
-                  disabled={!capabilities.canWrite}
                 >
                   {ENVIRONMENTS.map((environment) => (
                     <option key={environment} value={environment}>
@@ -1040,7 +1040,6 @@ export function RemoteDiagnosticsAdminPage() {
                     updateForm('sampleRate', event.target.value)
                   }
                   inputProps={{ step: '0.000001', min: '0.000001', max: '1' }}
-                  disabled={!capabilities.canWrite}
                 />
               </Stack>
             </Box>
@@ -1058,13 +1057,12 @@ export function RemoteDiagnosticsAdminPage() {
               minRows={2}
               fullWidth
               sx={{ mt: 2 }}
-              disabled={!capabilities.canWrite}
             />
             <Divider sx={{ my: 2 }} />
             <Button
               type="submit"
               variant="contained"
-              disabled={!capabilities.canWrite || isMutating}
+              disabled={isMutating}
             >
               Create policy
             </Button>
@@ -1073,7 +1071,7 @@ export function RemoteDiagnosticsAdminPage() {
           <PolicyList
             title="Active policies"
             policies={activePolicies}
-            canWrite={capabilities.canWrite}
+            canWrite
             onDisable={handleDisable}
           />
           <AuditList entries={auditEntries} />

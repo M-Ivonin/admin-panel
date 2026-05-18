@@ -12,7 +12,6 @@ import {
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
   getDiagnosticsAudit,
-  getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
   updateDiagnosticsBackendLogSetting,
@@ -43,7 +42,6 @@ jest.mock('@/lib/api/diagnostics', () => {
     disableDiagnosticsPolicy: jest.fn(),
     getDiagnosticsBackendLogSetting: jest.fn(),
     getDiagnosticsAudit: jest.fn(),
-    getDiagnosticsCapabilities: jest.fn(),
     getDiagnosticsPolicies: jest.fn(),
     getDiagnosticsTargetOptions: jest.fn(),
     updateDiagnosticsBackendLogSetting: jest.fn(),
@@ -84,14 +82,6 @@ const disabledPolicy: DiagnosticsPolicy = {
   disabledAt: '2026-05-16T10:30:00.000Z',
   disabledReason: 'Issue resolved',
 };
-
-function mockReadableCapabilities(canWrite = true, canTrace = false) {
-  (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
-    canRead: true,
-    canWrite,
-    canTrace,
-  });
-}
 
 function mockPageData() {
   (getDiagnosticsPolicies as jest.Mock).mockImplementation(
@@ -166,11 +156,9 @@ describe('RemoteDiagnosticsPage', () => {
     (disableDiagnosticsPolicy as jest.Mock).mockReset();
     (getDiagnosticsBackendLogSetting as jest.Mock).mockReset();
     (getDiagnosticsAudit as jest.Mock).mockReset();
-    (getDiagnosticsCapabilities as jest.Mock).mockReset();
     (getDiagnosticsPolicies as jest.Mock).mockReset();
     (getDiagnosticsTargetOptions as jest.Mock).mockReset();
     (updateDiagnosticsBackendLogSetting as jest.Mock).mockReset();
-    mockReadableCapabilities();
     mockPageData();
     (getDiagnosticsBackendLogSetting as jest.Mock).mockResolvedValue({
       mode: 'production',
@@ -193,19 +181,37 @@ describe('RemoteDiagnosticsPage', () => {
     jest.restoreAllMocks();
   });
 
-  it('keeps diagnostics fully usable even when backend capabilities are false', async () => {
-    (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
-      canRead: false,
-      canWrite: false,
-      canTrace: false,
-    });
-
+  it('keeps diagnostics fully usable without reading capability gates', async () => {
     render(<RemoteDiagnosticsPage />);
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
     expect(getDiagnosticsPolicies).toHaveBeenCalledWith({ activeOnly: true });
     expect(screen.queryByText(/Write access required/i)).toBeNull();
     expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
+  });
+
+  it('keeps target dropdowns populated when policy history is forbidden', async () => {
+    (getDiagnosticsPolicies as jest.Mock).mockRejectedValue(
+      new Error('Forbidden')
+    );
+    (getDiagnosticsAudit as jest.Mock).mockRejectedValue(
+      new Error('Forbidden')
+    );
+
+    render(<RemoteDiagnosticsPage />);
+
+    expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    expect(screen.queryByText('Forbidden')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'platform' },
+    });
+    expect(screen.getByRole('option', { name: 'android' })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'app_version_build' },
+    });
+    expect(screen.getByRole('option', { name: '1.2.3' })).toBeTruthy();
   });
 
   it('shows active policies, audit entries, target dropdowns, and trace mode', async () => {
@@ -504,7 +510,6 @@ describe('RemoteDiagnosticsPage', () => {
   });
 
   it('creates target-specific payloads and disables active policies', async () => {
-    mockReadableCapabilities(true, true);
     render(<RemoteDiagnosticsPage />);
 
     await screen.findByText('Remote Diagnostics');
