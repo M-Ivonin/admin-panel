@@ -73,6 +73,11 @@ const DEFAULT_TARGET_OPTIONS: DiagnosticsTargetOptionsResponse = {
   recentDevices: [],
   appVersionBuilds: [],
 };
+const DEFAULT_CAPABILITIES: DiagnosticsCapabilities = {
+  canRead: true,
+  canWrite: false,
+  canTrace: false,
+};
 
 const ENVIRONMENTS: DiagnosticsEnvironment[] = ['local', 'dev', 'production'];
 const BACKEND_LOG_MODES: Array<{
@@ -506,7 +511,7 @@ function AuditList({ entries }: { entries: DiagnosticsAuditEntry[] }) {
 
 export function RemoteDiagnosticsAdminPage() {
   const [capabilities, setCapabilities] =
-    useState<DiagnosticsCapabilities | null>(null);
+    useState<DiagnosticsCapabilities>(DEFAULT_CAPABILITIES);
   const [activePolicies, setActivePolicies] = useState<DiagnosticsPolicy[]>([]);
   const [auditEntries, setAuditEntries] = useState<DiagnosticsAuditEntry[]>([]);
   const [targetOptions, setTargetOptions] =
@@ -545,31 +550,20 @@ export function RemoteDiagnosticsAdminPage() {
     return [...new Set(matchingBuilds)];
   }, [form.appVersion, targetOptions.appVersionBuilds]);
 
-  const loadData = useCallback(
-    async (currentCapabilities: DiagnosticsCapabilities | null) => {
-      if (!currentCapabilities?.canRead) {
-        return;
-      }
-
-      const [
-        activeResponse,
-        auditResponse,
-        optionsResponse,
-        backendLogResponse,
-      ] = await Promise.all([
+  const loadData = useCallback(async () => {
+    const [activeResponse, auditResponse, optionsResponse, backendLogResponse] =
+      await Promise.all([
         getDiagnosticsPolicies({ activeOnly: true }),
         getDiagnosticsAudit({ limit: 5 }),
         getDiagnosticsTargetOptions(),
         getDiagnosticsBackendLogSetting(),
       ]);
 
-      setActivePolicies(activeResponse.items);
-      setAuditEntries(auditResponse.items);
-      setTargetOptions(normalizeTargetOptions(optionsResponse));
-      setBackendLogSetting(backendLogResponse);
-    },
-    []
-  );
+    setActivePolicies(activeResponse.items);
+    setAuditEntries(auditResponse.items);
+    setTargetOptions(normalizeTargetOptions(optionsResponse));
+    setBackendLogSetting(backendLogResponse);
+  }, []);
 
   useEffect(() => {
     if (
@@ -586,15 +580,20 @@ export function RemoteDiagnosticsAdminPage() {
   useEffect(() => {
     let isMounted = true;
 
-    getDiagnosticsCapabilities()
-      .then(async (nextCapabilities) => {
-        if (!isMounted) return;
-        setCapabilities(nextCapabilities);
-        if (nextCapabilities.canRead) {
-          await loadData(nextCapabilities);
+    async function loadInitialState() {
+      try {
+        const nextCapabilities = await getDiagnosticsCapabilities();
+        if (isMounted) {
+          setCapabilities({ ...nextCapabilities, canRead: true });
         }
-      })
-      .catch((error) => {
+      } catch {
+        // Reading diagnostics is available to every dashboard admin. If the
+        // capabilities endpoint is stale or unavailable, keep writes disabled.
+      }
+
+      try {
+        await loadData();
+      } catch (error) {
         if (isMounted) {
           setErrors([
             error instanceof Error
@@ -602,12 +601,14 @@ export function RemoteDiagnosticsAdminPage() {
               : 'Failed to load diagnostics access.',
           ]);
         }
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
-      });
+      }
+    }
+
+    void loadInitialState();
 
     return () => {
       isMounted = false;
@@ -669,7 +670,7 @@ export function RemoteDiagnosticsAdminPage() {
       });
       setStatus('Policy created.');
       setForm(initialFormState);
-      await loadData(capabilities);
+      await loadData();
     } catch (error) {
       setErrors([
         error instanceof Error ? error.message : 'Failed to create policy.',
@@ -688,7 +689,7 @@ export function RemoteDiagnosticsAdminPage() {
         reason: 'Disabled from admin panel',
       });
       setStatus('Policy disabled.');
-      await loadData(capabilities);
+      await loadData();
     } catch (error) {
       setErrors([
         error instanceof Error ? error.message : 'Failed to disable policy.',
@@ -728,22 +729,6 @@ export function RemoteDiagnosticsAdminPage() {
         }}
       >
         <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!capabilities?.canRead) {
-    return (
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: 4 }}>
-        <Paper sx={{ maxWidth: 760, mx: 'auto', p: 4 }}>
-          <Typography variant="h5" fontWeight={700} gutterBottom>
-            Remote Diagnostics access required
-          </Typography>
-          <Typography color="text.secondary">
-            Backend diagnostics capabilities do not allow this account to view
-            policies.
-          </Typography>
-        </Paper>
       </Box>
     );
   }

@@ -193,7 +193,7 @@ describe('RemoteDiagnosticsPage', () => {
     jest.restoreAllMocks();
   });
 
-  it('gates the section when backend capabilities deny diagnostics read access', async () => {
+  it('shows diagnostics to dashboard admins even when backend read capability is false', async () => {
     (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
       canRead: false,
       canWrite: false,
@@ -202,10 +202,9 @@ describe('RemoteDiagnosticsPage', () => {
 
     render(<RemoteDiagnosticsPage />);
 
-    expect(
-      await screen.findByText('Remote Diagnostics access required')
-    ).toBeTruthy();
-    expect(getDiagnosticsPolicies).not.toHaveBeenCalled();
+    expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    expect(getDiagnosticsPolicies).toHaveBeenCalledWith({ activeOnly: true });
+    expect(screen.getByText(/Write access required/i)).toBeTruthy();
   });
 
   it('shows active policies, audit entries, target dropdowns, and hides trace without canTrace', async () => {
