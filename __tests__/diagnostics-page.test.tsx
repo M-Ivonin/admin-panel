@@ -215,10 +215,17 @@ describe('RemoteDiagnosticsPage', () => {
     render(<RemoteDiagnosticsPage />);
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
-    expect(screen.getByLabelText('Backend logs')).toHaveValue('production');
-    expect(screen.getByRole('option', { name: 'production' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'dev/debug' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'off' })).toBeTruthy();
+    const backendLogs = screen.getByLabelText('Backend logs');
+    expect(backendLogs).toHaveValue('production');
+    expect(
+      within(backendLogs).getByRole('option', { name: 'production' })
+    ).toBeTruthy();
+    expect(
+      within(backendLogs).getByRole('option', { name: 'dev/debug' })
+    ).toBeTruthy();
+    expect(
+      within(backendLogs).getByRole('option', { name: 'off' })
+    ).toBeTruthy();
     expect((await screen.findAllByText('policy-debug')).length).toBeGreaterThan(
       0
     );
@@ -255,9 +262,16 @@ describe('RemoteDiagnosticsPage', () => {
     expect(screen.getByLabelText('Platform')).toBeTruthy();
     expect(screen.getByRole('option', { name: 'android' })).toBeTruthy();
     expect(screen.getByLabelText('Environment')).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'local' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'dev' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'production' })).toBeTruthy();
+    const environment = screen.getByLabelText('Environment');
+    expect(
+      within(environment).getByRole('option', { name: 'local' })
+    ).toBeTruthy();
+    expect(
+      within(environment).getByRole('option', { name: 'dev' })
+    ).toBeTruthy();
+    expect(
+      within(environment).getByRole('option', { name: 'production' })
+    ).toBeTruthy();
     expect(screen.queryByRole('option', { name: 'trace' })).toBeNull();
   });
 
@@ -276,7 +290,9 @@ describe('RemoteDiagnosticsPage', () => {
       mode: 'dev',
     });
     expect(createDiagnosticsPolicy).not.toHaveBeenCalled();
-    expect(await screen.findByText('Backend log setting updated.')).toBeTruthy();
+    expect(
+      await screen.findByText('Backend log setting updated.')
+    ).toBeTruthy();
   });
 
   it('validates TTL, reason, target details, and global sample rate before create', async () => {
