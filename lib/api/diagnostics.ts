@@ -1,6 +1,7 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 
 export type DiagnosticsMode = 'errors' | 'info' | 'debug' | 'trace';
+export type DiagnosticsBackendLogMode = 'production' | 'dev' | 'off';
 
 export type DiagnosticsTargetType =
   | 'device'
@@ -37,6 +38,16 @@ export interface DiagnosticsCapabilities {
   canRead: boolean;
   canWrite: boolean;
   canTrace: boolean;
+}
+
+export interface DiagnosticsBackendLogSetting {
+  mode: DiagnosticsBackendLogMode;
+  updatedByEmail: string | null;
+  updatedAt: string | null;
+}
+
+export interface UpdateDiagnosticsBackendLogSettingRequest {
+  mode: DiagnosticsBackendLogMode;
 }
 
 export interface DiagnosticsLimits {
@@ -193,6 +204,33 @@ export async function getDiagnosticsCapabilities(): Promise<DiagnosticsCapabilit
   return parseDiagnosticsResponse(
     response,
     'Failed to fetch diagnostics capabilities'
+  );
+}
+
+export async function getDiagnosticsBackendLogSetting(): Promise<DiagnosticsBackendLogSetting> {
+  const response = await adminAuthFetch({
+    path: '/diagnostics/admin/backend-log-setting',
+    method: 'GET',
+  });
+
+  return parseDiagnosticsResponse(
+    response,
+    'Failed to fetch backend log setting'
+  );
+}
+
+export async function updateDiagnosticsBackendLogSetting(
+  input: UpdateDiagnosticsBackendLogSettingRequest
+): Promise<DiagnosticsBackendLogSetting> {
+  const response = await adminAuthFetch({
+    path: '/diagnostics/admin/backend-log-setting',
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+
+  return parseDiagnosticsResponse(
+    response,
+    'Failed to update backend log setting'
   );
 }
 

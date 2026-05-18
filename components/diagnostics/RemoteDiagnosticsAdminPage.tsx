@@ -21,12 +21,16 @@ import {
   buildDiagnosticsLokiUrl,
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
+  getDiagnosticsBackendLogSetting,
   getDiagnosticsAudit,
   getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
   getDiagnosticsTtlLimitMinutes,
+  updateDiagnosticsBackendLogSetting,
   type DiagnosticsAuditEntry,
+  type DiagnosticsBackendLogMode,
+  type DiagnosticsBackendLogSetting,
   type DiagnosticsCapabilities,
   type DiagnosticsCategory,
   type DiagnosticsEnvironment,
@@ -71,6 +75,14 @@ const DEFAULT_TARGET_OPTIONS: DiagnosticsTargetOptionsResponse = {
 };
 
 const ENVIRONMENTS: DiagnosticsEnvironment[] = ['local', 'dev', 'production'];
+const BACKEND_LOG_MODES: Array<{
+  value: DiagnosticsBackendLogMode;
+  label: string;
+}> = [
+  { value: 'production', label: 'production' },
+  { value: 'dev', label: 'dev/debug' },
+  { value: 'off', label: 'off' },
+];
 
 interface FormState {
   mode: DiagnosticsMode;
@@ -499,6 +511,12 @@ export function RemoteDiagnosticsAdminPage() {
   const [auditEntries, setAuditEntries] = useState<DiagnosticsAuditEntry[]>([]);
   const [targetOptions, setTargetOptions] =
     useState<DiagnosticsTargetOptionsResponse>(DEFAULT_TARGET_OPTIONS);
+  const [backendLogSetting, setBackendLogSetting] =
+    useState<DiagnosticsBackendLogSetting>({
+      mode: 'production',
+      updatedByEmail: null,
+      updatedAt: null,
+    });
   const [form, setForm] = useState<FormState>(initialFormState);
   const [errors, setErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
@@ -533,16 +551,22 @@ export function RemoteDiagnosticsAdminPage() {
         return;
       }
 
-      const [activeResponse, auditResponse, optionsResponse] =
-        await Promise.all([
-          getDiagnosticsPolicies({ activeOnly: true }),
-          getDiagnosticsAudit({ limit: 5 }),
-          getDiagnosticsTargetOptions(),
-        ]);
+      const [
+        activeResponse,
+        auditResponse,
+        optionsResponse,
+        backendLogResponse,
+      ] = await Promise.all([
+        getDiagnosticsPolicies({ activeOnly: true }),
+        getDiagnosticsAudit({ limit: 5 }),
+        getDiagnosticsTargetOptions(),
+        getDiagnosticsBackendLogSetting(),
+      ]);
 
       setActivePolicies(activeResponse.items);
       setAuditEntries(auditResponse.items);
       setTargetOptions(normalizeTargetOptions(optionsResponse));
+      setBackendLogSetting(backendLogResponse);
     },
     []
   );
@@ -674,6 +698,25 @@ export function RemoteDiagnosticsAdminPage() {
     }
   }
 
+  async function handleBackendLogModeChange(mode: DiagnosticsBackendLogMode) {
+    setStatus(null);
+    setErrors([]);
+    setIsMutating(true);
+    try {
+      const updated = await updateDiagnosticsBackendLogSetting({ mode });
+      setBackendLogSetting(updated);
+      setStatus('Backend log setting updated.');
+    } catch (error) {
+      setErrors([
+        error instanceof Error
+          ? error.message
+          : 'Failed to update backend log setting.',
+      ]);
+    } finally {
+      setIsMutating(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <Box
@@ -748,6 +791,27 @@ export function RemoteDiagnosticsAdminPage() {
               Temporary mobile diagnostics policies and backend audit
             </Typography>
           </Box>
+          <Box sx={{ flex: 1 }} />
+          <TextField
+            select
+            SelectProps={{ native: true }}
+            label="Backend logs"
+            size="small"
+            value={backendLogSetting.mode}
+            onChange={(event) =>
+              handleBackendLogModeChange(
+                event.target.value as DiagnosticsBackendLogMode
+              )
+            }
+            disabled={!capabilities.canWrite || isMutating}
+            sx={{ minWidth: 180 }}
+          >
+            {BACKEND_LOG_MODES.map((mode) => (
+              <option key={mode.value} value={mode.value}>
+                {mode.label}
+              </option>
+            ))}
+          </TextField>
         </Box>
       </Paper>
 
