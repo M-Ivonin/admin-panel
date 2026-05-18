@@ -4,6 +4,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
+  Autocomplete,
+  Backdrop,
   Box,
   Button,
   Chip,
@@ -22,13 +24,16 @@ import {
   getDiagnosticsAudit,
   getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
+  getDiagnosticsTargetOptions,
   getDiagnosticsTtlLimitMinutes,
   type DiagnosticsAuditEntry,
   type DiagnosticsCapabilities,
   type DiagnosticsCategory,
+  type DiagnosticsEnvironment,
   type DiagnosticsMode,
   type DiagnosticsPolicy,
   type DiagnosticsTarget,
+  type DiagnosticsTargetOptionsResponse,
   type DiagnosticsTargetType,
 } from '@/lib/api/diagnostics';
 
@@ -58,11 +63,21 @@ const DEFAULT_LIMITS = {
   breadcrumbLimit: 20,
 };
 
+const DEFAULT_TARGET_OPTIONS: DiagnosticsTargetOptionsResponse = {
+  platforms: [],
+  recentUsers: [],
+  recentDevices: [],
+  appVersionBuilds: [],
+};
+
+const ENVIRONMENTS: DiagnosticsEnvironment[] = ['local', 'dev', 'production'];
+
 interface FormState {
   mode: DiagnosticsMode;
   targetType: DiagnosticsTargetType;
-  deviceId: string;
-  userId: string;
+  environment: DiagnosticsEnvironment;
+  deviceIds: string[];
+  userEmails: string[];
   platform: string;
   appVersion: string;
   buildNumber: string;
@@ -74,8 +89,9 @@ interface FormState {
 const initialFormState: FormState = {
   mode: 'debug',
   targetType: 'user',
-  deviceId: '',
-  userId: '',
+  environment: 'production',
+  deviceIds: [],
+  userEmails: [],
   platform: '',
   appVersion: '',
   buildNumber: '',
@@ -97,24 +113,36 @@ function formatDate(value: string | null) {
 }
 
 function labelForTarget(
-  policy: Pick<DiagnosticsPolicy, 'targetType' | 'targetKey'>
+  policy: Pick<DiagnosticsPolicy, 'targetType' | 'target'>
 ) {
-  return `${policy.targetType}: ${policy.targetKey}`;
+  return formatTarget(policy.targetType, policy.target);
 }
 
 function formatTarget(
   targetType: DiagnosticsTargetType,
   target: DiagnosticsTarget
 ) {
-  if (target.type === 'device')
-    return `${targetType}: ${target.deviceId ?? 'n/a'}`;
-  if (target.type === 'user') return `${targetType}: ${target.userId ?? 'n/a'}`;
-  if (target.type === 'platform')
-    return `${targetType}: ${target.platform ?? 'n/a'}`;
-  if (target.type === 'app_version_build') {
-    return `${targetType}: ${target.platform ?? '*'}:${target.appVersion ?? 'n/a'}:${target.buildNumber ?? 'n/a'}`;
+  const environmentLabel = target.environment ? ` (${target.environment})` : '';
+
+  if (target.type === 'device') {
+    const deviceLabel =
+      target.deviceIds?.join(', ') ?? target.deviceId ?? 'n/a';
+    return `${targetType}: ${deviceLabel}${environmentLabel}`;
   }
-  return targetType;
+  if (target.type === 'user') {
+    const userLabel =
+      target.userEmails?.join(', ') ??
+      target.userEmail ??
+      target.userId ??
+      'n/a';
+    return `${targetType}: ${userLabel}${environmentLabel}`;
+  }
+  if (target.type === 'platform')
+    return `${targetType}: ${target.platform ?? 'n/a'}${environmentLabel}`;
+  if (target.type === 'app_version_build') {
+    return `${targetType}: ${target.appVersion ?? 'n/a'}:${target.buildNumber ?? 'n/a'}${environmentLabel}`;
+  }
+  return `${targetType}${environmentLabel}`;
 }
 
 function limitLabels(limits: {
@@ -162,31 +190,91 @@ function DetailChips({
   );
 }
 
+function clampGlobalSampleTtl(ttlMinutes: string) {
+  const ttl = Number(ttlMinutes);
+
+  if (!Number.isFinite(ttl) || ttl <= 0 || ttl > 30) {
+    return '30';
+  }
+
+  return ttlMinutes;
+}
+
+function clampGlobalSampleRate(sampleRate: string) {
+  const rate = Number(sampleRate);
+
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 0.01) {
+    return '0.01';
+  }
+
+  return sampleRate;
+}
+
+function normalizeChipValues(
+  values: string[],
+  options: { lowercase?: boolean } = {}
+) {
+  const normalizedValues = values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => (options.lowercase ? value.toLowerCase() : value));
+
+  return [...new Set(normalizedValues)];
+}
+
+function normalizeTargetOptions(
+  options: DiagnosticsTargetOptionsResponse
+): DiagnosticsTargetOptionsResponse {
+  return {
+    platforms: options.platforms ?? [],
+    recentUsers: options.recentUsers ?? [],
+    recentDevices: options.recentDevices ?? [],
+    appVersionBuilds: options.appVersionBuilds ?? [],
+  };
+}
+
 function buildTarget(form: FormState): DiagnosticsTarget {
   const platform = form.platform.trim().toLowerCase();
+  const environment = form.environment;
 
   if (form.targetType === 'device') {
-    return { type: 'device', deviceId: form.deviceId.trim() };
+    const deviceIds = normalizeChipValues(form.deviceIds);
+
+    return {
+      type: 'device',
+      deviceId: deviceIds[0],
+      deviceIds,
+      environment,
+    };
   }
 
   if (form.targetType === 'user') {
-    return { type: 'user', userId: form.userId.trim() };
+    const userEmails = normalizeChipValues(form.userEmails, {
+      lowercase: true,
+    });
+
+    return {
+      type: 'user',
+      userEmail: userEmails[0],
+      userEmails,
+      environment,
+    };
   }
 
   if (form.targetType === 'platform') {
-    return { type: 'platform', platform };
+    return { type: 'platform', platform, environment };
   }
 
   if (form.targetType === 'app_version_build') {
     return {
       type: 'app_version_build',
-      platform: platform || undefined,
       appVersion: form.appVersion.trim(),
       buildNumber: form.buildNumber.trim(),
+      environment,
     };
   }
 
-  return { type: form.targetType };
+  return { type: form.targetType, environment };
 }
 
 function validateForm(form: FormState) {
@@ -201,6 +289,10 @@ function validateForm(form: FormState) {
 
   if (form.mode === 'trace' && !isTraceTargetType(form.targetType)) {
     errors.push('Trace policies can only target a device or user.');
+  }
+
+  if (!ENVIRONMENTS.includes(form.environment)) {
+    errors.push('Environment is required.');
   }
 
   if (!Number.isFinite(ttl) || ttl <= 0) {
@@ -221,12 +313,18 @@ function validateForm(form: FormState) {
     errors.push('Global sample rate must be 0.01 or lower.');
   }
 
-  if (form.targetType === 'device' && !form.deviceId.trim()) {
+  if (
+    form.targetType === 'device' &&
+    normalizeChipValues(form.deviceIds).length === 0
+  ) {
     errors.push('Device ID is required.');
   }
 
-  if (form.targetType === 'user' && !form.userId.trim()) {
-    errors.push('User ID is required.');
+  if (
+    form.targetType === 'user' &&
+    normalizeChipValues(form.userEmails, { lowercase: true }).length === 0
+  ) {
+    errors.push('User email is required.');
   }
 
   if (form.targetType === 'platform' && !form.platform.trim()) {
@@ -245,15 +343,11 @@ function PolicyList({
   title,
   policies,
   canWrite,
-  disableReasons,
-  onDisableReasonChange,
   onDisable,
 }: {
   title: string;
   policies: DiagnosticsPolicy[];
   canWrite: boolean;
-  disableReasons: Record<string, string>;
-  onDisableReasonChange: (policyId: string, reason: string) => void;
   onDisable: (policyId: string) => void;
 }) {
   return (
@@ -335,26 +429,14 @@ function PolicyList({
                     )}
                   </Box>
                   {canWrite && policy.enabled && (
-                    <Stack
-                      spacing={1}
-                      sx={{ minWidth: { xs: '100%', md: 280 } }}
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => onDisable(policy.id)}
+                      sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}
                     >
-                      <TextField
-                        label={`Disable reason for ${policy.id}`}
-                        value={disableReasons[policy.id] ?? ''}
-                        onChange={(event) =>
-                          onDisableReasonChange(policy.id, event.target.value)
-                        }
-                        size="small"
-                      />
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => onDisable(policy.id)}
-                      >
-                        Disable {policy.id}
-                      </Button>
-                    </Stack>
+                      Disable {policy.id}
+                    </Button>
                   )}
                 </Stack>
               </Box>
@@ -371,6 +453,10 @@ function AuditList({ entries }: { entries: DiagnosticsAuditEntry[] }) {
     <Paper sx={{ p: 3 }}>
       <Typography variant="h6" color="text.primary" gutterBottom>
         Backend audit
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Chronological log of who created or disabled diagnostics access, when,
+        for which target, and why.
       </Typography>
       <Stack spacing={1.5}>
         {entries.length === 0 ? (
@@ -398,27 +484,6 @@ function AuditList({ entries }: { entries: DiagnosticsAuditEntry[] }) {
                 categories={entry.categories}
               />
               <Typography variant="body2">{entry.reason}</Typography>
-              <Box
-                component="pre"
-                sx={{
-                  mt: 1,
-                  p: 1,
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  fontSize: 12,
-                  overflowX: 'auto',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {JSON.stringify(
-                  {
-                    before: entry.beforeSnapshot,
-                    after: entry.afterSnapshot,
-                  },
-                  null,
-                  2
-                )}
-              </Box>
             </Box>
           ))
         )}
@@ -431,15 +496,14 @@ export function RemoteDiagnosticsAdminPage() {
   const [capabilities, setCapabilities] =
     useState<DiagnosticsCapabilities | null>(null);
   const [activePolicies, setActivePolicies] = useState<DiagnosticsPolicy[]>([]);
-  const [recentPolicies, setRecentPolicies] = useState<DiagnosticsPolicy[]>([]);
   const [auditEntries, setAuditEntries] = useState<DiagnosticsAuditEntry[]>([]);
+  const [targetOptions, setTargetOptions] =
+    useState<DiagnosticsTargetOptionsResponse>(DEFAULT_TARGET_OPTIONS);
   const [form, setForm] = useState<FormState>(initialFormState);
-  const [disableReasons, setDisableReasons] = useState<Record<string, string>>(
-    {}
-  );
   const [errors, setErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
 
   const ttlLimit = useMemo(
     () => getDiagnosticsTtlLimitMinutes(form.mode, form.targetType),
@@ -447,6 +511,21 @@ export function RemoteDiagnosticsAdminPage() {
   );
   const canUseTrace =
     capabilities?.canTrace && isTraceTargetType(form.targetType);
+  const appVersions = useMemo(
+    () => [
+      ...new Set(
+        targetOptions.appVersionBuilds.map((option) => option.appVersion)
+      ),
+    ],
+    [targetOptions.appVersionBuilds]
+  );
+  const buildNumbers = useMemo(() => {
+    const matchingBuilds = targetOptions.appVersionBuilds
+      .filter((option) => option.appVersion === form.appVersion)
+      .map((option) => option.buildNumber);
+
+    return [...new Set(matchingBuilds)];
+  }, [form.appVersion, targetOptions.appVersionBuilds]);
 
   const loadData = useCallback(
     async (currentCapabilities: DiagnosticsCapabilities | null) => {
@@ -454,20 +533,31 @@ export function RemoteDiagnosticsAdminPage() {
         return;
       }
 
-      const [activeResponse, recentResponse, auditResponse] = await Promise.all(
-        [
+      const [activeResponse, auditResponse, optionsResponse] =
+        await Promise.all([
           getDiagnosticsPolicies({ activeOnly: true }),
-          getDiagnosticsPolicies(),
-          getDiagnosticsAudit({ limit: 100 }),
-        ]
-      );
+          getDiagnosticsAudit({ limit: 5 }),
+          getDiagnosticsTargetOptions(),
+        ]);
 
       setActivePolicies(activeResponse.items);
-      setRecentPolicies(recentResponse.items);
       setAuditEntries(auditResponse.items);
+      setTargetOptions(normalizeTargetOptions(optionsResponse));
     },
     []
   );
+
+  useEffect(() => {
+    if (
+      form.targetType !== 'app_version_build' ||
+      form.buildNumber === '' ||
+      buildNumbers.includes(form.buildNumber)
+    ) {
+      return;
+    }
+
+    updateForm('buildNumber', '');
+  }, [buildNumbers, form.buildNumber, form.targetType]);
 
   useEffect(() => {
     let isMounted = true;
@@ -512,6 +602,18 @@ export function RemoteDiagnosticsAdminPage() {
           ? 'debug'
           : current.mode,
       targetType,
+      platform: targetType === 'platform' ? current.platform : '',
+      appVersion: targetType === 'app_version_build' ? current.appVersion : '',
+      buildNumber:
+        targetType === 'app_version_build' ? current.buildNumber : '',
+      ttlMinutes:
+        targetType === 'global_sample'
+          ? clampGlobalSampleTtl(current.ttlMinutes)
+          : current.ttlMinutes,
+      sampleRate:
+        targetType === 'global_sample'
+          ? clampGlobalSampleRate(current.sampleRate)
+          : current.sampleRate,
     }));
   }
 
@@ -530,6 +632,7 @@ export function RemoteDiagnosticsAdminPage() {
       Date.now() + ttlMinutes * 60 * 1000
     ).toISOString();
 
+    setIsMutating(true);
     try {
       await createDiagnosticsPolicy({
         mode: form.mode,
@@ -547,26 +650,27 @@ export function RemoteDiagnosticsAdminPage() {
       setErrors([
         error instanceof Error ? error.message : 'Failed to create policy.',
       ]);
+    } finally {
+      setIsMutating(false);
     }
   }
 
   async function handleDisable(policyId: string) {
-    const reason = disableReasons[policyId]?.trim();
-
-    if (!reason) {
-      setErrors([`Disable reason for ${policyId} is required.`]);
-      return;
-    }
-
+    setStatus(null);
+    setErrors([]);
+    setIsMutating(true);
     try {
-      await disableDiagnosticsPolicy(policyId, { reason });
+      await disableDiagnosticsPolicy(policyId, {
+        reason: 'Disabled from admin panel',
+      });
       setStatus('Policy disabled.');
-      setDisableReasons((current) => ({ ...current, [policyId]: '' }));
       await loadData(capabilities);
     } catch (error) {
       setErrors([
         error instanceof Error ? error.message : 'Failed to disable policy.',
       ]);
+    } finally {
+      setIsMutating(false);
     }
   }
 
@@ -603,6 +707,21 @@ export function RemoteDiagnosticsAdminPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Backdrop
+        open={isMutating}
+        sx={{
+          zIndex: (theme) => theme.zIndex.modal + 1,
+          color: 'common.white',
+        }}
+      >
+        <Stack spacing={2} alignItems="center">
+          <CircularProgress
+            color="inherit"
+            aria-label="Applying policy changes"
+          />
+          <Typography fontWeight={700}>Applying policy changes...</Typography>
+        </Stack>
+      </Backdrop>
       <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Box
           sx={{
@@ -663,116 +782,220 @@ export function RemoteDiagnosticsAdminPage() {
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
                 gap: 2,
+                alignItems: 'start',
               }}
             >
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                label="Mode"
-                value={form.mode}
-                onChange={(event) =>
-                  updateForm('mode', event.target.value as DiagnosticsMode)
-                }
-                disabled={!capabilities.canWrite}
-              >
-                {(['errors', 'info', 'debug'] as DiagnosticsMode[]).map(
-                  (mode) => (
-                    <option key={mode} value={mode}>
-                      {mode}
+              <Stack spacing={2}>
+                <TextField
+                  select
+                  SelectProps={{ native: true }}
+                  label="Mode"
+                  value={form.mode}
+                  onChange={(event) =>
+                    updateForm('mode', event.target.value as DiagnosticsMode)
+                  }
+                  disabled={!capabilities.canWrite}
+                >
+                  {(['errors', 'info', 'debug'] as DiagnosticsMode[]).map(
+                    (mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    )
+                  )}
+                  {canUseTrace && <option value="trace">trace</option>}
+                </TextField>
+                <TextField
+                  label="Expires in minutes"
+                  type="number"
+                  value={form.ttlMinutes}
+                  onChange={(event) =>
+                    updateForm('ttlMinutes', event.target.value)
+                  }
+                  helperText={
+                    ttlLimit
+                      ? `Max ${ttlLimit} minutes`
+                      : 'Backend validates future expiry'
+                  }
+                  disabled={!capabilities.canWrite}
+                />
+              </Stack>
+
+              <Stack spacing={2} data-testid="diagnostics-target-column">
+                <TextField
+                  select
+                  SelectProps={{ native: true }}
+                  label="Target type"
+                  value={form.targetType}
+                  onChange={(event) =>
+                    updateTargetType(
+                      event.target.value as DiagnosticsTargetType
+                    )
+                  }
+                  disabled={!capabilities.canWrite}
+                >
+                  {TARGET_TYPES.map((targetType) => (
+                    <option key={targetType.value} value={targetType.value}>
+                      {targetType.label}
                     </option>
-                  )
+                  ))}
+                </TextField>
+                {form.targetType === 'device' && (
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    openOnFocus
+                    selectOnFocus
+                    handleHomeEndKeys
+                    forcePopupIcon
+                    noOptionsText="No recent devices found"
+                    options={targetOptions.recentDevices}
+                    value={form.deviceIds}
+                    onChange={(_, values) =>
+                      updateForm('deviceIds', normalizeChipValues(values))
+                    }
+                    disabled={!capabilities.canWrite}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Device IDs"
+                        placeholder="Select or enter device ID"
+                      />
+                    )}
+                  />
                 )}
-                {canUseTrace && <option value="trace">trace</option>}
-              </TextField>
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                label="Target type"
-                value={form.targetType}
-                onChange={(event) =>
-                  updateTargetType(event.target.value as DiagnosticsTargetType)
-                }
-                disabled={!capabilities.canWrite}
-              >
-                {TARGET_TYPES.map((targetType) => (
-                  <option key={targetType.value} value={targetType.value}>
-                    {targetType.label}
-                  </option>
-                ))}
-              </TextField>
-              <TextField
-                label="Expires in minutes"
-                type="number"
-                value={form.ttlMinutes}
-                onChange={(event) =>
-                  updateForm('ttlMinutes', event.target.value)
-                }
-                helperText={
-                  ttlLimit
-                    ? `Max ${ttlLimit} minutes`
-                    : 'Backend validates future expiry'
-                }
-                disabled={!capabilities.canWrite}
-              />
-              <TextField
-                label="Sample rate"
-                type="number"
-                value={form.sampleRate}
-                onChange={(event) =>
-                  updateForm('sampleRate', event.target.value)
-                }
-                inputProps={{ step: '0.000001', min: '0.000001', max: '1' }}
-                disabled={!capabilities.canWrite}
-              />
-              {form.targetType === 'device' && (
-                <TextField
-                  label="Device ID"
-                  value={form.deviceId}
-                  onChange={(event) =>
-                    updateForm('deviceId', event.target.value)
-                  }
-                  disabled={!capabilities.canWrite}
-                />
-              )}
-              {form.targetType === 'user' && (
-                <TextField
-                  label="User ID"
-                  value={form.userId}
-                  onChange={(event) => updateForm('userId', event.target.value)}
-                  disabled={!capabilities.canWrite}
-                />
-              )}
-              {(form.targetType === 'platform' ||
-                form.targetType === 'app_version_build') && (
-                <TextField
-                  label="Platform"
-                  value={form.platform}
-                  onChange={(event) =>
-                    updateForm('platform', event.target.value)
-                  }
-                  disabled={!capabilities.canWrite}
-                />
-              )}
-              {form.targetType === 'app_version_build' && (
-                <>
-                  <TextField
-                    label="App version"
-                    value={form.appVersion}
-                    onChange={(event) =>
-                      updateForm('appVersion', event.target.value)
+                {form.targetType === 'user' && (
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    openOnFocus
+                    selectOnFocus
+                    handleHomeEndKeys
+                    forcePopupIcon
+                    noOptionsText="No recent users found"
+                    options={targetOptions.recentUsers}
+                    value={form.userEmails}
+                    onChange={(_, values) =>
+                      updateForm(
+                        'userEmails',
+                        normalizeChipValues(values, { lowercase: true })
+                      )
                     }
                     disabled={!capabilities.canWrite}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="User emails"
+                        placeholder="Select or enter email"
+                      />
+                    )}
                   />
+                )}
+                {form.targetType === 'platform' && (
                   <TextField
-                    label="Build number"
-                    value={form.buildNumber}
+                    select
+                    SelectProps={{ native: true }}
+                    label="Platform"
+                    value={form.platform}
                     onChange={(event) =>
-                      updateForm('buildNumber', event.target.value)
+                      updateForm('platform', event.target.value)
+                    }
+                    helperText={
+                      targetOptions.platforms.length === 0
+                        ? 'No platforms found from analytics devices'
+                        : undefined
                     }
                     disabled={!capabilities.canWrite}
-                  />
-                </>
-              )}
+                  >
+                    <option value="">Select platform</option>
+                    {targetOptions.platforms.map((platform) => (
+                      <option key={platform} value={platform}>
+                        {platform}
+                      </option>
+                    ))}
+                  </TextField>
+                )}
+                {form.targetType === 'app_version_build' && (
+                  <>
+                    <TextField
+                      select
+                      SelectProps={{ native: true }}
+                      label="App version"
+                      value={form.appVersion}
+                      onChange={(event) =>
+                        updateForm('appVersion', event.target.value)
+                      }
+                      helperText={
+                        appVersions.length === 0
+                          ? 'No versions found from analytics devices'
+                          : undefined
+                      }
+                      disabled={!capabilities.canWrite}
+                    >
+                      <option value="">Select app version</option>
+                      {appVersions.map((appVersion) => (
+                        <option key={appVersion} value={appVersion}>
+                          {appVersion}
+                        </option>
+                      ))}
+                    </TextField>
+                    <TextField
+                      select
+                      SelectProps={{ native: true }}
+                      label="Build number"
+                      value={form.buildNumber}
+                      onChange={(event) =>
+                        updateForm('buildNumber', event.target.value)
+                      }
+                      helperText={
+                        form.appVersion && buildNumbers.length === 0
+                          ? 'No builds found for this version'
+                          : undefined
+                      }
+                      disabled={!capabilities.canWrite || !form.appVersion}
+                    >
+                      <option value="">Select build number</option>
+                      {buildNumbers.map((buildNumber) => (
+                        <option key={buildNumber} value={buildNumber}>
+                          {buildNumber}
+                        </option>
+                      ))}
+                    </TextField>
+                  </>
+                )}
+              </Stack>
+
+              <Stack spacing={2}>
+                <TextField
+                  select
+                  SelectProps={{ native: true }}
+                  label="Environment"
+                  value={form.environment}
+                  onChange={(event) =>
+                    updateForm(
+                      'environment',
+                      event.target.value as DiagnosticsEnvironment
+                    )
+                  }
+                  disabled={!capabilities.canWrite}
+                >
+                  {ENVIRONMENTS.map((environment) => (
+                    <option key={environment} value={environment}>
+                      {environment}
+                    </option>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Sample rate"
+                  type="number"
+                  value={form.sampleRate}
+                  onChange={(event) =>
+                    updateForm('sampleRate', event.target.value)
+                  }
+                  inputProps={{ step: '0.000001', min: '0.000001', max: '1' }}
+                  disabled={!capabilities.canWrite}
+                />
+              </Stack>
             </Box>
             <Box sx={{ mt: 2 }}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -794,41 +1017,18 @@ export function RemoteDiagnosticsAdminPage() {
             <Button
               type="submit"
               variant="contained"
-              disabled={!capabilities.canWrite}
+              disabled={!capabilities.canWrite || isMutating}
             >
               Create policy
             </Button>
           </Paper>
 
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
-              gap: 3,
-            }}
-          >
-            <PolicyList
-              title="Active policies"
-              policies={activePolicies}
-              canWrite={capabilities.canWrite}
-              disableReasons={disableReasons}
-              onDisableReasonChange={(policyId, reason) =>
-                setDisableReasons((current) => ({
-                  ...current,
-                  [policyId]: reason,
-                }))
-              }
-              onDisable={handleDisable}
-            />
-            <PolicyList
-              title="Recent policies"
-              policies={recentPolicies}
-              canWrite={false}
-              disableReasons={disableReasons}
-              onDisableReasonChange={() => undefined}
-              onDisable={() => undefined}
-            />
-          </Box>
+          <PolicyList
+            title="Active policies"
+            policies={activePolicies}
+            canWrite={capabilities.canWrite}
+            onDisable={handleDisable}
+          />
           <AuditList entries={auditEntries} />
         </Stack>
       </Box>

@@ -2,10 +2,13 @@ import {
   buildDiagnosticsLokiUrl,
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
+  getDiagnosticsBackendLogSetting,
   getDiagnosticsAudit,
   getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
+  getDiagnosticsTargetOptions,
   getDiagnosticsTtlLimitMinutes,
+  updateDiagnosticsBackendLogSetting,
   type DiagnosticsPolicy,
 } from '@/lib/api/diagnostics';
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
@@ -18,8 +21,12 @@ const policy: DiagnosticsPolicy = {
   id: 'policy-debug',
   mode: 'debug',
   targetType: 'user',
-  targetKey: 'user-1',
-  target: { type: 'user', userId: 'user-1' },
+  targetKey: 'production:user@example.com',
+  target: {
+    type: 'user',
+    userEmail: 'user@example.com',
+    environment: 'production',
+  },
   expiresAt: '2026-05-16T11:00:00.000Z',
   sampleRate: 0.5,
   uploadIntervalSec: 60,
@@ -65,6 +72,43 @@ describe('diagnostics admin api', () => {
     });
   });
 
+  it('loads and updates backend log forwarding mode', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        mode: 'production',
+        updatedByEmail: null,
+        updatedAt: null,
+      }),
+    });
+
+    await expect(getDiagnosticsBackendLogSetting()).resolves.toEqual({
+      mode: 'production',
+      updatedByEmail: null,
+      updatedAt: null,
+    });
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/diagnostics/admin/backend-log-setting',
+      method: 'GET',
+    });
+
+    (adminAuthFetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        mode: 'dev',
+        updatedByEmail: 'writer@example.com',
+        updatedAt: '2026-05-16T10:00:00.000Z',
+      }),
+    });
+
+    await updateDiagnosticsBackendLogSetting({ mode: 'dev' });
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/diagnostics/admin/backend-log-setting',
+      method: 'PUT',
+      body: JSON.stringify({ mode: 'dev' }),
+    });
+  });
+
   it('lists active or recent policies and surfaces backend errors', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -99,9 +143,9 @@ describe('diagnostics admin api', () => {
       mode: 'debug',
       target: {
         type: 'app_version_build',
-        platform: 'ios',
         appVersion: '1.2.3',
         buildNumber: '45',
+        environment: 'dev',
       },
       expiresAt: '2026-05-16T11:00:00.000Z',
       sampleRate: 0.25,
@@ -125,9 +169,9 @@ describe('diagnostics admin api', () => {
         mode: 'debug',
         target: {
           type: 'app_version_build',
-          platform: 'ios',
           appVersion: '1.2.3',
           buildNumber: '45',
+          environment: 'dev',
         },
         expiresAt: '2026-05-16T11:00:00.000Z',
         sampleRate: 0.25,
@@ -159,7 +203,7 @@ describe('diagnostics admin api', () => {
             actorEmail: 'writer@example.com',
             reason: 'Investigating support ticket',
             targetType: 'user',
-            target: { type: 'user', userId: 'user-1' },
+            target: { type: 'user', userEmail: 'user@example.com' },
             mode: 'debug',
             ttlSeconds: 3600,
             sampling: { sampleRate: 0.5 },
@@ -183,6 +227,26 @@ describe('diagnostics admin api', () => {
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
       path: '/diagnostics/admin/audit?limit=50',
+      method: 'GET',
+    });
+  });
+
+  it('loads diagnostics target options for dropdowns', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        platforms: ['android', 'ios'],
+        appVersionBuilds: [{ appVersion: '1.2.3', buildNumber: '45' }],
+      }),
+    });
+
+    await expect(getDiagnosticsTargetOptions()).resolves.toEqual({
+      platforms: ['android', 'ios'],
+      appVersionBuilds: [{ appVersion: '1.2.3', buildNumber: '45' }],
+    });
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/diagnostics/admin/target-options',
       method: 'GET',
     });
   });

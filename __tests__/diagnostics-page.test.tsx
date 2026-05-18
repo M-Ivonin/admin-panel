@@ -1,11 +1,21 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import RemoteDiagnosticsPage from '@/app/(admin)/dashboard/remote-diagnostics/page';
 import {
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
+  getDiagnosticsBackendLogSetting,
   getDiagnosticsAudit,
   getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
+  getDiagnosticsTargetOptions,
+  updateDiagnosticsBackendLogSetting,
   type DiagnosticsPolicy,
 } from '@/lib/api/diagnostics';
 
@@ -31,9 +41,12 @@ jest.mock('@/lib/api/diagnostics', () => {
     ...actual,
     createDiagnosticsPolicy: jest.fn(),
     disableDiagnosticsPolicy: jest.fn(),
+    getDiagnosticsBackendLogSetting: jest.fn(),
     getDiagnosticsAudit: jest.fn(),
     getDiagnosticsCapabilities: jest.fn(),
     getDiagnosticsPolicies: jest.fn(),
+    getDiagnosticsTargetOptions: jest.fn(),
+    updateDiagnosticsBackendLogSetting: jest.fn(),
   };
 });
 
@@ -41,8 +54,12 @@ const activePolicy: DiagnosticsPolicy = {
   id: 'policy-debug',
   mode: 'debug',
   targetType: 'user',
-  targetKey: 'user-1',
-  target: { type: 'user', userId: 'user-1' },
+  targetKey: 'production:user@example.com',
+  target: {
+    type: 'user',
+    userEmail: 'user@example.com',
+    environment: 'production',
+  },
   expiresAt: '2026-05-16T11:00:00.000Z',
   sampleRate: 0.5,
   uploadIntervalSec: 60,
@@ -94,7 +111,11 @@ function mockPageData() {
         actorEmail: 'writer@example.com',
         reason: 'Investigating support ticket',
         targetType: 'user',
-        target: { type: 'user', userId: 'user-1' },
+        target: {
+          type: 'user',
+          userEmail: 'user@example.com',
+          environment: 'production',
+        },
         mode: 'debug',
         ttlSeconds: 3600,
         sampling: { sampleRate: 0.5 },
@@ -112,6 +133,27 @@ function mockPageData() {
       },
     ],
   });
+  (getDiagnosticsTargetOptions as jest.Mock).mockResolvedValue({
+    platforms: ['android', 'ios'],
+    recentUsers: ['recent@example.com', 'user@example.com'],
+    recentDevices: ['device-1', 'device-2'],
+    appVersionBuilds: [
+      { appVersion: '1.2.3', buildNumber: '45' },
+      { appVersion: '1.2.3', buildNumber: '46' },
+      { appVersion: '1.2.2', buildNumber: '44' },
+    ],
+  });
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
 }
 
 describe('RemoteDiagnosticsPage', () => {
@@ -122,11 +164,24 @@ describe('RemoteDiagnosticsPage', () => {
     process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL = '';
     (createDiagnosticsPolicy as jest.Mock).mockReset();
     (disableDiagnosticsPolicy as jest.Mock).mockReset();
+    (getDiagnosticsBackendLogSetting as jest.Mock).mockReset();
     (getDiagnosticsAudit as jest.Mock).mockReset();
     (getDiagnosticsCapabilities as jest.Mock).mockReset();
     (getDiagnosticsPolicies as jest.Mock).mockReset();
+    (getDiagnosticsTargetOptions as jest.Mock).mockReset();
+    (updateDiagnosticsBackendLogSetting as jest.Mock).mockReset();
     mockReadableCapabilities();
     mockPageData();
+    (getDiagnosticsBackendLogSetting as jest.Mock).mockResolvedValue({
+      mode: 'production',
+      updatedByEmail: null,
+      updatedAt: null,
+    });
+    (updateDiagnosticsBackendLogSetting as jest.Mock).mockResolvedValue({
+      mode: 'dev',
+      updatedByEmail: 'writer@example.com',
+      updatedAt: '2026-05-16T10:00:00.000Z',
+    });
     (createDiagnosticsPolicy as jest.Mock).mockResolvedValue(activePolicy);
     (disableDiagnosticsPolicy as jest.Mock).mockResolvedValue({
       ...activePolicy,
@@ -153,26 +208,34 @@ describe('RemoteDiagnosticsPage', () => {
     expect(getDiagnosticsPolicies).not.toHaveBeenCalled();
   });
 
-  it('shows active and recent policies, audit entries, and hides trace without canTrace', async () => {
+  it('shows active policies, audit entries, target dropdowns, and hides trace without canTrace', async () => {
     process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL =
       'https://grafana.example.com/explore';
 
     render(<RemoteDiagnosticsPage />);
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    expect(screen.getByLabelText('Backend logs')).toHaveValue('production');
+    expect(screen.getByRole('option', { name: 'production' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'dev/debug' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'off' })).toBeTruthy();
     expect((await screen.findAllByText('policy-debug')).length).toBeGreaterThan(
       0
     );
-    expect(screen.getByText('policy-disabled')).toBeTruthy();
+    expect(screen.queryByText('policy-disabled')).toBeNull();
     expect(screen.getByText(/writer@example.com/)).toBeTruthy();
-    expect(screen.getByText('Issue resolved')).toBeTruthy();
     expect(screen.getAllByText('upload 60s').length).toBeGreaterThan(0);
     expect(screen.getAllByText('network').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText(/debug on user: user-1/i).length
+      screen.getAllByText(/debug on user: user@example.com \(production\)/i)
+        .length
     ).toBeGreaterThan(0);
     expect(screen.getByText(/TTL 60m/i)).toBeTruthy();
-    expect(screen.getByText(/"after"/i)).toBeTruthy();
+    expect(
+      screen.getByText(/Chronological log of who created or disabled/i)
+    ).toBeTruthy();
+    expect(getDiagnosticsAudit).toHaveBeenCalledWith({ limit: 5 });
+    expect(screen.queryByText(/"after"/i)).toBeNull();
     expect(
       screen.getAllByRole('link', { name: /open in grafana/i })[0]
     ).toHaveAttribute('href', expect.stringContaining('grafana.example.com'));
@@ -186,7 +249,34 @@ describe('RemoteDiagnosticsPage', () => {
         'global_sample',
       ].every((targetType) => screen.getByRole('option', { name: targetType }))
     ).toBe(true);
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'platform' },
+    });
+    expect(screen.getByLabelText('Platform')).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'android' })).toBeTruthy();
+    expect(screen.getByLabelText('Environment')).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'local' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'dev' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'production' })).toBeTruthy();
     expect(screen.queryByRole('option', { name: 'trace' })).toBeNull();
+  });
+
+  it('updates backend log forwarding from the header without creating a policy', async () => {
+    render(<RemoteDiagnosticsPage />);
+
+    await screen.findByText('Remote Diagnostics');
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Backend logs'), {
+        target: { value: 'dev' },
+      });
+    });
+
+    expect(updateDiagnosticsBackendLogSetting).toHaveBeenCalledWith({
+      mode: 'dev',
+    });
+    expect(createDiagnosticsPolicy).not.toHaveBeenCalled();
+    expect(await screen.findByText('Backend log setting updated.')).toBeTruthy();
   });
 
   it('validates TTL, reason, target details, and global sample rate before create', async () => {
@@ -200,6 +290,8 @@ describe('RemoteDiagnosticsPage', () => {
     expect(
       screen.getByText(/Global sample policies affect random users/i)
     ).toBeTruthy();
+    expect(screen.getByLabelText('Expires in minutes')).toHaveValue(30);
+    expect(screen.getByLabelText('Sample rate')).toHaveValue(0.01);
 
     fireEvent.change(screen.getByLabelText('Expires in minutes'), {
       target: { value: '45' },
@@ -242,6 +334,159 @@ describe('RemoteDiagnosticsPage', () => {
     expect(createDiagnosticsPolicy).not.toHaveBeenCalled();
   });
 
+  it('creates user policies with selected and manually entered email chips', async () => {
+    render(<RemoteDiagnosticsPage />);
+
+    await screen.findByText('Remote Diagnostics');
+
+    const userEmails = screen.getByLabelText('User emails');
+    fireEvent.change(userEmails, {
+      target: { value: 'manual@example.com' },
+    });
+    fireEvent.keyDown(userEmails, { key: 'Enter' });
+    fireEvent.change(userEmails, {
+      target: { value: 'recent@example.com' },
+    });
+    fireEvent.keyDown(userEmails, { key: 'Enter' });
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'Investigating user report' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create policy' }));
+    });
+
+    expect(createDiagnosticsPolicy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          type: 'user',
+          userEmail: 'manual@example.com',
+          userEmails: ['manual@example.com', 'recent@example.com'],
+          environment: 'production',
+        },
+      })
+    );
+  });
+
+  it('creates device policies with selected and manually entered device chips', async () => {
+    render(<RemoteDiagnosticsPage />);
+
+    await screen.findByText('Remote Diagnostics');
+
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'device' },
+    });
+
+    const deviceIds = screen.getByLabelText('Device IDs');
+    fireEvent.change(deviceIds, {
+      target: { value: 'manual-device' },
+    });
+    fireEvent.keyDown(deviceIds, { key: 'Enter' });
+    fireEvent.change(deviceIds, {
+      target: { value: 'device-1' },
+    });
+    fireEvent.keyDown(deviceIds, { key: 'Enter' });
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'Investigating device report' },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create policy' }));
+    });
+
+    expect(createDiagnosticsPolicy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: {
+          type: 'device',
+          deviceId: 'manual-device',
+          deviceIds: ['manual-device', 'device-1'],
+          environment: 'production',
+        },
+      })
+    );
+  });
+
+  it('keeps target-specific fields directly under the target type selector', async () => {
+    render(<RemoteDiagnosticsPage />);
+
+    await screen.findByText('Remote Diagnostics');
+
+    const targetColumn = screen.getByTestId('diagnostics-target-column');
+
+    expect(within(targetColumn).getByLabelText('Target type')).toBeTruthy();
+    expect(within(targetColumn).getByLabelText('User emails')).toBeTruthy();
+    expect(within(targetColumn).getByLabelText('Open')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'platform' },
+    });
+
+    expect(within(targetColumn).getByLabelText('Platform')).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'android' })).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Target type'), {
+      target: { value: 'app_version_build' },
+    });
+
+    expect(within(targetColumn).getByLabelText('App version')).toBeTruthy();
+    expect(within(targetColumn).getByLabelText('Build number')).toBeTruthy();
+    expect(within(targetColumn).queryByLabelText('Platform')).toBeNull();
+  });
+
+  it('shows a blocking overlay while create and disable requests are pending', async () => {
+    const createRequest = createDeferred<DiagnosticsPolicy>();
+    (createDiagnosticsPolicy as jest.Mock).mockReturnValue(
+      createRequest.promise
+    );
+
+    render(<RemoteDiagnosticsPage />);
+
+    await screen.findByText('Remote Diagnostics');
+
+    const userEmails = screen.getByLabelText('User emails');
+    fireEvent.change(userEmails, {
+      target: { value: 'user@example.com' },
+    });
+    fireEvent.keyDown(userEmails, { key: 'Enter' });
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'Investigating user report' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create policy' }));
+
+    expect(await screen.findByText('Applying policy changes...')).toBeVisible();
+    expect(
+      screen.getByRole('progressbar', {
+        hidden: true,
+        name: 'Applying policy changes',
+      })
+    ).toBeTruthy();
+
+    await act(async () => {
+      createRequest.resolve(activePolicy);
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Applying policy changes...')).not.toBeVisible()
+    );
+
+    const disableRequest = createDeferred<DiagnosticsPolicy>();
+    (disableDiagnosticsPolicy as jest.Mock).mockReturnValue(
+      disableRequest.promise
+    );
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Disable policy-debug' })
+    );
+
+    expect(await screen.findByText('Applying policy changes...')).toBeVisible();
+
+    await act(async () => {
+      disableRequest.resolve({ ...activePolicy, enabled: false });
+    });
+    await waitFor(() =>
+      expect(screen.getByText('Applying policy changes...')).not.toBeVisible()
+    );
+  });
+
   it('creates target-specific payloads and disables active policies', async () => {
     mockReadableCapabilities(true, true);
     render(<RemoteDiagnosticsPage />);
@@ -259,11 +504,12 @@ describe('RemoteDiagnosticsPage', () => {
     fireEvent.change(reason, {
       target: { value: 'Investigating app build regression' },
     });
+    fireEvent.change(screen.getByLabelText('Environment'), {
+      target: { value: 'dev' },
+    });
     fireEvent.change(targetType, { target: { value: 'app_version_build' } });
     expect(screen.queryByRole('option', { name: 'trace' })).toBeNull();
-    fireEvent.change(screen.getByLabelText('Platform'), {
-      target: { value: 'ios' },
-    });
+    expect(screen.queryByLabelText('Platform')).toBeNull();
     fireEvent.change(screen.getByLabelText('App version'), {
       target: { value: '1.2.3' },
     });
@@ -280,17 +526,17 @@ describe('RemoteDiagnosticsPage', () => {
         mode: 'debug',
         target: {
           type: 'app_version_build',
-          platform: 'ios',
           appVersion: '1.2.3',
           buildNumber: '45',
+          environment: 'dev',
         },
         reason: 'Investigating app build regression',
       })
     );
 
-    fireEvent.change(screen.getByLabelText('Disable reason for policy-debug'), {
-      target: { value: 'Issue resolved' },
-    });
+    expect(
+      screen.queryByLabelText('Disable reason for policy-debug')
+    ).toBeNull();
 
     await act(async () => {
       fireEvent.click(
@@ -299,7 +545,7 @@ describe('RemoteDiagnosticsPage', () => {
     });
 
     expect(disableDiagnosticsPolicy).toHaveBeenCalledWith('policy-debug', {
-      reason: 'Issue resolved',
+      reason: 'Disabled from admin panel',
     });
   });
 });

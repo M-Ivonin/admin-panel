@@ -18,10 +18,16 @@ export type DiagnosticsCategory =
   | 'push_deeplinks'
   | 'app_lifecycle';
 
+export type DiagnosticsEnvironment = 'local' | 'dev' | 'production';
+
 export type DiagnosticsTarget = {
   type: DiagnosticsTargetType;
+  environment?: DiagnosticsEnvironment;
   deviceId?: string;
+  deviceIds?: string[];
   userId?: string;
+  userEmail?: string;
+  userEmails?: string[];
   platform?: string;
   appVersion?: string;
   buildNumber?: string;
@@ -103,6 +109,16 @@ export interface DiagnosticsAuditEntry {
 
 export interface DiagnosticsAuditResponse {
   items: DiagnosticsAuditEntry[];
+}
+
+export interface DiagnosticsTargetOptionsResponse {
+  platforms: string[];
+  recentUsers: string[];
+  recentDevices: string[];
+  appVersionBuilds: Array<{
+    appVersion: string;
+    buildNumber: string;
+  }>;
 }
 
 export interface DiagnosticsPoliciesParams {
@@ -198,6 +214,18 @@ export async function getDiagnosticsPolicies(
   return parseDiagnosticsResponse(
     response,
     'Failed to fetch diagnostics policies'
+  );
+}
+
+export async function getDiagnosticsTargetOptions(): Promise<DiagnosticsTargetOptionsResponse> {
+  const response = await adminAuthFetch({
+    path: '/diagnostics/admin/target-options',
+    method: 'GET',
+  });
+
+  return parseDiagnosticsResponse(
+    response,
+    'Failed to fetch diagnostics target options'
   );
 }
 
