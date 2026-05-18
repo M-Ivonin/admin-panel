@@ -173,7 +173,7 @@ export default function DashboardPage() {
                     Remote Diagnostics
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Create and audit temporary mobile diagnostics policies
+                    Manage temporary mobile diagnostics policies
                   </Typography>
                 </CardActionArea>
               </Card>

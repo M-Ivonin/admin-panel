@@ -3,7 +3,6 @@ import {
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
-  getDiagnosticsAudit,
   getDiagnosticsCapabilities,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
@@ -188,46 +187,6 @@ describe('diagnostics admin api', () => {
       path: '/diagnostics/admin/policies/policy-debug/disable',
       method: 'POST',
       body: JSON.stringify({ reason: 'Issue resolved' }),
-    });
-  });
-
-  it('loads backend audit entries with optional limit', async () => {
-    (adminAuthFetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: jest.fn().mockResolvedValue({
-        items: [
-          {
-            id: 'audit-1',
-            policyId: 'policy-debug',
-            action: 'create',
-            actorEmail: 'writer@example.com',
-            reason: 'Investigating support ticket',
-            targetType: 'user',
-            target: { type: 'user', userEmail: 'user@example.com' },
-            mode: 'debug',
-            ttlSeconds: 3600,
-            sampling: { sampleRate: 0.5 },
-            limits: {
-              uploadIntervalSec: 60,
-              maxEventsPerMinute: 30,
-              maxBatchEvents: 20,
-              maxPayloadKb: 64,
-              breadcrumbLimit: 20,
-            },
-            categories: ['network'],
-            beforeSnapshot: null,
-            afterSnapshot: {},
-            createdAt: '2026-05-16T10:00:00.000Z',
-          },
-        ],
-      }),
-    });
-
-    await getDiagnosticsAudit({ limit: 50 });
-
-    expect(adminAuthFetch).toHaveBeenCalledWith({
-      path: '/diagnostics/admin/audit?limit=50',
-      method: 'GET',
     });
   });
 

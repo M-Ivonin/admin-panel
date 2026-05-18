@@ -3,7 +3,7 @@
   "github": {
     "owner": "M-Ivonin",
     "repo": "admin-panel",
-    "prepareLabels": "create-missing",
+    "prepareLabels": "report-only",
     "labels": {
       "auto": {
         "name": "agent:auto",
@@ -46,13 +46,14 @@
     "workspaceRoot": ".codex-orchestrator/workspaces",
     "maxParallelChildren": 3,
     "stateDir": ".codex-orchestrator/state",
+    "allowAgentLocalCommits": false,
     "worktreeCleanup": {
       "enabled": true
     }
   },
   "codex": {
     "adapter": "codex-cli",
-    "command": "codex",
+    "command": "/Applications/Codex.app/Contents/Resources/codex",
     "args": [
       "exec",
       "--cd",
@@ -68,6 +69,9 @@
       "-"
     ],
     "timeoutMs": 1800000,
+    "mobileTimeoutMs": 3600000,
+    "idleTimeoutMs": 300000,
+    "profiles": {},
     "promptFileEnv": "CODEX_ORCHESTRATOR_PROMPT_FILE",
     "reportFileEnv": "CODEX_ORCHESTRATOR_REPORT_FILE"
   },
@@ -78,38 +82,44 @@
   "workflows": {
     "prd": {
       "skillName": "to-prd",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/prd.md"
     },
     "issueBreakdown": {
       "skillName": "to-issues",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/issue-breakdown.md"
     },
     "breakdownReview": {
       "skillName": "issue-breakdown-review",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/breakdown-review.md"
     },
     "triage": {
       "skillName": "triage",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/triage.md"
     },
     "scopedImplementation": {
       "skillName": "spec-implementer",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/scoped-implementation.md"
     },
     "issueTreeOrchestration": {
       "skillName": "issue-orchestrator",
-      "source": "package-owned-prompt-fallback",
+      "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/issue-tree-orchestration.md"
     }
   },
   "checks": {
     "typecheck": "npm run typecheck",
     "test": "npm test"
+  },
+  "checksPolicy": {
+    "missingNpmScript": "skip",
+    "lintBaseline": {
+      "mode": "strict"
+    }
   },
   "reviewGates": {
     "visualProof": {
@@ -206,6 +216,39 @@
           "code review"
         ]
       }
+    }
+  },
+  "loopPolicy": {
+    "issueSelection": {
+      "priorityLabels": [
+        "priority:critical",
+        "priority:high",
+        "priority:medium",
+        "priority:low"
+      ],
+      "tieBreaker": "issue-number-asc"
+    },
+    "rework": {
+      "maxAttempts": 1,
+      "retryableBlockers": [
+        "missing-completion-report",
+        "invalid-completion-report",
+        "no-changed-files",
+        "failed-configured-checks",
+        "missing-quality-gate-evidence"
+      ]
+    },
+    "freshContextReview": {
+      "enabled": false,
+      "mode": "advisory",
+      "blockOnHighConfidencePolicyViolations": true
+    },
+    "durableRunSummaries": {
+      "enabled": true
+    },
+    "policySuggestions": {
+      "enabled": true,
+      "maxSuggestions": 5
     }
   },
   "deny": {

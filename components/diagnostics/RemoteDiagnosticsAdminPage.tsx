@@ -22,12 +22,10 @@ import {
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
-  getDiagnosticsAudit,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
   getDiagnosticsTtlLimitMinutes,
   updateDiagnosticsBackendLogSetting,
-  type DiagnosticsAuditEntry,
   type DiagnosticsBackendLogMode,
   type DiagnosticsBackendLogSetting,
   type DiagnosticsCategory,
@@ -466,53 +464,8 @@ function PolicyList({
   );
 }
 
-function AuditList({ entries }: { entries: DiagnosticsAuditEntry[] }) {
-  return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" color="text.primary" gutterBottom>
-        Backend audit
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Chronological log of who created or disabled diagnostics access, when,
-        for which target, and why.
-      </Typography>
-      <Stack spacing={1.5}>
-        {entries.length === 0 ? (
-          <Typography color="text.secondary">No audit entries found</Typography>
-        ) : (
-          entries.map((entry) => (
-            <Box
-              key={entry.id}
-              sx={{ borderBottom: 1, borderColor: 'divider', pb: 1.5 }}
-            >
-              <Typography fontWeight={700}>
-                {entry.action} {entry.policyId ?? 'policy'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {entry.actorEmail ?? 'unknown actor'} -{' '}
-                {formatDate(entry.createdAt)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {entry.mode} on {formatTarget(entry.targetType, entry.target)} -
-                TTL {Math.round(entry.ttlSeconds / 60)}m - sample{' '}
-                {entry.sampling.sampleRate}
-              </Typography>
-              <DetailChips
-                limits={entry.limits}
-                categories={entry.categories}
-              />
-              <Typography variant="body2">{entry.reason}</Typography>
-            </Box>
-          ))
-        )}
-      </Stack>
-    </Paper>
-  );
-}
-
 export function RemoteDiagnosticsAdminPage() {
   const [activePolicies, setActivePolicies] = useState<DiagnosticsPolicy[]>([]);
-  const [auditEntries, setAuditEntries] = useState<DiagnosticsAuditEntry[]>([]);
   const [targetOptions, setTargetOptions] =
     useState<DiagnosticsTargetOptionsResponse>(DEFAULT_TARGET_OPTIONS);
   const [backendLogSetting, setBackendLogSetting] =
@@ -549,10 +502,9 @@ export function RemoteDiagnosticsAdminPage() {
   }, [form.appVersion, targetOptions.appVersionBuilds]);
 
   const loadData = useCallback(async () => {
-    const [activeResponse, auditResponse, optionsResponse, backendLogResponse] =
+    const [activeResponse, optionsResponse, backendLogResponse] =
       await Promise.allSettled([
         getDiagnosticsPolicies({ activeOnly: true }),
-        getDiagnosticsAudit({ limit: 5 }),
         getDiagnosticsTargetOptions(),
         getDiagnosticsBackendLogSetting(),
       ]);
@@ -563,12 +515,6 @@ export function RemoteDiagnosticsAdminPage() {
       setActivePolicies(activeResponse.value.items);
     } else if (!isForbiddenError(activeResponse.reason)) {
       loadErrors.push(readErrorMessage(activeResponse.reason));
-    }
-
-    if (auditResponse.status === 'fulfilled') {
-      setAuditEntries(auditResponse.value.items);
-    } else if (!isForbiddenError(auditResponse.reason)) {
-      loadErrors.push(readErrorMessage(auditResponse.reason));
     }
 
     if (optionsResponse.status === 'fulfilled') {
@@ -784,7 +730,7 @@ export function RemoteDiagnosticsAdminPage() {
               Remote Diagnostics
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Temporary mobile diagnostics policies and backend audit
+              Temporary mobile diagnostics policies and backend log forwarding
             </Typography>
           </Box>
           <Box sx={{ flex: 1 }} />
@@ -1074,7 +1020,6 @@ export function RemoteDiagnosticsAdminPage() {
             canWrite
             onDisable={handleDisable}
           />
-          <AuditList entries={auditEntries} />
         </Stack>
       </Box>
     </Box>

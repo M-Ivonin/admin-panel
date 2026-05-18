@@ -98,30 +98,6 @@ export interface DisableDiagnosticsPolicyRequest {
   reason: string;
 }
 
-export type DiagnosticsAuditAction = 'create' | 'disable';
-
-export interface DiagnosticsAuditEntry {
-  id: string;
-  policyId: string | null;
-  action: DiagnosticsAuditAction;
-  actorEmail: string | null;
-  reason: string;
-  targetType: DiagnosticsTargetType;
-  target: DiagnosticsTarget;
-  mode: DiagnosticsMode;
-  ttlSeconds: number;
-  sampling: { sampleRate: number };
-  limits: DiagnosticsLimits;
-  categories: DiagnosticsCategory[];
-  beforeSnapshot: Record<string, unknown> | null;
-  afterSnapshot: Record<string, unknown> | null;
-  createdAt: string;
-}
-
-export interface DiagnosticsAuditResponse {
-  items: DiagnosticsAuditEntry[];
-}
-
 export interface DiagnosticsTargetOptionsResponse {
   platforms: string[];
   recentUsers: string[];
@@ -134,12 +110,6 @@ export interface DiagnosticsTargetOptionsResponse {
 
 export interface DiagnosticsPoliciesParams {
   activeOnly?: boolean;
-}
-
-export interface DiagnosticsAuditParams {
-  from?: string;
-  to?: string;
-  limit?: number;
 }
 
 async function readAdminErrorMessage(
@@ -295,27 +265,6 @@ export async function disableDiagnosticsPolicy(
   return parseDiagnosticsResponse(
     response,
     'Failed to disable diagnostics policy'
-  );
-}
-
-export async function getDiagnosticsAudit(
-  params: DiagnosticsAuditParams = {}
-): Promise<DiagnosticsAuditResponse> {
-  const searchParams = new URLSearchParams();
-
-  if (params.from) searchParams.set('from', params.from);
-  if (params.to) searchParams.set('to', params.to);
-  if (params.limit) searchParams.set('limit', String(params.limit));
-
-  const queryString = searchParams.toString();
-  const response = await adminAuthFetch({
-    path: `/diagnostics/admin/audit${queryString ? `?${queryString}` : ''}`,
-    method: 'GET',
-  });
-
-  return parseDiagnosticsResponse(
-    response,
-    'Failed to fetch diagnostics audit'
   );
 }
 

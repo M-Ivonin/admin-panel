@@ -10,7 +10,6 @@ The screen supports:
 - creating temporary diagnostics policies for device, user, internal QA,
   app version/build, platform, and sampled global targets;
 - disabling active policies with a required reason;
-- showing backend audit entries from `/diagnostics/admin/audit`;
 - showing an optional Grafana link when
   `NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL` is configured.
 

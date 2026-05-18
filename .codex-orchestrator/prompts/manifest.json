@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "packageName": "codex-orchestrator",
+  "packageVersion": "0.1.29",
+  "prompts": {
+    "setup-skill.md": {
+      "installedHash": "eedd59b684ad87bd9f0c681d6a7384f71fc51a726207d0abac22bac2d840f2cc",
+      "packageHash": "eedd59b684ad87bd9f0c681d6a7384f71fc51a726207d0abac22bac2d840f2cc",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/prd.md": {
+      "installedHash": "3259d098b256e64a1fdde74f8119effe5be2ad3abd95f5525d5fb55f2983ddeb",
+      "packageHash": "3259d098b256e64a1fdde74f8119effe5be2ad3abd95f5525d5fb55f2983ddeb",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/issue-breakdown.md": {
+      "installedHash": "ba7033900e56d4b0203bee7976c2c2a0d87a7430e9805043afa651225dc24a98",
+      "packageHash": "ba7033900e56d4b0203bee7976c2c2a0d87a7430e9805043afa651225dc24a98",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/breakdown-review.md": {
+      "installedHash": "d67541fc875ac0b8f6739391e3e2242f14ef975daa502417af447fb624124e57",
+      "packageHash": "d67541fc875ac0b8f6739391e3e2242f14ef975daa502417af447fb624124e57",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/triage.md": {
+      "installedHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
+      "packageHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/scoped-implementation.md": {
+      "installedHash": "37b8e63b18c2fc01d89928ccc4afc786022e110f5b0c5aa0f4da48e546bb5333",
+      "packageHash": "37b8e63b18c2fc01d89928ccc4afc786022e110f5b0c5aa0f4da48e546bb5333",
+      "packageVersion": "0.1.29"
+    },
+    "workflows/issue-tree-orchestration.md": {
+      "installedHash": "d6d0c4e024dbd3ac369a7f2a93b1f835cccc0870c1735946d3394b895e6b3ac8",
+      "packageHash": "d6d0c4e024dbd3ac369a7f2a93b1f835cccc0870c1735946d3394b895e6b3ac8",
+      "packageVersion": "0.1.29"
+    }
+  }
+}

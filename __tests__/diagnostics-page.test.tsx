@@ -11,7 +11,6 @@ import {
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
-  getDiagnosticsAudit,
   getDiagnosticsPolicies,
   getDiagnosticsTargetOptions,
   updateDiagnosticsBackendLogSetting,
@@ -41,7 +40,6 @@ jest.mock('@/lib/api/diagnostics', () => {
     createDiagnosticsPolicy: jest.fn(),
     disableDiagnosticsPolicy: jest.fn(),
     getDiagnosticsBackendLogSetting: jest.fn(),
-    getDiagnosticsAudit: jest.fn(),
     getDiagnosticsPolicies: jest.fn(),
     getDiagnosticsTargetOptions: jest.fn(),
     updateDiagnosticsBackendLogSetting: jest.fn(),
@@ -92,37 +90,6 @@ function mockPageData() {
           : [activePolicy, disabledPolicy],
       })
   );
-  (getDiagnosticsAudit as jest.Mock).mockResolvedValue({
-    items: [
-      {
-        id: 'audit-1',
-        policyId: 'policy-debug',
-        action: 'create',
-        actorEmail: 'writer@example.com',
-        reason: 'Investigating support ticket',
-        targetType: 'user',
-        target: {
-          type: 'user',
-          userEmail: 'user@example.com',
-          environment: 'production',
-        },
-        mode: 'debug',
-        ttlSeconds: 3600,
-        sampling: { sampleRate: 0.5 },
-        limits: {
-          uploadIntervalSec: 60,
-          maxEventsPerMinute: 30,
-          maxBatchEvents: 20,
-          maxPayloadKb: 64,
-          breadcrumbLimit: 20,
-        },
-        categories: ['network'],
-        beforeSnapshot: null,
-        afterSnapshot: {},
-        createdAt: '2026-05-16T10:00:00.000Z',
-      },
-    ],
-  });
   (getDiagnosticsTargetOptions as jest.Mock).mockResolvedValue({
     platforms: ['android', 'ios'],
     recentUsers: ['recent@example.com', 'user@example.com'],
@@ -155,7 +122,6 @@ describe('RemoteDiagnosticsPage', () => {
     (createDiagnosticsPolicy as jest.Mock).mockReset();
     (disableDiagnosticsPolicy as jest.Mock).mockReset();
     (getDiagnosticsBackendLogSetting as jest.Mock).mockReset();
-    (getDiagnosticsAudit as jest.Mock).mockReset();
     (getDiagnosticsPolicies as jest.Mock).mockReset();
     (getDiagnosticsTargetOptions as jest.Mock).mockReset();
     (updateDiagnosticsBackendLogSetting as jest.Mock).mockReset();
@@ -190,11 +156,8 @@ describe('RemoteDiagnosticsPage', () => {
     expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
   });
 
-  it('keeps target dropdowns populated when policy history is forbidden', async () => {
+  it('keeps target dropdowns populated when policies are forbidden', async () => {
     (getDiagnosticsPolicies as jest.Mock).mockRejectedValue(
-      new Error('Forbidden')
-    );
-    (getDiagnosticsAudit as jest.Mock).mockRejectedValue(
       new Error('Forbidden')
     );
 
@@ -214,7 +177,7 @@ describe('RemoteDiagnosticsPage', () => {
     expect(screen.getByRole('option', { name: '1.2.3' })).toBeTruthy();
   });
 
-  it('shows active policies, audit entries, target dropdowns, and trace mode', async () => {
+  it('shows active policies, target dropdowns, and trace mode', async () => {
     process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL =
       'https://grafana.example.com/explore';
 
@@ -236,18 +199,13 @@ describe('RemoteDiagnosticsPage', () => {
       0
     );
     expect(screen.queryByText('policy-disabled')).toBeNull();
-    expect(screen.getByText(/writer@example.com/)).toBeTruthy();
     expect(screen.getAllByText('upload 60s').length).toBeGreaterThan(0);
     expect(screen.getAllByText('network').length).toBeGreaterThan(0);
     expect(
       screen.getAllByText(/debug on user: user@example.com \(production\)/i)
         .length
     ).toBeGreaterThan(0);
-    expect(screen.getByText(/TTL 60m/i)).toBeTruthy();
-    expect(
-      screen.getByText(/Chronological log of who created or disabled/i)
-    ).toBeTruthy();
-    expect(getDiagnosticsAudit).toHaveBeenCalledWith({ limit: 5 });
+    expect(screen.queryByText(/Chronological log of who created/i)).toBeNull();
     expect(screen.queryByText(/"after"/i)).toBeNull();
     expect(
       screen.getAllByRole('link', { name: /open in grafana/i })[0]
