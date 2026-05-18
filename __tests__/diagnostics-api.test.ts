@@ -1,5 +1,6 @@
 import {
   buildDiagnosticsLokiUrl,
+  buildDiagnosticsBackendLokiUrl,
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
   getDiagnosticsBackendLogSetting,
@@ -234,7 +235,26 @@ describe('diagnostics admin api', () => {
       String(new Date('2026-05-16T11:05:00.000Z').getTime())
     );
     expect(left.queries[0]?.expr).toBe(
-      '{source=~"mobile-.*|mobile-app"} |= "policy-debug" |= "policyTargetType" |= "user" |= "debug"'
+      '{log_origin="mobile",policy_mode="debug",policy_target_type="user"} |= "policy-debug"'
+    );
+  });
+
+  it('builds backend Loki links with backend origin and selected environment', () => {
+    process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL =
+      'https://grafana.example.com/explore';
+
+    expect(buildDiagnosticsBackendLokiUrl('off')).toBeNull();
+
+    const url = new URL(buildDiagnosticsBackendLokiUrl('dev') ?? '');
+    const left = JSON.parse(url.searchParams.get('left') ?? '{}') as {
+      queries: Array<{ expr: string }>;
+    };
+
+    expect(url.origin + url.pathname).toBe(
+      'https://grafana.example.com/explore'
+    );
+    expect(left.queries[0]?.expr).toBe(
+      '{log_origin="backend",environment="dev"}'
     );
   });
 });

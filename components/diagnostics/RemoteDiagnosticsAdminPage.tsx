@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { ArrowBack, BugReport, OpenInNew } from '@mui/icons-material';
 import {
+  buildDiagnosticsBackendLokiUrl,
   buildDiagnosticsLokiUrl,
   createDiagnosticsPolicy,
   disableDiagnosticsPolicy,
@@ -485,6 +486,10 @@ export function RemoteDiagnosticsAdminPage() {
     [form.mode, form.targetType]
   );
   const canUseTrace = isTraceTargetType(form.targetType);
+  const backendLokiUrl = useMemo(
+    () => buildDiagnosticsBackendLokiUrl(backendLogSetting.mode),
+    [backendLogSetting.mode]
+  );
   const appVersions = useMemo(
     () => [
       ...new Set(
@@ -734,26 +739,39 @@ export function RemoteDiagnosticsAdminPage() {
             </Typography>
           </Box>
           <Box sx={{ flex: 1 }} />
-          <TextField
-            select
-            SelectProps={{ native: true }}
-            label="Backend logs"
-            size="small"
-            value={backendLogSetting.mode}
-            onChange={(event) =>
-              handleBackendLogModeChange(
-                event.target.value as DiagnosticsBackendLogMode
-              )
-            }
-            disabled={isMutating}
-            sx={{ minWidth: 180 }}
-          >
-            {BACKEND_LOG_MODES.map((mode) => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
-              </option>
-            ))}
-          </TextField>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField
+              select
+              SelectProps={{ native: true }}
+              label="Backend logs"
+              size="small"
+              value={backendLogSetting.mode}
+              onChange={(event) =>
+                handleBackendLogModeChange(
+                  event.target.value as DiagnosticsBackendLogMode
+                )
+              }
+              disabled={isMutating}
+              sx={{ minWidth: 180 }}
+            >
+              {BACKEND_LOG_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.label}
+                </option>
+              ))}
+            </TextField>
+            {backendLokiUrl && (
+              <Button
+                href={backendLokiUrl}
+                target="_blank"
+                rel="noreferrer"
+                size="small"
+                endIcon={<OpenInNew />}
+              >
+                Backend Grafana
+              </Button>
+            )}
+          </Stack>
         </Box>
       </Paper>
 

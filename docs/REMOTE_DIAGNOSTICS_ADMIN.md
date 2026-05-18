@@ -12,6 +12,9 @@ The screen supports:
 - disabling active policies with a required reason;
 - showing an optional Grafana link when
   `NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL` is configured.
+- opening mobile logs with `log_origin="mobile"` and backend logs with
+  `log_origin="backend"` so operators can filter the two sources directly in
+  Loki.
 
 Client-side validation mirrors the backend safety caps:
 

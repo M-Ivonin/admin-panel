@@ -301,7 +301,7 @@ export function buildDiagnosticsLokiUrl(
 
   try {
     const url = new URL(baseUrl);
-    const expr = `{source=~"mobile-.*|mobile-app"} |= "${policy.id}" |= "policyTargetType" |= "${policy.targetType}" |= "${policy.mode}"`;
+    const expr = `{log_origin="mobile",policy_mode="${policy.mode}",policy_target_type="${policy.targetType}"} |= "${policy.id}"`;
     const from = policy.createdAt
       ? new Date(new Date(policy.createdAt).getTime() - 5 * 60 * 1000)
       : null;
@@ -318,6 +318,34 @@ export function buildDiagnosticsLokiUrl(
       JSON.stringify({
         datasource: 'Loki',
         queries: [{ expr }],
+      })
+    );
+
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function buildDiagnosticsBackendLokiUrl(
+  mode: DiagnosticsBackendLogMode
+): string | null {
+  const baseUrl = process.env.NEXT_PUBLIC_DIAGNOSTICS_LOKI_EXPLORE_URL;
+
+  if (!baseUrl || mode === 'off') {
+    return null;
+  }
+
+  try {
+    const url = new URL(baseUrl);
+    const environment = mode === 'dev' ? 'dev' : 'production';
+    url.searchParams.set(
+      'left',
+      JSON.stringify({
+        datasource: 'Loki',
+        queries: [
+          { expr: `{log_origin="backend",environment="${environment}"}` },
+        ],
       })
     );
 
