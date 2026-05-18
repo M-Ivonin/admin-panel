@@ -261,7 +261,11 @@
     "additionalPathGlobs": []
   },
   "branches": {
-    "base": "main",
+    "base": {
+      "mode": "explicit",
+      "remote": "origin",
+      "branch": "dev"
+    },
     "scopedIssue": "codex/issue-${issueNumber}",
     "issueTree": "codex/tree-${parentIssueNumber}"
   },
