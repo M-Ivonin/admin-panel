@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { getDiagnosticsCapabilities } from '@/lib/api/diagnostics';
 import Link from 'next/link';
 import {
   Box,
@@ -31,27 +29,6 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const [canReadDiagnostics, setCanReadDiagnostics] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getDiagnosticsCapabilities()
-      .then((capabilities) => {
-        if (isMounted) {
-          setCanReadDiagnostics(capabilities.canRead);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setCanReadDiagnostics(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const handleLogout = () => {
     logout();
@@ -186,23 +163,21 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            {canReadDiagnostics && (
-              <Link href="/dashboard/remote-diagnostics" style={{ textDecoration: 'none' }}>
-                <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
-                  <CardActionArea sx={{ p: 3, height: '100%' }}>
-                    <Avatar sx={{ bgcolor: 'error.main', width: 48, height: 48, mb: 2 }}>
-                      <BugReport />
-                    </Avatar>
-                    <Typography variant="h6" color="text.primary" gutterBottom>
-                      Remote Diagnostics
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Create and audit temporary mobile diagnostics policies
-                    </Typography>
-                  </CardActionArea>
-                </Card>
-              </Link>
-            )}
+            <Link href="/dashboard/remote-diagnostics" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'error.main', width: 48, height: 48, mb: 2 }}>
+                    <BugReport />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Remote Diagnostics
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Create and audit temporary mobile diagnostics policies
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
 
             {/* Settings Card */}
             <Card sx={{ height: '100%', opacity: 0.5 }}>

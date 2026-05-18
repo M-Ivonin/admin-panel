@@ -1,6 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import DashboardPage from '@/app/(admin)/dashboard/page';
-import { getDiagnosticsCapabilities } from '@/lib/api/diagnostics';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -30,43 +29,13 @@ jest.mock('next/link', () => ({
   }) => <a href={href}>{children}</a>,
 }));
 
-jest.mock('@/lib/api/diagnostics', () => ({
-  getDiagnosticsCapabilities: jest.fn(),
-}));
-
 describe('diagnostics dashboard navigation', () => {
-  beforeEach(() => {
-    (getDiagnosticsCapabilities as jest.Mock).mockReset();
-  });
-
-  it('shows the Remote Diagnostics section when backend capabilities allow reading', async () => {
-    (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
-      canRead: true,
-      canWrite: false,
-      canTrace: false,
-    });
-
+  it('shows the Remote Diagnostics section for signed-in dashboard admins', async () => {
     render(<DashboardPage />);
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /remote diagnostics/i })).toHaveAttribute(
-      'href',
-      '/dashboard/remote-diagnostics',
-    );
-  });
-
-  it('hides the Remote Diagnostics section when capabilities deny reading', async () => {
-    (getDiagnosticsCapabilities as jest.Mock).mockResolvedValue({
-      canRead: false,
-      canWrite: false,
-      canTrace: false,
-    });
-
-    render(<DashboardPage />);
-
-    await waitFor(() => {
-      expect(getDiagnosticsCapabilities).toHaveBeenCalled();
-    });
-    expect(screen.queryByText('Remote Diagnostics')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: /remote diagnostics/i })
+    ).toHaveAttribute('href', '/dashboard/remote-diagnostics');
   });
 });
