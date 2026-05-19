@@ -109,6 +109,13 @@ Status: confirmed / needs proof / not applicable
 - Manual/live:
 - Required fixtures or files:
 
+## codex-orchestrator metadata
+
+Ownership:
+
+- List the narrow files, directories, modules, or glob scopes this issue is expected to own.
+- Use scopes precise enough that non-overlapping AFK issues can run in parallel.
+
 ## Blocked by
 
 Blocking issue references, or "None - can start immediately."
