@@ -73,6 +73,77 @@ function getPlanColor(
   return colors[plan || 'free'] || 'default';
 }
 
+function normalizePlanIdentifier(value: string | null | undefined): string {
+  return value?.trim().toLowerCase().replace(/[\s.-]+/g, '_') ?? '';
+}
+
+function resolveSirBroPlanTier(plan: string | null | undefined) {
+  const normalizedPlan = normalizePlanIdentifier(plan);
+
+  if (
+    normalizedPlan.includes('sirbro_playmaker') ||
+    normalizedPlan.includes('playmaker') ||
+    normalizedPlan.includes('play_maker')
+  ) {
+    return 'playmaker';
+  }
+
+  if (
+    normalizedPlan.includes('sirbro_probro') ||
+    normalizedPlan.includes('probro') ||
+    normalizedPlan.includes('pro_bro')
+  ) {
+    return 'probro';
+  }
+
+  return null;
+}
+
+function resolveTipsterBroPlanTier(plan: string | null | undefined) {
+  const normalizedPlan = normalizePlanIdentifier(plan);
+
+  if (
+    normalizedPlan.includes('tipsterbro_weekly') ||
+    normalizedPlan.includes('tipsterbro_monthly') ||
+    normalizedPlan.includes('weekly_pass') ||
+    normalizedPlan.includes('weekly_plan') ||
+    normalizedPlan.includes('monthly_plus')
+  ) {
+    return 'playmaker';
+  }
+
+  if (
+    normalizedPlan.includes('tipsterbro_annual') ||
+    normalizedPlan.includes('annual_bro')
+  ) {
+    return 'probro';
+  }
+
+  return null;
+}
+
+function getEffectivePlanLabel(user: User): string {
+  const subscription = user.subscription;
+
+  if (!subscription) {
+    return 'free';
+  }
+
+  if (subscription.subscriptionStatus?.toLowerCase() !== 'active') {
+    return 'free';
+  }
+
+  if (user.latestAppProfile === 'SirBro') {
+    return resolveSirBroPlanTier(subscription.activePlan) ?? 'free';
+  }
+
+  if (user.latestAppProfile === 'TipsterBro') {
+    return resolveTipsterBroPlanTier(subscription.activePlan) ?? 'free';
+  }
+
+  return subscription.activePlan || 'free';
+}
+
 function hexToRgba(hex: string, alpha: number): string {
   const normalized = hex.replace('#', '');
 
@@ -629,11 +700,17 @@ export default function UsersPage() {
                           })()}
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={user.subscription?.activePlan || 'free'}
-                            size="small"
-                            color={getPlanColor(user.subscription?.activePlan)}
-                          />
+                          {(() => {
+                            const effectivePlan = getEffectivePlanLabel(user);
+
+                            return (
+                              <Chip
+                                label={effectivePlan}
+                                size="small"
+                                color={getPlanColor(effectivePlan)}
+                              />
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           <Box>
