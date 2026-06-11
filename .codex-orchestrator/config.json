@@ -45,6 +45,7 @@
   "runner": {
     "workspaceRoot": ".codex-orchestrator/workspaces",
     "maxParallelChildren": 3,
+    "maxParallelScopedIssues": 3,
     "stateDir": ".codex-orchestrator/state",
     "allowAgentLocalCommits": false,
     "worktreeCleanup": {
@@ -261,7 +262,11 @@
     "additionalPathGlobs": []
   },
   "branches": {
-    "base": "main",
+    "base": {
+      "mode": "explicit",
+      "remote": "origin",
+      "branch": "dev"
+    },
     "scopedIssue": "codex/issue-${issueNumber}",
     "issueTree": "codex/tree-${parentIssueNumber}"
   },

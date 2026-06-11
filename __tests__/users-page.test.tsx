@@ -137,4 +137,87 @@ describe('UsersPage', () => {
       screen.queryByPlaceholderText(/filter by app/i)
     ).not.toBeInTheDocument();
   });
+
+  it('renders app-effective plans instead of cross-app billing plans', async () => {
+    mockedGetUsers.mockResolvedValue({
+      users: [
+        createUser({
+          id: 'tipsterbro_profile_with_sirbro_plan',
+          name_app: 'TipsterBro Profile',
+          latestAppProfile: 'TipsterBro',
+          subscription: {
+            id: 'subscription_sirbro_probro',
+            provider: 'google_play',
+            activePlan: 'sirbro_probro',
+            subscriptionStatus: 'active',
+            subscriptionStartDate: null,
+            subscriptionEndDate: null,
+            autoRenewing: true,
+          },
+        }),
+        createUser({
+          id: 'sirbro_profile_with_tipsterbro_plan',
+          name_app: 'SirBro Profile',
+          latestAppProfile: 'SirBro',
+          subscription: {
+            id: 'subscription_tipsterbro_annual',
+            provider: 'google_play',
+            activePlan: 'tipsterbro_annual',
+            subscriptionStatus: 'active',
+            subscriptionStartDate: null,
+            subscriptionEndDate: null,
+            autoRenewing: true,
+          },
+        }),
+        createUser({
+          id: 'sirbro_profile_with_sirbro_plan',
+          name_app: 'SirBro ProBro Profile',
+          latestAppProfile: 'SirBro',
+          subscription: {
+            id: 'subscription_sirbro_valid',
+            provider: 'google_play',
+            activePlan: 'sirbro_probro',
+            subscriptionStatus: 'active',
+            subscriptionStartDate: null,
+            subscriptionEndDate: null,
+            autoRenewing: true,
+          },
+        }),
+      ],
+      total: 3,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      retentionCounts: {
+        [RetentionStage.NEW]: 0,
+        [RetentionStage.CURRENT]: 3,
+        [RetentionStage.AT_RISK_WAU]: 0,
+        [RetentionStage.AT_RISK_MAU]: 0,
+        [RetentionStage.DEAD]: 0,
+        [RetentionStage.REACTIVATED]: 0,
+        [RetentionStage.RESURRECTED]: 0,
+        [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 0,
+      },
+    });
+
+    render(<UsersPage />);
+
+    expect(await screen.findByText('TipsterBro Profile')).toBeTruthy();
+
+    const tipsterbroRow = screen.getByText('TipsterBro Profile').closest('tr');
+    const sirbroRow = screen.getByText('SirBro Profile').closest('tr');
+    const sirbroProbroRow = screen
+      .getByText('SirBro ProBro Profile')
+      .closest('tr');
+
+    expect(tipsterbroRow).not.toBeNull();
+    expect(sirbroRow).not.toBeNull();
+    expect(sirbroProbroRow).not.toBeNull();
+
+    expect(within(tipsterbroRow!).getByText('free')).toBeTruthy();
+    expect(within(tipsterbroRow!).queryByText('sirbro_probro')).toBeNull();
+    expect(within(sirbroRow!).getByText('free')).toBeTruthy();
+    expect(within(sirbroRow!).queryByText('tipsterbro_annual')).toBeNull();
+    expect(within(sirbroProbroRow!).getByText('probro')).toBeTruthy();
+  });
 });
