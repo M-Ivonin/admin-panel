@@ -17,7 +17,7 @@ export default async function DisclaimerPage({ params }: { params: Promise<{ lan
 
   return (
     <LegalDocumentPage locale={lang} titleKey="disclaimer">
-      <DisclaimerContent />
+      <DisclaimerContent locale={lang} />
     </LegalDocumentPage>
   );
 }
