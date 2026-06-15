@@ -14,13 +14,16 @@ export async function generateMetadata({
 }: ChannelJoinPageProps): Promise<Metadata> {
   const params = await searchParams;
   const channelId = params.channelId || 'unknown';
-  
+  const title = `Join SirBro Channel - ${channelId}`;
+  const description =
+    'Join this SirBro channel to get expert football insights and live challenges.';
+
   return {
-    title: `Join TipsterBro Channel - ${channelId}`,
-    description: 'Join this TipsterBro channel to get expert sports betting tips and analysis.',
+    title,
+    description,
     openGraph: {
-      title: `Join TipsterBro Channel - ${channelId}`,
-      description: 'Join this TipsterBro channel to get expert sports betting tips and analysis.',
+      title,
+      description,
       type: 'website',
     },
   };
