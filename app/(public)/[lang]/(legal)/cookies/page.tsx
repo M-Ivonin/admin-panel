@@ -17,7 +17,7 @@ export default async function CookiesPage({ params }: { params: Promise<{ lang: 
 
   return (
     <LegalDocumentPage locale={lang} titleKey="cookies">
-      <CookiesContent />
+      <CookiesContent locale={lang} />
     </LegalDocumentPage>
   );
 }

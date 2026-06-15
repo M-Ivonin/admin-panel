@@ -17,7 +17,7 @@ export default async function TermsPage({ params }: { params: Promise<{ lang: Lo
 
   return (
     <LegalDocumentPage locale={lang} titleKey="terms">
-      <TermsContent />
+      <TermsContent locale={lang} />
     </LegalDocumentPage>
   );
 }
