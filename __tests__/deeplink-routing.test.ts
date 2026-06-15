@@ -3,6 +3,7 @@ import {
   buildInternalAppDeepLink,
   resolveClientDeepLinkConfigForHost,
 } from '@/modules/deeplink/utils/app-links';
+import { generateMetadata as generateChannelJoinMetadata } from '@/app/(deeplink)/channels/join/page';
 
 describe('deep link routing', () => {
   it('keeps external match links on the public deep-link route', () => {
@@ -41,5 +42,22 @@ describe('deep link routing', () => {
     expect(config.androidPlayUrl).toBe(
       'https://play.google.com/store/apps/details?id=ai.levantem.tipsterbro'
     );
+  });
+
+  it('uses SirBro metadata for channel join social previews', async () => {
+    const metadata = await generateChannelJoinMetadata({
+      searchParams: Promise.resolve({ channelId: 'channel-123' }),
+    });
+
+    expect(metadata.title).toBe('Join SirBro Channel - channel-123');
+    expect(metadata.description).toBe(
+      'Join this SirBro channel to get expert football insights and live challenges.'
+    );
+    expect(metadata.openGraph).toMatchObject({
+      title: 'Join SirBro Channel - channel-123',
+      description:
+        'Join this SirBro channel to get expert football insights and live challenges.',
+      type: 'website',
+    });
   });
 });
