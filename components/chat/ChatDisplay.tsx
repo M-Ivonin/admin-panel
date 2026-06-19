@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Alert,
   IconButton,
+  Chip,
 } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 
@@ -204,6 +205,16 @@ export function ChatDisplay({
     return 'system';
   };
 
+  const getUserMessageSourceLabel = (message: ChatMessage): string | null => {
+    if (getMessageType(message) !== 'user') {
+      return null;
+    }
+
+    return message.metadata?.actionType === 'for_you_ask_sb'
+      ? 'For You Feed'
+      : 'AI Chat';
+  };
+
   const formatTime = (dateString: string | null): string => {
     if (!dateString) return '';
     try {
@@ -264,10 +275,12 @@ export function ChatDisplay({
             const isUserMessage = type === 'user';
             const isBotMessage = type === 'bot';
             const formattedContent = formatContent(message.content);
+            const sourceLabel = getUserMessageSourceLabel(message);
 
             return (
               <Box
                 key={message.id}
+                data-testid="chat-message"
                 sx={{ display: 'flex', justifyContent: isUserMessage ? 'flex-end' : 'flex-start' }}
               >
                 <Box
@@ -295,6 +308,24 @@ export function ChatDisplay({
                           }),
                   }}
                 >
+                  {sourceLabel && (
+                    <Chip
+                      label={sourceLabel}
+                      size="small"
+                      sx={{
+                        mb: 1,
+                        height: 22,
+                        bgcolor: isUserMessage
+                          ? 'rgba(255, 255, 255, 0.18)'
+                          : 'rgba(255, 255, 255, 0.10)',
+                        color: 'inherit',
+                        fontWeight: 600,
+                        '& .MuiChip-label': {
+                          px: 1,
+                        },
+                      }}
+                    />
+                  )}
                   {formattedContent.primary.map((line, index) => (
                     <Typography
                       key={`primary-${message.id}-${index}`}
