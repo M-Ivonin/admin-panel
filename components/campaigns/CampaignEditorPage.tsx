@@ -66,6 +66,7 @@ import type {
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignSendGuardAction,
+  CampaignStateDispatchMode,
   CampaignStepLocaleContent,
   CampaignStatus,
   CampaignTargetApp,
@@ -543,6 +544,35 @@ function formatTriggerTypeLabel(
   }
 
   return 'Scheduled';
+}
+
+function formatDateTimeLocalInput(value?: string | null): string {
+  if (!value) {
+    return '';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  const local = new Date(
+    parsed.getTime() - parsed.getTimezoneOffset() * 60 * 1000
+  );
+  return local.toISOString().slice(0, 16);
+}
+
+function parseDateTimeLocalInput(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
 }
 
 function describeScenarioTemplate(
@@ -1793,102 +1823,102 @@ export function CampaignEditorPage({
                             : undefined,
                         }}
                       >
-                      <Stack spacing={1}>
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="flex-start"
-                          spacing={1}
-                        >
-                          <Typography
-                            sx={{
-                              color: COLORS.textPrimary,
-                              fontWeight: 700,
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {template.name}
-                          </Typography>
+                        <Stack spacing={1}>
                           <Stack
                             direction="row"
-                            spacing={0.5}
-                            alignItems="center"
-                            sx={{ flexShrink: 0 }}
+                            justifyContent="space-between"
+                            alignItems="flex-start"
+                            spacing={1}
                           >
-                            <Chip
-                              label={
-                                template.source === 'saved'
-                                  ? 'Saved'
-                                  : 'Shipped'
-                              }
-                              size="small"
+                            <Typography
                               sx={{
-                                bgcolor:
-                                  template.source === 'saved'
-                                    ? COLORS.accentSoft
-                                    : COLORS.panel,
-                                color: COLORS.textSecondary,
-                                border: `1px solid ${COLORS.stroke}`,
-                              }}
-                            />
-                            <IconButton
-                              size="small"
-                              aria-label={`Edit template ${template.name}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                editTemplate(template);
-                              }}
-                              sx={{
-                                color: COLORS.textSecondary,
+                                color: COLORS.textPrimary,
+                                fontWeight: 700,
+                                lineHeight: 1.3,
                               }}
                             >
-                              <Edit fontSize="small" />
-                            </IconButton>
-                            {template.source === 'saved' ? (
+                              {template.name}
+                            </Typography>
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              alignItems="center"
+                              sx={{ flexShrink: 0 }}
+                            >
+                              <Chip
+                                label={
+                                  template.source === 'saved'
+                                    ? 'Saved'
+                                    : 'Shipped'
+                                }
+                                size="small"
+                                sx={{
+                                  bgcolor:
+                                    template.source === 'saved'
+                                      ? COLORS.accentSoft
+                                      : COLORS.panel,
+                                  color: COLORS.textSecondary,
+                                  border: `1px solid ${COLORS.stroke}`,
+                                }}
+                              />
                               <IconButton
                                 size="small"
-                                aria-label={`Delete template ${template.name}`}
+                                aria-label={`Edit template ${template.name}`}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  setTemplateToDelete(template);
+                                  editTemplate(template);
                                 }}
                                 sx={{
                                   color: COLORS.textSecondary,
                                 }}
                               >
-                                <Delete fontSize="small" />
+                                <Edit fontSize="small" />
                               </IconButton>
-                            ) : null}
+                              {template.source === 'saved' ? (
+                                <IconButton
+                                  size="small"
+                                  aria-label={`Delete template ${template.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setTemplateToDelete(template);
+                                  }}
+                                  sx={{
+                                    color: COLORS.textSecondary,
+                                  }}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              ) : null}
+                            </Stack>
                           </Stack>
-                        </Stack>
 
-                        <Typography
-                          sx={{
-                            color: COLORS.textSecondary,
-                            fontSize: 13,
-                            lineHeight: 1.45,
-                          }}
-                        >
-                          {template.description}
-                        </Typography>
-
-                        <Typography
-                          sx={{
-                            color: COLORS.textSecondary,
-                            fontSize: 12,
-                          }}
-                        >
-                          {describeScenarioTemplate(template)}
-                        </Typography>
-                        {disabledReason ? (
                           <Typography
-                            sx={{ color: COLORS.warning, fontSize: 11 }}
+                            sx={{
+                              color: COLORS.textSecondary,
+                              fontSize: 13,
+                              lineHeight: 1.45,
+                            }}
                           >
-                            {disabledReason}
+                            {template.description}
                           </Typography>
-                        ) : null}
-                      </Stack>
-                    </Paper>
+
+                          <Typography
+                            sx={{
+                              color: COLORS.textSecondary,
+                              fontSize: 12,
+                            }}
+                          >
+                            {describeScenarioTemplate(template)}
+                          </Typography>
+                          {disabledReason ? (
+                            <Typography
+                              sx={{ color: COLORS.warning, fontSize: 11 }}
+                            >
+                              {disabledReason}
+                            </Typography>
+                          ) : null}
+                        </Stack>
+                      </Paper>
                     );
                   })}
                 </Stack>
@@ -2315,6 +2345,8 @@ export function CampaignEditorPage({
                                     qualificationMode:
                                       'when_user_matches_audience',
                                     reentryCooldownHours: 24,
+                                    dispatchMode: 'continuous',
+                                    deliveryCutoffAt: null,
                                   },
                                 });
                               } else if (option.value === 'event_based') {
@@ -2360,6 +2392,57 @@ export function CampaignEditorPage({
                             selected audience. The campaign checks eligibility
                             on each planner cycle.
                           </Alert>
+                          <FormControl fullWidth>
+                            <InputLabel id="campaign-state-dispatch-mode-label">
+                              Dispatch mode
+                            </InputLabel>
+                            <Select
+                              labelId="campaign-state-dispatch-mode-label"
+                              label="Dispatch mode"
+                              value={
+                                stateBasedTrigger.dispatchMode ?? 'continuous'
+                              }
+                              onChange={(event) =>
+                                dispatch({
+                                  type: 'changeTrigger',
+                                  trigger: {
+                                    ...stateBasedTrigger,
+                                    dispatchMode: event.target
+                                      .value as CampaignStateDispatchMode,
+                                  },
+                                })
+                              }
+                            >
+                              <MenuItem value="continuous">Continuous</MenuItem>
+                              <MenuItem value="single_wave">
+                                Single wave
+                              </MenuItem>
+                            </Select>
+                            <FormHelperText>
+                              Single wave creates one launch batch and then
+                              stops new journey planning.
+                            </FormHelperText>
+                          </FormControl>
+                          <TextField
+                            label="Delivery cutoff"
+                            type="datetime-local"
+                            value={formatDateTimeLocalInput(
+                              stateBasedTrigger.deliveryCutoffAt
+                            )}
+                            InputLabelProps={{ shrink: true }}
+                            helperText="Queued or available deliveries are skipped after this time."
+                            onChange={(event) =>
+                              dispatch({
+                                type: 'changeTrigger',
+                                trigger: {
+                                  ...stateBasedTrigger,
+                                  deliveryCutoffAt: parseDateTimeLocalInput(
+                                    event.target.value
+                                  ),
+                                },
+                              })
+                            }
+                          />
                           <TextField
                             label="Re-entry cooldown (hours)"
                             type="number"

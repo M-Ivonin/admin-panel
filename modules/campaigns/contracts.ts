@@ -31,6 +31,7 @@ export type CampaignEntryTriggerType =
 export type CampaignQualificationMode = 'when_user_matches_audience';
 export type CampaignEventEntryMode = 'first_eligible_event';
 export type CampaignTimezoneMode = 'user_local';
+export type CampaignStateDispatchMode = 'continuous' | 'single_wave';
 
 export type CampaignTokenKey =
   | 'first_name'
@@ -273,7 +274,8 @@ export interface CampaignDeeplinkOption extends CampaignCompatibilityMetadata {
   path: string;
 }
 
-export interface CampaignSourceEventOption extends CampaignCompatibilityMetadata {
+export interface CampaignSourceEventOption
+  extends CampaignCompatibilityMetadata {
   eventKey: CampaignSourceEventKey;
   producerKey: CampaignSourceEventProducerKey;
   label: string;
@@ -350,6 +352,9 @@ export type CampaignTriggerDefinition =
       type: 'state_based';
       qualificationMode: CampaignQualificationMode;
       reentryCooldownHours: number | null;
+      dispatchMode?: CampaignStateDispatchMode;
+      deliveryCutoffAt?: string | null;
+      runtimeAnchorAt?: string | null;
     }
   | {
       type: 'event_based';
@@ -358,6 +363,8 @@ export type CampaignTriggerDefinition =
       entryMode: CampaignEventEntryMode;
       reentryCooldownHours: number | null;
       maxSendsPerUser: number | null;
+      deliveryCutoffAt?: string | null;
+      runtimeAnchorAt?: string | null;
     }
   | {
       type: 'scheduled_recurring';
