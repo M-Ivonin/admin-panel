@@ -227,7 +227,15 @@ function formatTrigger(draft: CampaignDraft): string {
 
 function describeTriggerDetails(draft: CampaignDraft): string {
   if (draft.trigger.type === 'state_based') {
-    return `Users enter when they match the selected audience. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).`;
+    const dispatchMode =
+      draft.trigger.dispatchMode === 'single_wave'
+        ? 'Single wave'
+        : 'Continuous';
+    const cutoffLabel = draft.trigger.deliveryCutoffAt
+      ? ` Cutoff: ${new Date(draft.trigger.deliveryCutoffAt).toLocaleString()}.`
+      : '';
+
+    return `Users enter when they match the selected audience. ${dispatchMode}. Re-entry after ${draft.trigger.reentryCooldownHours ?? 'no'} hour(s).${cutoffLabel}`;
   }
 
   if (draft.trigger.type === 'event_based') {

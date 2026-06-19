@@ -68,6 +68,8 @@ export function createEmptyCampaignDraft(): CampaignDraft {
       type: 'state_based',
       qualificationMode: 'when_user_matches_audience',
       reentryCooldownHours: 24,
+      dispatchMode: 'continuous',
+      deliveryCutoffAt: null,
     },
     journey: {
       steps: [firstStep],
