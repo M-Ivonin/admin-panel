@@ -142,6 +142,14 @@ function formatEnumLabel(value: string): string {
     .join(' ');
 }
 
+function formatLedgerEventTypeLabel(entry: RevenueLedgerEntry): string {
+  if (entry.eventType === 'subscription_canceled') {
+    return 'Auto-renew canceled';
+  }
+
+  return formatEnumLabel(entry.eventType);
+}
+
 function formatDateTime(value: string | null): string {
   if (!value) {
     return '-';
@@ -872,7 +880,7 @@ function RevenueLedgerContent() {
                         {formatDateTime(entry.eventTime)}
                       </TableCell>
                       <TableCell>{formatEnumLabel(entry.store)}</TableCell>
-                      <TableCell>{formatEnumLabel(entry.eventType)}</TableCell>
+                      <TableCell>{formatLedgerEventTypeLabel(entry)}</TableCell>
                       <TableCell>
                         <Chip
                           size="small"

@@ -113,6 +113,29 @@ describe('RevenueLedgerPage', () => {
     );
   });
 
+  it('describes Google Play subscription cancellation as auto-renew cancellation', async () => {
+    (getRevenueLedgerEntries as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      items: [
+        {
+          ...populatedResponse.items[0],
+          id: 'ledger-canceled',
+          eventType: 'subscription_canceled',
+          direction: 'none',
+          grossAmount: null,
+          currency: null,
+          tenjinDispatchStatus: 'not_applicable',
+          dispatchSkipReason: 'google_play_subscription_canceled_not_revenue_v1',
+        },
+      ],
+    });
+
+    render(<RevenueLedgerPage />);
+
+    expect(await screen.findByText('Auto-renew canceled')).toBeTruthy();
+    expect(screen.queryByText('Subscription Canceled')).toBeNull();
+  });
+
   it('shows loading and then the empty state', async () => {
     let resolveRequest: (value: unknown) => void = () => undefined;
     (getRevenueLedgerEntries as jest.Mock).mockReturnValueOnce(
