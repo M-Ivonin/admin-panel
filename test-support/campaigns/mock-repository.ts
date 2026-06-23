@@ -125,6 +125,11 @@ const EDITOR_DEEPLINK_OPTIONS: CampaignDeeplinkOption[] = [
     path: '/matches',
   },
   {
+    target: 'open_live',
+    label: 'Open Live',
+    path: '/trades',
+  },
+  {
     target: 'open_rewards_wallet',
     label: 'Open rewards wallet',
     path: '/profile',
@@ -145,6 +150,13 @@ const EDITOR_SOURCE_EVENTS: CampaignSourceEventOption[] = [
     label: 'Completed onboarding',
     description:
       'User completed onboarding and the mobile app sent the public CRM source event.',
+  },
+  {
+    eventKey: 'live_opened',
+    producerKey: 'crm_source_events',
+    label: 'Live opened',
+    description:
+      'User opened Live and the mobile app sent the authenticated CRM source event.',
   },
   {
     eventKey: 'subscription_started',
@@ -216,6 +228,13 @@ const EDITOR_SOURCE_EVENTS: CampaignSourceEventOption[] = [
     description:
       'A live challenge finished and the backend emitted the results source event.',
   },
+  {
+    eventKey: 'prediction_market_order_placed',
+    producerKey: 'crm_source_events',
+    label: 'Prediction Market order placed',
+    description:
+      'User placed a Prediction Market order and the backend emitted the CRM source event.',
+  },
 ];
 
 const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
@@ -235,6 +254,12 @@ const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
     goalKey: 'match_center_opened:trace_required_response',
     label: 'Match center opened',
     eventKey: 'match_center_opened',
+    attributionMode: 'trace_required_response',
+  },
+  {
+    goalKey: 'live_opened:trace_required_response',
+    label: 'Live opened',
+    eventKey: 'live_opened',
     attributionMode: 'trace_required_response',
   },
   {
@@ -265,6 +290,12 @@ const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
     goalKey: 'voted_for_prediction:global_state_event',
     label: 'Voted for prediction',
     eventKey: 'voted_for_prediction',
+    attributionMode: 'global_state_event',
+  },
+  {
+    goalKey: 'prediction_market_order_placed:global_state_event',
+    label: 'Prediction Market order placed',
+    eventKey: 'prediction_market_order_placed',
     attributionMode: 'global_state_event',
   },
   {
