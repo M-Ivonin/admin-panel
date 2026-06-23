@@ -59,11 +59,7 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function createCampaignUser(
-  id: string,
-  name: string,
-  email: string
-): User {
+function createCampaignUser(id: string, name: string, email: string): User {
   return {
     id,
     email,
@@ -121,10 +117,54 @@ describe('CampaignEditorPage', () => {
 
     expect(
       screen.getByText(
-        'Optional. Choose the screen or action the push notification opens when tapped. If left empty, the app falls back to the default notifications flow.'
+        'Optional. Choose the screen or action the push notification opens when tapped, or add a custom app path. If left empty, the app falls back to the default notifications flow.'
       )
     ).toBeTruthy();
     expect(screen.getByText('No follow-up action')).toBeTruthy();
+  });
+
+  it('persists a custom deep link path for the tap action', async () => {
+    const createCampaignDraftSpy = jest.spyOn(
+      campaignsRepository,
+      'createCampaignDraft'
+    );
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.change(screen.getByLabelText('Campaign name'), {
+      target: { value: 'Custom link campaign' },
+    });
+    fireEvent.change(screen.getByLabelText('Goal description'), {
+      target: { value: 'Open a custom prediction market path' },
+    });
+
+    fireEvent.click(screen.getByText('Step Content'));
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Action after tap (optional)' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Custom deep link' }));
+    fireEvent.change(screen.getByLabelText('Custom deep link path'), {
+      target: { value: '/trades/custom-market' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => {
+      expect(createCampaignDraftSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.objectContaining({
+            step_1: expect.objectContaining({
+              en: expect.objectContaining({
+                deeplinkTarget: null,
+                customDeeplinkPath: '/trades/custom-market',
+              }),
+            }),
+          }),
+        })
+      );
+    });
   });
 
   it('shows and persists localized message variants', async () => {

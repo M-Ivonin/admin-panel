@@ -1,6 +1,8 @@
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import {
   appendCampaignJourneyStepDraft,
+  changeCampaignJourneyStepCustomDeeplink,
+  changeCampaignJourneyStepDeeplink,
   getCampaignJourneyStepDrafts,
   getMissingJourneyStepContentKeys,
   removeCampaignJourneyStepDraft,
@@ -60,10 +62,12 @@ describe('campaign journey step draft module', () => {
         inAppExpirationMinutes: 60,
       }),
     ]);
-    expect(getCampaignJourneyStepDrafts(withEditedExpiration)[1]).toMatchObject({
-      stepKey: 'step_2',
-      inAppExpirationMinutes: 60,
-    });
+    expect(getCampaignJourneyStepDrafts(withEditedExpiration)[1]).toMatchObject(
+      {
+        stepKey: 'step_2',
+        inAppExpirationMinutes: 60,
+      }
+    );
   });
 
   it('adds and removes Journey step drafts without orphaning Delivery content', () => {
@@ -88,6 +92,7 @@ describe('campaign journey step draft module', () => {
     expect(withStepThree.content.step_2.en.deeplinkTarget).toBe(
       'open_match_center'
     );
+    expect(withStepThree.content.step_2.en.customDeeplinkPath).toBeNull();
     expect(
       getCampaignJourneyStepDrafts(afterRemoveStepTwo).map((step) => step.order)
     ).toEqual([1, 2]);
@@ -104,5 +109,30 @@ describe('campaign journey step draft module', () => {
     delete brokenDraft.content.step_2;
 
     expect(getMissingJourneyStepContentKeys(brokenDraft)).toEqual(['step_2']);
+  });
+
+  it('switches between preset and custom deep links without keeping stale values', () => {
+    const draft = createEmptyCampaignDraft();
+    const withCustomPath = changeCampaignJourneyStepCustomDeeplink(
+      draft,
+      'step_1',
+      'en',
+      '/trades/custom-market'
+    );
+    const withPreset = changeCampaignJourneyStepDeeplink(
+      withCustomPath,
+      'step_1',
+      'en',
+      'open_live'
+    );
+
+    expect(withCustomPath.content.step_1.en).toMatchObject({
+      deeplinkTarget: null,
+      customDeeplinkPath: '/trades/custom-market',
+    });
+    expect(withPreset.content.step_1.en).toMatchObject({
+      deeplinkTarget: 'open_live',
+      customDeeplinkPath: null,
+    });
   });
 });

@@ -237,9 +237,37 @@ describe('campaignEditorReducer', () => {
     });
 
     expect(initialDraft.content.step_1.en.deeplinkTarget).toBeNull();
+    expect(initialDraft.content.step_1.en.customDeeplinkPath).toBeNull();
     expect(nextState.draft.content.step_2.en.deeplinkTarget).toBeNull();
     expect(nextState.draft.content.step_2.es.deeplinkTarget).toBeNull();
     expect(nextState.draft.content.step_2.pt.deeplinkTarget).toBeNull();
+    expect(nextState.draft.content.step_2.en.customDeeplinkPath).toBeNull();
+  });
+
+  it('keeps custom deep link paths mutually exclusive with preset tap actions', () => {
+    const initialState = createCampaignEditorState(createEmptyCampaignDraft());
+
+    const withCustomPath = campaignEditorReducer(initialState, {
+      type: 'changeCustomDeeplink',
+      stepKey: 'step_1',
+      locale: 'en',
+      path: '/trades/custom-market',
+    });
+    const withPreset = campaignEditorReducer(withCustomPath, {
+      type: 'changeDeeplink',
+      stepKey: 'step_1',
+      locale: 'en',
+      target: 'open_live',
+    });
+
+    expect(withCustomPath.draft.content.step_1.en).toMatchObject({
+      deeplinkTarget: null,
+      customDeeplinkPath: '/trades/custom-market',
+    });
+    expect(withPreset.draft.content.step_1.en).toMatchObject({
+      deeplinkTarget: 'open_live',
+      customDeeplinkPath: null,
+    });
   });
 
   it('updates timing, Send Guard, and localized Delivery content through a journey step draft', () => {
