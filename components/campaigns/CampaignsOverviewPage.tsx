@@ -856,8 +856,8 @@ export function CampaignsOverviewPage() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
-                md: 'repeat(2, minmax(0, 1fr))',
-                xl: 'repeat(5, minmax(0, 1fr))',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(5, minmax(0, 1fr))',
               },
               gap: 1.5,
               mb: 3,
