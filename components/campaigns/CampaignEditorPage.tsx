@@ -120,6 +120,8 @@ const COLORS = {
   danger: '#e05a5a',
 };
 
+const CUSTOM_DEEPLINK_SELECT_VALUE = '__custom_deeplink__';
+
 const STEP_ORDER: CampaignEditorStep[] = [
   CampaignEditorStep.AUDIENCE,
   CampaignEditorStep.TRIGGER_JOURNEY,
@@ -664,8 +666,13 @@ function getJourneyAnchorLabel(
 
 function getDeeplinkOptionLabel(
   options: Array<{ target: CampaignDeeplinkTarget; label: string }>,
-  target: CampaignDeeplinkTarget | null
+  target: CampaignDeeplinkTarget | null,
+  customPath: string | null = null
 ): string {
+  if (customPath !== null) {
+    return 'Custom deep link';
+  }
+
   if (!target) {
     return 'No follow-up action';
   }
@@ -3352,26 +3359,52 @@ export function CampaignEditorPage({
                             labelId="campaign-step-action-label"
                             label="Action after tap (optional)"
                             displayEmpty
-                            value={activeStepContent.deeplinkTarget ?? ''}
+                            value={
+                              activeStepContent.customDeeplinkPath != null
+                                ? CUSTOM_DEEPLINK_SELECT_VALUE
+                                : (activeStepContent.deeplinkTarget ?? '')
+                            }
                             renderValue={(value) =>
                               getDeeplinkOptionLabel(
                                 state.catalog.deeplinkOptions,
-                                (value as CampaignDeeplinkTarget | '') || null
+                                value === CUSTOM_DEEPLINK_SELECT_VALUE
+                                  ? null
+                                  : (value as CampaignDeeplinkTarget | '') ||
+                                      null,
+                                value === CUSTOM_DEEPLINK_SELECT_VALUE
+                                  ? (activeStepContent.customDeeplinkPath ??
+                                      '/')
+                                  : null
                               )
                             }
-                            onChange={(event) =>
+                            onChange={(event) => {
+                              const value = event.target.value;
+
+                              if (value === CUSTOM_DEEPLINK_SELECT_VALUE) {
+                                dispatch({
+                                  type: 'changeCustomDeeplink',
+                                  stepKey: state.activeContentStepKey,
+                                  locale: activeLocale,
+                                  path:
+                                    activeStepContent.customDeeplinkPath ?? '/',
+                                });
+                                return;
+                              }
+
                               dispatch({
                                 type: 'changeDeeplink',
                                 stepKey: state.activeContentStepKey,
                                 locale: activeLocale,
                                 target:
-                                  (event.target
-                                    .value as CampaignDeeplinkTarget) || null,
-                              })
-                            }
+                                  (value as CampaignDeeplinkTarget) || null,
+                              });
+                            }}
                           >
                             <MenuItem value="">
                               <em>No follow-up action</em>
+                            </MenuItem>
+                            <MenuItem value={CUSTOM_DEEPLINK_SELECT_VALUE}>
+                              Custom deep link
                             </MenuItem>
                             {state.catalog.deeplinkOptions.map((option) => {
                               const compatibilityReason =
@@ -3396,10 +3429,27 @@ export function CampaignEditorPage({
                           </Select>
                           <FormHelperText>
                             Optional. Choose the screen or action the push
-                            notification opens when tapped. If left empty, the
-                            app falls back to the default notifications flow.
+                            notification opens when tapped, or add a custom app
+                            path. If left empty, the app falls back to the
+                            default notifications flow.
                           </FormHelperText>
                         </FormControl>
+                        {activeStepContent.customDeeplinkPath != null ? (
+                          <TextField
+                            label="Custom deep link path"
+                            value={activeStepContent.customDeeplinkPath}
+                            onChange={(event) =>
+                              dispatch({
+                                type: 'changeCustomDeeplink',
+                                stepKey: state.activeContentStepKey,
+                                locale: activeLocale,
+                                path: event.target.value,
+                              })
+                            }
+                            helperText="Use an internal app path, for example /trades or /channels/123."
+                            fullWidth
+                          />
+                        ) : null}
                       </Stack>
                     ) : (
                       <Typography sx={{ color: COLORS.textSecondary }}>

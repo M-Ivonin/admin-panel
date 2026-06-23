@@ -30,18 +30,21 @@ export function createBlankStepLocaleMap(
       body: '',
       fallbackFirstName: '',
       deeplinkTarget,
+      customDeeplinkPath: null,
     },
     es: {
       title: '',
       body: '',
       fallbackFirstName: '',
       deeplinkTarget,
+      customDeeplinkPath: null,
     },
     pt: {
       title: '',
       body: '',
       fallbackFirstName: '',
       deeplinkTarget,
+      customDeeplinkPath: null,
     },
   };
 }
@@ -213,6 +216,19 @@ export function changeCampaignJourneyStepDeeplink(
 ): CampaignDraft {
   return updateCampaignJourneyStepDeliveryContent(draft, stepKey, locale, {
     deeplinkTarget: target,
+    customDeeplinkPath: null,
+  });
+}
+
+export function changeCampaignJourneyStepCustomDeeplink(
+  draft: CampaignDraft,
+  stepKey: string,
+  locale: CampaignLocale,
+  path: string | null
+): CampaignDraft {
+  return updateCampaignJourneyStepDeliveryContent(draft, stepKey, locale, {
+    deeplinkTarget: null,
+    customDeeplinkPath: path,
   });
 }
 
@@ -279,5 +295,6 @@ function createBlankLocaleContent(
     body: '',
     fallbackFirstName: '',
     deeplinkTarget,
+    customDeeplinkPath: null,
   };
 }

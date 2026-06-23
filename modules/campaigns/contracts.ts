@@ -429,6 +429,7 @@ export interface CampaignStepLocaleContent {
   }>;
   fallbackFirstName: string;
   deeplinkTarget: CampaignDeeplinkTarget | null;
+  customDeeplinkPath?: string | null;
 }
 
 export type CampaignStepContentMap = Record<

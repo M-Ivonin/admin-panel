@@ -19,6 +19,7 @@ import {
 } from '@/modules/campaigns/defaults';
 import {
   appendCampaignJourneyStepDraft,
+  changeCampaignJourneyStepCustomDeeplink,
   changeCampaignJourneyStepDeeplink,
   getCampaignJourneyStepDraft,
   getFirstJourneyStepKey,
@@ -156,6 +157,12 @@ export type CampaignEditorAction =
       stepKey: string;
       locale: CampaignLocale;
       target: CampaignDeeplinkTarget | null;
+    }
+  | {
+      type: 'changeCustomDeeplink';
+      stepKey: string;
+      locale: CampaignLocale;
+      path: string | null;
     }
   | {
       type: 'changeGoalDefinition';
@@ -542,6 +549,16 @@ export function campaignEditorReducer(
           action.stepKey,
           action.locale,
           action.target
+        )
+      );
+    case 'changeCustomDeeplink':
+      return markDirty(
+        state,
+        changeCampaignJourneyStepCustomDeeplink(
+          state.draft,
+          action.stepKey,
+          action.locale,
+          action.path
         )
       );
     case 'openDialog':
