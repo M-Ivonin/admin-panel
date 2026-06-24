@@ -378,6 +378,7 @@ export type CampaignTriggerDefinition =
       dispatchMode?: CampaignStateDispatchMode;
       deliveryCutoffAt?: string | null;
       runtimeAnchorAt?: string | null;
+      runtimeMetricsResetAt?: string | null;
     }
   | {
       type: 'event_based';
@@ -388,6 +389,7 @@ export type CampaignTriggerDefinition =
       maxSendsPerUser: number | null;
       deliveryCutoffAt?: string | null;
       runtimeAnchorAt?: string | null;
+      runtimeMetricsResetAt?: string | null;
     }
   | {
       type: 'scheduled_recurring';
@@ -395,6 +397,8 @@ export type CampaignTriggerDefinition =
       timezoneMode: CampaignTimezoneMode;
       startDate?: string | null;
       maxOccurrences?: number | null;
+      runtimeAnchorAt?: string | null;
+      runtimeMetricsResetAt?: string | null;
     };
 
 export type CampaignJourneyAnchor =
@@ -547,6 +551,11 @@ export interface PauseCampaignRequest {
 
 export interface PauseCampaignResponse {
   campaign: CampaignDraft;
+}
+
+export interface CampaignDiagnosticsResetResponse {
+  campaignId: string;
+  metricsResetAt: string;
 }
 
 export interface UpsertCampaignDraftRequest {

@@ -8,6 +8,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
   CampaignOverviewItemMetricsResponse,
   CampaignOverviewStatsResponse,
@@ -404,4 +405,18 @@ export async function pauseCampaign(
   });
 
   return parseAdminResponse(response, 'Failed to pause campaign');
+}
+
+/**
+ * Resets the diagnostics baseline for one campaign without deleting history.
+ */
+export async function resetCampaignDiagnostics(
+  id: string
+): Promise<CampaignDiagnosticsResetResponse> {
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/${id}/reset-diagnostics`,
+    method: 'POST',
+  });
+
+  return parseAdminResponse(response, 'Failed to reset campaign diagnostics');
 }

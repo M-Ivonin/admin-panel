@@ -1149,6 +1149,28 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
+  async resetCampaignDiagnostics(id) {
+    const draft = state.drafts[id];
+    const overviewItem = state.overviewItems.find((item) => item.id === id);
+
+    if (!draft || !overviewItem) {
+      throw new Error('Campaign not found');
+    }
+
+    const metricsResetAt = nextTimestampIso(0);
+    overviewItem.progress = {
+      ...overviewItem.progress,
+      failedCount: 0,
+      skippedCount: 0,
+      failureReasons: [],
+    };
+
+    return {
+      campaignId: id,
+      metricsResetAt,
+    };
+  },
+
   async pauseDraft(draft) {
     const persistedDraft = (await this.saveDraft(draft)).draft;
     let response: { campaign: CampaignDraft };

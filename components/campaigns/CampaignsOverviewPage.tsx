@@ -26,6 +26,7 @@ import {
   ArrowBack,
   Edit,
   InfoOutlined,
+  RestartAlt,
   Search,
 } from '@mui/icons-material';
 import type {
@@ -883,6 +884,10 @@ export function CampaignsOverviewPage() {
   const [hydratedItemsById, setHydratedItemsById] = useState<
     Record<string, CampaignListItem>
   >({});
+  const [reloadToken, setReloadToken] = useState(0);
+  const [resettingCampaignId, setResettingCampaignId] = useState<string | null>(
+    null
+  );
 
   const statsRangeParams = useMemo(() => {
     if (statsPeriod !== 'custom' || !customStatsFrom || !customStatsTo) {
@@ -987,6 +992,7 @@ export function CampaignsOverviewPage() {
     selectedQuickView,
     statsPeriod,
     statsRangeParams,
+    reloadToken,
   ]);
 
   const stats = overview?.stats;
@@ -1052,6 +1058,24 @@ export function CampaignsOverviewPage() {
         ? current.filter((value) => value !== targetApp)
         : current;
     });
+  }
+
+  async function handleResetDiagnostics(campaignId: string) {
+    setResettingCampaignId(campaignId);
+    setError(null);
+
+    try {
+      await campaignsRepository.resetCampaignDiagnostics(campaignId);
+      setReloadToken((current) => current + 1);
+    } catch (resetError) {
+      setError(
+        resetError instanceof Error
+          ? resetError.message
+          : 'Failed to reset campaign diagnostics.'
+      );
+    } finally {
+      setResettingCampaignId(null);
+    }
   }
 
   return (
@@ -1657,29 +1681,55 @@ export function CampaignsOverviewPage() {
                             }}
                           />
                         </Stack>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<Edit fontSize="small" />}
-                          onClick={() =>
-                            router.push(`/dashboard/campaigns/${item.id}`)
-                          }
-                          sx={{
-                            borderColor: COLORS.stroke,
-                            borderRadius: 2,
-                            color: COLORS.textPrimary,
-                            height: 32,
-                            ml: { lg: 'auto' },
-                            px: 1.25,
-                            textTransform: 'none',
-                            '&:hover': {
-                              borderColor: COLORS.accent,
-                              bgcolor: COLORS.accentSoft,
-                            },
-                          }}
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{ ml: { lg: 'auto' } }}
                         >
-                          Edit
-                        </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<RestartAlt fontSize="small" />}
+                            disabled={resettingCampaignId === item.id}
+                            onClick={() => void handleResetDiagnostics(item.id)}
+                            sx={{
+                              borderColor: COLORS.stroke,
+                              borderRadius: 2,
+                              color: COLORS.textPrimary,
+                              height: 32,
+                              px: 1.25,
+                              textTransform: 'none',
+                              '&:hover': {
+                                borderColor: COLORS.warning,
+                                bgcolor: '#f59e0b18',
+                              },
+                            }}
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Edit fontSize="small" />}
+                            onClick={() =>
+                              router.push(`/dashboard/campaigns/${item.id}`)
+                            }
+                            sx={{
+                              borderColor: COLORS.stroke,
+                              borderRadius: 2,
+                              color: COLORS.textPrimary,
+                              height: 32,
+                              px: 1.25,
+                              textTransform: 'none',
+                              '&:hover': {
+                                borderColor: COLORS.accent,
+                                bgcolor: COLORS.accentSoft,
+                              },
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </Stack>
                       </Stack>
                     </Stack>
 

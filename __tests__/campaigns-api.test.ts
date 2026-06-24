@@ -10,6 +10,7 @@ import {
   getCampaignsOverview,
   getCampaignsOverviewStats,
   pauseCampaign,
+  resetCampaignDiagnostics,
   saveCampaignSegment,
   saveCampaignTemplate,
   scheduleCampaign,
@@ -248,6 +249,7 @@ describe('campaigns API helpers', () => {
     await scheduleCampaign('cmp_onboarding_not_completed', { confirm: true });
     await archiveCampaign('cmp_onboarding_not_completed', { confirm: true });
     await pauseCampaign('cmp_onboarding_not_completed', { confirm: true });
+    await resetCampaignDiagnostics('cmp_onboarding_not_completed');
 
     expect(adminAuthFetch).toHaveBeenNthCalledWith(1, {
       path: '/campaigns/admin/catalog',
@@ -335,6 +337,10 @@ describe('campaigns API helpers', () => {
       path: '/campaigns/admin/cmp_onboarding_not_completed/pause',
       method: 'POST',
       body: JSON.stringify({ confirm: true }),
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(12, {
+      path: '/campaigns/admin/cmp_onboarding_not_completed/reset-diagnostics',
+      method: 'POST',
     });
   });
 
