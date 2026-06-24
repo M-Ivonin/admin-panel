@@ -132,6 +132,12 @@ The overview page loads `/campaigns/admin/overview` and shows:
 - pagination,
 - a "New Campaign" entry point.
 
+The admin screen uses staged loading for the overview. It first calls
+`/campaigns/admin/overview?includeMetrics=false` so campaign rows can render
+without waiting for delivery aggregates or live audience estimates. KPI cards
+then hydrate from `/campaigns/admin/overview/stats`, and visible row metrics
+hydrate from `/campaigns/admin/overview/item-metrics` as each response arrives.
+
 #### KPI cards
 
 The KPI cards show:
@@ -465,21 +471,23 @@ Admin access is currently guarded by:
 
 ### Endpoints
 
-| Method   | Path                                 | Purpose                                   |
-| -------- | ------------------------------------ | ----------------------------------------- |
-| `GET`    | `/campaigns/admin/overview`          | Load overview stats and campaign list     |
-| `GET`    | `/campaigns/admin/catalog`           | Load editor catalog                       |
-| `GET`    | `/campaigns/admin/:id`               | Load one persisted campaign draft         |
-| `POST`   | `/campaigns/admin`                   | Create campaign draft                     |
-| `PUT`    | `/campaigns/admin/:id`               | Update campaign draft                     |
-| `POST`   | `/campaigns/admin/estimate-audience` | Estimate audience                         |
-| `POST`   | `/campaigns/admin/segments`          | Save reusable audience segment            |
-| `POST`   | `/campaigns/admin/templates`         | Save reusable campaign template           |
-| `DELETE` | `/campaigns/admin/templates/:id`     | Delete saved template                     |
-| `POST`   | `/campaigns/admin/:id/send-test`     | Insert and execute traced test deliveries |
-| `POST`   | `/campaigns/admin/:id/schedule`      | Schedule or activate live runtime         |
-| `POST`   | `/campaigns/admin/:id/archive`       | Archive a campaign                        |
-| `POST`   | `/campaigns/admin/:id/pause`         | Pause a live campaign                     |
+| Method   | Path                                      | Purpose                                             |
+| -------- | ----------------------------------------- | --------------------------------------------------- |
+| `GET`    | `/campaigns/admin/overview`               | Load campaign list, with optional full metrics      |
+| `GET`    | `/campaigns/admin/overview/stats`         | Load overview KPI stats                             |
+| `GET`    | `/campaigns/admin/overview/item-metrics`  | Hydrate metrics for selected visible campaign rows  |
+| `GET`    | `/campaigns/admin/catalog`                | Load editor catalog                                 |
+| `GET`    | `/campaigns/admin/:id`                    | Load one persisted campaign draft                   |
+| `POST`   | `/campaigns/admin`                        | Create campaign draft                               |
+| `PUT`    | `/campaigns/admin/:id`                    | Update campaign draft                               |
+| `POST`   | `/campaigns/admin/estimate-audience`      | Estimate audience                                   |
+| `POST`   | `/campaigns/admin/segments`               | Save reusable audience segment                      |
+| `POST`   | `/campaigns/admin/templates`              | Save reusable campaign template                     |
+| `DELETE` | `/campaigns/admin/templates/:id`          | Delete saved template                               |
+| `POST`   | `/campaigns/admin/:id/send-test`          | Insert and execute traced test deliveries           |
+| `POST`   | `/campaigns/admin/:id/schedule`           | Schedule or activate live runtime                   |
+| `POST`   | `/campaigns/admin/:id/archive`            | Archive a campaign                                  |
+| `POST`   | `/campaigns/admin/:id/pause`              | Pause a campaign                                    |
 
 ## 7. Persistence model
 

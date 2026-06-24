@@ -2,10 +2,50 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewPage';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
+import { createInitialCampaignsOverviewResponse } from '@/test-support/campaigns/mock-data';
+import type { CampaignListItem } from '@/modules/campaigns/contracts';
 
 jest.setTimeout(30000);
 
 const push = jest.fn();
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
+
+function toSummaryCampaignItem(item: CampaignListItem): CampaignListItem {
+  return {
+    ...item,
+    audience: {
+      ...item.audience,
+      currentEstimate: null,
+    },
+    progress: {
+      sentCount: null,
+      totalCount: null,
+      failedCount: null,
+      skippedCount: null,
+      inProgressCount: null,
+      openCount: null,
+      uniqueRecipientCount: null,
+      journeyInstanceCount: null,
+      deliveryRowCount: null,
+      failureReasons: [],
+      deliveredRate: null,
+      ctr: null,
+      progressPercent: null,
+    },
+    metric: {
+      label: 'goal',
+      value: item.goal,
+    },
+  };
+}
 
 jest.mock('@/modules/campaigns/repository', () => {
   const { mockCampaignsRepository } = jest.requireActual(
@@ -46,6 +86,114 @@ describe('CampaignsOverviewPage', () => {
       );
     } finally {
       overviewSpy.mockRestore();
+    }
+  });
+
+  it('renders campaign rows before KPI and row metrics hydrate', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const fullItem = seeded.items[0];
+    if (!fullItem) {
+      throw new Error('Expected seeded overview item');
+    }
+    const summaryItem = toSummaryCampaignItem(fullItem);
+    const statsDeferred = createDeferred<{
+      stats: NonNullable<typeof seeded.stats>;
+    }>();
+    const itemMetricsDeferred = createDeferred<{
+      items: typeof seeded.items;
+    }>();
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        ...seeded,
+        stats: null,
+        items: [summaryItem],
+        total: 1,
+        totalPages: 1,
+      });
+    const statsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverviewStats')
+      .mockReturnValue(statsDeferred.promise);
+    const itemMetricsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignOverviewItemMetrics')
+      .mockReturnValue(itemMetricsDeferred.promise);
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      expect(await screen.findByText(fullItem.name)).toBeTruthy();
+      expect(screen.getByText('Progress unavailable')).toBeTruthy();
+      expect(screen.queryByText('Delivered today')).toBeNull();
+      expect(overviewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ includeMetrics: false })
+      );
+      expect(statsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ statsPeriod: 'all_time' })
+      );
+      expect(itemMetricsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ campaignIds: [fullItem.id] })
+      );
+
+      statsDeferred.resolve({ stats: seeded.stats! });
+      expect(await screen.findByText('Delivered today')).toBeTruthy();
+
+      itemMetricsDeferred.resolve({ items: [fullItem] });
+      await waitFor(() => {
+        expect(screen.queryByText('Progress unavailable')).toBeNull();
+        expect(screen.getAllByText('Delivered').length).toBeGreaterThan(0);
+      });
+    } finally {
+      overviewSpy.mockRestore();
+      statsSpy.mockRestore();
+      itemMetricsSpy.mockRestore();
+    }
+  });
+
+  it('hydrates row metrics in sequential batches instead of one request per row', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const items = seeded.items.slice(0, 4);
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        ...seeded,
+        stats: null,
+        items: items.map(toSummaryCampaignItem),
+        total: items.length,
+        totalPages: 1,
+      });
+    const statsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverviewStats')
+      .mockResolvedValue({ stats: seeded.stats! });
+    const itemMetricsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignOverviewItemMetrics')
+      .mockImplementation(async ({ campaignIds }) => ({
+        items: items.filter((item) => campaignIds.includes(item.id)),
+      }));
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText(items[0].name);
+
+      await waitFor(() => {
+        expect(itemMetricsSpy).toHaveBeenCalledTimes(2);
+      });
+      expect(itemMetricsSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          campaignIds: items.slice(0, 3).map((item) => item.id),
+        })
+      );
+      expect(itemMetricsSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          campaignIds: items.slice(3).map((item) => item.id),
+        })
+      );
+    } finally {
+      overviewSpy.mockRestore();
+      statsSpy.mockRestore();
+      itemMetricsSpy.mockRestore();
     }
   });
 
@@ -307,7 +455,9 @@ describe('CampaignsOverviewPage', () => {
     try {
       render(<CampaignsOverviewPage />);
 
-      expect(await screen.findByText('Runtime diagnostics campaign')).toBeTruthy();
+      expect(
+        await screen.findByText('Runtime diagnostics campaign')
+      ).toBeTruthy();
       expect(screen.getByText('Audience now')).toBeTruthy();
       expect(screen.getByText('41 users')).toBeTruthy();
       expect(screen.queryByText('Saved estimate')).toBeNull();
@@ -319,7 +469,9 @@ describe('CampaignsOverviewPage', () => {
       expect(screen.getByText('Message attempts')).toBeTruthy();
       expect(screen.getByText('Failure / skip reasons')).toBeTruthy();
       expect(screen.getByText(/invalid fcm token: 1/)).toBeTruthy();
-      expect(screen.getByText(/Send Guard matched: opened app: 2/)).toBeTruthy();
+      expect(
+        screen.getByText(/Send Guard matched: opened app: 2/)
+      ).toBeTruthy();
       expect(screen.getByText('Traced goal events')).toBeTruthy();
       expect(screen.getByText('Untraced matching events')).toBeTruthy();
       expect(screen.getByText('Source events without user')).toBeTruthy();

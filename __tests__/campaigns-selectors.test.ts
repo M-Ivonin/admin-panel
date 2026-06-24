@@ -14,6 +14,11 @@ import {
 } from '@/modules/campaigns/selectors';
 
 describe('campaign selectors', () => {
+  it('defaults new campaign journey steps to a one-hour frequency cap', () => {
+    expect(createJourneyStep(1).frequencyCapHours).toBe(1);
+    expect(createJourneyStep(2).frequencyCapHours).toBe(1);
+  });
+
   it('returns a PT warning when localized content is incomplete', () => {
     const draft = createEmptyCampaignDraft();
     draft.content.step_1.pt.title = 'Volte agora';

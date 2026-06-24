@@ -20,11 +20,19 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Add, ArrowBack, Edit, InfoOutlined, Search } from '@mui/icons-material';
+import {
+  Add,
+  ArrowBack,
+  Edit,
+  InfoOutlined,
+  Search,
+} from '@mui/icons-material';
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
   CampaignLocale,
+  CampaignOverviewItemMetricsResponse,
+  CampaignOverviewStats,
   CampaignQuickView,
   CampaignStatus,
   CampaignStatsPeriod,
@@ -35,6 +43,7 @@ import { campaignsRepository } from '@/modules/campaigns/repository';
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const METRICS_HYDRATION_BATCH_SIZE = 3;
 
 const STATUS_OPTIONS: Array<{ value: CampaignStatus; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -216,6 +225,46 @@ function getLocaleReadinessEntries(
   >;
 }
 
+async function hydrateCampaignMetricsInBatches({
+  campaignIds,
+  statsPeriod,
+  statsRangeParams,
+  isActive,
+  applyItems,
+}: {
+  campaignIds: string[];
+  statsPeriod: CampaignStatsPeriod;
+  statsRangeParams: { statsFrom?: string; statsTo?: string };
+  isActive: () => boolean;
+  applyItems: (items: CampaignOverviewItemMetricsResponse['items']) => void;
+}) {
+  for (
+    let startIndex = 0;
+    startIndex < campaignIds.length && isActive();
+    startIndex += METRICS_HYDRATION_BATCH_SIZE
+  ) {
+    const batchIds = campaignIds.slice(
+      startIndex,
+      startIndex + METRICS_HYDRATION_BATCH_SIZE
+    );
+
+    try {
+      const metricsResponse =
+        await campaignsRepository.getCampaignOverviewItemMetrics({
+          campaignIds: batchIds,
+          statsPeriod,
+          ...statsRangeParams,
+        });
+
+      if (isActive()) {
+        applyItems(metricsResponse.items);
+      }
+    } catch {
+      return;
+    }
+  }
+}
+
 function KpiCard({
   eyebrow,
   value,
@@ -315,9 +364,7 @@ function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-function getTodayDeliveryHelper(
-  stats: CampaignsOverviewResponse['stats']
-): string {
+function getTodayDeliveryHelper(stats: CampaignOverviewStats): string {
   const attemptedToday = getOptionalNumber(stats.attemptedToday);
   const failedToday = getOptionalNumber(stats.failedToday);
   const deliveredRateToday = getOptionalNumber(stats.deliveredRateToday);
@@ -329,9 +376,7 @@ function getTodayDeliveryHelper(
   return `${deliveredRateToday}% today · ${failedToday.toLocaleString('en-US')} failed`;
 }
 
-function getDeliveryRateHelper(
-  stats: CampaignsOverviewResponse['stats']
-): string {
+function getDeliveryRateHelper(stats: CampaignOverviewStats): string {
   const deliveredTotal = getOptionalNumber(stats.deliveredTotal);
   const attemptedTotal = getOptionalNumber(stats.attemptedTotal);
 
@@ -342,7 +387,7 @@ function getDeliveryRateHelper(
   return `${deliveredTotal.toLocaleString('en-US')} / ${attemptedTotal.toLocaleString('en-US')} finalized`;
 }
 
-function getCtrHelper(stats: CampaignsOverviewResponse['stats']): string {
+function getCtrHelper(stats: CampaignOverviewStats): string {
   const openedTotal = getOptionalNumber(stats.openedTotal);
 
   return `${openedTotal.toLocaleString('en-US')} opened · ${formatPercentDelta(
@@ -350,7 +395,7 @@ function getCtrHelper(stats: CampaignsOverviewResponse['stats']): string {
   )} vs prev 7d`;
 }
 
-function getQueuedHelper(stats: CampaignsOverviewResponse['stats']): string {
+function getQueuedHelper(stats: CampaignOverviewStats): string {
   return `${stats.reachInProgress.toLocaleString('en-US')} queued or available`;
 }
 
@@ -435,10 +480,8 @@ const KPI_HINTS = {
     'Delivered today is messages sent or shown today. Failed today is messages that failed today.',
   deliveryRate:
     'Share of finished send attempts that were delivered instead of failed. Waiting and skipped messages are not included.',
-  avgCtr:
-    'Average share of delivered campaign messages that users opened.',
-  queued:
-    'Messages waiting to be sent or currently being sent.',
+  avgCtr: 'Average share of delivered campaign messages that users opened.',
+  queued: 'Messages waiting to be sent or currently being sent.',
 };
 
 const ROW_HINTS = {
@@ -452,16 +495,11 @@ const ROW_HINTS = {
     'Delivered messages compared with all message attempts created by this campaign.',
   audienceNow:
     'People who match the audience rules now and can currently receive campaign messages.',
-  delivered:
-    'Messages sent or shown to users.',
-  failed:
-    'Messages that could not be sent successfully.',
-  queued:
-    'Messages waiting, being sent, or available in-app now.',
-  skipped:
-    'Messages the campaign skipped before delivery or after expiration.',
-  opened:
-    'Delivered messages that users opened.',
+  delivered: 'Messages sent or shown to users.',
+  failed: 'Messages that could not be sent successfully.',
+  queued: 'Messages waiting, being sent, or available in-app now.',
+  skipped: 'Messages the campaign skipped before delivery or after expiration.',
+  opened: 'Delivered messages that users opened.',
   deliveryRate:
     'Share of finished send attempts that were delivered instead of failed.',
   ctr: 'Share of delivered campaign messages that users opened.',
@@ -649,6 +687,9 @@ export function CampaignsOverviewPage() {
   const [overview, setOverview] = useState<CampaignsOverviewResponse | null>(
     null
   );
+  const [hydratedItemsById, setHydratedItemsById] = useState<
+    Record<string, CampaignListItem>
+  >({});
 
   const statsRangeParams = useMemo(() => {
     if (statsPeriod !== 'custom' || !customStatsFrom || !customStatsTo) {
@@ -669,7 +710,7 @@ export function CampaignsOverviewPage() {
       setError(null);
 
       try {
-        const response = await campaignsRepository.getCampaignsOverview({
+        const overviewParams = {
           page: page + 1,
           limit: rowsPerPage,
           search,
@@ -679,10 +720,49 @@ export function CampaignsOverviewPage() {
           quickView: selectedQuickView,
           statsPeriod,
           ...statsRangeParams,
+        };
+
+        const response = await campaignsRepository.getCampaignsOverview({
+          ...overviewParams,
+          includeMetrics: false,
         });
 
         if (isActive) {
           setOverview(response);
+          setHydratedItemsById({});
+          void campaignsRepository
+            .getCampaignsOverviewStats({
+              statsPeriod,
+              ...statsRangeParams,
+            })
+            .then((statsResponse) => {
+              if (!isActive) {
+                return;
+              }
+
+              setOverview((current) =>
+                current ? { ...current, stats: statsResponse.stats } : current
+              );
+            })
+            .catch(() => undefined);
+
+          void hydrateCampaignMetricsInBatches({
+            campaignIds: response.items.map((item) => item.id),
+            statsPeriod,
+            statsRangeParams,
+            isActive: () => isActive,
+            applyItems: (items) => {
+              setHydratedItemsById((current) => ({
+                ...current,
+                ...Object.fromEntries(
+                  items.map((hydratedItem) => [
+                    hydratedItem.id,
+                    hydratedItem,
+                  ])
+                ),
+              }));
+            },
+          });
         }
       } catch (loadError) {
         if (isActive) {
@@ -717,6 +797,11 @@ export function CampaignsOverviewPage() {
   ]);
 
   const stats = overview?.stats;
+  const visibleItems = useMemo(
+    () =>
+      overview?.items.map((item) => hydratedItemsById[item.id] ?? item) ?? [],
+    [hydratedItemsById, overview?.items]
+  );
 
   const filtersSummary = useMemo(() => {
     return [
@@ -1093,7 +1178,6 @@ export function CampaignsOverviewPage() {
                   );
                 })}
               </FilterSection>
-
             </Stack>
           </Paper>
 
@@ -1259,7 +1343,7 @@ export function CampaignsOverviewPage() {
             )}
 
             <Stack spacing={1.5}>
-              {overview?.items.map((item) => (
+              {visibleItems.map((item) => (
                 <Paper
                   key={item.id}
                   elevation={0}
@@ -1561,7 +1645,9 @@ export function CampaignsOverviewPage() {
                               hint={ROW_HINTS.ctr}
                             />
                           ) : null}
-                          {hasMetricNumber(item.progress.uniqueRecipientCount) ? (
+                          {hasMetricNumber(
+                            item.progress.uniqueRecipientCount
+                          ) ? (
                             <InlineMetric
                               label="Users with messages"
                               value={formatCount(
@@ -1570,7 +1656,9 @@ export function CampaignsOverviewPage() {
                               hint={ROW_HINTS.uniqueRecipients}
                             />
                           ) : null}
-                          {hasMetricNumber(item.progress.journeyInstanceCount) ? (
+                          {hasMetricNumber(
+                            item.progress.journeyInstanceCount
+                          ) ? (
                             <InlineMetric
                               label="Campaign starts"
                               value={formatCount(
@@ -1582,7 +1670,9 @@ export function CampaignsOverviewPage() {
                           {hasMetricNumber(item.progress.deliveryRowCount) ? (
                             <InlineMetric
                               label="Message attempts"
-                              value={formatCount(item.progress.deliveryRowCount)}
+                              value={formatCount(
+                                item.progress.deliveryRowCount
+                              )}
                               hint={ROW_HINTS.deliveryRows}
                             />
                           ) : null}
@@ -1699,7 +1789,7 @@ export function CampaignsOverviewPage() {
                 </Paper>
               ))}
 
-              {!isLoading && overview && overview.items.length === 0 && (
+              {!isLoading && overview && visibleItems.length === 0 && (
                 <Paper
                   elevation={0}
                   sx={{

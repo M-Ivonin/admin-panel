@@ -21,6 +21,8 @@ import type {
   CampaignTokenDefinition,
   EstimateAudienceRequest,
   EstimateAudienceResponse,
+  GetCampaignOverviewItemMetricsParams,
+  GetCampaignOverviewStatsParams,
   GetCampaignsOverviewParams,
   SaveSegmentRequest,
   SaveTemplateRequest,
@@ -37,9 +39,7 @@ import {
   createInitialScenarioTemplates,
   createSavedSegmentDefinitionMap,
 } from '@/test-support/campaigns/mock-data';
-import {
-  type CampaignsRepository,
-} from '@/modules/campaigns/repository';
+import { type CampaignsRepository } from '@/modules/campaigns/repository';
 import {
   canScheduleCampaign,
   getCampaignLocaleReadiness,
@@ -48,7 +48,9 @@ import {
 interface MockCampaignsState {
   drafts: Record<string, CampaignDraft>;
   overviewItems: CampaignListItem[];
-  stats: ReturnType<typeof createInitialCampaignsOverviewResponse>['stats'];
+  stats: NonNullable<
+    ReturnType<typeof createInitialCampaignsOverviewResponse>['stats']
+  >;
   savedSegments: CampaignSavedSegmentSummary[];
   scenarioTemplates: CampaignScenarioTemplateSummary[];
   savedSegmentDefinitions: Record<string, CampaignAudienceDefinition>;
@@ -68,6 +70,42 @@ const STAGE_WEIGHTS: Record<RetentionStage, number> = {
   [RetentionStage.RESURRECTED]: 2800,
   [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 3200,
 };
+
+function toSummaryOverviewItem(item: CampaignListItem): CampaignListItem {
+  return {
+    ...item,
+    audience: {
+      ...item.audience,
+      currentEstimate: null,
+    },
+    progress: {
+      sentCount: null,
+      totalCount: null,
+      failedCount: null,
+      skippedCount: null,
+      inProgressCount: null,
+      openCount: null,
+      uniqueRecipientCount: null,
+      journeyInstanceCount: null,
+      deliveryRowCount: null,
+      failureReasons: [],
+      deliveredRate: null,
+      ctr: null,
+      progressPercent: null,
+    },
+    metric: {
+      label: 'goal',
+      value: item.goal,
+      detail: null,
+      reachedCount: null,
+      journeyCount: null,
+      attributionMode: item.metric.attributionMode ?? null,
+      traceGoalEventCount: null,
+      untracedGoalEventCount: null,
+      sourceEventsWithoutUserCount: null,
+    },
+  };
+}
 
 const LOCALE_SHARES: Record<CampaignLocale, number> = {
   en: 0.5,
@@ -362,7 +400,7 @@ function createInitialState(): MockCampaignsState {
   return {
     drafts: createInitialCampaignDraftMap(),
     overviewItems: overview.items,
-    stats: overview.stats,
+    stats: overview.stats!,
     savedSegments: createInitialSavedSegments(),
     scenarioTemplates: createInitialScenarioTemplates(),
     savedSegmentDefinitions: createSavedSegmentDefinitionMap(),
@@ -761,12 +799,36 @@ export const mockCampaignsRepository: CampaignsRepository = {
     const items = filteredItems.slice(startIndex, startIndex + params.limit);
 
     return {
-      stats: clone(state.stats),
-      items: clone(items),
+      stats: params.includeMetrics === false ? null : clone(state.stats),
+      items: clone(
+        params.includeMetrics === false
+          ? items.map((item) => toSummaryOverviewItem(item))
+          : items
+      ),
       total: filteredItems.length,
       page: params.page,
       limit: params.limit,
       totalPages: Math.max(1, Math.ceil(filteredItems.length / params.limit)),
+    };
+  },
+
+  async getCampaignsOverviewStats(_params: GetCampaignOverviewStatsParams) {
+    return {
+      stats: clone(state.stats),
+    };
+  },
+
+  async getCampaignOverviewItemMetrics(
+    params: GetCampaignOverviewItemMetricsParams
+  ) {
+    return {
+      items: clone(
+        params.campaignIds
+          .map((campaignId) =>
+            state.overviewItems.find((item) => item.id === campaignId)
+          )
+          .filter((item): item is CampaignListItem => item != null)
+      ),
     };
   },
 
@@ -961,9 +1023,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async sendTestDraft(draft, input) {
-    const persistedDraft = (
-      await this.saveDraft(draft)
-    ).draft;
+    const persistedDraft = (await this.saveDraft(draft)).draft;
     let response: SendTestCampaignResponse;
     try {
       response = await this.sendTestCampaign(persistedDraft.id!, input);
@@ -1020,9 +1080,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async scheduleDraft(draft) {
-    const savedDraft = (
-      await this.saveDraft(draft)
-    ).draft;
+    const savedDraft = (await this.saveDraft(draft)).draft;
     let response: ScheduleCampaignResponse;
     try {
       response = await this.scheduleCampaign(savedDraft.id!, {
@@ -1092,9 +1150,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
   },
 
   async pauseDraft(draft) {
-    const persistedDraft = (
-      await this.saveDraft(draft)
-    ).draft;
+    const persistedDraft = (await this.saveDraft(draft)).draft;
     let response: { campaign: CampaignDraft };
     try {
       response = await this.pauseCampaign(persistedDraft.id!, {

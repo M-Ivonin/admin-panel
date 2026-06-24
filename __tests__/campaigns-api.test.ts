@@ -5,8 +5,10 @@ import {
   deleteCampaignTemplate,
   estimateCampaignAudience,
   getCampaignDraft,
+  getCampaignOverviewItemMetrics,
   getCampaignEditorCatalog,
   getCampaignsOverview,
+  getCampaignsOverviewStats,
   pauseCampaign,
   saveCampaignSegment,
   saveCampaignTemplate,
@@ -50,6 +52,40 @@ describe('campaigns API helpers', () => {
     });
   });
 
+  it('serializes progressive overview loading calls', async () => {
+    await getCampaignsOverview({
+      page: 1,
+      limit: 10,
+      search: '',
+      statuses: ['active'],
+      triggerTypes: [],
+      targetApps: ['SirBro'],
+      quickView: null,
+      statsPeriod: 'last_7_days',
+      includeMetrics: false,
+    });
+    await getCampaignsOverviewStats({
+      statsPeriod: 'last_7_days',
+    });
+    await getCampaignOverviewItemMetrics({
+      campaignIds: ['cmp_1', 'cmp_2'],
+      statsPeriod: 'last_7_days',
+    });
+
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(1, {
+      path: '/campaigns/admin/overview?page=1&limit=10&statsPeriod=last_7_days&includeMetrics=false&statuses=active&targetApps=SirBro',
+      method: 'GET',
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(2, {
+      path: '/campaigns/admin/overview/stats?statsPeriod=last_7_days',
+      method: 'GET',
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(3, {
+      path: '/campaigns/admin/overview/item-metrics?statsPeriod=last_7_days&campaignIds=cmp_1&campaignIds=cmp_2',
+      method: 'GET',
+    });
+  });
+
   it('serializes trigger, journey, and per-step content for create/update calls', async () => {
     const draft = createEmptyCampaignDraft();
 
@@ -82,7 +118,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
-      targetApps: draft.targetApps,
+        targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -97,7 +133,7 @@ describe('campaigns API helpers', () => {
       body: JSON.stringify({
         name: draft.name,
         goal: draft.goal,
-      targetApps: draft.targetApps,
+        targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -179,7 +215,7 @@ describe('campaigns API helpers', () => {
       definition: {
         name: draft.name,
         goal: draft.goal,
-      targetApps: draft.targetApps,
+        targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -194,7 +230,7 @@ describe('campaigns API helpers', () => {
       definition: {
         name: draft.name,
         goal: draft.goal,
-      targetApps: draft.targetApps,
+        targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
@@ -243,7 +279,7 @@ describe('campaigns API helpers', () => {
         definition: {
           name: draft.name,
           goal: draft.goal,
-      targetApps: draft.targetApps,
+          targetApps: draft.targetApps,
           goalDefinition: draft.goalDefinition,
           channel: draft.channel,
           audience: draft.audience,
@@ -262,7 +298,7 @@ describe('campaigns API helpers', () => {
         definition: {
           name: draft.name,
           goal: draft.goal,
-      targetApps: draft.targetApps,
+          targetApps: draft.targetApps,
           goalDefinition: draft.goalDefinition,
           channel: draft.channel,
           audience: draft.audience,
@@ -321,7 +357,7 @@ describe('campaigns API helpers', () => {
       createCampaignDraft({
         name: draft.name,
         goal: draft.goal,
-      targetApps: draft.targetApps,
+        targetApps: draft.targetApps,
         goalDefinition: draft.goalDefinition,
         channel: draft.channel,
         audience: draft.audience,
