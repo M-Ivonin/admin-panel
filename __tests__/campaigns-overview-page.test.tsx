@@ -122,8 +122,10 @@ describe('CampaignsOverviewPage', () => {
       render(<CampaignsOverviewPage />);
 
       expect(await screen.findByText(fullItem.name)).toBeTruthy();
-      expect(screen.getByText('Progress unavailable')).toBeTruthy();
-      expect(screen.queryByText('Delivered today')).toBeNull();
+      expect(screen.queryByText('Progress unavailable')).toBeNull();
+      expect(screen.getByLabelText('Loading campaign progress')).toBeTruthy();
+      expect(screen.getByLabelText('Loading audience reach')).toBeTruthy();
+      expect(screen.getByLabelText('Loading Delivered today')).toBeTruthy();
       expect(overviewSpy).toHaveBeenCalledWith(
         expect.objectContaining({ includeMetrics: false })
       );
@@ -136,10 +138,13 @@ describe('CampaignsOverviewPage', () => {
 
       statsDeferred.resolve({ stats: seeded.stats! });
       expect(await screen.findByText('Delivered today')).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.queryByLabelText('Loading Delivered today')).toBeNull();
+      });
 
       itemMetricsDeferred.resolve({ items: [fullItem] });
       await waitFor(() => {
-        expect(screen.queryByText('Progress unavailable')).toBeNull();
+        expect(screen.queryByLabelText('Loading campaign progress')).toBeNull();
         expect(screen.getAllByText('Delivered').length).toBeGreaterThan(0);
       });
     } finally {

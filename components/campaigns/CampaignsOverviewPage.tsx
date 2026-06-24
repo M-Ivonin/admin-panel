@@ -14,6 +14,7 @@ import {
   Divider,
   LinearProgress,
   Paper,
+  Skeleton,
   Stack,
   TablePagination,
   TextField,
@@ -328,6 +329,58 @@ function KpiCard({
   );
 }
 
+function KpiLoadingCard({ eyebrow, hint }: { eyebrow: string; hint: string }) {
+  return (
+    <Tooltip title={hint} describeChild arrow placement="top">
+      <Paper
+        elevation={0}
+        sx={{
+          p: 1.75,
+          borderRadius: 3,
+          bgcolor: COLORS.panel,
+          border: `1px solid ${COLORS.stroke}`,
+          minHeight: 108,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Typography
+            sx={{
+              color: COLORS.textMuted,
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: 11,
+              fontWeight: 500,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {eyebrow}
+          </Typography>
+          <InfoOutlined sx={{ color: COLORS.textMuted, fontSize: 14 }} />
+        </Stack>
+        <Box aria-label={`Loading ${eyebrow}`} role="status">
+          <Skeleton
+            animation="wave"
+            variant="rounded"
+            width={72}
+            height={32}
+            sx={{ bgcolor: COLORS.soft, mb: 1 }}
+          />
+          <Skeleton
+            animation="wave"
+            variant="rounded"
+            width="82%"
+            height={14}
+            sx={{ bgcolor: COLORS.soft }}
+          />
+        </Box>
+      </Paper>
+    </Tooltip>
+  );
+}
+
 function MetricLabel({ label, hint }: { label: string; hint: string }) {
   return (
     <Tooltip title={hint} describeChild arrow placement="top">
@@ -358,6 +411,13 @@ function getOptionalNumber(value: number | undefined): number {
 
 function hasMetricNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isRowMetricsHydrating(item: CampaignListItem): boolean {
+  return (
+    !hasMetricNumber(item.progress.sentCount) ||
+    !hasMetricNumber(item.progress.totalCount)
+  );
 }
 
 function formatCount(value: number): string {
@@ -560,6 +620,139 @@ function InlineMetric({
     <Tooltip title={hint} describeChild arrow placement="top">
       {content}
     </Tooltip>
+  );
+}
+
+function InlineMetricShimmer({
+  label,
+  width = 64,
+}: {
+  label: string;
+  width?: number;
+}) {
+  return (
+    <Stack
+      aria-label={label}
+      role="status"
+      spacing={0.4}
+      sx={{ minWidth: 86 }}
+    >
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width={58}
+        height={10}
+        sx={{ bgcolor: COLORS.stroke }}
+      />
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width={width}
+        height={16}
+        sx={{ bgcolor: COLORS.soft }}
+      />
+    </Stack>
+  );
+}
+
+function ProgressMetricsShimmer() {
+  return (
+    <>
+      <Box sx={{ mb: 0.75 }}>
+        <Skeleton
+          aria-label="Loading campaign progress"
+          role="status"
+          animation="wave"
+          variant="rounded"
+          width={92}
+          height={17}
+          sx={{ bgcolor: COLORS.soft }}
+        />
+      </Box>
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width="100%"
+        height={8}
+        sx={{ bgcolor: '#171717', borderRadius: 999 }}
+      />
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2, minmax(0, 1fr))',
+            sm: 'repeat(3, minmax(0, 1fr))',
+            md: 'repeat(3, minmax(0, 1fr))',
+          },
+          columnGap: 1.25,
+          rowGap: 0.9,
+          mt: 1,
+        }}
+      >
+        {[
+          'Loading delivered',
+          'Loading failed',
+          'Loading queued',
+          'Loading skipped',
+          'Loading opened',
+          'Loading delivery rate',
+          'Loading CTR',
+          'Loading users with messages',
+          'Loading message attempts',
+        ].map((label, index) => (
+          <InlineMetricShimmer
+            key={label}
+            label={label}
+            width={index % 3 === 0 ? 72 : 48}
+          />
+        ))}
+      </Box>
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width="100%"
+        height={38}
+        sx={{ bgcolor: COLORS.soft, mt: 1 }}
+      />
+    </>
+  );
+}
+
+function OutcomeMetricsShimmer() {
+  return (
+    <Box aria-label="Loading campaign outcome" role="status">
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width={152}
+        height={17}
+        sx={{ bgcolor: COLORS.soft }}
+      />
+      <Skeleton
+        animation="wave"
+        variant="rounded"
+        width="86%"
+        height={14}
+        sx={{ bgcolor: COLORS.stroke, mt: 0.65 }}
+      />
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2, minmax(0, 1fr))',
+            md: '1fr',
+            xl: 'repeat(2, minmax(0, 1fr))',
+          },
+          columnGap: 1.25,
+          rowGap: 0.9,
+          mt: 1,
+        }}
+      >
+        <InlineMetricShimmer label="Loading traced goal events" width={42} />
+        <InlineMetricShimmer label="Loading matching events" width={52} />
+        <InlineMetricShimmer label="Loading anonymous events" width={48} />
+      </Box>
+    </Box>
   );
 }
 
@@ -935,7 +1128,7 @@ export function CampaignsOverviewPage() {
           </Button>
         </Stack>
 
-        {stats && (
+        {overview && (
           <Box
             sx={{
               display: 'grid',
@@ -948,36 +1141,60 @@ export function CampaignsOverviewPage() {
               mb: 3,
             }}
           >
-            <KpiCard
-              eyebrow="Active campaigns"
-              value={String(stats.activeCampaigns)}
-              helper={`${stats.pausedCampaigns} paused · ${stats.scheduledCampaigns} scheduled`}
-              hint={KPI_HINTS.activeCampaigns}
-            />
-            <KpiCard
-              eyebrow="Delivered today"
-              value={formatMetricValue(stats.sentToday)}
-              helper={getTodayDeliveryHelper(stats)}
-              hint={KPI_HINTS.deliveredToday}
-            />
-            <KpiCard
-              eyebrow="Delivery rate"
-              value={`${stats.deliveredRate}%`}
-              helper={getDeliveryRateHelper(stats)}
-              hint={KPI_HINTS.deliveryRate}
-            />
-            <KpiCard
-              eyebrow="Avg CTR"
-              value={`${stats.avgCtr}%`}
-              helper={getCtrHelper(stats)}
-              hint={KPI_HINTS.avgCtr}
-            />
-            <KpiCard
-              eyebrow="Queued deliveries"
-              value={formatMetricValue(stats.reachInProgress)}
-              helper={getQueuedHelper(stats)}
-              hint={KPI_HINTS.queued}
-            />
+            {stats ? (
+              <>
+                <KpiCard
+                  eyebrow="Active campaigns"
+                  value={String(stats.activeCampaigns)}
+                  helper={`${stats.pausedCampaigns} paused · ${stats.scheduledCampaigns} scheduled`}
+                  hint={KPI_HINTS.activeCampaigns}
+                />
+                <KpiCard
+                  eyebrow="Delivered today"
+                  value={formatMetricValue(stats.sentToday)}
+                  helper={getTodayDeliveryHelper(stats)}
+                  hint={KPI_HINTS.deliveredToday}
+                />
+                <KpiCard
+                  eyebrow="Delivery rate"
+                  value={`${stats.deliveredRate}%`}
+                  helper={getDeliveryRateHelper(stats)}
+                  hint={KPI_HINTS.deliveryRate}
+                />
+                <KpiCard
+                  eyebrow="Avg CTR"
+                  value={`${stats.avgCtr}%`}
+                  helper={getCtrHelper(stats)}
+                  hint={KPI_HINTS.avgCtr}
+                />
+                <KpiCard
+                  eyebrow="Queued deliveries"
+                  value={formatMetricValue(stats.reachInProgress)}
+                  helper={getQueuedHelper(stats)}
+                  hint={KPI_HINTS.queued}
+                />
+              </>
+            ) : (
+              <>
+                <KpiLoadingCard
+                  eyebrow="Active campaigns"
+                  hint={KPI_HINTS.activeCampaigns}
+                />
+                <KpiLoadingCard
+                  eyebrow="Delivered today"
+                  hint={KPI_HINTS.deliveredToday}
+                />
+                <KpiLoadingCard
+                  eyebrow="Delivery rate"
+                  hint={KPI_HINTS.deliveryRate}
+                />
+                <KpiLoadingCard eyebrow="Avg CTR" hint={KPI_HINTS.avgCtr} />
+                <KpiLoadingCard
+                  eyebrow="Queued deliveries"
+                  hint={KPI_HINTS.queued}
+                />
+              </>
+            )}
           </Box>
         )}
 
@@ -1511,7 +1728,9 @@ export function CampaignsOverviewPage() {
                               )} users`}
                               hint={ROW_HINTS.audienceNow}
                             />
-                          ) : null}
+                          ) : (
+                            <InlineMetricShimmer label="Loading audience reach" />
+                          )}
                         </Stack>
                       </Box>
 
@@ -1538,147 +1757,158 @@ export function CampaignsOverviewPage() {
                           label="Progress"
                           hint={ROW_HINTS.progress}
                         />
-                        <Tooltip
-                          title={ROW_HINTS.progressCompletion}
-                          describeChild
-                          arrow
-                          placement="top"
-                        >
-                          <Typography
-                            sx={{
-                              color: COLORS.textPrimary,
-                              fontSize: 13,
-                              fontWeight: 600,
-                              mb: 0.75,
-                              width: 'fit-content',
-                            }}
-                          >
-                            {hasMetricNumber(item.progress.sentCount) &&
-                            hasMetricNumber(item.progress.totalCount)
-                              ? `${formatCount(item.progress.sentCount)} / ${formatCount(
-                                  item.progress.totalCount
-                                )}`
-                              : 'Progress unavailable'}
-                          </Typography>
-                        </Tooltip>
-                        {hasMetricNumber(item.progress.progressPercent) ? (
-                          <Tooltip
-                            title={ROW_HINTS.progressCompletion}
-                            describeChild
-                            arrow
-                            placement="top"
-                          >
-                            <LinearProgress
-                              variant="determinate"
-                              value={item.progress.progressPercent}
+                        {isRowMetricsHydrating(item) ? (
+                          <ProgressMetricsShimmer />
+                        ) : (
+                          <>
+                            <Tooltip
+                              title={ROW_HINTS.progressCompletion}
+                              describeChild
+                              arrow
+                              placement="top"
+                            >
+                              <Typography
+                                sx={{
+                                  color: COLORS.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  mb: 0.75,
+                                  width: 'fit-content',
+                                }}
+                              >
+                                {`${formatCount(item.progress.sentCount!)} / ${formatCount(
+                                  item.progress.totalCount!
+                                )}`}
+                              </Typography>
+                            </Tooltip>
+                            {hasMetricNumber(item.progress.progressPercent) ? (
+                              <Tooltip
+                                title={ROW_HINTS.progressCompletion}
+                                describeChild
+                                arrow
+                                placement="top"
+                              >
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={item.progress.progressPercent}
+                                  sx={{
+                                    height: 8,
+                                    borderRadius: 999,
+                                    bgcolor: '#171717',
+                                    '& .MuiLinearProgress-bar': {
+                                      borderRadius: 999,
+                                      bgcolor: COLORS.accent,
+                                    },
+                                  }}
+                                />
+                              </Tooltip>
+                            ) : null}
+                            <Box
                               sx={{
-                                height: 8,
-                                borderRadius: 999,
-                                bgcolor: '#171717',
-                                '& .MuiLinearProgress-bar': {
-                                  borderRadius: 999,
-                                  bgcolor: COLORS.accent,
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: 'repeat(2, minmax(0, 1fr))',
+                                  sm: 'repeat(3, minmax(0, 1fr))',
+                                  md: 'repeat(3, minmax(0, 1fr))',
                                 },
+                                columnGap: 1.25,
+                                rowGap: 0.9,
+                                mt: 1,
                               }}
-                            />
-                          </Tooltip>
-                        ) : null}
-                        <Box
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                              xs: 'repeat(2, minmax(0, 1fr))',
-                              sm: 'repeat(3, minmax(0, 1fr))',
-                              md: 'repeat(3, minmax(0, 1fr))',
-                            },
-                            columnGap: 1.25,
-                            rowGap: 0.9,
-                            mt: 1,
-                          }}
-                        >
-                          {hasMetricNumber(item.progress.sentCount) ? (
-                            <InlineMetric
-                              label="Delivered"
-                              value={formatCount(item.progress.sentCount)}
-                              hint={ROW_HINTS.delivered}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.failedCount) ? (
-                            <InlineMetric
-                              label="Failed"
-                              value={formatCount(item.progress.failedCount)}
-                              hint={ROW_HINTS.failed}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.inProgressCount) ? (
-                            <InlineMetric
-                              label="Queued"
-                              value={formatCount(item.progress.inProgressCount)}
-                              hint={ROW_HINTS.queued}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.skippedCount) ? (
-                            <InlineMetric
-                              label="Skipped"
-                              value={formatCount(item.progress.skippedCount)}
-                              hint={ROW_HINTS.skipped}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.openCount) ? (
-                            <InlineMetric
-                              label="Opened"
-                              value={formatCount(item.progress.openCount)}
-                              hint={ROW_HINTS.opened}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.deliveredRate) ? (
-                            <InlineMetric
-                              label="Delivery rate"
-                              value={`${item.progress.deliveredRate}%`}
-                              hint={ROW_HINTS.deliveryRate}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.ctr) ? (
-                            <InlineMetric
-                              label="CTR"
-                              value={`${item.progress.ctr}%`}
-                              hint={ROW_HINTS.ctr}
-                            />
-                          ) : null}
-                          {hasMetricNumber(
-                            item.progress.uniqueRecipientCount
-                          ) ? (
-                            <InlineMetric
-                              label="Users with messages"
-                              value={formatCount(
+                            >
+                              {hasMetricNumber(item.progress.sentCount) ? (
+                                <InlineMetric
+                                  label="Delivered"
+                                  value={formatCount(item.progress.sentCount)}
+                                  hint={ROW_HINTS.delivered}
+                                />
+                              ) : null}
+                              {hasMetricNumber(item.progress.failedCount) ? (
+                                <InlineMetric
+                                  label="Failed"
+                                  value={formatCount(item.progress.failedCount)}
+                                  hint={ROW_HINTS.failed}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
+                                item.progress.inProgressCount
+                              ) ? (
+                                <InlineMetric
+                                  label="Queued"
+                                  value={formatCount(
+                                    item.progress.inProgressCount
+                                  )}
+                                  hint={ROW_HINTS.queued}
+                                />
+                              ) : null}
+                              {hasMetricNumber(item.progress.skippedCount) ? (
+                                <InlineMetric
+                                  label="Skipped"
+                                  value={formatCount(
+                                    item.progress.skippedCount
+                                  )}
+                                  hint={ROW_HINTS.skipped}
+                                />
+                              ) : null}
+                              {hasMetricNumber(item.progress.openCount) ? (
+                                <InlineMetric
+                                  label="Opened"
+                                  value={formatCount(item.progress.openCount)}
+                                  hint={ROW_HINTS.opened}
+                                />
+                              ) : null}
+                              {hasMetricNumber(item.progress.deliveredRate) ? (
+                                <InlineMetric
+                                  label="Delivery rate"
+                                  value={`${item.progress.deliveredRate}%`}
+                                  hint={ROW_HINTS.deliveryRate}
+                                />
+                              ) : null}
+                              {hasMetricNumber(item.progress.ctr) ? (
+                                <InlineMetric
+                                  label="CTR"
+                                  value={`${item.progress.ctr}%`}
+                                  hint={ROW_HINTS.ctr}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
                                 item.progress.uniqueRecipientCount
-                              )}
-                              hint={ROW_HINTS.uniqueRecipients}
-                            />
-                          ) : null}
-                          {hasMetricNumber(
-                            item.progress.journeyInstanceCount
-                          ) ? (
-                            <InlineMetric
-                              label="Campaign starts"
-                              value={formatCount(
+                              ) ? (
+                                <InlineMetric
+                                  label="Users with messages"
+                                  value={formatCount(
+                                    item.progress.uniqueRecipientCount
+                                  )}
+                                  hint={ROW_HINTS.uniqueRecipients}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
                                 item.progress.journeyInstanceCount
-                              )}
-                              hint={ROW_HINTS.journeyInstances}
-                            />
-                          ) : null}
-                          {hasMetricNumber(item.progress.deliveryRowCount) ? (
-                            <InlineMetric
-                              label="Message attempts"
-                              value={formatCount(
+                              ) ? (
+                                <InlineMetric
+                                  label="Campaign starts"
+                                  value={formatCount(
+                                    item.progress.journeyInstanceCount
+                                  )}
+                                  hint={ROW_HINTS.journeyInstances}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
                                 item.progress.deliveryRowCount
-                              )}
-                              hint={ROW_HINTS.deliveryRows}
-                            />
-                          ) : null}
-                        </Box>
-                        <FailureReasonsLine item={item} />
-                        <AppBucketsLine item={item} />
+                              ) ? (
+                                <InlineMetric
+                                  label="Message attempts"
+                                  value={formatCount(
+                                    item.progress.deliveryRowCount
+                                  )}
+                                  hint={ROW_HINTS.deliveryRows}
+                                />
+                              ) : null}
+                            </Box>
+                            <FailureReasonsLine item={item} />
+                            <AppBucketsLine item={item} />
+                          </>
+                        )}
                       </Box>
 
                       <Box>
@@ -1686,71 +1916,79 @@ export function CampaignsOverviewPage() {
                           label="Outcome"
                           hint={getOutcomeHint(item)}
                         />
-                        <Typography
-                          sx={{
-                            color: COLORS.textPrimary,
-                            fontSize: 13,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {item.metric.value}
-                        </Typography>
-                        {item.metric.detail ? (
-                          <Typography
-                            sx={{
-                              color: COLORS.textSecondary,
-                              fontSize: 12,
-                              mt: 0.35,
-                            }}
-                          >
-                            {item.metric.detail}
-                          </Typography>
-                        ) : null}
-                        <Box
-                          sx={{
-                            display: 'grid',
-                            gridTemplateColumns: {
-                              xs: 'repeat(2, minmax(0, 1fr))',
-                              md: '1fr',
-                              xl: 'repeat(2, minmax(0, 1fr))',
-                            },
-                            columnGap: 1.25,
-                            rowGap: 0.9,
-                            mt: 1,
-                          }}
-                        >
-                          {hasMetricNumber(item.metric.traceGoalEventCount) ? (
-                            <InlineMetric
-                              label="Traced goal events"
-                              value={formatCount(
+                        {isRowMetricsHydrating(item) ? (
+                          <OutcomeMetricsShimmer />
+                        ) : (
+                          <>
+                            <Typography
+                              sx={{
+                                color: COLORS.textPrimary,
+                                fontSize: 13,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {item.metric.value}
+                            </Typography>
+                            {item.metric.detail ? (
+                              <Typography
+                                sx={{
+                                  color: COLORS.textSecondary,
+                                  fontSize: 12,
+                                  mt: 0.35,
+                                }}
+                              >
+                                {item.metric.detail}
+                              </Typography>
+                            ) : null}
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                  xs: 'repeat(2, minmax(0, 1fr))',
+                                  md: '1fr',
+                                  xl: 'repeat(2, minmax(0, 1fr))',
+                                },
+                                columnGap: 1.25,
+                                rowGap: 0.9,
+                                mt: 1,
+                              }}
+                            >
+                              {hasMetricNumber(
                                 item.metric.traceGoalEventCount
-                              )}
-                              hint={ROW_HINTS.tracedGoalEvents}
-                            />
-                          ) : null}
-                          {hasMetricNumber(
-                            item.metric.untracedGoalEventCount
-                          ) ? (
-                            <InlineMetric
-                              label="Untraced matching events"
-                              value={formatCount(
+                              ) ? (
+                                <InlineMetric
+                                  label="Traced goal events"
+                                  value={formatCount(
+                                    item.metric.traceGoalEventCount
+                                  )}
+                                  hint={ROW_HINTS.tracedGoalEvents}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
                                 item.metric.untracedGoalEventCount
-                              )}
-                              hint={ROW_HINTS.untracedMatchingEvents}
-                            />
-                          ) : null}
-                          {hasMetricNumber(
-                            item.metric.sourceEventsWithoutUserCount
-                          ) ? (
-                            <InlineMetric
-                              label="Source events without user"
-                              value={formatCount(
+                              ) ? (
+                                <InlineMetric
+                                  label="Untraced matching events"
+                                  value={formatCount(
+                                    item.metric.untracedGoalEventCount
+                                  )}
+                                  hint={ROW_HINTS.untracedMatchingEvents}
+                                />
+                              ) : null}
+                              {hasMetricNumber(
                                 item.metric.sourceEventsWithoutUserCount
-                              )}
-                              hint={ROW_HINTS.sourceEventsWithoutUser}
-                            />
-                          ) : null}
-                        </Box>
+                              ) ? (
+                                <InlineMetric
+                                  label="Source events without user"
+                                  value={formatCount(
+                                    item.metric.sourceEventsWithoutUserCount
+                                  )}
+                                  hint={ROW_HINTS.sourceEventsWithoutUser}
+                                />
+                              ) : null}
+                            </Box>
+                          </>
+                        )}
                         <Stack
                           direction="row"
                           spacing={0.75}
