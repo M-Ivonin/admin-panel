@@ -32,6 +32,7 @@ import {
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
+  CampaignListMetricSummary,
   CampaignLocale,
   CampaignOverviewItemMetricsResponse,
   CampaignOverviewStats,
@@ -425,6 +426,25 @@ function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
+function getTraceCoverageValue(
+  metric: CampaignListMetricSummary
+): string | null {
+  if (
+    !hasMetricNumber(metric.traceGoalEventCount) ||
+    !hasMetricNumber(metric.untracedGoalEventCount)
+  ) {
+    return null;
+  }
+
+  const total =
+    metric.traceGoalEventCount + metric.untracedGoalEventCount;
+  if (total <= 0) {
+    return null;
+  }
+
+  return `${((metric.traceGoalEventCount / total) * 100).toFixed(1)}%`;
+}
+
 function getTodayDeliveryHelper(stats: CampaignOverviewStats): string {
   const attemptedToday = getOptionalNumber(stats.attemptedToday);
   const failedToday = getOptionalNumber(stats.failedToday);
@@ -574,6 +594,8 @@ const ROW_HINTS = {
     'Goal actions that can be linked back to a specific campaign message.',
   untracedMatchingEvents:
     'Matching user actions that happened after campaign entry but cannot be linked to a specific campaign message, so they are informational only.',
+  traceCoverage:
+    'Share of matching goal actions that carried a delivery trace and can be used for strict response attribution.',
   sourceEventsWithoutUser:
     'Matching actions where the user was unknown, so the campaign cannot attribute them to a person.',
 };
@@ -621,6 +643,25 @@ function InlineMetric({
     <Tooltip title={hint} describeChild arrow placement="top">
       {content}
     </Tooltip>
+  );
+}
+
+function TraceCoverageMetric({
+  metric,
+}: {
+  metric: CampaignListMetricSummary;
+}) {
+  const value = getTraceCoverageValue(metric);
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <InlineMetric
+      label="Trace coverage"
+      value={value}
+      hint={ROW_HINTS.traceCoverage}
+    />
   );
 }
 
@@ -2025,6 +2066,7 @@ export function CampaignsOverviewPage() {
                                   hint={ROW_HINTS.untracedMatchingEvents}
                                 />
                               ) : null}
+                              <TraceCoverageMetric metric={item.metric} />
                               {hasMetricNumber(
                                 item.metric.sourceEventsWithoutUserCount
                               ) ? (
