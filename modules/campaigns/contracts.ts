@@ -558,6 +558,10 @@ export interface CampaignDiagnosticsResetResponse {
   metricsResetAt: string;
 }
 
+export interface CampaignDiagnosticsResetRequest {
+  metricsResetAt?: string | null;
+}
+
 export interface UpsertCampaignDraftRequest {
   name: string;
   goal: string;

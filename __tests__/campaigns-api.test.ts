@@ -249,7 +249,9 @@ describe('campaigns API helpers', () => {
     await scheduleCampaign('cmp_onboarding_not_completed', { confirm: true });
     await archiveCampaign('cmp_onboarding_not_completed', { confirm: true });
     await pauseCampaign('cmp_onboarding_not_completed', { confirm: true });
-    await resetCampaignDiagnostics('cmp_onboarding_not_completed');
+    await resetCampaignDiagnostics('cmp_onboarding_not_completed', {
+      metricsResetAt: '2026-06-23T15:20:00.000Z',
+    });
 
     expect(adminAuthFetch).toHaveBeenNthCalledWith(1, {
       path: '/campaigns/admin/catalog',
@@ -341,6 +343,9 @@ describe('campaigns API helpers', () => {
     expect(adminAuthFetch).toHaveBeenNthCalledWith(12, {
       path: '/campaigns/admin/cmp_onboarding_not_completed/reset-diagnostics',
       method: 'POST',
+      body: JSON.stringify({
+        metricsResetAt: '2026-06-23T15:20:00.000Z',
+      }),
     });
   });
 

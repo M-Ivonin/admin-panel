@@ -8,6 +8,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignDiagnosticsResetRequest,
   CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
   CampaignOverviewItemMetricsResponse,
@@ -411,11 +412,13 @@ export async function pauseCampaign(
  * Resets the diagnostics baseline for one campaign without deleting history.
  */
 export async function resetCampaignDiagnostics(
-  id: string
+  id: string,
+  input: CampaignDiagnosticsResetRequest = {}
 ): Promise<CampaignDiagnosticsResetResponse> {
   const response = await adminAuthFetch({
     path: `/campaigns/admin/${id}/reset-diagnostics`,
     method: 'POST',
+    body: JSON.stringify(input),
   });
 
   return parseAdminResponse(response, 'Failed to reset campaign diagnostics');
