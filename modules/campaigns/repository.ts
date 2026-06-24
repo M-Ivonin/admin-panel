@@ -9,6 +9,8 @@ import {
   createCampaignDraft,
   deleteCampaignTemplate,
   estimateCampaignAudience,
+  getCampaignOverviewItemMetrics,
+  getCampaignsOverviewStats,
   getCampaignDraft,
   getCampaignEditorCatalog,
   getCampaignsOverview,
@@ -26,9 +28,13 @@ import type {
   DeleteTemplateResponse,
   CampaignDraft,
   CampaignEditorCatalog,
+  CampaignOverviewItemMetricsResponse,
+  CampaignOverviewStatsResponse,
   CampaignsOverviewResponse,
   EstimateAudienceRequest,
   EstimateAudienceResponse,
+  GetCampaignOverviewItemMetricsParams,
+  GetCampaignOverviewStatsParams,
   GetCampaignsOverviewParams,
   PauseCampaignRequest,
   PauseCampaignResponse,
@@ -48,6 +54,14 @@ import type {
 export type GetCampaignsOverviewMethod = (
   params: GetCampaignsOverviewParams
 ) => Promise<CampaignsOverviewResponse>;
+
+export type GetCampaignsOverviewStatsMethod = (
+  params: GetCampaignOverviewStatsParams
+) => Promise<CampaignOverviewStatsResponse>;
+
+export type GetCampaignOverviewItemMetricsMethod = (
+  params: GetCampaignOverviewItemMetricsParams
+) => Promise<CampaignOverviewItemMetricsResponse>;
 
 export type GetCampaignEditorCatalogMethod =
   () => Promise<CampaignEditorCatalog>;
@@ -104,8 +118,7 @@ export type PauseCampaignMethod = (
   input: PauseCampaignRequest
 ) => Promise<PauseCampaignResponse>;
 
-export interface ScheduleCampaignDraftResult
-  extends ScheduleCampaignResponse {
+export interface ScheduleCampaignDraftResult extends ScheduleCampaignResponse {
   persistedDraftId: string;
 }
 
@@ -166,6 +179,8 @@ export class CampaignEditorActionError extends Error {
 
 export interface CampaignsRepository {
   getCampaignsOverview: GetCampaignsOverviewMethod;
+  getCampaignsOverviewStats: GetCampaignsOverviewStatsMethod;
+  getCampaignOverviewItemMetrics: GetCampaignOverviewItemMetricsMethod;
   loadEditor: LoadCampaignEditorMethod;
   getEditorCatalog: GetCampaignEditorCatalogMethod;
   getCampaign: GetCampaignDraftMethod;
@@ -186,7 +201,9 @@ export interface CampaignsRepository {
   pauseDraft: PauseCampaignDraftMethod;
 }
 
-async function persistCampaignDraft(draft: CampaignDraft): Promise<CampaignDraft> {
+async function persistCampaignDraft(
+  draft: CampaignDraft
+): Promise<CampaignDraft> {
   const payload = buildUpsertCampaignDraftPayload(draft);
 
   return draft.id === null
@@ -196,6 +213,8 @@ async function persistCampaignDraft(draft: CampaignDraft): Promise<CampaignDraft
 
 export const campaignsRepository: CampaignsRepository = {
   getCampaignsOverview,
+  getCampaignsOverviewStats,
+  getCampaignOverviewItemMetrics,
   async loadEditor(input) {
     const catalog = await getCampaignEditorCatalog();
 

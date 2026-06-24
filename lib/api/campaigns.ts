@@ -9,9 +9,13 @@ import type {
   DeleteTemplateResponse,
   CampaignDraft,
   CampaignEditorCatalog,
+  CampaignOverviewItemMetricsResponse,
+  CampaignOverviewStatsResponse,
   CampaignsOverviewResponse,
   EstimateAudienceRequest,
   EstimateAudienceResponse,
+  GetCampaignOverviewItemMetricsParams,
+  GetCampaignOverviewStatsParams,
   GetCampaignsOverviewParams,
   PauseCampaignRequest,
   PauseCampaignResponse,
@@ -121,6 +125,10 @@ export async function getCampaignsOverview(
     searchParams.set('statsTo', params.statsTo);
   }
 
+  if (params.includeMetrics === false) {
+    searchParams.set('includeMetrics', 'false');
+  }
+
   appendQueryParam(searchParams, 'statuses', params.statuses);
   appendQueryParam(searchParams, 'triggerTypes', params.triggerTypes);
   appendQueryParam(searchParams, 'targetApps', params.targetApps ?? []);
@@ -131,6 +139,56 @@ export async function getCampaignsOverview(
   });
 
   return parseAdminResponse(response, 'Failed to fetch campaigns overview');
+}
+
+function appendStatsPeriodParams(
+  searchParams: URLSearchParams,
+  params: GetCampaignOverviewStatsParams
+) {
+  searchParams.set('statsPeriod', params.statsPeriod);
+
+  if (params.statsFrom) {
+    searchParams.set('statsFrom', params.statsFrom);
+  }
+
+  if (params.statsTo) {
+    searchParams.set('statsTo', params.statsTo);
+  }
+}
+
+export async function getCampaignsOverviewStats(
+  params: GetCampaignOverviewStatsParams
+): Promise<CampaignOverviewStatsResponse> {
+  const searchParams = new URLSearchParams();
+  appendStatsPeriodParams(searchParams, params);
+
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/overview/stats?${searchParams.toString()}`,
+    method: 'GET',
+  });
+
+  return parseAdminResponse(
+    response,
+    'Failed to fetch campaigns overview stats'
+  );
+}
+
+export async function getCampaignOverviewItemMetrics(
+  params: GetCampaignOverviewItemMetricsParams
+): Promise<CampaignOverviewItemMetricsResponse> {
+  const searchParams = new URLSearchParams();
+  appendStatsPeriodParams(searchParams, params);
+  appendQueryParam(searchParams, 'campaignIds', params.campaignIds);
+
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/overview/item-metrics?${searchParams.toString()}`,
+    method: 'GET',
+  });
+
+  return parseAdminResponse(
+    response,
+    'Failed to fetch campaigns overview item metrics'
+  );
 }
 
 /**

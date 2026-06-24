@@ -241,15 +241,35 @@ export interface GetCampaignsOverviewParams {
   statsPeriod: CampaignStatsPeriod;
   statsFrom?: string;
   statsTo?: string;
+  includeMetrics?: boolean;
 }
 
 export interface CampaignsOverviewResponse {
-  stats: CampaignOverviewStats;
+  stats: CampaignOverviewStats | null;
   items: CampaignListItem[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface GetCampaignOverviewStatsParams {
+  statsPeriod: CampaignStatsPeriod;
+  statsFrom?: string;
+  statsTo?: string;
+}
+
+export interface CampaignOverviewStatsResponse {
+  stats: CampaignOverviewStats;
+}
+
+export interface GetCampaignOverviewItemMetricsParams
+  extends GetCampaignOverviewStatsParams {
+  campaignIds: string[];
+}
+
+export interface CampaignOverviewItemMetricsResponse {
+  items: CampaignListItem[];
 }
 
 export interface CampaignSavedSegmentSummary {
