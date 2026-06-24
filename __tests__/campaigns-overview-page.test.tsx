@@ -95,6 +95,9 @@ describe('CampaignsOverviewPage', () => {
     if (!campaign) {
       throw new Error('Expected seeded overview item');
     }
+    const dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-06-24T15:20:00.000Z').getTime());
     const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
     const resetSpy = jest
       .spyOn(campaignsRepository, 'resetCampaignDiagnostics')
@@ -107,10 +110,36 @@ describe('CampaignsOverviewPage', () => {
       render(<CampaignsOverviewPage />);
 
       await screen.findByText(campaign.name);
-      fireEvent.click(screen.getAllByRole('button', { name: /reset/i })[0]);
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /reset diagnostics/i })[0]
+      );
+
+      expect(await screen.findByText('Reset diagnostics?')).toBeTruthy();
+      expect(
+        screen.getByText(/This does not delete campaign history/i)
+      ).toBeTruthy();
+      expect(resetSpy).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      await waitFor(() => {
+        expect(screen.queryByText('Reset diagnostics?')).toBeNull();
+      });
+      expect(resetSpy).not.toHaveBeenCalled();
+
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /reset diagnostics/i })[0]
+      );
+      fireEvent.change(await screen.findByRole('slider'), {
+        target: { value: '1' },
+      });
+      fireEvent.click(
+        await screen.findByRole('button', { name: /^reset diagnostics$/i })
+      );
 
       await waitFor(() => {
-        expect(resetSpy).toHaveBeenCalledWith(campaign.id);
+        expect(resetSpy).toHaveBeenCalledWith(campaign.id, {
+          metricsResetAt: '2026-06-23T15:20:00.000Z',
+        });
       });
       await waitFor(() => {
         expect(overviewSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
@@ -118,6 +147,7 @@ describe('CampaignsOverviewPage', () => {
     } finally {
       overviewSpy.mockRestore();
       resetSpy.mockRestore();
+      dateNowSpy.mockRestore();
     }
   });
 

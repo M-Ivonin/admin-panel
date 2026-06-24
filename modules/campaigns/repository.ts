@@ -28,6 +28,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignDiagnosticsResetRequest,
   CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
   CampaignOverviewItemMetricsResponse,
@@ -121,7 +122,8 @@ export type PauseCampaignMethod = (
 ) => Promise<PauseCampaignResponse>;
 
 export type ResetCampaignDiagnosticsMethod = (
-  id: string
+  id: string,
+  input?: CampaignDiagnosticsResetRequest
 ) => Promise<CampaignDiagnosticsResetResponse>;
 
 export interface ScheduleCampaignDraftResult extends ScheduleCampaignResponse {

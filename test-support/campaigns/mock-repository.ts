@@ -1149,7 +1149,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async resetCampaignDiagnostics(id) {
+  async resetCampaignDiagnostics(id, input = {}) {
     const draft = state.drafts[id];
     const overviewItem = state.overviewItems.find((item) => item.id === id);
 
@@ -1157,7 +1157,7 @@ export const mockCampaignsRepository: CampaignsRepository = {
       throw new Error('Campaign not found');
     }
 
-    const metricsResetAt = nextTimestampIso(0);
+    const metricsResetAt = input.metricsResetAt ?? nextTimestampIso(0);
     overviewItem.progress = {
       ...overviewItem.progress,
       failedCount: 0,

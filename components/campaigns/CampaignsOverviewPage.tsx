@@ -12,9 +12,14 @@ import {
   Button,
   Chip,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   LinearProgress,
   Paper,
   Skeleton,
+  Slider,
   Stack,
   TablePagination,
   TextField,
@@ -47,6 +52,15 @@ import { campaignsRepository } from '@/modules/campaigns/repository';
 const DEFAULT_ROWS_PER_PAGE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 const METRICS_HYDRATION_BATCH_SIZE = 3;
+
+const DIAGNOSTICS_BASELINE_DAY_OPTIONS = [
+  { value: 0, label: 'Today' },
+  { value: 1, label: '1d' },
+  { value: 3, label: '3d' },
+  { value: 7, label: '7d' },
+  { value: 14, label: '14d' },
+  { value: 30, label: '30d' },
+];
 
 const STATUS_OPTIONS: Array<{ value: CampaignStatus; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -424,6 +438,14 @@ function isRowMetricsHydrating(item: CampaignListItem): boolean {
 
 function formatCount(value: number): string {
   return value.toLocaleString('en-US');
+}
+
+function formatDiagnosticsBaseline(daysAgo: number): string {
+  if (daysAgo === 0) {
+    return 'today';
+  }
+
+  return `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
 }
 
 function getTraceCoverageValue(
@@ -929,6 +951,9 @@ export function CampaignsOverviewPage() {
   const [resettingCampaignId, setResettingCampaignId] = useState<string | null>(
     null
   );
+  const [pendingResetCampaign, setPendingResetCampaign] =
+    useState<CampaignListItem | null>(null);
+  const [resetBaselineDaysAgo, setResetBaselineDaysAgo] = useState(0);
 
   const statsRangeParams = useMemo(() => {
     if (statsPeriod !== 'custom' || !customStatsFrom || !customStatsTo) {
@@ -1101,12 +1126,24 @@ export function CampaignsOverviewPage() {
     });
   }
 
-  async function handleResetDiagnostics(campaignId: string) {
+  async function handleConfirmResetDiagnostics() {
+    const campaign = pendingResetCampaign;
+    if (!campaign) {
+      return;
+    }
+
+    const campaignId = campaign.id;
+    const metricsResetAt = new Date(
+      Date.now() - resetBaselineDaysAgo * 24 * 60 * 60 * 1000
+    ).toISOString();
     setResettingCampaignId(campaignId);
     setError(null);
 
     try {
-      await campaignsRepository.resetCampaignDiagnostics(campaignId);
+      await campaignsRepository.resetCampaignDiagnostics(campaignId, {
+        metricsResetAt,
+      });
+      setPendingResetCampaign(null);
       setReloadToken((current) => current + 1);
     } catch (resetError) {
       setError(
@@ -1727,27 +1764,40 @@ export function CampaignsOverviewPage() {
                           spacing={1}
                           sx={{ ml: { lg: 'auto' } }}
                         >
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<RestartAlt fontSize="small" />}
-                            disabled={resettingCampaignId === item.id}
-                            onClick={() => void handleResetDiagnostics(item.id)}
-                            sx={{
-                              borderColor: COLORS.stroke,
-                              borderRadius: 2,
-                              color: COLORS.textPrimary,
-                              height: 32,
-                              px: 1.25,
-                              textTransform: 'none',
-                              '&:hover': {
-                                borderColor: COLORS.warning,
-                                bgcolor: '#f59e0b18',
-                              },
-                            }}
+                          <Tooltip
+                            title="Reset visible diagnostics from now without deleting campaign history."
+                            describeChild
+                            arrow
+                            placement="top"
                           >
-                            Reset
-                          </Button>
+                            <span>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                aria-label="Reset diagnostics"
+                                startIcon={<RestartAlt fontSize="small" />}
+                                disabled={resettingCampaignId === item.id}
+                                onClick={() => {
+                                  setResetBaselineDaysAgo(0);
+                                  setPendingResetCampaign(item);
+                                }}
+                                sx={{
+                                  borderColor: COLORS.stroke,
+                                  borderRadius: 2,
+                                  color: COLORS.textPrimary,
+                                  height: 32,
+                                  px: 1.25,
+                                  textTransform: 'none',
+                                  '&:hover': {
+                                    borderColor: COLORS.warning,
+                                    bgcolor: '#f59e0b18',
+                                  },
+                                }}
+                              >
+                                Reset
+                              </Button>
+                            </span>
+                          </Tooltip>
                           <Button
                             size="small"
                             variant="outlined"
@@ -2170,6 +2220,72 @@ export function CampaignsOverviewPage() {
           </Paper>
         </Box>
       </Box>
+      <Dialog
+        open={pendingResetCampaign !== null}
+        onClose={() => {
+          if (!resettingCampaignId) {
+            setPendingResetCampaign(null);
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Reset diagnostics?</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This does not delete campaign history, deliveries, source events, or
+            cooldown data. It only sets a new diagnostics baseline, so the
+            overview hides older failures, skips, and goal diagnostics by
+            default.
+          </Alert>
+          <Typography sx={{ color: COLORS.textSecondary, fontSize: 14 }}>
+            Future failures and skip reasons for{' '}
+            <strong>{pendingResetCampaign?.name}</strong> will start accumulating
+            from {formatDiagnosticsBaseline(resetBaselineDaysAgo)}.
+          </Typography>
+          <Box sx={{ px: 1, pt: 3 }}>
+            <Slider
+              aria-label="Diagnostics baseline"
+              value={resetBaselineDaysAgo}
+              min={0}
+              max={30}
+              step={null}
+              marks={DIAGNOSTICS_BASELINE_DAY_OPTIONS}
+              valueLabelDisplay="auto"
+              valueLabelFormat={formatDiagnosticsBaseline}
+              onChange={(_event, value) => {
+                setResetBaselineDaysAgo(Array.isArray(value) ? value[0] : value);
+              }}
+              sx={{
+                color: COLORS.warning,
+                '& .MuiSlider-markLabel': {
+                  color: COLORS.textSecondary,
+                  fontSize: 12,
+                },
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setPendingResetCampaign(null)}
+            disabled={resettingCampaignId !== null}
+            sx={{ color: COLORS.textSecondary, textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={() => void handleConfirmResetDiagnostics()}
+            disabled={resettingCampaignId !== null}
+            startIcon={<RestartAlt fontSize="small" />}
+            sx={{ textTransform: 'none' }}
+          >
+            Reset diagnostics
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
