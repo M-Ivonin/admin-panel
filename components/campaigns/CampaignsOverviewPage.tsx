@@ -31,6 +31,7 @@ import type {
   CampaignEntryTriggerType,
   CampaignListItem,
   CampaignLocale,
+  CampaignOverviewItemMetricsResponse,
   CampaignOverviewStats,
   CampaignQuickView,
   CampaignStatus,
@@ -42,6 +43,7 @@ import { campaignsRepository } from '@/modules/campaigns/repository';
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const METRICS_HYDRATION_BATCH_SIZE = 3;
 
 const STATUS_OPTIONS: Array<{ value: CampaignStatus; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -221,6 +223,46 @@ function getLocaleReadinessEntries(
   return Object.entries(item.localeReadiness) as Array<
     [CampaignLocale, VisibleLocaleReadiness]
   >;
+}
+
+async function hydrateCampaignMetricsInBatches({
+  campaignIds,
+  statsPeriod,
+  statsRangeParams,
+  isActive,
+  applyItems,
+}: {
+  campaignIds: string[];
+  statsPeriod: CampaignStatsPeriod;
+  statsRangeParams: { statsFrom?: string; statsTo?: string };
+  isActive: () => boolean;
+  applyItems: (items: CampaignOverviewItemMetricsResponse['items']) => void;
+}) {
+  for (
+    let startIndex = 0;
+    startIndex < campaignIds.length && isActive();
+    startIndex += METRICS_HYDRATION_BATCH_SIZE
+  ) {
+    const batchIds = campaignIds.slice(
+      startIndex,
+      startIndex + METRICS_HYDRATION_BATCH_SIZE
+    );
+
+    try {
+      const metricsResponse =
+        await campaignsRepository.getCampaignOverviewItemMetrics({
+          campaignIds: batchIds,
+          statsPeriod,
+          ...statsRangeParams,
+        });
+
+      if (isActive()) {
+        applyItems(metricsResponse.items);
+      }
+    } catch {
+      return;
+    }
+  }
 }
 
 function KpiCard({
@@ -704,29 +746,22 @@ export function CampaignsOverviewPage() {
             })
             .catch(() => undefined);
 
-          response.items.forEach((item) => {
-            void campaignsRepository
-              .getCampaignOverviewItemMetrics({
-                campaignIds: [item.id],
-                statsPeriod,
-                ...statsRangeParams,
-              })
-              .then((metricsResponse) => {
-                if (!isActive) {
-                  return;
-                }
-
-                const [hydratedItem] = metricsResponse.items;
-                if (!hydratedItem) {
-                  return;
-                }
-
-                setHydratedItemsById((current) => ({
-                  ...current,
-                  [hydratedItem.id]: hydratedItem,
-                }));
-              })
-              .catch(() => undefined);
+          void hydrateCampaignMetricsInBatches({
+            campaignIds: response.items.map((item) => item.id),
+            statsPeriod,
+            statsRangeParams,
+            isActive: () => isActive,
+            applyItems: (items) => {
+              setHydratedItemsById((current) => ({
+                ...current,
+                ...Object.fromEntries(
+                  items.map((hydratedItem) => [
+                    hydratedItem.id,
+                    hydratedItem,
+                  ])
+                ),
+              }));
+            },
           });
         }
       } catch (loadError) {

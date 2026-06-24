@@ -3,6 +3,7 @@ import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewP
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 import { createInitialCampaignsOverviewResponse } from '@/test-support/campaigns/mock-data';
+import type { CampaignListItem } from '@/modules/campaigns/contracts';
 
 jest.setTimeout(30000);
 
@@ -15,6 +16,35 @@ function createDeferred<T>() {
   });
 
   return { promise, resolve };
+}
+
+function toSummaryCampaignItem(item: CampaignListItem): CampaignListItem {
+  return {
+    ...item,
+    audience: {
+      ...item.audience,
+      currentEstimate: null,
+    },
+    progress: {
+      sentCount: null,
+      totalCount: null,
+      failedCount: null,
+      skippedCount: null,
+      inProgressCount: null,
+      openCount: null,
+      uniqueRecipientCount: null,
+      journeyInstanceCount: null,
+      deliveryRowCount: null,
+      failureReasons: [],
+      deliveredRate: null,
+      ctr: null,
+      progressPercent: null,
+    },
+    metric: {
+      label: 'goal',
+      value: item.goal,
+    },
+  };
 }
 
 jest.mock('@/modules/campaigns/repository', () => {
@@ -65,32 +95,7 @@ describe('CampaignsOverviewPage', () => {
     if (!fullItem) {
       throw new Error('Expected seeded overview item');
     }
-    const summaryItem = {
-      ...fullItem,
-      audience: {
-        ...fullItem.audience,
-        currentEstimate: null,
-      },
-      progress: {
-        sentCount: null,
-        totalCount: null,
-        failedCount: null,
-        skippedCount: null,
-        inProgressCount: null,
-        openCount: null,
-        uniqueRecipientCount: null,
-        journeyInstanceCount: null,
-        deliveryRowCount: null,
-        failureReasons: [],
-        deliveredRate: null,
-        ctr: null,
-        progressPercent: null,
-      },
-      metric: {
-        label: 'goal' as const,
-        value: fullItem.goal,
-      },
-    };
+    const summaryItem = toSummaryCampaignItem(fullItem);
     const statsDeferred = createDeferred<{
       stats: NonNullable<typeof seeded.stats>;
     }>();
@@ -137,6 +142,54 @@ describe('CampaignsOverviewPage', () => {
         expect(screen.queryByText('Progress unavailable')).toBeNull();
         expect(screen.getAllByText('Delivered').length).toBeGreaterThan(0);
       });
+    } finally {
+      overviewSpy.mockRestore();
+      statsSpy.mockRestore();
+      itemMetricsSpy.mockRestore();
+    }
+  });
+
+  it('hydrates row metrics in sequential batches instead of one request per row', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const items = seeded.items.slice(0, 4);
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({
+        ...seeded,
+        stats: null,
+        items: items.map(toSummaryCampaignItem),
+        total: items.length,
+        totalPages: 1,
+      });
+    const statsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverviewStats')
+      .mockResolvedValue({ stats: seeded.stats! });
+    const itemMetricsSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignOverviewItemMetrics')
+      .mockImplementation(async ({ campaignIds }) => ({
+        items: items.filter((item) => campaignIds.includes(item.id)),
+      }));
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText(items[0].name);
+
+      await waitFor(() => {
+        expect(itemMetricsSpy).toHaveBeenCalledTimes(2);
+      });
+      expect(itemMetricsSpy).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          campaignIds: items.slice(0, 3).map((item) => item.id),
+        })
+      );
+      expect(itemMetricsSpy).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          campaignIds: items.slice(3).map((item) => item.id),
+        })
+      );
     } finally {
       overviewSpy.mockRestore();
       statsSpy.mockRestore();
