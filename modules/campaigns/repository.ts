@@ -15,6 +15,7 @@ import {
   getCampaignEditorCatalog,
   getCampaignsOverview,
   pauseCampaign,
+  resetCampaignDiagnostics,
   saveCampaignSegment,
   saveCampaignTemplate,
   scheduleCampaign,
@@ -27,6 +28,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
   CampaignOverviewItemMetricsResponse,
   CampaignOverviewStatsResponse,
@@ -118,6 +120,10 @@ export type PauseCampaignMethod = (
   input: PauseCampaignRequest
 ) => Promise<PauseCampaignResponse>;
 
+export type ResetCampaignDiagnosticsMethod = (
+  id: string
+) => Promise<CampaignDiagnosticsResetResponse>;
+
 export interface ScheduleCampaignDraftResult extends ScheduleCampaignResponse {
   persistedDraftId: string;
 }
@@ -198,6 +204,7 @@ export interface CampaignsRepository {
   scheduleDraft: ScheduleCampaignDraftMethod;
   archiveCampaign: ArchiveCampaignMethod;
   pauseCampaign: PauseCampaignMethod;
+  resetCampaignDiagnostics: ResetCampaignDiagnosticsMethod;
   pauseDraft: PauseCampaignDraftMethod;
 }
 
@@ -286,6 +293,7 @@ export const campaignsRepository: CampaignsRepository = {
   },
   archiveCampaign,
   pauseCampaign,
+  resetCampaignDiagnostics,
   async pauseDraft(draft) {
     const persistedDraft = await persistCampaignDraft(draft);
     let response: PauseCampaignResponse;

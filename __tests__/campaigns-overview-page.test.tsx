@@ -89,6 +89,38 @@ describe('CampaignsOverviewPage', () => {
     }
   });
 
+  it('resets campaign diagnostics and reloads overview metrics', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const campaign = seeded.items[0];
+    if (!campaign) {
+      throw new Error('Expected seeded overview item');
+    }
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
+    const resetSpy = jest
+      .spyOn(campaignsRepository, 'resetCampaignDiagnostics')
+      .mockResolvedValue({
+        campaignId: campaign.id,
+        metricsResetAt: '2026-06-24T15:20:00.000Z',
+      });
+
+    try {
+      render(<CampaignsOverviewPage />);
+
+      await screen.findByText(campaign.name);
+      fireEvent.click(screen.getAllByRole('button', { name: /reset/i })[0]);
+
+      await waitFor(() => {
+        expect(resetSpy).toHaveBeenCalledWith(campaign.id);
+      });
+      await waitFor(() => {
+        expect(overviewSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+      });
+    } finally {
+      overviewSpy.mockRestore();
+      resetSpy.mockRestore();
+    }
+  });
+
   it('renders campaign rows before KPI and row metrics hydrate', async () => {
     const seeded = createInitialCampaignsOverviewResponse();
     const fullItem = seeded.items[0];
