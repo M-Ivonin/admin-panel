@@ -511,6 +511,8 @@ describe('CampaignsOverviewPage', () => {
       ).toBeTruthy();
       expect(screen.getByText('Traced goal events')).toBeTruthy();
       expect(screen.getByText('Untraced matching events')).toBeTruthy();
+      expect(screen.getByText('Trace coverage')).toBeTruthy();
+      expect(screen.getByText('25.0%')).toBeTruthy();
       expect(screen.getByText('Source events without user')).toBeTruthy();
     } finally {
       overviewSpy.mockRestore();
