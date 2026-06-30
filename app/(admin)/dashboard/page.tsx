@@ -115,6 +115,22 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
+            <Link href="/dashboard/onboarding-analytics" style={{ textDecoration: 'none' }}>
+              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}>
+                    <Analytics />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Onboarding Analytics
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Track onboarding completion, drop-offs, transitions, and heatmap activity
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
             <Link href="/dashboard/campaigns" style={{ textDecoration: 'none' }}>
               <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
