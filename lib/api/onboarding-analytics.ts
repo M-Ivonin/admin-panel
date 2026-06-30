@@ -56,6 +56,12 @@ export interface OnboardingFunnelRecentEvent {
   occurredAt: string;
 }
 
+export interface OnboardingFunnelAnalyticsFilters {
+  platforms: string[];
+  locales: string[];
+  appVersions: string[];
+}
+
 export interface OnboardingFunnelAnalyticsResponse {
   range: {
     from: string;
@@ -63,6 +69,7 @@ export interface OnboardingFunnelAnalyticsResponse {
     timezone: 'UTC';
   };
   summary: OnboardingFunnelSummary;
+  filters: OnboardingFunnelAnalyticsFilters;
   steps: OnboardingFunnelStep[];
   transitions: OnboardingFunnelTransition[];
   timeSeries: OnboardingFunnelTimeSeriesBucket[];
