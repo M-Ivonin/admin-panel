@@ -25,6 +25,11 @@ describe('onboarding analytics api', () => {
           completionRate: 0,
           averageSecondsToCompletion: null,
         },
+        filters: {
+          platforms: ['ios'],
+          locales: ['en-us'],
+          appVersions: ['1.1.300'],
+        },
         steps: [],
         transitions: [],
         timeSeries: [],
@@ -43,8 +48,7 @@ describe('onboarding analytics api', () => {
     });
 
     expect(adminAuthFetch).toHaveBeenCalledWith({
-      path:
-        '/onboarding-funnel/admin/analytics?from=2026-06-01T00%3A00%3A00.000Z&to=2026-06-30T23%3A59%3A59.999Z&platform=ios&app_product=SirBro&app_version=1.1.300&locale=en-us',
+      path: '/onboarding-funnel/admin/analytics?from=2026-06-01T00%3A00%3A00.000Z&to=2026-06-30T23%3A59%3A59.999Z&platform=ios&app_product=SirBro&app_version=1.1.300&locale=en-us',
       method: 'GET',
     });
   });

@@ -10,6 +10,7 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -48,6 +49,16 @@ function defaultFrom(): string {
 
 function defaultTo(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function optionsWithCurrent(options: string[], currentValue: string): string[] {
+  const normalized = currentValue.trim();
+  if (!normalized || options.includes(normalized)) {
+    return options;
+  }
+  return [...options, normalized].sort((left, right) =>
+    left.localeCompare(right)
+  );
 }
 
 export function OnboardingAnalyticsDashboard() {
@@ -104,8 +115,23 @@ export function OnboardingAnalyticsDashboard() {
     return map;
   }, [data]);
   const maxHeatmapEvents = useMemo(() => {
-    return Math.max(...(data?.heatmap.map((bucket) => bucket.events) ?? [0]), 1);
+    return Math.max(
+      ...(data?.heatmap.map((bucket) => bucket.events) ?? [0]),
+      1
+    );
   }, [data]);
+  const platformOptions = useMemo(
+    () => optionsWithCurrent(data?.filters.platforms ?? [], platform),
+    [data?.filters.platforms, platform]
+  );
+  const localeOptions = useMemo(
+    () => optionsWithCurrent(data?.filters.locales ?? [], locale),
+    [data?.filters.locales, locale]
+  );
+  const appVersionOptions = useMemo(
+    () => optionsWithCurrent(data?.filters.appVersions ?? [], appVersion),
+    [appVersion, data?.filters.appVersions]
+  );
 
   return (
     <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
@@ -145,24 +171,49 @@ export function OnboardingAnalyticsDashboard() {
               />
               <TextField
                 label="Platform"
+                select
                 size="small"
                 value={platform}
                 onChange={(event) => setPlatform(event.target.value)}
-                placeholder="ios"
-              />
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="">All platforms</MenuItem>
+                {platformOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
               <TextField
                 label="Locale"
+                select
                 size="small"
                 value={locale}
                 onChange={(event) => setLocale(event.target.value)}
-                placeholder="en-us"
-              />
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="">All locales</MenuItem>
+                {localeOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
               <TextField
                 label="App version"
+                select
                 size="small"
                 value={appVersion}
                 onChange={(event) => setAppVersion(event.target.value)}
-              />
+                sx={{ minWidth: 200 }}
+              >
+                <MenuItem value="">All versions</MenuItem>
+                {appVersionOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
               <Button variant="contained" onClick={load} disabled={loading}>
                 Refresh
               </Button>
