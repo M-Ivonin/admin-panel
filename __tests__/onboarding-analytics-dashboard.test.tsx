@@ -53,4 +53,16 @@ describe('OnboardingAnalyticsDashboard', () => {
       screen.getByRole('combobox', { name: /app version/i })
     ).toBeInTheDocument();
   });
+
+  it('renders the dashboard navigation header', async () => {
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(await screen.findByText('Started')).toBeInTheDocument();
+
+    const backLink = screen.getByRole('link', { name: /back/i });
+    expect(backLink).toHaveAttribute('href', '/dashboard');
+    expect(
+      screen.getByRole('heading', { name: 'Onboarding Analytics' })
+    ).toBeInTheDocument();
+  });
 });
