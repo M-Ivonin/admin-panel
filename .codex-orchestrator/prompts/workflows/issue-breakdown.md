@@ -46,6 +46,16 @@ Consider a spec gate when the slice involves:
 - required browser, mobile, manual, or live smoke validation;
 - known rejected approaches or unresolved product or technical decisions.
 
+## Size / Risk
+
+Each child issue must declare the intended implementation path:
+
+- `Small / low risk`: use `small-task-implementer`; keep the issue narrow, deterministic, and directly verifiable.
+- `Medium`: use scoped implementation with TDD and configured review gates.
+- `High risk`: require issue-level or wave-level spec gates before implementation.
+
+Do not split a small issue into a parent orchestration tree just to satisfy process. Do not mark risky shared-contract work as small to avoid review.
+
 ## Review Gate
 
 Before publishing child issues, run an issue-breakdown-review pass over the proposed breakdown. The review must check tracer-bullet quality, dependency correctness, AFK readiness, acceptance criteria, scope control, source-of-truth risk, spec proportionality, and orchestration risk.
@@ -58,6 +68,7 @@ Present the proposed breakdown as a numbered list. For each slice include:
 
 - **Title**
 - **Type**: AFK or HITL
+- **Size / Risk**: small / medium / high, with intended path (`small-task-implementer`, scoped implementation, issue-level spec, or wave-level spec)
 - **Blocked by**
 - **User stories covered** when available
 - **Spec required**: none / issue-level / wave-level, with one short reason
@@ -92,6 +103,16 @@ Spec required: none / issue-level / wave-level
 Reason:
 
 - One concise reason, or "None - straightforward implementation with existing local patterns."
+
+## Size / risk
+
+Size: small / medium / high
+
+Intended path: small-task-implementer / scoped implementation / issue-level spec / wave-level spec
+
+Reason:
+
+- One concise reason tied to ownership, contracts, and validation.
 
 ## External contracts
 

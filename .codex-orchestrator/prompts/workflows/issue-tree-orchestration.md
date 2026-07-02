@@ -37,7 +37,8 @@ Allowed proof includes test result, smoke result, command output, API or browser
 4. Build a dependency graph: ready, blocked, final integration/regression.
 5. Identify protected paths, likely source-of-truth owners, and files that must not be edited concurrently.
 6. Extract each issue's spec gate metadata.
-7. Mark unresolved external contracts, credentials, live fixtures, or human-only decisions as blocked until proven or cleared.
+7. Extract each issue's size/risk and intended path (`small-task-implementer`, scoped implementation, issue-level spec, or wave-level spec).
+8. Mark unresolved external contracts, credentials, live fixtures, or human-only decisions as blocked until proven or cleared.
 
 ## Plan Waves
 
@@ -49,6 +50,7 @@ Create the smallest safe parallel wave first:
 - keep final cross-cutting regression or cleanup issues for the last wave;
 - define each wave exit gate: worker reports, integration diff review, combined validation, and blocker reconciliation;
 - decide whether the wave requires a spec gate.
+- keep small low-risk children on the compact `small-task-implementer` path when their ownership and validation are genuinely narrow.
 
 ## Spec Gates
 
@@ -78,6 +80,7 @@ For each issue in the active wave, assign one worker with a narrow ownership sco
 - accepted implementation spec reference when a spec gate was run;
 - repo policy and relevant docs to read;
 - instruction to use TDD for behavior changes;
+- instruction to use `$small-task-implementer` only for child issues explicitly classified as small/low-risk, and to escalate if hidden risk appears;
 - exact ownership boundaries;
 - warning that other agents may be editing the repo;
 - instruction not to revert or overwrite user or worker changes;
@@ -85,6 +88,7 @@ For each issue in the active wave, assign one worker with a narrow ownership sco
 - required preconditions and verification commands;
 - stop conditions;
 - required final report: changed files, proof per acceptance criterion, tests run, skipped checks, risks, blockers, and unresolved acceptance criteria.
+- required `reviewHandoff`: flow used, risk level, implemented contract, proof by acceptance criterion, review focus, and human review checklist.
 
 While workers run, the integrator should do non-overlapping work: read docs, inspect ownership, map integration points, and prepare validation. Do not duplicate a worker's implementation.
 
@@ -98,14 +102,15 @@ Treat each wave as a hard execution gate:
 4. Remove duplicated logic, competing source-of-truth changes, and workaround-shaped code.
 5. Check for architecture drift: shallow modules, one-adapter seams, duplicated rules, or tests coupled to implementation details.
 6. Reconcile every active child issue as complete, blocked with evidence, or deferred.
-7. Verify TDD evidence for behavior-changing issues.
-8. Run the smallest meaningful combined validation for the wave.
-9. Run repo architecture checks when available and applicable.
-10. Verify implementation stayed inside the accepted spec, or document why a spec amendment was required.
-11. Run cleanup-review and code-review when repo policy or change size requires them.
-12. Fix high-confidence review findings and rerun validation.
-13. Create focused commits for completed child issues, or one documented wave commit when safe separation is impossible.
-14. Update the dependency graph before starting the next wave.
+7. Verify each child's declared path: small-task-implementer stayed compact, and medium/high-risk work satisfied spec/review/proof expectations.
+8. Verify TDD evidence for behavior-changing issues.
+9. Run the smallest meaningful combined validation for the wave.
+10. Run repo architecture checks when available and applicable.
+11. Verify implementation stayed inside the accepted spec, or document why a spec amendment was required.
+12. Run cleanup-review and code-review when repo policy or change size requires them.
+13. Fix high-confidence review findings and rerun validation.
+14. Create focused commits for completed child issues, or one documented wave commit when safe separation is impossible.
+15. Update the dependency graph before starting the next wave.
 
 If a worker reports an ambiguous or risky decision, pause and ask the user a targeted question.
 
@@ -117,12 +122,13 @@ After all child issues are implemented, blocked, or deferred:
 2. Reconcile all child acceptance criteria, skipped checks, blockers, and out-of-scope protections.
 3. Run cleanup-review before final code-review when repo policy requires it.
 4. Fix grounded findings and rerun relevant checks.
-5. Summarize completed issues, verification, skipped checks, and follow-up risks.
-6. Comment on completed child issues with result summaries and verification.
-7. Close completed child issues only after completion evidence is posted.
-8. Comment on the parent with completed children, validation, out-of-scope items preserved, and residual risks.
-9. Open or prepare a pull request when requested or expected by repo workflow.
-10. Stop before any human-only action such as PR approval, merge, product decision, manual validation, missing access, or secrets.
+5. Write a Parent Risk/Proof Mini-Report summarizing child outcomes, flow used per child, risk levels, proof coverage, skipped checks, and the exact human review focus.
+6. Summarize completed issues, verification, skipped checks, and follow-up risks.
+7. Comment on completed child issues with result summaries and verification.
+8. Close completed child issues only after completion evidence is posted.
+9. Comment on the parent with completed children, validation, Parent Risk/Proof Mini-Report, out-of-scope items preserved, and residual risks.
+10. Open or prepare a pull request when requested or expected by repo workflow.
+11. Stop before any human-only action such as PR approval, merge, product decision, manual validation, missing access, or secrets.
 
 ## Stop Conditions
 

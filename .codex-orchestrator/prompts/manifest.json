@@ -1,42 +1,47 @@
 {
   "version": 1,
   "packageName": "codex-orchestrator",
-  "packageVersion": "0.1.31",
+  "packageVersion": "0.1.38",
   "prompts": {
     "setup-skill.md": {
       "installedHash": "eedd59b684ad87bd9f0c681d6a7384f71fc51a726207d0abac22bac2d840f2cc",
       "packageHash": "eedd59b684ad87bd9f0c681d6a7384f71fc51a726207d0abac22bac2d840f2cc",
-      "packageVersion": "0.1.31"
+      "packageVersion": "0.1.38"
     },
     "workflows/prd.md": {
-      "installedHash": "3259d098b256e64a1fdde74f8119effe5be2ad3abd95f5525d5fb55f2983ddeb",
-      "packageHash": "3259d098b256e64a1fdde74f8119effe5be2ad3abd95f5525d5fb55f2983ddeb",
-      "packageVersion": "0.1.31"
+      "installedHash": "00ea8d9b85ba42d84f9c83ddb1607b776f2bfca2c6e4d0ea505a0a8ba246e274",
+      "packageHash": "00ea8d9b85ba42d84f9c83ddb1607b776f2bfca2c6e4d0ea505a0a8ba246e274",
+      "packageVersion": "0.1.38"
     },
     "workflows/issue-breakdown.md": {
-      "installedHash": "d85290027bf25d2dcca62c81254f222a4ba03cac6878cd68d67bd214e7aa976f",
-      "packageHash": "d85290027bf25d2dcca62c81254f222a4ba03cac6878cd68d67bd214e7aa976f",
-      "packageVersion": "0.1.31"
+      "installedHash": "6171c9b4361eee7e3bf5ba4364a8f0657404f2d2731807e21e2322b42c3108cf",
+      "packageHash": "6171c9b4361eee7e3bf5ba4364a8f0657404f2d2731807e21e2322b42c3108cf",
+      "packageVersion": "0.1.38"
     },
     "workflows/breakdown-review.md": {
-      "installedHash": "d67541fc875ac0b8f6739391e3e2242f14ef975daa502417af447fb624124e57",
-      "packageHash": "d67541fc875ac0b8f6739391e3e2242f14ef975daa502417af447fb624124e57",
-      "packageVersion": "0.1.31"
+      "installedHash": "0e0f7bd8bd8fba8cab1319062f7e2ba0a075f1eddff21192422300091953ea99",
+      "packageHash": "0e0f7bd8bd8fba8cab1319062f7e2ba0a075f1eddff21192422300091953ea99",
+      "packageVersion": "0.1.38"
     },
     "workflows/triage.md": {
       "installedHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
       "packageHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
-      "packageVersion": "0.1.31"
+      "packageVersion": "0.1.38"
     },
     "workflows/scoped-implementation.md": {
-      "installedHash": "02493187f8aff169a013f5e3198f1bb9ec1e8eff313203f8631f4494d9e7d047",
-      "packageHash": "02493187f8aff169a013f5e3198f1bb9ec1e8eff313203f8631f4494d9e7d047",
-      "packageVersion": "0.1.31"
+      "installedHash": "54f47a8f26a530d4eee6a6d97c0d0a8b8633af73280d9402cafca8e69cf1fc02",
+      "packageHash": "54f47a8f26a530d4eee6a6d97c0d0a8b8633af73280d9402cafca8e69cf1fc02",
+      "packageVersion": "0.1.38"
     },
     "workflows/issue-tree-orchestration.md": {
-      "installedHash": "d6d0c4e024dbd3ac369a7f2a93b1f835cccc0870c1735946d3394b895e6b3ac8",
-      "packageHash": "d6d0c4e024dbd3ac369a7f2a93b1f835cccc0870c1735946d3394b895e6b3ac8",
-      "packageVersion": "0.1.31"
+      "installedHash": "fbd509021c797bc6ede8f6dc7ee083f0b80488924b00f4a8a46fa136a008a3c2",
+      "packageHash": "fbd509021c797bc6ede8f6dc7ee083f0b80488924b00f4a8a46fa136a008a3c2",
+      "packageVersion": "0.1.38"
+    },
+    "workflows/acceptance-proof.md": {
+      "installedHash": "5777120d991f4bae913a00b21939a7e0057fc48adc33e339c995a33cb68f9488",
+      "packageHash": "5777120d991f4bae913a00b21939a7e0057fc48adc33e339c995a33cb68f9488",
+      "packageVersion": "0.1.38"
     }
   }
 }

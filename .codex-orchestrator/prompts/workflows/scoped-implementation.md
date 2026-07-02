@@ -12,6 +12,16 @@ Implement one scoped issue or approved implementation spec. Follow the issue, re
 6. Do not add pass-through modules, one-adapter seams, or test-only helpers unless they improve real locality or leverage.
 7. Add comments only where they clarify non-obvious behavior.
 
+## Task Sizing
+
+Before editing, classify the issue:
+
+- `Small / low risk`: clear behavior, narrow ownership, no schema/persistence/auth/background/shared-contract change, and a targeted validation path exists. Use the Small Task Implementer path (`$small-task-implementer`): compact contract, smallest edit, targeted proof, explicit escalation if hidden risk appears.
+- `Medium`: behavior-changing runtime work that touches shared flow, multiple files, or meaningful tests, but does not require a parent issue tree. Use this scoped implementation workflow with TDD and the configured review gates.
+- `High risk`: schemas, persistence, queues, retries, idempotency, auth, permissions, billing, caching, external contracts, multi-service work, or broad source-of-truth changes. Use the scoped/spec path only if the issue already provides deterministic contracts; otherwise return `needs-promotion` with evidence.
+
+Do not run a heavy plan/spec process for a genuinely small task. Do not force a small task path when the change reveals hidden shared-contract or validation risk.
+
 ## TDD And Behavior Proof
 
 For runtime behavior changes, use strict TDD red-to-green:
@@ -44,9 +54,29 @@ Run code-review before completion when the issue or repo policy requires it, or 
 
 For compact low-risk changes, focused validation plus a clear completion report is enough unless repo policy says otherwise.
 
-## UI And Visual Proof
+## Review Handoff
 
-For browser UI work, prepare runner-owned visual proof artifacts when configured. Prefer Playwright for web UI proof, but let the runner execute configured proof commands when the prompt says so.
+For completed work, include `reviewHandoff` in the runner JSON report:
+
+- `flowUsed`: `small-task-implementer`, `scoped-implementation`, `spec-implementer`, `issue-tree-child`, or `other`;
+- `riskLevel`: `low`, `medium`, or `high`;
+- `implementedContract`: what behavior or invariant changed;
+- `proofByAcceptanceCriteria`: acceptance criteria mapped to test/smoke/artifact evidence;
+- `reviewFocus`: the exact files, states, contracts, or edge cases a human should inspect;
+- `humanReviewChecklist`: the shortest useful manual review path.
+
+## Acceptance Proof
+
+Prepare runner-owned acceptance proof artifacts when configured. For visual work,
+screenshots must be tied back to the acceptance criteria; for non-visual work,
+use smoke outputs, logs, or other observable artifacts. Let the runner execute
+configured proof commands when the prompt says so, and keep proof script repair
+inside proof-owned paths.
+
+For web UI work, prepare a proof-owned browser proof scenario when the runner
+uses `visual-proof auto` or `visual-proof browser`. Use explicit base URLs,
+ordered actions/assertions, named screenshot and DOM checkpoints, and criteria
+refs. Do not run or claim the final runner-owned proof command yourself.
 
 For Android mobile app UI work, use device-backed proof instead of Playwright:
 
@@ -88,5 +118,5 @@ Do not mark the issue complete until:
 - validation commands and behavior proof have run, or skipped checks have concrete reasons;
 - applicable cleanup-review and code-review gates have run;
 - protected paths stayed untouched and rejected approaches were avoided;
-- changed files, validation, skipped checks, residual risks, and blockers are reported;
+- changed files, validation, review handoff, skipped checks, residual risks, and blockers are reported;
 - the structured completion report is written exactly where the runner requested it.
