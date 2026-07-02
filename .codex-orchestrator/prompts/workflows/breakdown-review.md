@@ -24,6 +24,7 @@ Use or request:
 - **Source-of-truth risk:** flag duplicated business rules, competing ownership, or repeated normalization, dispatch, persistence, or compatibility logic across issues.
 - **Parallelization risk:** flag issues likely to collide if assigned to agents in the same wave.
 - **Spec proportionality:** flag repeated issue-level spec gates when one shared wave-level spec would be safer.
+- **Risk/proof routing:** flag small issues that are over-orchestrated instead of routed to `small-task-implementer`, and risky issues that lack spec gates, review focus, or proof strategy.
 - **Final coverage:** complex plans should include a final integration/regression slice when individual slices do not prove the full scenario together.
 
 ## Decision Rules
@@ -41,7 +42,7 @@ Always answer in this structure:
 3. `Blockers before publishing` with concrete findings and failure mechanics.
 4. `Split / Merge / Reorder` with exact issue-level changes.
 5. `Acceptance Criteria fixes` with criteria that need to become more testable.
-6. `AFK readiness and orchestration risk` with collision risks, spec-gate proportionality, and safer wave order.
+6. `AFK readiness and orchestration risk` with collision risks, spec-gate proportionality, risk/proof routing, and safer wave order.
 7. `Hard questions` with only questions that block publication.
 
 If there are no blockers, say so explicitly. Avoid generic praise and speculative objections.

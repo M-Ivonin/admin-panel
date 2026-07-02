@@ -53,6 +53,16 @@ List testing decisions. Include:
 - required smoke, browser, mobile, API, or live validation;
 - cases where a deterministic test seam is missing and must be created or explicitly accepted as risk.
 
+### Risk And Proof
+
+Classify the initiative so downstream automation can choose the right implementation path:
+
+- small low-risk work that should stay on the Small Task Implementer path;
+- medium scoped implementation work that needs TDD and review gates;
+- high-risk contracts that need issue-level or wave-level spec gates before coding.
+
+List the proof strategy a maintainer should expect after implementation: tests, smoke checks, artifacts, review focus, and any proof that cannot be automated locally.
+
 ### Out of Scope
 
 List adjacent behavior that should not be included in this PRD.
@@ -65,5 +75,6 @@ Record open questions, migration notes, rollout notes, compatibility concerns, a
 
 - The PRD must be durable: useful even if files move.
 - The PRD must be specific enough to break into vertical implementation issues.
+- The PRD must make risk and proof expectations explicit enough that small tasks are not over-orchestrated and risky work is not under-specified.
 - Do not hide unresolved decisions inside implementation work.
 - Do not mark work as agent-ready when the PRD still depends on unconfirmed external contracts, credentials, manual design decisions, or ambiguous acceptance criteria.

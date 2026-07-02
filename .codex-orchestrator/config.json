@@ -3,7 +3,7 @@
   "github": {
     "owner": "M-Ivonin",
     "repo": "admin-panel",
-    "prepareLabels": "report-only",
+    "prepareLabels": "create-missing",
     "labels": {
       "auto": {
         "name": "agent:auto",
@@ -110,6 +110,11 @@
       "skillName": "issue-orchestrator",
       "source": "package-bundled-prompt",
       "promptPath": ".codex-orchestrator/prompts/workflows/issue-tree-orchestration.md"
+    },
+    "acceptanceProof": {
+      "skillName": "spec-implementer",
+      "source": "package-bundled-prompt",
+      "promptPath": ".codex-orchestrator/prompts/workflows/acceptance-proof.md"
     }
   },
   "checks": {
@@ -123,6 +128,48 @@
     }
   },
   "reviewGates": {
+    "acceptanceProof": {
+      "enabled": true,
+      "artifactDir": ".codex-orchestrator/proofs",
+      "issueTextPatterns": [
+        "\\bUI\\b",
+        "frontend",
+        "responsive",
+        "layout",
+        "visual",
+        "screenshot",
+        "acceptance",
+        "proof",
+        "smoke",
+        "\\bAPI\\b",
+        "worker",
+        "\\bCLI\\b",
+        "скриншот",
+        "скріншот",
+        "viewport",
+        "dark theme",
+        "мобіл",
+        "mobile"
+      ],
+      "changedPathGlobs": [
+        "src/frontend/**",
+        "frontend/**",
+        "app/**",
+        "pages/**",
+        "components/**"
+      ],
+      "proofOwnedPathGlobs": [
+        ".codex-orchestrator/proofs/**"
+      ],
+      "runnerValidationCommand": "codex-orchestrator visual-proof auto --issue ${issueNumber}",
+      "runnerTimeoutMs": 900000,
+      "envPassthrough": [],
+      "browserProof": {
+        "strictConsoleErrors": false,
+        "strictNetworkFailures": false
+      },
+      "maxIterations": 5
+    },
     "visualProof": {
       "enabled": true,
       "artifactDir": ".codex-orchestrator/proofs",
@@ -164,7 +211,8 @@
         "dev server"
       ],
       "minScreenshotArtifacts": 1,
-      "runnerValidationCommand": "",
+      "requireWhenDesirable": false,
+      "runnerValidationCommand": "codex-orchestrator visual-proof auto --issue ${issueNumber}",
       "runnerTimeoutMs": 900000,
       "envPassthrough": []
     },
@@ -217,6 +265,19 @@
           "code review"
         ]
       }
+    },
+    "riskRouting": {
+      "enabled": true,
+      "mode": "warn",
+      "requireScopedReviewHandoff": true,
+      "requireParentSizeRisk": true,
+      "requireParentReviewHandoff": true,
+      "riskyChangedPathGlobs": [],
+      "highRiskRequiresCodeReview": true,
+      "allowedLowRiskFlows": [
+        "small-task-implementer",
+        "scoped-implementation"
+      ]
     }
   },
   "loopPolicy": {
@@ -236,7 +297,8 @@
         "invalid-completion-report",
         "no-changed-files",
         "failed-configured-checks",
-        "missing-quality-gate-evidence"
+        "missing-quality-gate-evidence",
+        "failed-acceptance-proof"
       ]
     },
     "freshContextReview": {
