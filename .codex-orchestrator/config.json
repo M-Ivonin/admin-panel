@@ -3,7 +3,7 @@
   "github": {
     "owner": "M-Ivonin",
     "repo": "admin-panel",
-    "prepareLabels": "create-missing",
+    "prepareLabels": "report-only",
     "labels": {
       "auto": {
         "name": "agent:auto",
@@ -130,6 +130,7 @@
   "reviewGates": {
     "acceptanceProof": {
       "enabled": true,
+      "proofStrategy": "auto",
       "artifactDir": ".codex-orchestrator/proofs",
       "issueTextPatterns": [
         "\\bUI\\b",

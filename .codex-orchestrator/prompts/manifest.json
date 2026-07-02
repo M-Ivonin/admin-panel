@@ -14,8 +14,8 @@
       "packageVersion": "0.1.38"
     },
     "workflows/issue-breakdown.md": {
-      "installedHash": "6171c9b4361eee7e3bf5ba4364a8f0657404f2d2731807e21e2322b42c3108cf",
-      "packageHash": "6171c9b4361eee7e3bf5ba4364a8f0657404f2d2731807e21e2322b42c3108cf",
+      "installedHash": "ac23de16f66a04138387d47b01d9568932620cfa6b467d7e9389db5f598cdb57",
+      "packageHash": "ac23de16f66a04138387d47b01d9568932620cfa6b467d7e9389db5f598cdb57",
       "packageVersion": "0.1.38"
     },
     "workflows/breakdown-review.md": {
@@ -24,8 +24,8 @@
       "packageVersion": "0.1.38"
     },
     "workflows/triage.md": {
-      "installedHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
-      "packageHash": "26f887c2d8b51f45a366b443a40500c9e9f3900570fbd4c16850209bc0be19ba",
+      "installedHash": "ab742ca3e364e055866db74680315a9cb95cb06dedd6db4aa9688e3153340061",
+      "packageHash": "ab742ca3e364e055866db74680315a9cb95cb06dedd6db4aa9688e3153340061",
       "packageVersion": "0.1.38"
     },
     "workflows/scoped-implementation.md": {
