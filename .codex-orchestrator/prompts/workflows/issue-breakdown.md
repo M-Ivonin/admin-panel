@@ -125,10 +125,20 @@ Status: confirmed / needs proof / not applicable
 
 ## Verification
 
+- Proof Strategy: auto / visual / browser-visual / mobile-visual / non-visual-smoke / none
 - Automated:
 - Architecture:
 - Manual/live:
 - Required fixtures or files:
+
+Choose a concrete proof strategy for every AFK issue:
+
+- `non-visual-smoke` for backend, CLI, telemetry, analytics, event dispatch, data, logging, or workflow behavior where tests, command output, logs, API responses, or machine-readable artifacts are the proof surface.
+- `browser-visual` for web UI/layout/copy/responsive behavior.
+- `mobile-visual` for Android/iOS/Flutter UI behavior where device-backed launch, screenshot, UI dump, or logs are the proof surface.
+- `visual` when visual proof is required but browser vs mobile should be selected from changed paths.
+- `none` only when normal tests/checks are sufficient and no extra acceptance proof artifacts are required.
+- `auto` when no stronger explicit choice is known.
 
 ## codex-orchestrator metadata
 

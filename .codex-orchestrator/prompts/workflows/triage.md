@@ -79,6 +79,17 @@ Describe what should happen, including edge cases and error conditions.
 - Interface or contract name - what needs to change and why
 - Config shape or command - expected behavior
 
+**Proof strategy:**
+Proof Strategy: auto / visual / browser-visual / mobile-visual / non-visual-smoke / none
+
+Choose the explicit strategy from the acceptance criteria:
+- `non-visual-smoke` for backend, CLI, telemetry, analytics, event dispatch, data, or logging work where tests, command output, logs, API responses, or machine-readable artifacts prove behavior better than screenshots.
+- `browser-visual` for web UI/layout/copy/responsive work.
+- `mobile-visual` for Android/iOS/Flutter UI behavior where device-backed launch, screenshot, UI dump, or logs are the proof surface.
+- `visual` when visual proof is required but browser vs mobile should be selected from changed paths.
+- `none` only when normal tests/checks are sufficient and no extra acceptance proof artifacts are required.
+- `auto` when no stronger explicit choice is known.
+
 **Acceptance criteria:**
 - [ ] Specific, testable criterion
 - [ ] Specific, testable criterion
