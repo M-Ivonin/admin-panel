@@ -65,4 +65,51 @@ describe('OnboardingAnalyticsDashboard', () => {
       screen.getByRole('heading', { name: 'Onboarding Analytics' })
     ).toBeInTheDocument();
   });
+
+  it('shows recent event identity, country, and language without exposing session ids as users', async () => {
+    (getOnboardingFunnelAnalytics as jest.Mock).mockResolvedValue({
+      ...analyticsResponse,
+      recentEvents: [
+        {
+          id: 'event-1',
+          sessionId: '3eabcadf-eec9-4cb9-9fae-aee0b2969e80',
+          userName: 'Ada Lovelace',
+          userEmail: 'ada@example.com',
+          userCountryCode: 'US',
+          userLanguage: 'en-us',
+          step: 'live_ready',
+          eventName: 'completed',
+          action: 'go',
+          occurredAt: '2026-07-03T13:01:32.000Z',
+        },
+        {
+          id: 'event-2',
+          sessionId: '08800c1e-712b-4cfd-bab4-9c455451c649',
+          userName: null,
+          userEmail: null,
+          userCountryCode: null,
+          userLanguage: 'pt-br',
+          step: 'favorites',
+          eventName: 'step_viewed',
+          action: null,
+          occurredAt: '2026-07-03T12:28:42.000Z',
+        },
+      ],
+    });
+
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByText('ada@example.com')).toBeInTheDocument();
+    expect(screen.getByText('US')).toBeInTheDocument();
+    expect(screen.getByText('en-us')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(2);
+    expect(screen.getByText('pt-br')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/3eabcadf-eec9-4cb9-9fae-aee0b2969e80/)
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/08800c1e-712b-4cfd-bab4-9c455451c649/)
+    ).not.toBeInTheDocument();
+  });
 });

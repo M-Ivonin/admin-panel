@@ -22,6 +22,7 @@ import {
   getOnboardingFunnelAnalytics,
   OnboardingFunnelAnalyticsResponse,
   OnboardingFunnelHeatmapBucket,
+  OnboardingFunnelRecentEvent,
 } from '@/lib/api/onboarding-analytics';
 
 const STEP_LABELS: Record<string, string> = {
@@ -62,6 +63,28 @@ function optionsWithCurrent(options: string[], currentValue: string): string[] {
   return [...options, normalized].sort((left, right) =>
     left.localeCompare(right)
   );
+}
+
+function formatRecentEventUserName(event: OnboardingFunnelRecentEvent): string {
+  return event.userName?.trim() || event.userEmail?.trim() || 'Unknown';
+}
+
+function formatRecentEventUserEmail(
+  event: OnboardingFunnelRecentEvent
+): string | null {
+  const email = event.userEmail?.trim();
+  if (!email || email === formatRecentEventUserName(event)) {
+    return null;
+  }
+  return email;
+}
+
+function formatRecentEventCountry(event: OnboardingFunnelRecentEvent): string {
+  return event.userCountryCode?.trim().toUpperCase() || 'Unknown';
+}
+
+function formatRecentEventLanguage(event: OnboardingFunnelRecentEvent): string {
+  return event.userLanguage?.trim() || 'Unknown';
 }
 
 export function OnboardingAnalyticsDashboard() {
@@ -457,24 +480,78 @@ export function OnboardingAnalyticsDashboard() {
                         No onboarding events in this range.
                       </Typography>
                     ) : (
-                      data.recentEvents.map((event) => (
-                        <Stack
-                          key={event.id}
-                          direction={{ xs: 'column', md: 'row' }}
-                          justifyContent="space-between"
-                          spacing={1}
+                      <>
+                        <Box
+                          sx={{
+                            display: { xs: 'none', md: 'grid' },
+                            gridTemplateColumns: '1fr 220px 88px 120px 170px',
+                            gap: 2,
+                            px: 0,
+                          }}
                         >
-                          <Typography variant="body2">
-                            {STEP_LABELS[event.step] ?? event.step} /{' '}
-                            {event.eventName}
-                            {event.action ? ` / ${event.action}` : ''}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {event.sessionId} ·{' '}
-                            {new Date(event.occurredAt).toLocaleString()}
-                          </Typography>
-                        </Stack>
-                      ))
+                          {['Event', 'User', 'Country', 'Language', 'Time'].map(
+                            (label) => (
+                              <Typography
+                                key={label}
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={700}
+                              >
+                                {label}
+                              </Typography>
+                            )
+                          )}
+                        </Box>
+                        {data.recentEvents.map((event) => (
+                          <Box
+                            key={event.id}
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: {
+                                xs: '1fr',
+                                md: '1fr 220px 88px 120px 170px',
+                              },
+                              gap: { xs: 0.75, md: 2 },
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Typography variant="body2">
+                              {STEP_LABELS[event.step] ?? event.step} /{' '}
+                              {event.eventName}
+                              {event.action ? ` / ${event.action}` : ''}
+                            </Typography>
+                            <Stack spacing={0.25}>
+                              <Typography
+                                variant="caption"
+                                color="text.primary"
+                                fontWeight={700}
+                              >
+                                {formatRecentEventUserName(event)}
+                              </Typography>
+                              {formatRecentEventUserEmail(event) && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {formatRecentEventUserEmail(event)}
+                                </Typography>
+                              )}
+                            </Stack>
+                            <Typography variant="caption" color="text.primary">
+                              {formatRecentEventCountry(event)}
+                            </Typography>
+                            <Typography variant="caption" color="text.primary">
+                              {formatRecentEventLanguage(event)}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {new Date(event.occurredAt).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </>
                     )}
                   </Stack>
                 </CardContent>
