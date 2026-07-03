@@ -57,6 +57,7 @@
     "command": "/Applications/Codex.app/Contents/Resources/codex",
     "args": [
       "exec",
+      "--ignore-user-config",
       "--cd",
       "${worktreePath}",
       "--sandbox",
@@ -72,6 +73,19 @@
     "timeoutMs": 1800000,
     "mobileTimeoutMs": 3600000,
     "idleTimeoutMs": 300000,
+    "ignoreUserConfig": true,
+    "figmaMcp": {
+      "enabled": true,
+      "url": "https://mcp.figma.com/mcp",
+      "httpHeaders": {
+        "X-Figma-Region": "us-east-1"
+      },
+      "issueTextPatterns": [
+        "https?://(?:www\\.)?figma\\.com/\\S+",
+        "\\bFigma\\b.{0,80}\\b(design|file|node|mockup|prototype|дизайн|макет)\\b",
+        "\\b(design|file|node|mockup|prototype|дизайн|макет)\\b.{0,80}\\bFigma\\b"
+      ]
+    },
     "profiles": {},
     "promptFileEnv": "CODEX_ORCHESTRATOR_PROMPT_FILE",
     "reportFileEnv": "CODEX_ORCHESTRATOR_REPORT_FILE"
