@@ -34,6 +34,7 @@ const STEP_LABELS: Record<string, string> = {
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const RECENT_EVENTS_PAGE_SIZE = '50';
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -98,19 +99,24 @@ export function OnboardingAnalyticsDashboard() {
   );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMoreRecentEvents, setLoadingMoreRecentEvents] = useState(false);
+
+  const buildAnalyticsParams = (recentEventsCursor?: string) => ({
+    from: from ? `${from}T00:00:00.000Z` : undefined,
+    to: to ? `${to}T23:59:59.999Z` : undefined,
+    platform,
+    locale,
+    app_version: appVersion,
+    app_product: 'SirBro',
+    recent_events_limit: RECENT_EVENTS_PAGE_SIZE,
+    recent_events_cursor: recentEventsCursor,
+  });
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getOnboardingFunnelAnalytics({
-        from: from ? `${from}T00:00:00.000Z` : undefined,
-        to: to ? `${to}T23:59:59.999Z` : undefined,
-        platform,
-        locale,
-        app_version: appVersion,
-        app_product: 'SirBro',
-      });
+      const result = await getOnboardingFunnelAnalytics(buildAnalyticsParams());
       setData(result);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unknown error');
@@ -123,6 +129,35 @@ export function OnboardingAnalyticsDashboard() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadMoreRecentEvents = async () => {
+    if (!data?.recentEventsNextCursor || loadingMoreRecentEvents) {
+      return;
+    }
+
+    setLoadingMoreRecentEvents(true);
+    setError(null);
+    try {
+      const result = await getOnboardingFunnelAnalytics(
+        buildAnalyticsParams(data.recentEventsNextCursor)
+      );
+      setData((current) => {
+        if (!current) {
+          return result;
+        }
+
+        return {
+          ...current,
+          recentEvents: [...current.recentEvents, ...result.recentEvents],
+          recentEventsNextCursor: result.recentEventsNextCursor,
+        };
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unknown error');
+    } finally {
+      setLoadingMoreRecentEvents(false);
+    }
+  };
 
   const maxStepViews = useMemo(() => {
     return Math.max(...(data?.steps.map((step) => step.views) ?? [0]), 1);
@@ -551,6 +586,22 @@ export function OnboardingAnalyticsDashboard() {
                             </Typography>
                           </Box>
                         ))}
+                        {data.recentEventsNextCursor && (
+                          <Box
+                            sx={{ display: 'flex', justifyContent: 'center' }}
+                          >
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={loadMoreRecentEvents}
+                              disabled={loadingMoreRecentEvents}
+                            >
+                              {loadingMoreRecentEvents
+                                ? 'Loading...'
+                                : 'Load more'}
+                            </Button>
+                          </Box>
+                        )}
                       </>
                     )}
                   </Stack>

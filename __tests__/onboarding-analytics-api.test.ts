@@ -53,6 +53,47 @@ describe('onboarding analytics api', () => {
     });
   });
 
+  it('serializes recent events pagination params', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        range: {
+          from: '2026-06-01T00:00:00.000Z',
+          to: '2026-06-30T23:59:59.999Z',
+          timezone: 'UTC',
+        },
+        summary: {
+          sessionsStarted: 0,
+          sessionsCompleted: 0,
+          completionRate: 0,
+          averageSecondsToCompletion: null,
+        },
+        filters: {
+          platforms: [],
+          locales: [],
+          appVersions: [],
+        },
+        steps: [],
+        transitions: [],
+        timeSeries: [],
+        heatmap: [],
+        recentEvents: [],
+        recentEventsNextCursor: null,
+      }),
+    });
+
+    await getOnboardingFunnelAnalytics({
+      app_product: 'SirBro',
+      recent_events_limit: '50',
+      recent_events_cursor: 'cursor-1',
+    });
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/onboarding-funnel/admin/analytics?app_product=SirBro&recent_events_limit=50&recent_events_cursor=cursor-1',
+      method: 'GET',
+    });
+  });
+
   it('surfaces forbidden responses as readable admin errors', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValue({
       ok: false,

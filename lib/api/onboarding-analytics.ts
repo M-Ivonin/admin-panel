@@ -7,6 +7,8 @@ export interface OnboardingFunnelAnalyticsParams {
   app_product?: string;
   app_version?: string;
   locale?: string;
+  recent_events_limit?: string;
+  recent_events_cursor?: string;
 }
 
 export interface OnboardingFunnelSummary {
@@ -79,6 +81,7 @@ export interface OnboardingFunnelAnalyticsResponse {
   timeSeries: OnboardingFunnelTimeSeriesBucket[];
   heatmap: OnboardingFunnelHeatmapBucket[];
   recentEvents: OnboardingFunnelRecentEvent[];
+  recentEventsNextCursor: string | null;
 }
 
 async function readAdminErrorMessage(

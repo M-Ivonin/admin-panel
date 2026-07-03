@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { OnboardingAnalyticsDashboard } from '@/components/onboarding-analytics/OnboardingAnalyticsDashboard';
 import { getOnboardingFunnelAnalytics } from '@/lib/api/onboarding-analytics';
 
@@ -28,6 +28,20 @@ const analyticsResponse = {
   timeSeries: [],
   heatmap: [],
   recentEvents: [],
+  recentEventsNextCursor: null,
+};
+
+const recentEvent = {
+  id: 'event-1',
+  sessionId: '3eabcadf-eec9-4cb9-9fae-aee0b2969e80',
+  userName: 'Ada Lovelace',
+  userEmail: 'ada@example.com',
+  userCountryCode: 'US',
+  userLanguage: 'en-us',
+  step: 'live_ready',
+  eventName: 'completed',
+  action: 'go',
+  occurredAt: '2026-07-03T13:01:32.000Z',
 };
 
 describe('OnboardingAnalyticsDashboard', () => {
@@ -70,18 +84,7 @@ describe('OnboardingAnalyticsDashboard', () => {
     (getOnboardingFunnelAnalytics as jest.Mock).mockResolvedValue({
       ...analyticsResponse,
       recentEvents: [
-        {
-          id: 'event-1',
-          sessionId: '3eabcadf-eec9-4cb9-9fae-aee0b2969e80',
-          userName: 'Ada Lovelace',
-          userEmail: 'ada@example.com',
-          userCountryCode: 'US',
-          userLanguage: 'en-us',
-          step: 'live_ready',
-          eventName: 'completed',
-          action: 'go',
-          occurredAt: '2026-07-03T13:01:32.000Z',
-        },
+        recentEvent,
         {
           id: 'event-2',
           sessionId: '08800c1e-712b-4cfd-bab4-9c455451c649',
@@ -110,6 +113,52 @@ describe('OnboardingAnalyticsDashboard', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText(/08800c1e-712b-4cfd-bab4-9c455451c649/)
+    ).not.toBeInTheDocument();
+  });
+
+  it('loads older recent events with the returned cursor', async () => {
+    (getOnboardingFunnelAnalytics as jest.Mock)
+      .mockResolvedValueOnce({
+        ...analyticsResponse,
+        recentEvents: [recentEvent],
+        recentEventsNextCursor: 'cursor-1',
+      })
+      .mockResolvedValueOnce({
+        ...analyticsResponse,
+        recentEvents: [
+          {
+            ...recentEvent,
+            id: 'event-older',
+            step: 'favorites',
+            eventName: 'step_viewed',
+            action: null,
+            occurredAt: '2026-07-03T12:28:42.000Z',
+          },
+        ],
+        recentEventsNextCursor: null,
+      });
+
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(
+      await screen.findByText('Live ready / completed / go')
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+
+    await waitFor(() =>
+      expect(getOnboardingFunnelAnalytics).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          recent_events_cursor: 'cursor-1',
+          recent_events_limit: '50',
+        })
+      )
+    );
+    expect(
+      await screen.findByText('Favorites / step_viewed')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Load more' })
     ).not.toBeInTheDocument();
   });
 });
