@@ -50,6 +50,10 @@ export interface OnboardingFunnelHeatmapBucket {
 export interface OnboardingFunnelRecentEvent {
   id: string;
   sessionId: string;
+  userName: string | null;
+  userEmail: string | null;
+  userCountryCode: string | null;
+  userLanguage: string | null;
   step: string;
   eventName: string;
   action: string | null;
