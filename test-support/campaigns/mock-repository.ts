@@ -812,7 +812,9 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
-  async getCampaignsOverviewStats(_params: GetCampaignOverviewStatsParams) {
+  async getCampaignsOverviewStats(params: GetCampaignOverviewStatsParams) {
+    void params;
+
     return {
       stats: clone(state.stats),
     };

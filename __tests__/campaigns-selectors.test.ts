@@ -363,14 +363,13 @@ describe('campaign selectors', () => {
 
   it('rejects unsupported send guard conditions', () => {
     const draft = createEmptyCampaignDraft();
-    draft.journey.steps[0].sendGuards = [
-      {
-        action: 'opened_app',
-        propertyMatches: [
-          { propertyKey: 'device.meta', expectedValue: 'ios' },
-        ],
-      } as any,
-    ];
+    const conditionalSendGuard = {
+      action: 'opened_app' as const,
+      propertyMatches: [
+        { propertyKey: 'device.meta', expectedValue: 'ios' },
+      ],
+    };
+    draft.journey.steps[0].sendGuards = [conditionalSendGuard];
 
     const summary = getCampaignValidationSummary(draft);
 
