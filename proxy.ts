@@ -29,6 +29,7 @@ function isBypassedPath(pathname: string) {
 function withForwardedLocale(request: NextRequest, locale: string) {
   const headers = new Headers(request.headers);
   headers.set('x-app-locale', locale);
+  headers.set('x-public-pathname', request.nextUrl.pathname);
 
   return NextResponse.next({
     request: {
