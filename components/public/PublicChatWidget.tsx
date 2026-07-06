@@ -1,25 +1,16 @@
-import Script from 'next/script';
+import { headers } from 'next/headers';
 import { getPublicAppConfig } from '@/modules/config/runtime';
+import { isLegalEmbedPathname } from '@/modules/public/legal-embed';
+import { PublicChatWidgetClient } from './PublicChatWidgetClient';
 
-export function PublicChatWidget() {
+export async function PublicChatWidget() {
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get('x-public-pathname');
+
+  if (isLegalEmbedPathname(pathname)) {
+    return null;
+  }
+
   const publicConfig = getPublicAppConfig();
-  const widgetUrl = publicConfig.chatWidgetUrl;
-  const shouldUseModuleScript = widgetUrl.includes('localhost');
-  const chatWidgetMarkup = `<sirbro-chat api-url="${publicConfig.chatApiUrl}" brand-icon="/assets/brandmark.png" show-markdown="${publicConfig.showMarkdown}"></sirbro-chat>`;
-
-  return (
-    <>
-      <Script
-        src={widgetUrl}
-        strategy="afterInteractive"
-        {...(shouldUseModuleScript ? { type: 'module' } : {})}
-      />
-      <div
-        suppressHydrationWarning
-        dangerouslySetInnerHTML={{
-          __html: chatWidgetMarkup,
-        }}
-      />
-    </>
-  );
+  return <PublicChatWidgetClient publicConfig={publicConfig} />;
 }
