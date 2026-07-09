@@ -299,6 +299,9 @@ export function OnboardingAnalyticsDashboard() {
                     </MenuItem>
                   ))}
                 </TextField>
+                <Button variant="contained" onClick={load} disabled={loading}>
+                  Refresh
+                </Button>
               </Stack>
             </CardContent>
           </Card>

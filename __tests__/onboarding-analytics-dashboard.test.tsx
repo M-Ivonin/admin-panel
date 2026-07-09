@@ -89,13 +89,11 @@ describe('OnboardingAnalyticsDashboard', () => {
     ).toBeInTheDocument();
   });
 
-  it('reloads data immediately when a filter date changes', async () => {
+  it('reloads data immediately when a filter date changes and manually refreshes with the same filters', async () => {
     render(<OnboardingAnalyticsDashboard />);
 
     expect(await screen.findByText('Started')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Refresh' })
-    ).not.toBeInTheDocument();
+    const refreshButton = screen.getByRole('button', { name: 'Refresh' });
 
     fireEvent.change(screen.getByLabelText('From'), {
       target: { value: '2026-07-01' },
@@ -109,6 +107,25 @@ describe('OnboardingAnalyticsDashboard', () => {
           app_product: 'SirBro',
         })
       )
+    );
+
+    const callsBeforeManualRefresh = (getOnboardingFunnelAnalytics as jest.Mock)
+      .mock.calls.length;
+
+    await waitFor(() => expect(refreshButton).not.toBeDisabled());
+    fireEvent.click(refreshButton);
+
+    await waitFor(() =>
+      expect(getOnboardingFunnelAnalytics).toHaveBeenCalledTimes(
+        callsBeforeManualRefresh + 1
+      )
+    );
+    expect(getOnboardingFunnelAnalytics).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        from: '2026-07-01T00:00:00.000Z',
+        to: '2026-07-09T23:59:59.999Z',
+        app_product: 'SirBro',
+      })
     );
   });
 
