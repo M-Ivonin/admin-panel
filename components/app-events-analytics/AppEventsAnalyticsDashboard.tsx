@@ -1,15 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import Link from 'next/link';
 import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   Card,
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   MenuItem,
   Paper,
   Stack,
@@ -19,12 +30,17 @@ import {
 import { ArrowBack } from '@mui/icons-material';
 import {
   AppEventsAnalyticsResponse,
+  AppEventsCountByEvent,
   AppEventsHeatmapBucket,
+  AppEventsTimeSeriesBucket,
+  AppEventsUnreadSocialActivityChannelTypeBreakdown,
   getAppEventsAnalytics,
 } from '@/lib/api/app-events-analytics';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DEFAULT_ANALYTICS_RANGE_DAYS = 14;
+const BASELINE_PLATFORM_OPTIONS = ['android', 'ios'];
+const BASELINE_LOCALE_OPTIONS = ['en-US', 'pt-BR', 'es-419'];
 const EVENT_LABELS: Record<string, string> = {
   for_you_feed_opened: 'For You feed opened',
   subscription_paywall_opened: 'Subscription paywall opened',
@@ -75,6 +91,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   social: 'Social',
   subscription: 'Subscription',
 };
+const UNREAD_CHANNEL_TYPE_LABELS: Record<string, string> = {
+  challenge: 'Live challenge chats',
+  club: 'Club channels',
+  private: 'Private chats',
+  public: 'Public channels',
+  unknown: 'Unknown channels',
+};
 
 function defaultFrom(): string {
   const date = new Date();
@@ -93,6 +116,19 @@ function optionsWithCurrent(options: string[], currentValue: string): string[] {
   }
   return [...options, normalized].sort((left, right) =>
     left.localeCompare(right)
+  );
+}
+
+function optionsWithRequired(
+  options: string[],
+  requiredOptions: string[],
+  currentValue: string
+): string[] {
+  return optionsWithCurrent(
+    [...options, ...requiredOptions].filter(
+      (option, index, merged) => merged.indexOf(option) === index
+    ),
+    currentValue
   );
 }
 
@@ -128,6 +164,19 @@ function formatCategoryLabel(category: string): string {
     .join(' ');
 }
 
+function formatUnreadChannelType(channelType: string): string {
+  const label = UNREAD_CHANNEL_TYPE_LABELS[channelType];
+  if (label) {
+    return label;
+  }
+
+  return channelType
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 function pluralize(value: number, singular: string, plural = `${singular}s`) {
   return value === 1 ? singular : plural;
 }
@@ -142,6 +191,7 @@ export function AppEventsAnalyticsDashboard() {
   const [category, setCategory] = useState('');
   const [eventKey, setEventKey] = useState('');
   const [data, setData] = useState<AppEventsAnalyticsResponse | null>(null);
+  const [selectedEventKey, setSelectedEventKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -206,7 +256,12 @@ export function AppEventsAnalyticsDashboard() {
     [data?.filters.targetApps, targetApp]
   );
   const platformOptions = useMemo(
-    () => optionsWithCurrent(data?.filters.platforms ?? [], platform),
+    () =>
+      optionsWithRequired(
+        data?.filters.platforms ?? [],
+        BASELINE_PLATFORM_OPTIONS,
+        platform
+      ),
     [data?.filters.platforms, platform]
   );
   const appVersionOptions = useMemo(
@@ -214,7 +269,12 @@ export function AppEventsAnalyticsDashboard() {
     [appVersion, data?.filters.appVersions]
   );
   const localeOptions = useMemo(
-    () => optionsWithCurrent(data?.filters.locales ?? [], locale),
+    () =>
+      optionsWithRequired(
+        data?.filters.locales ?? [],
+        BASELINE_LOCALE_OPTIONS,
+        locale
+      ),
     [data?.filters.locales, locale]
   );
   const categoryOptions = useMemo(
@@ -225,6 +285,21 @@ export function AppEventsAnalyticsDashboard() {
     () => optionsWithCurrent(data?.filters.eventKeys ?? [], eventKey),
     [data?.filters.eventKeys, eventKey]
   );
+  const unreadSocialBreakdown =
+    data?.breakdowns?.unreadSocialActivityByChannelType ?? [];
+  const selectedEvent = useMemo(() => {
+    return (
+      data?.countsByEvent.find((item) => item.eventKey === selectedEventKey) ??
+      null
+    );
+  }, [data?.countsByEvent, selectedEventKey]);
+  const selectedEventTimeSeries = useMemo(() => {
+    return (
+      data?.timeSeries.filter(
+        (bucket) => bucket.eventKey === selectedEventKey
+      ) ?? []
+    );
+  }, [data?.timeSeries, selectedEventKey]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -391,65 +466,84 @@ export function AppEventsAnalyticsDashboard() {
                         No App Event counts in this range.
                       </Typography>
                     ) : (
-                      data.countsByEvent.map((item) => (
-                        <Box key={item.eventKey}>
-                          <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            justifyContent="space-between"
-                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            spacing={1}
-                            sx={{ mb: 0.5 }}
-                          >
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              <Typography variant="body2" fontWeight={700}>
-                                {formatEventLabel(item.eventKey)}
-                              </Typography>
-                              <Chip
-                                size="small"
-                                label={formatCategoryLabel(item.category)}
-                              />
-                            </Stack>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              flexWrap="wrap"
-                              useFlexGap
-                            >
-                              <Chip
-                                size="small"
-                                label={`${item.count.toLocaleString()} ${pluralize(item.count, 'event')}`}
-                              />
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={`${item.uniqueUsers.toLocaleString()} ${pluralize(item.uniqueUsers, 'user')}`}
-                              />
-                            </Stack>
-                          </Stack>
-                          <Box
+                      data.countsByEvent.map((item) => {
+                        const eventLabel = formatEventLabel(item.eventKey);
+
+                        return (
+                          <ButtonBase
+                            key={item.eventKey}
+                            onClick={() => setSelectedEventKey(item.eventKey)}
+                            aria-label={`Open breakdown for ${eventLabel}`}
                             sx={{
-                              height: 10,
+                              width: '100%',
+                              display: 'block',
+                              textAlign: 'left',
                               borderRadius: 1,
-                              bgcolor: 'action.hover',
-                              overflow: 'hidden',
+                              p: 1,
+                              mx: -1,
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                              },
                             }}
                           >
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              justifyContent="space-between"
+                              alignItems={{ xs: 'flex-start', sm: 'center' }}
+                              spacing={1}
+                              sx={{ mb: 0.5 }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                <Typography variant="body2" fontWeight={700}>
+                                  {eventLabel}
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={formatCategoryLabel(item.category)}
+                                />
+                              </Stack>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                flexWrap="wrap"
+                                useFlexGap
+                              >
+                                <Chip
+                                  size="small"
+                                  label={`${item.count.toLocaleString()} ${pluralize(item.count, 'event')}`}
+                                />
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={`${item.uniqueUsers.toLocaleString()} ${pluralize(item.uniqueUsers, 'user')}`}
+                                />
+                              </Stack>
+                            </Stack>
                             <Box
                               sx={{
-                                width: `${(item.count / maxEventCount) * 100}%`,
-                                height: '100%',
-                                bgcolor: 'primary.main',
+                                height: 10,
+                                borderRadius: 1,
+                                bgcolor: 'action.hover',
+                                overflow: 'hidden',
                               }}
-                            />
-                          </Box>
-                        </Box>
-                      ))
+                            >
+                              <Box
+                                sx={{
+                                  width: `${(item.count / maxEventCount) * 100}%`,
+                                  height: '100%',
+                                  bgcolor: 'primary.main',
+                                }}
+                              />
+                            </Box>
+                          </ButtonBase>
+                        );
+                      })
                     )}
                   </Stack>
                 </CardContent>
@@ -548,6 +642,184 @@ export function AppEventsAnalyticsDashboard() {
           )}
         </Stack>
       </Box>
+      <EventBreakdownDialog
+        event={selectedEvent}
+        timeSeries={selectedEventTimeSeries}
+        unreadSocialBreakdown={unreadSocialBreakdown}
+        onClose={() => setSelectedEventKey(null)}
+      />
+    </Box>
+  );
+}
+
+function EventBreakdownDialog({
+  event,
+  timeSeries,
+  unreadSocialBreakdown,
+  onClose,
+}: {
+  event: AppEventsCountByEvent | null;
+  timeSeries: AppEventsTimeSeriesBucket[];
+  unreadSocialBreakdown: AppEventsUnreadSocialActivityChannelTypeBreakdown[];
+  onClose: () => void;
+}) {
+  const isOpen = Boolean(event);
+  const channelBreakdown =
+    event?.eventKey === 'unread_social_activity' ? unreadSocialBreakdown : [];
+  const maxDailyEvents = Math.max(
+    ...timeSeries.map((bucket) => bucket.count),
+    1
+  );
+  const maxChannelEvents = Math.max(
+    ...channelBreakdown.map((item) => item.count),
+    1
+  );
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        {event ? `${formatEventLabel(event.eventKey)} breakdown` : 'Breakdown'}
+      </DialogTitle>
+      <DialogContent>
+        {event && (
+          <Stack spacing={3} sx={{ pt: 0.5 }}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip size="small" label={formatCategoryLabel(event.category)} />
+              <Chip
+                size="small"
+                label={`${event.count.toLocaleString()} ${pluralize(event.count, 'event')}`}
+              />
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`${event.uniqueUsers.toLocaleString()} ${pluralize(event.uniqueUsers, 'user')}`}
+              />
+            </Stack>
+
+            {event.eventKey === 'unread_social_activity' && (
+              <BreakdownSection
+                title="Channel type"
+                emptyText="No channel-type breakdown returned for this event."
+              >
+                {channelBreakdown.length > 0 &&
+                  channelBreakdown.map((item) => (
+                    <BreakdownBar
+                      key={item.channelType}
+                      label={formatUnreadChannelType(item.channelType)}
+                      value={item.count}
+                      maxValue={maxChannelEvents}
+                      chips={[
+                        `${item.count.toLocaleString()} ${pluralize(item.count, 'event')}`,
+                        `${item.uniqueUsers.toLocaleString()} ${pluralize(item.uniqueUsers, 'user')}`,
+                        `${item.unreadCount.toLocaleString()} unread`,
+                      ]}
+                      color="secondary.main"
+                    />
+                  ))}
+              </BreakdownSection>
+            )}
+
+            <BreakdownSection
+              title="Daily buckets"
+              emptyText="No daily breakdown returned for this event."
+            >
+              {timeSeries.length > 0 &&
+                timeSeries.map((bucket) => (
+                  <BreakdownBar
+                    key={`${bucket.bucketStart}:${bucket.eventKey}`}
+                    label={bucket.bucketStart.slice(0, 10)}
+                    value={bucket.count}
+                    maxValue={maxDailyEvents}
+                    chips={[
+                      `${bucket.count.toLocaleString()} ${pluralize(bucket.count, 'event')}`,
+                      `${bucket.uniqueUsers.toLocaleString()} ${pluralize(bucket.uniqueUsers, 'user')}`,
+                    ]}
+                    color="success.main"
+                  />
+                ))}
+            </BreakdownSection>
+          </Stack>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function BreakdownSection({
+  title,
+  emptyText,
+  children,
+}: {
+  title: string;
+  emptyText: string;
+  children: ReactNode;
+}) {
+  const hasChildren = Boolean(children);
+
+  return (
+    <Box>
+      <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+        {title}
+      </Typography>
+      {hasChildren ? (
+        <Stack spacing={1.5}>{children}</Stack>
+      ) : (
+        <Typography color="text.secondary">{emptyText}</Typography>
+      )}
+    </Box>
+  );
+}
+
+function BreakdownBar({
+  label,
+  value,
+  maxValue,
+  chips,
+  color,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  chips: string[];
+  color: string;
+}) {
+  return (
+    <Box>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={1}
+        sx={{ mb: 0.5 }}
+      >
+        <Typography variant="body2" fontWeight={700}>
+          {label}
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {chips.map((chip) => (
+            <Chip key={chip} size="small" variant="outlined" label={chip} />
+          ))}
+        </Stack>
+      </Stack>
+      <Box
+        sx={{
+          height: 10,
+          borderRadius: 1,
+          bgcolor: 'action.hover',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            width: `${(value / maxValue) * 100}%`,
+            height: '100%',
+            bgcolor: color,
+          }}
+        />
+      </Box>
     </Box>
   );
 }
@@ -577,6 +849,14 @@ function FilterSelect({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       sx={{ minWidth }}
+      InputLabelProps={{ shrink: true }}
+      SelectProps={{
+        displayEmpty: true,
+        renderValue: (selected) => {
+          const selectedValue = String(selected);
+          return selectedValue ? formatOptionLabel(selectedValue) : allLabel;
+        },
+      }}
     >
       <MenuItem value="">{allLabel}</MenuItem>
       {options.map((option) => (

@@ -39,6 +39,12 @@ const analyticsResponse = {
       count: 1,
       uniqueUsers: 1,
     },
+    {
+      eventKey: 'unread_social_activity',
+      category: 'social',
+      count: 10,
+      uniqueUsers: 5,
+    },
   ],
   timeSeries: [
     {
@@ -47,6 +53,13 @@ const analyticsResponse = {
       category: 'matches',
       count: 2,
       uniqueUsers: 1,
+    },
+    {
+      bucketStart: '2026-07-09T00:00:00.000Z',
+      eventKey: 'unread_social_activity',
+      category: 'social',
+      count: 10,
+      uniqueUsers: 5,
     },
   ],
   heatmapUtc: [
@@ -64,6 +77,28 @@ const analyticsResponse = {
     locales: ['en'],
     categories: ['matches', 'prediction_markets'],
     eventKeys: ['matches_screen_opened', 'prediction_market_order_placed'],
+  },
+  breakdowns: {
+    unreadSocialActivityByChannelType: [
+      {
+        channelType: 'public',
+        count: 6,
+        uniqueUsers: 4,
+        unreadCount: 19,
+      },
+      {
+        channelType: 'private',
+        count: 3,
+        uniqueUsers: 2,
+        unreadCount: 7,
+      },
+      {
+        channelType: 'challenge',
+        count: 1,
+        uniqueUsers: 1,
+        unreadCount: 2,
+      },
+    ],
   },
   recentEvents: [
     {
@@ -100,6 +135,12 @@ describe('AppEventsAnalyticsDashboard', () => {
     render(<AppEventsAnalyticsDashboard />);
 
     expect(await screen.findByText('Total events')).toBeInTheDocument();
+    expect(screen.getByText('All target apps')).toBeInTheDocument();
+    expect(screen.getByText('All platforms')).toBeInTheDocument();
+    expect(screen.getByText('All versions')).toBeInTheDocument();
+    expect(screen.getByText('All locales')).toBeInTheDocument();
+    expect(screen.getByText('All categories')).toBeInTheDocument();
+    expect(screen.getByText('All event keys')).toBeInTheDocument();
     expect(getAppEventsAnalytics).toHaveBeenCalledWith(
       expect.objectContaining({
         from: '2026-06-25T00:00:00.000Z',
@@ -115,6 +156,9 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getByText('Prediction Markets')).toBeInTheDocument();
     expect(screen.queryByText('matches_screen_opened')).not.toBeInTheDocument();
     expect(screen.queryByText('prediction_markets')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Unread Social Activity by Channel Type')
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Registered-user App Event analytics start/i)
     ).not.toBeInTheDocument();
@@ -142,6 +186,83 @@ describe('AppEventsAnalyticsDashboard', () => {
         })
       )
     );
+  });
+
+  it('always exposes the baseline app platforms and locales in filter dropdowns', async () => {
+    (getAppEventsAnalytics as jest.Mock).mockResolvedValue({
+      ...analyticsResponse,
+      filters: {
+        ...analyticsResponse.filters,
+        platforms: ['android'],
+        locales: ['en-US'],
+      },
+    });
+
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('Total events');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Platform' }));
+
+    expect(await screen.findByRole('option', { name: 'android' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('option', { name: 'ios' }));
+
+    await waitFor(() =>
+      expect(getAppEventsAnalytics).toHaveBeenLastCalledWith(
+        expect.objectContaining({ platform: 'ios' })
+      )
+    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Locale' }));
+
+    expect(await screen.findByRole('option', { name: 'en-US' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'pt-BR' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'es-419' })).toBeTruthy();
+  });
+
+  it('opens a row breakdown dialog with channel-type detail for unread social activity', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('Total events');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open breakdown for Unread social activity',
+      })
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Unread social activity breakdown',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Channel type')).toBeInTheDocument();
+    expect(screen.getByText('Public channels')).toBeInTheDocument();
+    expect(screen.getByText('Private chats')).toBeInTheDocument();
+    expect(screen.getByText('Live challenge chats')).toBeInTheDocument();
+    expect(screen.getByText('19 unread')).toBeInTheDocument();
+    expect(screen.getByText('Daily buckets')).toBeInTheDocument();
+    expect(screen.getByText('2026-07-09')).toBeInTheDocument();
+  });
+
+  it('opens a row breakdown dialog for non-social events', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('Total events');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open breakdown for Matches screen opened',
+      })
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'Matches screen opened breakdown',
+      })
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Channel type')).not.toBeInTheDocument();
+    expect(screen.getByText('Daily buckets')).toBeInTheDocument();
+    expect(screen.getByText('2026-07-09')).toBeInTheDocument();
   });
 
   it('renders a neutral empty state without the backend no-backfill annotation', async () => {

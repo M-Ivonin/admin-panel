@@ -250,6 +250,7 @@ describe('campaignsRepository editor adapter', () => {
       tokens: [],
       deeplinkOptions: [],
       sourceEvents: [],
+      sendGuardOptions: [],
       goalOptions: [],
       defaults: {
         eventMaxSendsPerUser: 3,
@@ -293,11 +294,11 @@ describe('campaignsRepository editor adapter', () => {
     mockedCreateCampaignDraft.mockResolvedValue(savedDraft);
     mockedScheduleCampaign.mockRejectedValue(new Error('Schedule failed'));
 
-    await expect(campaignsRepository.scheduleDraft(draft)).rejects.toMatchObject(
-      {
-        message: 'Schedule failed',
-        persistedDraftId: 'cmp_local_001',
-      }
-    );
+    await expect(
+      campaignsRepository.scheduleDraft(draft)
+    ).rejects.toMatchObject({
+      message: 'Schedule failed',
+      persistedDraftId: 'cmp_local_001',
+    });
   });
 });

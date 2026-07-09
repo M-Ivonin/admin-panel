@@ -312,10 +312,10 @@ describe('CampaignEditorPage', () => {
       await screen.findByRole('option', { name: 'No send guard' })
     ).toBeTruthy();
     expect(
-      await screen.findByRole('option', { name: 'Opened match center' })
+      await screen.findByRole('option', { name: 'Matches screen opened' })
     ).toBeTruthy();
     expect(
-      await screen.findByRole('option', { name: 'Chatted in AI chat' })
+      await screen.findByRole('option', { name: 'AI chat message sent' })
     ).toBeTruthy();
     fireEvent.click(
       await screen.findByRole('option', { name: 'Voted for prediction' })
@@ -347,7 +347,9 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.click(screen.getByText('Trigger + Journey'));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'Opened app' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'AI chat message sent' })
+    );
 
     expect(screen.queryByText('Cancellation window')).toBeNull();
     expect(screen.queryByText('Conditions')).toBeNull();
@@ -1306,6 +1308,61 @@ describe('CampaignEditorPage', () => {
       )
     ).toBeTruthy();
     expect(screen.getByText(/Source: CRM integration events/i)).toBeTruthy();
+  });
+
+  it('uses backend App Event catalog labels for event-based triggers', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.click(screen.getByText('Source event'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Entry event' }));
+
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox).getByRole('option', {
+        name: 'Prediction Market order placed',
+      })
+    ).toBeTruthy();
+    expect(
+      within(listbox).getByRole('option', { name: 'Private chat created' })
+    ).toBeTruthy();
+  });
+
+  it('keeps analytics-only App Events out of goal options while preserving trace-required screen goals', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tracked goal' }));
+
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox).queryByRole('option', { name: 'Checkout started' })
+    ).toBeNull();
+    expect(
+      within(listbox).getByRole('option', { name: 'Match center opened' })
+    ).toBeTruthy();
+  });
+
+  it('loads send guard actions from the backend catalog', async () => {
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Send guard' }));
+
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox).getByRole('option', { name: 'AI chat message sent' })
+    ).toBeTruthy();
+    expect(
+      within(listbox).getByRole('option', {
+        name: 'Live Match Challenge created',
+      })
+    ).toBeTruthy();
   });
 
   it('hides lifecycle stage events from the source event picker', async () => {
