@@ -166,13 +166,11 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getByLabelText('Thu 15:00 UTC 2 events')).toBeInTheDocument();
   });
 
-  it('reloads data immediately when filters change without losing the selected date range', async () => {
+  it('reloads data immediately when filters change and manually refreshes with the same filters', async () => {
     render(<AppEventsAnalyticsDashboard />);
 
     await screen.findByText('Total events');
-    expect(
-      screen.queryByRole('button', { name: 'Refresh' })
-    ).not.toBeInTheDocument();
+    const refreshButton = screen.getByRole('button', { name: 'Refresh' });
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Target App' }));
     fireEvent.click(await screen.findByRole('option', { name: 'TipsterBro' }));
@@ -185,6 +183,25 @@ describe('AppEventsAnalyticsDashboard', () => {
           targetApp: 'TipsterBro',
         })
       )
+    );
+
+    const callsBeforeManualRefresh = (getAppEventsAnalytics as jest.Mock).mock
+      .calls.length;
+
+    await waitFor(() => expect(refreshButton).not.toBeDisabled());
+    fireEvent.click(refreshButton);
+
+    await waitFor(() =>
+      expect(getAppEventsAnalytics).toHaveBeenCalledTimes(
+        callsBeforeManualRefresh + 1
+      )
+    );
+    expect(getAppEventsAnalytics).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        from: '2026-06-25T00:00:00.000Z',
+        to: '2026-07-09T23:59:59.999Z',
+        targetApp: 'TipsterBro',
+      })
     );
   });
 

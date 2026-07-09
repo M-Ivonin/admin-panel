@@ -406,6 +406,9 @@ export function AppEventsAnalyticsDashboard() {
                   minWidth={240}
                   formatOptionLabel={formatEventLabel}
                 />
+                <Button variant="contained" onClick={load} disabled={loading}>
+                  Refresh
+                </Button>
               </Stack>
             </CardContent>
           </Card>
