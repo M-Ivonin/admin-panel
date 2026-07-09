@@ -512,7 +512,7 @@ describe('CampaignEditorPage', () => {
 
     fireEvent.mouseDown(trackedGoalSelector);
     fireEvent.click(
-      await screen.findByRole('option', { name: 'Match center opened' })
+      await screen.findByRole('option', { name: 'Matches screen opened' })
     );
     fireEvent.change(screen.getByLabelText('Goal reward points'), {
       target: { value: '300' },
@@ -1342,7 +1342,7 @@ describe('CampaignEditorPage', () => {
       within(listbox).queryByRole('option', { name: 'Checkout started' })
     ).toBeNull();
     expect(
-      within(listbox).getByRole('option', { name: 'Match center opened' })
+      within(listbox).getByRole('option', { name: 'Matches screen opened' })
     ).toBeTruthy();
   });
 

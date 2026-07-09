@@ -341,7 +341,7 @@ const EDITOR_GOAL_OPTIONS: CampaignGoalOption[] = [
   },
   {
     goalKey: 'match_center_opened:trace_required_response',
-    label: 'Match center opened',
+    label: 'Matches screen opened',
     eventKey: 'match_center_opened',
     attributionMode: 'trace_required_response',
   },

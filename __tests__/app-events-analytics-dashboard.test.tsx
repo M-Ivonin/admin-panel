@@ -75,6 +75,7 @@ const analyticsResponse = {
     platforms: ['ios', 'android'],
     appVersions: ['1.1.280+282'],
     locales: ['en'],
+    sourceTypes: ['user', 'generated'],
     categories: ['matches', 'prediction_markets'],
     eventKeys: ['matches_screen_opened', 'prediction_market_order_placed'],
   },
@@ -100,6 +101,28 @@ const analyticsResponse = {
       },
     ],
   },
+  versionHealth: [
+    {
+      appVersion: '1.1.281+283',
+      platform: 'android',
+      targetApp: 'SirBro',
+      count: 4,
+      uniqueUsers: 3,
+      lastSeenAt: '2026-07-09T15:30:00.000Z',
+      topEventKey: 'matches_screen_opened',
+      topEventCount: 2,
+    },
+    {
+      appVersion: '1.1.280+282',
+      platform: 'ios',
+      targetApp: 'SirBro',
+      count: 2,
+      uniqueUsers: 1,
+      lastSeenAt: '2026-07-09T12:00:00.000Z',
+      topEventKey: 'ai_chat_opened',
+      topEventCount: 1,
+    },
+  ],
   recentEvents: [
     {
       id: 'event-1',
@@ -139,6 +162,7 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getByText('All platforms')).toBeInTheDocument();
     expect(screen.getByText('All versions')).toBeInTheDocument();
     expect(screen.getByText('All locales')).toBeInTheDocument();
+    expect(screen.getByText('All events')).toBeInTheDocument();
     expect(screen.getByText('All categories')).toBeInTheDocument();
     expect(screen.getByText('All event keys')).toBeInTheDocument();
     expect(getAppEventsAnalytics).toHaveBeenCalledWith(
@@ -151,7 +175,7 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getAllByText('Matches screen opened').length).toBeGreaterThan(
       0
     );
-    expect(screen.getByText('2 events')).toBeInTheDocument();
+    expect(screen.getAllByText('2 events').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1 user').length).toBeGreaterThan(0);
     expect(screen.getByText('Prediction Markets')).toBeInTheDocument();
     expect(screen.queryByText('matches_screen_opened')).not.toBeInTheDocument();
@@ -164,6 +188,29 @@ describe('AppEventsAnalyticsDashboard', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Recent Events')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Thu 15:00 UTC 2 events')).toBeInTheDocument();
+    expect(screen.getByText('App Version Health')).toBeInTheDocument();
+    expect(screen.getByText('2 versions')).toBeInTheDocument();
+    expect(screen.getByText('6 events')).toBeInTheDocument();
+    expect(screen.getByText('Top version')).toBeInTheDocument();
+    expect(screen.getByText('1.1.281+283')).toBeInTheDocument();
+    expect(screen.queryByText('1.1.280+282')).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open app version health breakdown',
+      })
+    );
+
+    expect(
+      screen.getByRole('dialog', { name: 'App Version Health breakdown' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('1.1.280+282')).toBeInTheDocument();
+    expect(screen.getAllByText('android').length).toBeGreaterThan(0);
+    expect(screen.getByText('4 events')).toBeInTheDocument();
+    expect(screen.getByText('3 users')).toBeInTheDocument();
+    expect(screen.getAllByText('Matches screen opened').length).toBeGreaterThan(
+      0
+    );
   });
 
   it('reloads data immediately when filters change and manually refreshes with the same filters', async () => {
@@ -236,6 +283,26 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getByRole('option', { name: 'es-419' })).toBeTruthy();
   });
 
+  it('filters analytics by event source type', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('Total events');
+    expect(screen.getByText('All events')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'User events' })
+    );
+
+    await waitFor(() =>
+      expect(getAppEventsAnalytics).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sourceType: 'user',
+        })
+      )
+    );
+  });
+
   it('opens a row breakdown dialog with channel-type detail for unread social activity', async () => {
     render(<AppEventsAnalyticsDashboard />);
 
@@ -254,8 +321,8 @@ describe('AppEventsAnalyticsDashboard', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Channel type')).toBeInTheDocument();
     expect(screen.getByText('Public channels')).toBeInTheDocument();
-    expect(screen.getByText('Private chats')).toBeInTheDocument();
-    expect(screen.getByText('Live challenge chats')).toBeInTheDocument();
+    expect(screen.getByText('Private channels')).toBeInTheDocument();
+    expect(screen.getByText('Live Challenge channels')).toBeInTheDocument();
     expect(screen.getByText('19 unread')).toBeInTheDocument();
     expect(screen.getByText('Daily buckets')).toBeInTheDocument();
     expect(screen.getByText('2026-07-09')).toBeInTheDocument();
@@ -294,6 +361,7 @@ describe('AppEventsAnalyticsDashboard', () => {
       countsByEvent: [],
       timeSeries: [],
       heatmapUtc: [],
+      versionHealth: [],
       recentEvents: [],
       nextCursor: null,
       emptyState: {
