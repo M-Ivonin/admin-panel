@@ -1094,7 +1094,7 @@ The backend seeds these catalog segments in the database:
 | Seed                          | Meaning                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------- |
 | `seg_new_users_setup_dropoff` | Pre-registration users who started onboarding but did not finish within 30 days |
-| `seg_at_risk_wau`             | Inactive today, active 1-6 days ago                                             |
+| `seg_at_risk_wau`             | Inactive for at least 48 hours, active less than 7 days ago                     |
 | `seg_at_risk_mau`             | Inactive this week, active 7-24 days ago                                        |
 | `seg_dead_user`               | Inactive for 25+ days                                                           |
 | `seg_reactivated`             | First day back after 7-24 inactive days                                         |
