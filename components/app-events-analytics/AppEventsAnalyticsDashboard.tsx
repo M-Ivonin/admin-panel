@@ -34,6 +34,7 @@ import {
   AppEventsHeatmapBucket,
   AppEventsTimeSeriesBucket,
   AppEventsUnreadSocialActivityChannelTypeBreakdown,
+  AppEventsVersionHealthItem,
   getAppEventsAnalytics,
 } from '@/lib/api/app-events-analytics';
 
@@ -41,8 +42,10 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DEFAULT_ANALYTICS_RANGE_DAYS = 14;
 const BASELINE_PLATFORM_OPTIONS = ['android', 'ios'];
 const BASELINE_LOCALE_OPTIONS = ['en-US', 'pt-BR', 'es-419'];
+const SOURCE_TYPE_OPTIONS = ['user', 'generated'];
 const EVENT_LABELS: Record<string, string> = {
   for_you_feed_opened: 'For You feed opened',
+  home_banner_clicked: 'Home banner clicked',
   subscription_paywall_opened: 'Subscription paywall opened',
   checkout_started: 'Checkout started',
   subscription_started: 'Subscription started',
@@ -50,12 +53,15 @@ const EVENT_LABELS: Record<string, string> = {
   subscription_renewed: 'Subscription renewed',
   ai_chat_opened: 'AI chat opened',
   chat_in_ai_chat: 'AI chat message sent',
+  ai_chat_prediction_voted: 'AI chat prediction voted',
   live_challenge_created: 'Live Match Challenge created',
   live_challenge_invite_accepted: 'Live Match Challenge invite accepted',
   private_chat_created: 'Private chat created',
   private_chat_message_sent: 'Private chat message sent',
+  channel_poll_voted: 'Channel poll voted',
+  public_channel_message_sent: 'Public channel message sent',
   public_chat_opened: 'Public chat opened',
-  match_center_opened: 'Match center opened',
+  match_center_opened: 'Matches screen opened',
   matches_screen_opened: 'Matches screen opened',
   match_details_opened: 'Match details opened',
   league_details_opened: 'League details opened',
@@ -65,7 +71,7 @@ const EVENT_LABELS: Record<string, string> = {
   live_screen_opened: 'Live screen opened',
   rewards_wallet_opened: 'Rewards wallet opened',
   prediction_market_order_placed: 'Prediction Market order placed',
-  voted_for_prediction: 'Voted for prediction',
+  voted_for_prediction: 'AI prediction vote confirmed',
   daily_streak_reminder: 'Daily streak reminder',
   weekly_quest_urgency: 'Weekly quest urgency',
   favorite_match_kickoff: 'Favorite match kickoff',
@@ -91,10 +97,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   social: 'Social',
   subscription: 'Subscription',
 };
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  user: 'User events',
+  generated: 'Generated events',
+};
 const UNREAD_CHANNEL_TYPE_LABELS: Record<string, string> = {
-  challenge: 'Live challenge chats',
+  challenge: 'Live Challenge channels',
   club: 'Club channels',
-  private: 'Private chats',
+  private: 'Private channels',
   public: 'Public channels',
   unknown: 'Unknown channels',
 };
@@ -164,6 +174,10 @@ function formatCategoryLabel(category: string): string {
     .join(' ');
 }
 
+function formatSourceTypeLabel(sourceType: string): string {
+  return SOURCE_TYPE_LABELS[sourceType] ?? sourceType;
+}
+
 function formatUnreadChannelType(channelType: string): string {
   const label = UNREAD_CHANNEL_TYPE_LABELS[channelType];
   if (label) {
@@ -181,6 +195,14 @@ function pluralize(value: number, singular: string, plural = `${singular}s`) {
   return value === 1 ? singular : plural;
 }
 
+function formatLastSeenAt(value: string): string {
+  if (!value) {
+    return 'Unknown';
+  }
+
+  return `${value.slice(0, 16).replace('T', ' ')} UTC`;
+}
+
 export function AppEventsAnalyticsDashboard() {
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
@@ -188,10 +210,12 @@ export function AppEventsAnalyticsDashboard() {
   const [platform, setPlatform] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [locale, setLocale] = useState('');
+  const [sourceType, setSourceType] = useState('');
   const [category, setCategory] = useState('');
   const [eventKey, setEventKey] = useState('');
   const [data, setData] = useState<AppEventsAnalyticsResponse | null>(null);
   const [selectedEventKey, setSelectedEventKey] = useState<string | null>(null);
+  const [isVersionHealthOpen, setIsVersionHealthOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -203,10 +227,21 @@ export function AppEventsAnalyticsDashboard() {
       platform,
       appVersion,
       locale,
+      sourceType,
       category,
       eventKeys: eventKey ? [eventKey] : undefined,
     }),
-    [appVersion, category, eventKey, from, locale, platform, targetApp, to]
+    [
+      appVersion,
+      category,
+      eventKey,
+      from,
+      locale,
+      platform,
+      sourceType,
+      targetApp,
+      to,
+    ]
   );
 
   const load = useCallback(async () => {
@@ -276,6 +311,15 @@ export function AppEventsAnalyticsDashboard() {
         locale
       ),
     [data?.filters.locales, locale]
+  );
+  const sourceTypeOptions = useMemo(
+    () =>
+      optionsWithRequired(
+        data?.filters.sourceTypes ?? [],
+        SOURCE_TYPE_OPTIONS,
+        sourceType
+      ),
+    [data?.filters.sourceTypes, sourceType]
   );
   const categoryOptions = useMemo(
     () => optionsWithCurrent(data?.filters.categories ?? [], category),
@@ -390,6 +434,14 @@ export function AppEventsAnalyticsDashboard() {
                   onChange={setLocale}
                 />
                 <FilterSelect
+                  label="Source"
+                  value={sourceType}
+                  options={sourceTypeOptions}
+                  allLabel="All events"
+                  onChange={setSourceType}
+                  formatOptionLabel={formatSourceTypeLabel}
+                />
+                <FilterSelect
                   label="Category"
                   value={category}
                   options={categoryOptions}
@@ -449,6 +501,11 @@ export function AppEventsAnalyticsDashboard() {
                   value={data.summary.businessActionEvents.toLocaleString()}
                 />
               </Box>
+
+              <VersionHealthCard
+                items={data.versionHealth ?? []}
+                onOpen={() => setIsVersionHealthOpen(true)}
+              />
 
               <Card>
                 <CardContent>
@@ -651,7 +708,175 @@ export function AppEventsAnalyticsDashboard() {
         unreadSocialBreakdown={unreadSocialBreakdown}
         onClose={() => setSelectedEventKey(null)}
       />
+      <VersionHealthBreakdownDialog
+        items={data?.versionHealth ?? []}
+        open={isVersionHealthOpen}
+        onClose={() => setIsVersionHealthOpen(false)}
+      />
     </Box>
+  );
+}
+
+function VersionHealthCard({
+  items,
+  onOpen,
+}: {
+  items: AppEventsVersionHealthItem[];
+  onOpen: () => void;
+}) {
+  const totalEvents = items.reduce((sum, item) => sum + item.count, 0);
+  const topVersion = items[0] ?? null;
+
+  return (
+    <Card>
+      <ButtonBase
+        onClick={items.length > 0 ? onOpen : undefined}
+        disabled={items.length === 0}
+        aria-label="Open app version health breakdown"
+        sx={{
+          width: '100%',
+          display: 'block',
+          textAlign: 'left',
+          borderRadius: 1,
+          '&:hover': items.length > 0 ? { bgcolor: 'action.hover' } : undefined,
+        }}
+      >
+        <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1.5}
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+            justifyContent="space-between"
+          >
+            <Stack spacing={0.25}>
+              <Typography variant="subtitle1" fontWeight={700}>
+                App Version Health
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {items.length === 0
+                  ? 'No app version metadata in this range.'
+                  : 'Tap to inspect version, platform, and target app breakdown.'}
+              </Typography>
+            </Stack>
+            {items.length > 0 && topVersion ? (
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Chip
+                  size="small"
+                  label={`${items.length.toLocaleString()} ${pluralize(items.length, 'version')}`}
+                />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`${totalEvents.toLocaleString()} ${pluralize(totalEvents, 'event')}`}
+                />
+                <Chip size="small" label="Top version" />
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={topVersion.appVersion}
+                />
+              </Stack>
+            ) : null}
+          </Stack>
+        </CardContent>
+      </ButtonBase>
+    </Card>
+  );
+}
+
+function VersionHealthBreakdownDialog({
+  items,
+  open,
+  onClose,
+}: {
+  items: AppEventsVersionHealthItem[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>App Version Health breakdown</DialogTitle>
+      <DialogContent>
+        <Stack spacing={1.25} sx={{ pt: 0.5 }}>
+          {items.length === 0 ? (
+            <Typography color="text.secondary">
+              No app version metadata in this range.
+            </Typography>
+          ) : (
+            items.map((item) => (
+              <Box
+                key={`${item.appVersion}:${item.platform}:${item.targetApp}`}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    md: 'minmax(220px, 1.2fr) minmax(180px, 1fr) minmax(160px, 0.8fr) minmax(220px, 1.2fr)',
+                  },
+                  gap: 1.5,
+                  alignItems: 'center',
+                  py: 1.25,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                  '&:last-child': {
+                    borderBottom: 0,
+                  },
+                }}
+              >
+                <Stack spacing={0.75}>
+                  <Typography variant="body2" fontWeight={700}>
+                    {item.appVersion}
+                  </Typography>
+                  <Stack
+                    direction="row"
+                    spacing={0.75}
+                    flexWrap="wrap"
+                    useFlexGap
+                  >
+                    <Chip size="small" label={item.platform} />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={item.targetApp}
+                    />
+                  </Stack>
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip
+                    size="small"
+                    label={`${item.count.toLocaleString()} ${pluralize(item.count, 'event')}`}
+                  />
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${item.uniqueUsers.toLocaleString()} ${pluralize(item.uniqueUsers, 'user')}`}
+                  />
+                </Stack>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Last seen
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatLastSeenAt(item.lastSeenAt)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Top event
+                  </Typography>
+                  <Typography variant="body2">
+                    {formatEventLabel(item.topEventKey)}
+                    {` (${item.topEventCount.toLocaleString()})`}
+                  </Typography>
+                </Box>
+              </Box>
+            ))
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -716,7 +941,7 @@ function EventBreakdownDialog({
                         `${item.uniqueUsers.toLocaleString()} ${pluralize(item.uniqueUsers, 'user')}`,
                         `${item.unreadCount.toLocaleString()} unread`,
                       ]}
-                      color="secondary.main"
+                      color="success.main"
                     />
                   ))}
               </BreakdownSection>

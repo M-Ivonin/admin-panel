@@ -623,7 +623,7 @@ function getSourceEventLabel(eventKey: string): string {
     case 'onboarding_completed':
       return 'Completed onboarding';
     case 'match_center_opened':
-      return 'Opened match center';
+      return 'Matches screen opened';
     case 'matches_screen_opened':
       return 'Matches screen opened organically';
     case 'match_details_opened':

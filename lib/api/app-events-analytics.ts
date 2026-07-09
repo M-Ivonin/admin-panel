@@ -8,6 +8,7 @@ export interface AppEventsAnalyticsParams {
   appVersion?: string;
   locale?: string;
   category?: string;
+  sourceType?: string;
   eventKeys?: string[];
   cursor?: string;
   limit?: string;
@@ -56,6 +57,7 @@ export interface AppEventsAnalyticsFilters {
   platforms: string[];
   appVersions: string[];
   locales: string[];
+  sourceTypes: string[];
   categories: string[];
   eventKeys: string[];
 }
@@ -69,6 +71,17 @@ export interface AppEventsUnreadSocialActivityChannelTypeBreakdown {
 
 export interface AppEventsAnalyticsBreakdowns {
   unreadSocialActivityByChannelType: AppEventsUnreadSocialActivityChannelTypeBreakdown[];
+}
+
+export interface AppEventsVersionHealthItem {
+  appVersion: string;
+  platform: string;
+  targetApp: string;
+  count: number;
+  uniqueUsers: number;
+  lastSeenAt: string;
+  topEventKey: string;
+  topEventCount: number;
 }
 
 export interface AppEventsRecentEvent {
@@ -93,6 +106,7 @@ export interface AppEventsAnalyticsResponse {
   heatmapUtc: AppEventsHeatmapBucket[];
   filters: AppEventsAnalyticsFilters;
   breakdowns?: AppEventsAnalyticsBreakdowns;
+  versionHealth: AppEventsVersionHealthItem[];
   recentEvents: AppEventsRecentEvent[];
   nextCursor: string | null;
   emptyState: {

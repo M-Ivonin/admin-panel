@@ -296,7 +296,7 @@ describe('campaign selectors', () => {
     expect(canScheduleCampaign(draft)).toBe(true);
   });
 
-  it('summarizes Match center opened send guards on journey steps', () => {
+  it('summarizes Matches screen opened send guards on journey steps', () => {
     const draft = createEmptyCampaignDraft();
     draft.journey.steps[0].sendGuards = [{ action: 'match_center_opened' }];
 
@@ -304,7 +304,7 @@ describe('campaign selectors', () => {
     const summary = getCampaignValidationSummary(draft);
 
     expect(reviewModel.journey[0].value).toContain(
-      'skips if Opened match center since journey start'
+      'skips if Matches screen opened since journey start'
     );
     expect(summary.errors).not.toContain(
       'Step step_1 has an unsupported send guard.'

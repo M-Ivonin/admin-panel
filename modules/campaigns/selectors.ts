@@ -28,7 +28,7 @@ const TOKEN_PATTERN = /{{([a-z_]+)}}/g;
 const SOURCE_EVENT_LABELS: Record<string, string> = {
   app_opened: 'Opened app',
   onboarding_completed: 'Completed onboarding',
-  match_center_opened: 'Opened match center',
+  match_center_opened: 'Matches screen opened',
   rewards_wallet_opened: 'Opened rewards wallet',
   subscription_started: 'Started subscription',
   subscription_renewed: 'Renewed subscription',
@@ -59,7 +59,7 @@ export const SEND_GUARD_ACTION_LABELS: Partial<
   Record<CampaignSendGuardAction, string>
 > = {
   opened_app: 'Opened app',
-  match_center_opened: 'Opened match center',
+  match_center_opened: 'Matches screen opened',
   rewards_wallet_opened: 'Opened rewards wallet',
   live_challenge_created: 'Created live challenge',
   voted_for_prediction: 'Voted for prediction',
