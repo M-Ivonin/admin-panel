@@ -46,10 +46,31 @@ const recentEvent = {
 
 describe('OnboardingAnalyticsDashboard', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-09T08:47:47.000Z'));
     (getOnboardingFunnelAnalytics as jest.Mock).mockReset();
     (getOnboardingFunnelAnalytics as jest.Mock).mockResolvedValue(
       analyticsResponse
     );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('loads the last 7 days by default on first page open', async () => {
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(await screen.findByText('Started')).toBeInTheDocument();
+
+    expect(getOnboardingFunnelAnalytics).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: '2026-07-02T00:00:00.000Z',
+        to: '2026-07-09T23:59:59.999Z',
+      })
+    );
+    expect(screen.getByLabelText('From')).toHaveValue('2026-07-02');
+    expect(screen.getByLabelText('To')).toHaveValue('2026-07-09');
   });
 
   it('renders platform, locale, and app version filters as dropdowns', async () => {
