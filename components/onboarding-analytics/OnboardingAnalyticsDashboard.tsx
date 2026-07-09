@@ -35,6 +35,7 @@ const STEP_LABELS: Record<string, string> = {
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const RECENT_EVENTS_PAGE_SIZE = '50';
+const DEFAULT_ANALYTICS_RANGE_DAYS = 7;
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -48,7 +49,7 @@ function formatSeconds(value: number | null): string {
 
 function defaultFrom(): string {
   const date = new Date();
-  date.setUTCDate(date.getUTCDate() - 30);
+  date.setUTCDate(date.getUTCDate() - DEFAULT_ANALYTICS_RANGE_DAYS);
   return date.toISOString().slice(0, 10);
 }
 
