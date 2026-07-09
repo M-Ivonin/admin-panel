@@ -89,6 +89,29 @@ describe('OnboardingAnalyticsDashboard', () => {
     ).toBeInTheDocument();
   });
 
+  it('reloads data immediately when a filter date changes', async () => {
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(await screen.findByText('Started')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Refresh' })
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('From'), {
+      target: { value: '2026-07-01' },
+    });
+
+    await waitFor(() =>
+      expect(getOnboardingFunnelAnalytics).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          from: '2026-07-01T00:00:00.000Z',
+          to: '2026-07-09T23:59:59.999Z',
+          app_product: 'SirBro',
+        })
+      )
+    );
+  });
+
   it('renders the dashboard navigation header', async () => {
     render(<OnboardingAnalyticsDashboard />);
 

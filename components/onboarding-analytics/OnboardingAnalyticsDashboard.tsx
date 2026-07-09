@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -102,18 +102,21 @@ export function OnboardingAnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadingMoreRecentEvents, setLoadingMoreRecentEvents] = useState(false);
 
-  const buildAnalyticsParams = (recentEventsCursor?: string) => ({
-    from: from ? `${from}T00:00:00.000Z` : undefined,
-    to: to ? `${to}T23:59:59.999Z` : undefined,
-    platform,
-    locale,
-    app_version: appVersion,
-    app_product: 'SirBro',
-    recent_events_limit: RECENT_EVENTS_PAGE_SIZE,
-    recent_events_cursor: recentEventsCursor,
-  });
+  const buildAnalyticsParams = useCallback(
+    (recentEventsCursor?: string) => ({
+      from: from ? `${from}T00:00:00.000Z` : undefined,
+      to: to ? `${to}T23:59:59.999Z` : undefined,
+      platform,
+      locale,
+      app_version: appVersion,
+      app_product: 'SirBro',
+      recent_events_limit: RECENT_EVENTS_PAGE_SIZE,
+      recent_events_cursor: recentEventsCursor,
+    }),
+    [appVersion, from, locale, platform, to]
+  );
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -124,12 +127,11 @@ export function OnboardingAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildAnalyticsParams]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   const loadMoreRecentEvents = async () => {
     if (!data?.recentEventsNextCursor || loadingMoreRecentEvents) {
@@ -297,9 +299,6 @@ export function OnboardingAnalyticsDashboard() {
                     </MenuItem>
                   ))}
                 </TextField>
-                <Button variant="contained" onClick={load} disabled={loading}>
-                  Refresh
-                </Button>
               </Stack>
             </CardContent>
           </Card>
