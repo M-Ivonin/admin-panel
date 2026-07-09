@@ -15,6 +15,7 @@ import type {
   CampaignListItem,
   CampaignLocale,
   CampaignScenarioTemplateSummary,
+  CampaignSendGuardOption,
   CampaignSavedSegmentSummary,
   CampaignSourceEventOption,
   CampaignStatus,
@@ -268,10 +269,60 @@ const EDITOR_SOURCE_EVENTS: CampaignSourceEventOption[] = [
   },
   {
     eventKey: 'prediction_market_order_placed',
-    producerKey: 'crm_source_events',
+    producerKey: 'app_events',
     label: 'Prediction Market order placed',
     description:
-      'User placed a Prediction Market order and the backend emitted the CRM source event.',
+      'User placed a Prediction Market order and the backend emitted the App Event.',
+    category: 'prediction_markets',
+  },
+  {
+    eventKey: 'private_chat_created',
+    producerKey: 'app_events',
+    label: 'Private chat created',
+    description:
+      'Backend-owned private chat creation emitted once the private channel exists.',
+    category: 'social',
+  },
+  {
+    eventKey: 'level_up',
+    producerKey: 'app_events',
+    label: 'Reached level',
+    description:
+      'Backend progression event emitted when a user reaches a higher level.',
+    category: 'progression',
+  },
+];
+
+const EDITOR_SEND_GUARD_OPTIONS: CampaignSendGuardOption[] = [
+  {
+    action: 'chat_in_ai_chat',
+    label: 'AI chat message sent',
+    category: 'ai_chat',
+  },
+  {
+    action: 'live_challenge_created',
+    label: 'Live Match Challenge created',
+    category: 'live_challenge',
+  },
+  {
+    action: 'match_center_opened',
+    label: 'Matches screen opened',
+    category: 'matches',
+  },
+  {
+    action: 'live_opened',
+    label: 'Live screen opened',
+    category: 'live',
+  },
+  {
+    action: 'rewards_wallet_opened',
+    label: 'Rewards wallet opened',
+    category: 'campaign',
+  },
+  {
+    action: 'voted_for_prediction',
+    label: 'Voted for prediction',
+    category: 'prediction_markets',
   },
 ];
 
@@ -421,6 +472,7 @@ function buildEditorCatalog(): CampaignEditorCatalog {
     tokens: clone(EDITOR_TOKENS),
     deeplinkOptions: clone(EDITOR_DEEPLINK_OPTIONS),
     sourceEvents: clone(EDITOR_SOURCE_EVENTS),
+    sendGuardOptions: clone(EDITOR_SEND_GUARD_OPTIONS),
     goalOptions: clone(EDITOR_GOAL_OPTIONS),
     defaults: {
       eventMaxSendsPerUser: 3,

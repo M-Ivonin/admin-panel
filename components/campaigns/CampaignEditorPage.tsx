@@ -66,6 +66,7 @@ import type {
   CampaignLocale,
   CampaignScenarioTemplateSummary,
   CampaignSendGuardAction,
+  CampaignSendGuardOption,
   CampaignStateDispatchMode,
   CampaignStepLocaleContent,
   CampaignStatus,
@@ -140,14 +141,6 @@ const TARGET_APP_OPTIONS: Array<{ value: CampaignTargetApp; label: string }> = [
   { value: 'SirBro', label: 'SirBro' },
   { value: 'TipsterBro', label: 'TipsterBro' },
 ];
-
-const SEND_GUARD_ACTION_OPTIONS: Array<{
-  action: CampaignSendGuardAction;
-  label: string;
-}> = Object.entries(SEND_GUARD_ACTION_LABELS).map(([action, label]) => ({
-  action: action as CampaignSendGuardAction,
-  label,
-}));
 
 interface CampaignEditorPageProps {
   mode: 'create' | 'edit';
@@ -602,6 +595,10 @@ function getActiveCampaignTemplateReason(
 }
 
 function getSourceEventProducerLabel(producerKey: string): string {
+  if (producerKey === 'app_events') {
+    return 'App Events catalog';
+  }
+
   if (producerKey === 'crm_source_events') {
     return 'CRM integration events';
   }
@@ -617,10 +614,28 @@ function getSourceEventLabel(eventKey: string): string {
   switch (eventKey) {
     case 'app_opened':
       return 'Opened app';
+    case 'for_you_feed_opened':
+      return 'For You feed opened';
+    case 'subscription_paywall_opened':
+      return 'Subscription paywall opened';
+    case 'checkout_started':
+      return 'Checkout started';
     case 'onboarding_completed':
       return 'Completed onboarding';
     case 'match_center_opened':
       return 'Opened match center';
+    case 'matches_screen_opened':
+      return 'Matches screen opened organically';
+    case 'match_details_opened':
+      return 'Match details opened';
+    case 'league_details_opened':
+      return 'League details opened';
+    case 'team_hub_opened':
+      return 'Team hub opened';
+    case 'league_hub_opened':
+      return 'League hub opened';
+    case 'live_screen_opened':
+      return 'Live screen opened organically';
     case 'rewards_wallet_opened':
       return 'Opened rewards wallet';
     case 'subscription_started':
@@ -633,6 +648,16 @@ function getSourceEventLabel(eventKey: string): string {
       return 'Daily streak reminder';
     case 'weekly_quest_urgency':
       return 'Weekly quest urgency';
+    case 'ai_chat_opened':
+      return 'AI chat opened';
+    case 'chat_in_ai_chat':
+      return 'AI chat message sent';
+    case 'private_chat_created':
+      return 'Private chat created';
+    case 'private_chat_message_sent':
+      return 'Private chat message sent';
+    case 'public_chat_opened':
+      return 'Public chat opened';
     case 'favorite_match_kickoff':
       return 'Favorite match kickoff';
     case 'weekly_stats_digest':
@@ -643,6 +668,8 @@ function getSourceEventLabel(eventKey: string): string {
       return 'Live challenge starting soon';
     case 'live_challenge_results':
       return 'Live challenge results available';
+    case 'live_challenge_invite_accepted':
+      return 'Live challenge invite accepted';
     case 'stage_at_risk_wau':
       return 'Became at-risk weekly user';
     case 'stage_at_risk_mau':
@@ -653,6 +680,10 @@ function getSourceEventLabel(eventKey: string): string {
       return 'Reactivated after 7-24 days';
     case 'stage_resurrected':
       return 'Reactivated after 25+ days';
+    case 'level_up':
+      return 'Reached level';
+    case 'near_level_up':
+      return 'Near level';
     default:
       return eventKey;
   }
@@ -711,6 +742,15 @@ function getCatalogCompatibilityReason(
     option.compatibilityReason ??
     `Not compatible with ${targetApps.join(', ')} Target Apps.`
   );
+}
+
+function getFallbackSendGuardOption(
+  action: CampaignSendGuardAction
+): CampaignSendGuardOption {
+  return {
+    action,
+    label: SEND_GUARD_ACTION_LABELS[action] ?? getSourceEventLabel(action),
+  };
 }
 
 function CatalogOptionLabel({
@@ -1592,6 +1632,14 @@ export function CampaignEditorPage({
   ): ReactNode {
     const guard = step.sendGuards?.[0] ?? null;
     const selectedAction = guard?.action ?? '';
+    const sendGuardOptions = [...state.catalog.sendGuardOptions];
+
+    if (
+      guard &&
+      !sendGuardOptions.some((option) => option.action === guard.action)
+    ) {
+      sendGuardOptions.unshift(getFallbackSendGuardOption(guard.action));
+    }
 
     return (
       <Stack spacing={1.25}>
@@ -1609,7 +1657,10 @@ export function CampaignEditorPage({
                 const action = selected as CampaignSendGuardAction | '';
 
                 return action
-                  ? (SEND_GUARD_ACTION_LABELS[action] ?? action)
+                  ? (sendGuardOptions.find((option) => option.action === action)
+                      ?.label ??
+                      SEND_GUARD_ACTION_LABELS[action] ??
+                      getSourceEventLabel(action))
                   : 'No send guard';
               }}
               onChange={(event) => {
@@ -1627,11 +1678,25 @@ export function CampaignEditorPage({
               }}
             >
               <MenuItem value="">No send guard</MenuItem>
-              {SEND_GUARD_ACTION_OPTIONS.map((option) => (
-                <MenuItem key={option.action} value={option.action}>
-                  {option.label}
-                </MenuItem>
-              ))}
+              {sendGuardOptions.map((option) => {
+                const compatibilityReason = getCatalogCompatibilityReason(
+                  option,
+                  state.draft.targetApps
+                );
+
+                return (
+                  <MenuItem
+                    key={option.action}
+                    value={option.action}
+                    disabled={compatibilityReason !== null}
+                  >
+                    <CatalogOptionLabel
+                      label={option.label}
+                      reason={compatibilityReason}
+                    />
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
           <Typography

@@ -60,6 +60,17 @@ export interface AppEventsAnalyticsFilters {
   eventKeys: string[];
 }
 
+export interface AppEventsUnreadSocialActivityChannelTypeBreakdown {
+  channelType: string;
+  count: number;
+  uniqueUsers: number;
+  unreadCount: number;
+}
+
+export interface AppEventsAnalyticsBreakdowns {
+  unreadSocialActivityByChannelType: AppEventsUnreadSocialActivityChannelTypeBreakdown[];
+}
+
 export interface AppEventsRecentEvent {
   id: string;
   eventKey: string;
@@ -81,6 +92,7 @@ export interface AppEventsAnalyticsResponse {
   timeSeries: AppEventsTimeSeriesBucket[];
   heatmapUtc: AppEventsHeatmapBucket[];
   filters: AppEventsAnalyticsFilters;
+  breakdowns?: AppEventsAnalyticsBreakdowns;
   recentEvents: AppEventsRecentEvent[];
   nextCursor: string | null;
   emptyState: {

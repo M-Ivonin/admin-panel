@@ -208,6 +208,7 @@ const EMPTY_CATALOG: CampaignEditorCatalog = {
   tokens: [],
   deeplinkOptions: [],
   sourceEvents: [],
+  sendGuardOptions: [],
   goalOptions: [],
   defaults: {
     eventMaxSendsPerUser: null,

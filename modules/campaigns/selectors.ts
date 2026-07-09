@@ -55,15 +55,16 @@ const SOURCE_EVENT_SOURCE_LABELS: Record<string, string> = {
   channels_favorite_matches: 'Favorite matches service',
 };
 
-export const SEND_GUARD_ACTION_LABELS: Record<CampaignSendGuardAction, string> =
-  {
-    opened_app: 'Opened app',
-    match_center_opened: 'Opened match center',
-    rewards_wallet_opened: 'Opened rewards wallet',
-    live_challenge_created: 'Created live challenge',
-    voted_for_prediction: 'Voted for prediction',
-    chat_in_ai_chat: 'Chatted in AI chat',
-  };
+export const SEND_GUARD_ACTION_LABELS: Partial<
+  Record<CampaignSendGuardAction, string>
+> = {
+  opened_app: 'Opened app',
+  match_center_opened: 'Opened match center',
+  rewards_wallet_opened: 'Opened rewards wallet',
+  live_challenge_created: 'Created live challenge',
+  voted_for_prediction: 'Voted for prediction',
+  chat_in_ai_chat: 'Chatted in AI chat',
+};
 
 /**
  * Warns operators that tracked-goal runtime behavior is disabled for the draft.

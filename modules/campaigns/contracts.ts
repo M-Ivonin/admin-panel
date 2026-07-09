@@ -73,10 +73,26 @@ export type CampaignStatsPeriod =
   | 'last_7_days'
   | 'custom';
 
-export type CampaignSourceEventKey =
+type KnownCampaignSourceEventKey =
   | 'app_opened'
   | 'onboarding_completed'
   | 'match_center_opened'
+  | 'matches_screen_opened'
+  | 'live_screen_opened'
+  | 'for_you_feed_opened'
+  | 'subscription_paywall_opened'
+  | 'checkout_started'
+  | 'ai_chat_opened'
+  | 'private_chat_created'
+  | 'private_chat_message_sent'
+  | 'public_chat_opened'
+  | 'match_details_opened'
+  | 'league_details_opened'
+  | 'team_hub_opened'
+  | 'league_hub_opened'
+  | 'live_challenge_invite_accepted'
+  | 'level_up'
+  | 'near_level_up'
   | 'live_opened'
   | 'rewards_wallet_opened'
   | 'subscription_started'
@@ -99,18 +115,17 @@ export type CampaignSourceEventKey =
   | 'stage_reactivated'
   | 'stage_resurrected';
 
+export type CampaignSourceEventKey =
+  | KnownCampaignSourceEventKey
+  | (string & Record<never, never>);
+
 export type CampaignSourceEventProducerKey =
   | 'crm_source_events'
-  | 'channels_favorite_matches';
+  | 'channels_favorite_matches'
+  | 'app_events';
 
 export type CampaignJourneyExitRule = 'none' | 'stop_on_goal';
-export type CampaignSendGuardAction =
-  | 'opened_app'
-  | 'match_center_opened'
-  | 'rewards_wallet_opened'
-  | 'live_challenge_created'
-  | 'voted_for_prediction'
-  | 'chat_in_ai_chat';
+export type CampaignSendGuardAction = 'opened_app' | CampaignSourceEventKey;
 
 export interface CampaignCompatibilityMetadata {
   compatibleTargetApps?: CampaignTargetApp[];
@@ -303,6 +318,7 @@ export interface CampaignSourceEventOption
   producerKey: CampaignSourceEventProducerKey;
   label: string;
   description: string;
+  category?: string;
 }
 
 export interface CampaignTemplateDefinition {
@@ -347,6 +363,7 @@ export interface CampaignEditorCatalog {
   tokens: CampaignTokenDefinition[];
   deeplinkOptions: CampaignDeeplinkOption[];
   sourceEvents: CampaignSourceEventOption[];
+  sendGuardOptions: CampaignSendGuardOption[];
   goalOptions: CampaignGoalOption[];
   defaults: {
     eventMaxSendsPerUser: number | null;
@@ -435,6 +452,12 @@ export interface CampaignGoalDefinition {
   eventKey: CampaignSourceEventKey;
   attributionMode: CampaignGoalAttributionMode;
   rewardPoints?: number;
+}
+
+export interface CampaignSendGuardOption extends CampaignCompatibilityMetadata {
+  action: CampaignSendGuardAction;
+  label: string;
+  category?: string;
 }
 
 export interface CampaignGoalOption extends CampaignCompatibilityMetadata {
