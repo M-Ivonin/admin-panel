@@ -40,13 +40,27 @@ export default function DashboardPage() {
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         {/* Header */}
         <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box
+            sx={{
+              maxWidth: 1280,
+              mx: 'auto',
+              px: { xs: 2, sm: 3, lg: 4 },
+              py: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <Box>
               <Typography variant="h5" fontWeight="bold" color="text.primary">
                 Admin Dashboard
               </Typography>
               {user && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
                   Welcome, {user.name} ({user.email})
                 </Typography>
               )}
@@ -63,13 +77,43 @@ export default function DashboardPage() {
         </Paper>
 
         {/* Main content */}
-        <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 6 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 3 }}>
+        <Box
+          sx={{
+            maxWidth: 1280,
+            mx: 'auto',
+            px: { xs: 2, sm: 3, lg: 4 },
+            py: 6,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                lg: 'repeat(3, 1fr)',
+              },
+              gap: 3,
+            }}
+          >
             {/* Bot Chat Card */}
             <Link href="/dashboard/bot-chat" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'primary.main',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
                     <Chat />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -84,9 +128,22 @@ export default function DashboardPage() {
 
             {/* Users Card */}
             <Link href="/dashboard/users" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'success.main',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
                     <People />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -99,10 +156,26 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/prediction-evaluations" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/prediction-evaluations"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'warning.main', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'warning.main',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
                     <Analytics />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -115,26 +188,87 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/onboarding-analytics" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/onboarding-analytics"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}
+                  >
                     <Analytics />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
                     Onboarding Analytics
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Track onboarding completion, drop-offs, transitions, and heatmap activity
+                    Track onboarding completion, drop-offs, transitions, and
+                    heatmap activity
                   </Typography>
                 </CardActionArea>
               </Card>
             </Link>
 
-            <Link href="/dashboard/campaigns" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/app-events-analytics"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'primary.dark', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'secondary.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
+                    <Analytics />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    App Events Analytics
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Inspect registered-user App Event behavior, filters,
+                    heatmap, and recent events
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
+              href="/dashboard/campaigns"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'primary.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
                     <Campaign />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -147,26 +281,54 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/home-banner" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/home-banner"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'info.main', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{ bgcolor: 'info.main', width: 48, height: 48, mb: 2 }}
+                  >
                     <ViewCarousel />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
                     Home Banner
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Control the localized promo banner shown on the app Home screen
+                    Control the localized promo banner shown on the app Home
+                    screen
                   </Typography>
                 </CardActionArea>
               </Card>
             </Link>
 
-            <Link href="/dashboard/revenue-ledger" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/revenue-ledger"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'success.dark', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'success.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
                     <ReceiptLong />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -179,10 +341,21 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/dashboard/remote-diagnostics" style={{ textDecoration: 'none' }}>
-              <Card sx={{ height: '100%', '&:hover': { boxShadow: 6 }, transition: 'box-shadow 0.2s' }}>
+            <Link
+              href="/dashboard/remote-diagnostics"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
-                  <Avatar sx={{ bgcolor: 'error.main', width: 48, height: 48, mb: 2 }}>
+                  <Avatar
+                    sx={{ bgcolor: 'error.main', width: 48, height: 48, mb: 2 }}
+                  >
                     <BugReport />
                   </Avatar>
                   <Typography variant="h6" color="text.primary" gutterBottom>
@@ -198,7 +371,14 @@ export default function DashboardPage() {
             {/* Settings Card */}
             <Card sx={{ height: '100%', opacity: 0.5 }}>
               <CardContent sx={{ p: 3 }}>
-                <Avatar sx={{ bgcolor: 'secondary.main', width: 48, height: 48, mb: 2 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: 'secondary.main',
+                    width: 48,
+                    height: 48,
+                    mb: 2,
+                  }}
+                >
                   <Settings />
                 </Avatar>
                 <Typography variant="h6" color="text.primary" gutterBottom>
