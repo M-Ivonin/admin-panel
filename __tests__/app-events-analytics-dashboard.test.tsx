@@ -80,6 +80,29 @@ const analyticsResponse = {
     eventKeys: ['matches_screen_opened', 'prediction_market_order_placed'],
   },
   breakdowns: {
+    userEventsDistribution: [
+      {
+        eventKey: 'matches_screen_opened',
+        category: 'matches',
+        count: 24,
+        uniqueUsers: 12,
+        share: 0.6,
+      },
+      {
+        eventKey: 'ai_chat_prediction_voted',
+        category: 'ai_chat',
+        count: 12,
+        uniqueUsers: 8,
+        share: 0.3,
+      },
+      {
+        eventKey: 'prediction_market_order_placed',
+        category: 'prediction_markets',
+        count: 4,
+        uniqueUsers: 3,
+        share: 0.1,
+      },
+    ],
     unreadSocialActivityByChannelType: [
       {
         channelType: 'public',
@@ -194,6 +217,13 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getByText('Top version')).toBeInTheDocument();
     expect(screen.getByText('1.1.281+283')).toBeInTheDocument();
     expect(screen.queryByText('1.1.280+282')).not.toBeInTheDocument();
+    expect(screen.getByText('User Events Distribution')).toBeInTheDocument();
+    expect(screen.getByText('40 user events')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: 'Open user event distribution for Matches screen opened',
+      })
+    ).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -211,6 +241,26 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(screen.getAllByText('Matches screen opened').length).toBeGreaterThan(
       0
     );
+  });
+
+  it('opens event breakdown from the user events distribution heatmap', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('User Events Distribution');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Open user event distribution for AI chat prediction voted',
+      })
+    );
+
+    expect(
+      screen.getByRole('dialog', {
+        name: 'AI chat prediction voted breakdown',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText('12 events')).toBeInTheDocument();
+    expect(screen.getByText('8 users')).toBeInTheDocument();
   });
 
   it('reloads data immediately when filters change and manually refreshes with the same filters', async () => {

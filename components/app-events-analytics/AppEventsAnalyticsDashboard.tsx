@@ -34,6 +34,7 @@ import {
   AppEventsHeatmapBucket,
   AppEventsTimeSeriesBucket,
   AppEventsUnreadSocialActivityChannelTypeBreakdown,
+  AppEventsUserEventDistributionItem,
   AppEventsVersionHealthItem,
   getAppEventsAnalytics,
 } from '@/lib/api/app-events-analytics';
@@ -203,6 +204,12 @@ function formatLastSeenAt(value: string): string {
   return `${value.slice(0, 16).replace('T', ' ')} UTC`;
 }
 
+function userEventDistributionColor(count: number, maxCount: number): string {
+  const ratio = Math.max(0, Math.min(1, count / Math.max(maxCount, 1)));
+  const hue = 215 - ratio * 205;
+  return `hsl(${hue}, 86%, 56%)`;
+}
+
 export function AppEventsAnalyticsDashboard() {
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
@@ -329,14 +336,23 @@ export function AppEventsAnalyticsDashboard() {
     () => optionsWithCurrent(data?.filters.eventKeys ?? [], eventKey),
     [data?.filters.eventKeys, eventKey]
   );
+  const userEventsDistribution =
+    data?.breakdowns?.userEventsDistribution ?? [];
   const unreadSocialBreakdown =
     data?.breakdowns?.unreadSocialActivityByChannelType ?? [];
   const selectedEvent = useMemo(() => {
     return (
       data?.countsByEvent.find((item) => item.eventKey === selectedEventKey) ??
+      data?.breakdowns?.userEventsDistribution.find(
+        (item) => item.eventKey === selectedEventKey
+      ) ??
       null
     );
-  }, [data?.countsByEvent, selectedEventKey]);
+  }, [
+    data?.breakdowns?.userEventsDistribution,
+    data?.countsByEvent,
+    selectedEventKey,
+  ]);
   const selectedEventTimeSeries = useMemo(() => {
     return (
       data?.timeSeries.filter(
@@ -505,6 +521,11 @@ export function AppEventsAnalyticsDashboard() {
               <VersionHealthCard
                 items={data.versionHealth ?? []}
                 onOpen={() => setIsVersionHealthOpen(true)}
+              />
+
+              <UserEventsDistributionCard
+                items={userEventsDistribution}
+                onSelectEvent={setSelectedEventKey}
               />
 
               <Card>
@@ -714,6 +735,92 @@ export function AppEventsAnalyticsDashboard() {
         onClose={() => setIsVersionHealthOpen(false)}
       />
     </Box>
+  );
+}
+
+function UserEventsDistributionCard({
+  items,
+  onSelectEvent,
+}: {
+  items: AppEventsUserEventDistributionItem[];
+  onSelectEvent: (eventKey: string) => void;
+}) {
+  const totalEvents = items.reduce((sum, item) => sum + item.count, 0);
+  const maxCount = Math.max(...items.map((item) => item.count), 1);
+
+  return (
+    <Card>
+      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+        <Stack spacing={1.25}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+          >
+            <Typography variant="subtitle1" fontWeight={700}>
+              User Events Distribution
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Chip
+                size="small"
+                label={`${totalEvents.toLocaleString()} user ${pluralize(totalEvents, 'event')}`}
+              />
+              <Chip
+                size="small"
+                variant="outlined"
+                label={`${items.length.toLocaleString()} ${pluralize(items.length, 'type')}`}
+              />
+            </Stack>
+          </Stack>
+
+          {items.length === 0 ? (
+            <Typography color="text.secondary">
+              No user events in this range.
+            </Typography>
+          ) : (
+            <Box
+              sx={{
+                height: 18,
+                display: 'flex',
+                gap: 0.25,
+                borderRadius: 1,
+                overflow: 'hidden',
+                bgcolor: 'action.hover',
+              }}
+            >
+              {items.map((item) => {
+                const eventLabel = formatEventLabel(item.eventKey);
+                const sharePercent = Math.round(item.share * 1000) / 10;
+
+                return (
+                  <ButtonBase
+                    key={item.eventKey}
+                    onClick={() => onSelectEvent(item.eventKey)}
+                    aria-label={`Open user event distribution for ${eventLabel}`}
+                    title={`${eventLabel}: ${item.count.toLocaleString()} events, ${item.uniqueUsers.toLocaleString()} users, ${sharePercent}%`}
+                    sx={{
+                      flexGrow: Math.max(item.share, 0.02),
+                      flexBasis: 0,
+                      minWidth: 20,
+                      height: '100%',
+                      bgcolor: userEventDistributionColor(
+                        item.count,
+                        maxCount
+                      ),
+                      transition: 'filter 120ms ease, opacity 120ms ease',
+                      '&:hover': {
+                        filter: 'brightness(1.12)',
+                      },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
