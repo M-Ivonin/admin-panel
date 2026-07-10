@@ -65,6 +65,26 @@ export interface RevenueLedgerCurrencySummary {
   negativeCount: number;
 }
 
+export interface RevenueLedgerUsdRevenueSummary {
+  baseCurrency: 'USD';
+  netGrossAmountUsd: string;
+  positiveGrossAmountUsd: string;
+  negativeGrossAmountUsd: string;
+  rateDate: string | null;
+  source: string;
+  sourceUrl: string;
+  missingCurrencies: string[];
+}
+
+export interface RevenueLedgerUsdDailyRevenuePoint {
+  date: string;
+  netGrossAmountUsd: string;
+  positiveGrossAmountUsd: string;
+  negativeGrossAmountUsd: string;
+  positiveCount: number;
+  negativeCount: number;
+}
+
 export interface RevenueLedgerSummary {
   totalEntries: number;
   recordedPositiveCount: number;
@@ -72,6 +92,8 @@ export interface RevenueLedgerSummary {
   skippedCount: number;
   missingAmountCount: number;
   byCurrency: RevenueLedgerCurrencySummary[];
+  usdRevenue?: RevenueLedgerUsdRevenueSummary | null;
+  dailyUsdRevenue?: RevenueLedgerUsdDailyRevenuePoint[] | null;
 }
 
 export interface PaginatedRevenueLedgerEntriesResponse {

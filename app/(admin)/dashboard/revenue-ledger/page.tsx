@@ -41,6 +41,7 @@ import {
   RevenueLedgerSortOrder,
   RevenueLedgerStore,
   RevenueLedgerSummary,
+  RevenueLedgerUsdDailyRevenuePoint,
   TenjinSdkDispatchStatus,
   getRevenueLedgerEntries,
 } from '@/lib/api/revenue-ledger';
@@ -56,6 +57,8 @@ const EMPTY_SUMMARY: RevenueLedgerSummary = {
   skippedCount: 0,
   missingAmountCount: 0,
   byCurrency: [],
+  usdRevenue: null,
+  dailyUsdRevenue: [],
 };
 
 const STORE_OPTIONS: Array<{ value: RevenueLedgerStore; label: string }> = [
@@ -180,6 +183,197 @@ function formatAmount(amount: string | null, currency: string | null): string {
   return `${displayAmount} ${currency}`;
 }
 
+function formatUsdNumber(value: number) {
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatUsdTick(value: number) {
+  return value < 0
+    ? `-$${formatUsdNumber(Math.abs(value))}`
+    : `$${formatUsdNumber(value)}`;
+}
+
+function formatChartDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+function getDateInputDatePart(value: string | undefined) {
+  const datePart = value?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  if (!datePart) {
+    return null;
+  }
+
+  const parsed = new Date(`${datePart}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) ? null : datePart;
+}
+
+function toUtcDatePart(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function buildDailyUsdRevenueRange(
+  points: RevenueLedgerUsdDailyRevenuePoint[] | null | undefined,
+  dateRange: { dateFrom: string; dateTo: string }
+) {
+  if (points === null || points === undefined) {
+    return [];
+  }
+
+  const sortedPoints = [...points].sort((left, right) =>
+    left.date.localeCompare(right.date)
+  );
+  const startDatePart =
+    getDateInputDatePart(dateRange.dateFrom) ?? sortedPoints[0]?.date ?? null;
+  const endDatePart =
+    getDateInputDatePart(dateRange.dateTo) ??
+    sortedPoints[sortedPoints.length - 1]?.date ??
+    null;
+
+  if (!startDatePart || !endDatePart) {
+    return sortedPoints;
+  }
+
+  const start = new Date(`${startDatePart}T00:00:00.000Z`);
+  const end = new Date(`${endDatePart}T00:00:00.000Z`);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const dayCount = Math.floor((end.getTime() - start.getTime()) / dayMs) + 1;
+
+  if (dayCount <= 0 || dayCount > 370) {
+    return sortedPoints;
+  }
+
+  const pointsByDate = new Map(
+    sortedPoints.map((point) => [point.date, point])
+  );
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(start.getTime() + index * dayMs);
+    const datePart = toUtcDatePart(date);
+
+    return (
+      pointsByDate.get(datePart) ?? {
+        date: datePart,
+        netGrossAmountUsd: '0.00',
+        positiveGrossAmountUsd: '0.00',
+        negativeGrossAmountUsd: '0.00',
+        positiveCount: 0,
+        negativeCount: 0,
+      }
+    );
+  });
+}
+
+function buildUsdRevenueChart(
+  points: RevenueLedgerUsdDailyRevenuePoint[] | null | undefined
+) {
+  const visiblePoints = points ?? [];
+  const width = 760;
+  const height = 260;
+  const padding = {
+    top: 18,
+    right: 88,
+    bottom: 46,
+    left: 16,
+  };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const numericPoints = visiblePoints.map((point) => ({
+    ...point,
+    net: Number(point.netGrossAmountUsd),
+    positive: Number(point.positiveGrossAmountUsd),
+    negative: Number(point.negativeGrossAmountUsd),
+  }));
+  const finiteValues = numericPoints
+    .flatMap((point) => [point.net, point.positive, point.negative])
+    .filter(Number.isFinite);
+  const rawMin = Math.min(0, ...finiteValues);
+  const rawMax = Math.max(0, ...finiteValues);
+  const roundedMax = Math.ceil((rawMax || 1) / 10) * 10;
+  const roundedMin =
+    rawMin < 0
+      ? Math.floor(Math.min(rawMin * 1.4, -roundedMax * 0.25) / 10) * 10
+      : 0;
+  const minValue = rawMin < 0 ? roundedMin : -roundedMax * 0.08;
+  const maxValue = roundedMax;
+  const valueSpan = maxValue - minValue || 1;
+  const xForIndex = (index: number) =>
+    padding.left +
+    (numericPoints.length <= 1
+      ? chartWidth / 2
+      : (chartWidth * index) / (numericPoints.length - 1));
+  const yForValue = (value: number) =>
+    padding.top + ((maxValue - value) / valueSpan) * chartHeight;
+  const linePath = numericPoints
+    .map((point, index) => {
+      const command = index === 0 ? 'M' : 'L';
+      return `${command}${xForIndex(index).toFixed(2)} ${yForValue(point.net).toFixed(2)}`;
+    })
+    .join(' ');
+  const tickValues =
+    rawMin < 0
+      ? [roundedMax, roundedMax / 2, 0, roundedMin / 2, roundedMin]
+      : [
+          roundedMax,
+          roundedMax * 0.75,
+          roundedMax * 0.5,
+          roundedMax * 0.25,
+          0,
+        ];
+  const xLabelIndexes = numericPoints
+    .map((_, index) => index)
+    .filter((index) => {
+      if (numericPoints.length <= 4) {
+        return true;
+      }
+
+      return (
+        index === 0 ||
+        index === numericPoints.length - 1 ||
+        index % Math.ceil(numericPoints.length / 4) === 0
+      );
+    });
+  const totalPositive = numericPoints.reduce(
+    (sum, point) => sum + (Number.isFinite(point.positive) ? point.positive : 0),
+    0
+  );
+  const totalNegative = numericPoints.reduce(
+    (sum, point) => sum + (Number.isFinite(point.negative) ? point.negative : 0),
+    0
+  );
+  const totalNet = numericPoints.reduce(
+    (sum, point) => sum + (Number.isFinite(point.net) ? point.net : 0),
+    0
+  );
+
+  return {
+    width,
+    height,
+    padding,
+    linePath,
+    numericPoints,
+    tickValues,
+    xLabelIndexes,
+    xForIndex,
+    yForValue,
+    totalPositive,
+    totalNegative,
+    totalNet,
+    hasNegativeRevenue: totalNegative < 0,
+  };
+}
+
 function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
   if (!value) {
     return undefined;
@@ -187,6 +381,31 @@ function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+}
+
+function toLocalDateTimeInputValue(value: Date): string {
+  const pad = (numberValue: number) => numberValue.toString().padStart(2, '0');
+
+  return [
+    value.getFullYear(),
+    pad(value.getMonth() + 1),
+    pad(value.getDate()),
+  ].join('-') + `T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+}
+
+function getDefaultDateRange() {
+  const today = new Date();
+  const dateFrom = new Date(today);
+  const dateTo = new Date(today);
+
+  dateFrom.setDate(today.getDate() - 7);
+  dateFrom.setHours(0, 0, 0, 0);
+  dateTo.setHours(23, 59, 0, 0);
+
+  return {
+    dateFrom: toLocalDateTimeInputValue(dateFrom),
+    dateTo: toLocalDateTimeInputValue(dateTo),
+  };
 }
 
 function getStatusChipColor(
@@ -265,14 +484,8 @@ function RevenueLedgerContent() {
     productId: '',
     userId: '',
     orderId: '',
-    purchaseToken: '',
-    transactionId: '',
-    originalTransactionId: '',
   });
-  const [dateRange, setDateRange] = useState({
-    dateFrom: '',
-    dateTo: '',
-  });
+  const [dateRange, setDateRange] = useState(getDefaultDateRange);
   const [sortBy, setSortBy] =
     useState<RevenueLedgerSortField>(DEFAULT_SORT_FIELD);
   const [sortOrder, setSortOrder] =
@@ -295,10 +508,6 @@ function RevenueLedgerContent() {
       productId: identityFilters.productId.trim() || undefined,
       userId: identityFilters.userId.trim() || undefined,
       orderId: identityFilters.orderId.trim() || undefined,
-      purchaseToken: identityFilters.purchaseToken.trim() || undefined,
-      transactionId: identityFilters.transactionId.trim() || undefined,
-      originalTransactionId:
-        identityFilters.originalTransactionId.trim() || undefined,
       dateFrom: toIsoTimestampFromLocalDateTime(dateRange.dateFrom),
       dateTo: toIsoTimestampFromLocalDateTime(dateRange.dateTo),
       sortBy,
@@ -375,6 +584,16 @@ function RevenueLedgerContent() {
     sortBy !== DEFAULT_SORT_FIELD ||
     sortOrder !== DEFAULT_SORT_ORDER;
 
+  const usdRevenueChart = useMemo(
+    () =>
+      buildUsdRevenueChart(
+        buildDailyUsdRevenueRange(summary.dailyUsdRevenue, dateRange)
+      ),
+    [summary.dailyUsdRevenue, dateRange]
+  );
+  const shouldShowUsdRevenueChart =
+    summary.totalEntries > 0 && usdRevenueChart.numericPoints.length > 0;
+
   const handleIdentityFilterChange =
     (key: keyof typeof identityFilters) =>
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -414,9 +633,6 @@ function RevenueLedgerContent() {
       productId: '',
       userId: '',
       orderId: '',
-      purchaseToken: '',
-      transactionId: '',
-      originalTransactionId: '',
     });
     setDateRange({ dateFrom: '', dateTo: '' });
     setSortBy(DEFAULT_SORT_FIELD);
@@ -522,26 +738,39 @@ function RevenueLedgerContent() {
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
-                md: 'repeat(2, 1fr)',
-                lg: 'repeat(3, 1fr)',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                lg: 'repeat(auto-fit, minmax(150px, 1fr))',
               },
-              gap: 2,
+              gap: 1.5,
               mb: 3,
             }}
           >
             {summary.byCurrency.map((currencySummary) => (
-              <Paper key={currencySummary.currency} sx={{ p: 2.5 }}>
+              <Paper
+                key={currencySummary.currency}
+                sx={{ p: 1.5, minWidth: 0 }}
+              >
                 <Typography variant="body2" color="text.secondary">
                   {currencySummary.currency}
                 </Typography>
-                <Typography variant="h5" fontWeight={700}>
+                <Typography variant="h6" fontWeight={700}>
                   {formatAmount(
                     currencySummary.netGrossAmount,
                     currencySummary.currency
                   )}
                 </Typography>
-                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                  <Typography variant="caption" color="success.main">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  useFlexGap
+                  flexWrap="wrap"
+                  sx={{ mt: 0.5 }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="success.main"
+                    sx={{ lineHeight: 1.35 }}
+                  >
                     +
                     {formatAmount(
                       currencySummary.positiveGrossAmount,
@@ -549,7 +778,11 @@ function RevenueLedgerContent() {
                     )}{' '}
                     ({currencySummary.positiveCount})
                   </Typography>
-                  <Typography variant="caption" color="error.main">
+                  <Typography
+                    variant="caption"
+                    color="error.main"
+                    sx={{ lineHeight: 1.35 }}
+                  >
                     {formatAmount(
                       currencySummary.negativeGrossAmount,
                       currencySummary.currency
@@ -560,6 +793,136 @@ function RevenueLedgerContent() {
               </Paper>
             ))}
           </Box>
+        )}
+
+        {shouldShowUsdRevenueChart && (
+          <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3, overflow: 'hidden' }}>
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={{ xs: 1.5, md: 5 }}
+              sx={{ mb: 2, alignItems: { xs: 'flex-start', md: 'center' } }}
+            >
+              <Box>
+                <Typography variant="body2" color="primary.main">
+                  Total USD revenue
+                </Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  {formatUsdTick(usdRevenueChart.totalNet)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  Positive revenue
+                </Typography>
+                <Typography variant="h5" fontWeight={700}>
+                  {formatUsdTick(usdRevenueChart.totalPositive)}
+                </Typography>
+              </Box>
+              {usdRevenueChart.hasNegativeRevenue && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Negative revenue
+                  </Typography>
+                  <Typography variant="h5" fontWeight={700}>
+                    {formatUsdTick(usdRevenueChart.totalNegative)}
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+
+            <Box sx={{ width: '100%', overflowX: 'auto' }}>
+              <Box
+                component="svg"
+                role="img"
+                aria-label="Daily USD revenue chart"
+                viewBox={`0 0 ${usdRevenueChart.width} ${usdRevenueChart.height}`}
+                sx={{
+                  display: 'block',
+                  width: '100%',
+                  minWidth: { xs: 640, sm: 0 },
+                  height: 'auto',
+                }}
+              >
+                <title>Daily USD revenue chart</title>
+                {usdRevenueChart.tickValues.map((value, index) => {
+                  const y = usdRevenueChart.yForValue(value);
+
+                  return (
+                    <g key={`${value}-${index}`}>
+                      <line
+                        x1={usdRevenueChart.padding.left}
+                        x2={
+                          usdRevenueChart.width -
+                          usdRevenueChart.padding.right -
+                          8
+                        }
+                        y1={y}
+                        y2={y}
+                        stroke="currentColor"
+                        strokeOpacity="0.12"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={
+                          usdRevenueChart.width -
+                          usdRevenueChart.padding.right +
+                          4
+                        }
+                        y={y + 4}
+                        fill="currentColor"
+                        opacity="0.7"
+                        fontSize="12"
+                      >
+                        {formatUsdTick(value)}
+                      </text>
+                    </g>
+                  );
+                })}
+                {usdRevenueChart.linePath && (
+                  <path
+                    d={usdRevenueChart.linePath}
+                    fill="none"
+                    stroke="#75a5ff"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+                {usdRevenueChart.numericPoints.map((point, index) => (
+                  <circle
+                    key={`${point.date}-${index}`}
+                    cx={usdRevenueChart.xForIndex(index)}
+                    cy={usdRevenueChart.yForValue(point.net)}
+                    r="4.5"
+                    fill="#202020"
+                    stroke="#75a5ff"
+                    strokeWidth="2"
+                  >
+                    <title>
+                      {`${formatChartDate(point.date)}: total ${formatUsdTick(point.net)}, positive ${formatUsdTick(point.positive)}, negative ${formatUsdTick(point.negative)}`}
+                    </title>
+                  </circle>
+                ))}
+                {usdRevenueChart.xLabelIndexes.map((index) => {
+                  const point = usdRevenueChart.numericPoints[index];
+
+                  return (
+                    <text
+                      key={point.date}
+                      x={usdRevenueChart.xForIndex(index)}
+                      y={usdRevenueChart.height - 18}
+                      fill="currentColor"
+                      opacity="0.68"
+                      fontSize="12"
+                      textAnchor="middle"
+                    >
+                      {formatChartDate(point.date)}
+                    </text>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Paper>
         )}
 
         <Paper sx={{ p: 2.5, mb: 3 }}>
@@ -737,29 +1100,16 @@ function RevenueLedgerContent() {
               onChange={handleIdentityFilterChange('orderId')}
             />
             <TextField
-              label="Purchase token"
-              size="small"
-              value={identityFilters.purchaseToken}
-              onChange={handleIdentityFilterChange('purchaseToken')}
-            />
-            <TextField
-              label="Transaction ID"
-              size="small"
-              value={identityFilters.transactionId}
-              onChange={handleIdentityFilterChange('transactionId')}
-            />
-            <TextField
-              label="Original transaction ID"
-              size="small"
-              value={identityFilters.originalTransactionId}
-              onChange={handleIdentityFilterChange('originalTransactionId')}
-            />
-            <TextField
               label="From"
               type="datetime-local"
               size="small"
               value={dateRange.dateFrom}
               onChange={handleDateChange('dateFrom')}
+              onInput={(event) =>
+                handleDateChange('dateFrom')(
+                  event as ChangeEvent<HTMLInputElement>
+                )
+              }
               InputLabelProps={{ shrink: true }}
             />
             <TextField
@@ -768,29 +1118,38 @@ function RevenueLedgerContent() {
               size="small"
               value={dateRange.dateTo}
               onChange={handleDateChange('dateTo')}
+              onInput={(event) =>
+                handleDateChange('dateTo')(
+                  event as ChangeEvent<HTMLInputElement>
+                )
+              }
               InputLabelProps={{ shrink: true }}
             />
+            <Stack
+              direction="row"
+              spacing={1.5}
+              flexWrap="wrap"
+              sx={{ alignItems: 'center', minHeight: 40 }}
+            >
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<Refresh />}
+                onClick={() => setRefreshNonce((current) => current + 1)}
+              >
+                Refresh
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Clear />}
+                disabled={!hasActiveFilters}
+                onClick={resetFilters}
+              >
+                Clear
+              </Button>
+            </Stack>
           </Box>
-
-          <Stack direction="row" spacing={1.5} sx={{ mt: 2 }} flexWrap="wrap">
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Refresh />}
-              onClick={() => setRefreshNonce((current) => current + 1)}
-            >
-              Refresh
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              startIcon={<Clear />}
-              disabled={!hasActiveFilters}
-              onClick={resetFilters}
-            >
-              Clear
-            </Button>
-          </Stack>
         </Paper>
 
         {error && (
