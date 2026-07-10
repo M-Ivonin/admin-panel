@@ -294,6 +294,31 @@ describe('CampaignEditorPage', () => {
     });
   });
 
+  it('opens trigger and journey when a legacy catalog omits send guard options', async () => {
+    const catalog = await campaignsRepository.getEditorCatalog();
+    const legacyCatalog: Partial<typeof catalog> = { ...catalog };
+    delete legacyCatalog.sendGuardOptions;
+
+    jest.spyOn(campaignsRepository, 'loadEditor').mockResolvedValue({
+      catalog: legacyCatalog as typeof catalog,
+      draft: createEmptyCampaignDraft(),
+      lastPersistedDraft: null,
+    });
+
+    render(<CampaignEditorPage mode="create" />);
+
+    await screen.findByText('Create campaign');
+
+    fireEvent.click(screen.getByText('Trigger + Journey'));
+
+    expect(screen.getByText('Step 1')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Select an action that cancels this step if the user does it before send time.'
+      )
+    ).toBeTruthy();
+  });
+
   it('selects, summarizes, and clears a send guard on a journey step', async () => {
     render(<CampaignEditorPage mode="create" />);
 
