@@ -45,6 +45,12 @@ export interface AppEventsTimeSeriesBucket {
   uniqueUsers: number;
 }
 
+export interface AppEventsDailyTimeSeriesBucket {
+  bucketStart: string;
+  count: number;
+  uniqueUsers: number;
+}
+
 export interface AppEventsHeatmapBucket {
   dayOfWeek: number;
   hour: number;
@@ -112,6 +118,7 @@ export interface AppEventsAnalyticsResponse {
   summary: AppEventsAnalyticsSummary;
   countsByEvent: AppEventsCountByEvent[];
   timeSeries: AppEventsTimeSeriesBucket[];
+  dailyTimeSeries: AppEventsDailyTimeSeriesBucket[];
   heatmapUtc: AppEventsHeatmapBucket[];
   filters: AppEventsAnalyticsFilters;
   breakdowns?: AppEventsAnalyticsBreakdowns;

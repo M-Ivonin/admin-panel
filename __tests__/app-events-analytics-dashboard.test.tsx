@@ -62,6 +62,18 @@ const analyticsResponse = {
       uniqueUsers: 5,
     },
   ],
+  dailyTimeSeries: [
+    {
+      bucketStart: '2026-07-08T00:00:00.000Z',
+      count: 6,
+      uniqueUsers: 3,
+    },
+    {
+      bucketStart: '2026-07-09T00:00:00.000Z',
+      count: 12,
+      uniqueUsers: 7,
+    },
+  ],
   heatmapUtc: [
     {
       dayOfWeek: 4,
@@ -210,13 +222,16 @@ describe('AppEventsAnalyticsDashboard', () => {
       screen.queryByText(/Registered-user App Event analytics start/i)
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Recent Events')).not.toBeInTheDocument();
+    expect(screen.getByText('Daily Activity Trend')).toBeInTheDocument();
+    expect(screen.queryByText('Time Series')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('2026-07-09 12 events 7 users')).toBeInTheDocument();
     expect(screen.getByLabelText('Thu 15:00 UTC 2 events')).toBeInTheDocument();
     expect(screen.getByText('App Version Health')).toBeInTheDocument();
     expect(screen.getByText('2 versions')).toBeInTheDocument();
     expect(screen.getByText('6 events')).toBeInTheDocument();
     expect(screen.getByText('Top version')).toBeInTheDocument();
-    expect(screen.getByText('1.1.281+283')).toBeInTheDocument();
-    expect(screen.queryByText('1.1.280+282')).not.toBeInTheDocument();
+    expect(screen.getAllByText('1.1.281+283').length).toBeGreaterThan(0);
+    expect(screen.getByText('1.1.280+282')).toBeInTheDocument();
     expect(screen.getByText('User Events Distribution')).toBeInTheDocument();
     expect(screen.getByText('40 user events')).toBeInTheDocument();
     expect(
@@ -234,13 +249,45 @@ describe('AppEventsAnalyticsDashboard', () => {
     expect(
       screen.getByRole('dialog', { name: 'App Version Health breakdown' })
     ).toBeInTheDocument();
-    expect(screen.getByText('1.1.280+282')).toBeInTheDocument();
+    expect(screen.getAllByText('1.1.280+282').length).toBeGreaterThan(0);
     expect(screen.getAllByText('android').length).toBeGreaterThan(0);
     expect(screen.getByText('4 events')).toBeInTheDocument();
     expect(screen.getByText('3 users')).toBeInTheDocument();
     expect(screen.getAllByText('Matches screen opened').length).toBeGreaterThan(
       0
     );
+  });
+
+  it('renders app version health in the distribution chart style', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('App Version Health');
+
+    const segments = [
+      screen.getByTestId('app-version-health-segment-1.1.280+282-ios-SirBro'),
+      screen.getByTestId(
+        'app-version-health-segment-1.1.281+283-android-SirBro'
+      ),
+    ];
+    const labels = [
+      screen.getByTestId('app-version-health-label-1.1.280+282-ios-SirBro'),
+      screen.getByTestId('app-version-health-label-1.1.281+283-android-SirBro'),
+    ];
+
+    expect(segments.map((segment) => getComputedStyle(segment).flexGrow)).toEqual(
+      ['1', '1']
+    );
+    expect(labels.map((label) => label.textContent)).toEqual([
+      '1.1.280+282',
+      '1.1.281+283',
+    ]);
+    expect(
+      getComputedStyle(screen.getByTestId('app-version-health-label-rail'))
+        .minHeight
+    ).toBe('72px');
+    expect(getComputedStyle(labels[0]).transform).toBe('rotate(-86deg)');
+    expect(getComputedStyle(labels[0]).overflow).toBe('visible');
+    expect(getComputedStyle(labels[0]).textOverflow).not.toBe('ellipsis');
   });
 
   it('opens event breakdown from the user events distribution heatmap', async () => {
@@ -261,6 +308,68 @@ describe('AppEventsAnalyticsDashboard', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('12 events')).toBeInTheDocument();
     expect(screen.getByText('8 users')).toBeInTheDocument();
+  });
+
+  it('renders user event distribution segments with equal visual width', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('User Events Distribution');
+
+    const segments = [
+      screen.getByRole('button', {
+        name: 'Open user event distribution for Matches screen opened',
+      }),
+      screen.getByRole('button', {
+        name: 'Open user event distribution for AI chat prediction voted',
+      }),
+      screen.getByRole('button', {
+        name: 'Open user event distribution for Prediction Market order placed',
+      }),
+    ];
+
+    expect(segments.map((segment) => getComputedStyle(segment).flexGrow)).toEqual([
+      '1',
+      '1',
+      '1',
+    ]);
+  });
+
+  it('orders user event distribution segments from coldest to hottest', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('User Events Distribution');
+
+    const segments = screen
+      .getAllByRole('button')
+      .filter((button) =>
+        button
+          .getAttribute('aria-label')
+          ?.startsWith('Open user event distribution for ')
+      );
+
+    expect(
+      segments.map((segment) => segment.getAttribute('aria-label'))
+    ).toEqual([
+      'Open user event distribution for Prediction Market order placed',
+      'Open user event distribution for AI chat prediction voted',
+      'Open user event distribution for Matches screen opened',
+    ]);
+  });
+
+  it('renders vertical event labels under the user event distribution segments', async () => {
+    render(<AppEventsAnalyticsDashboard />);
+
+    await screen.findByText('User Events Distribution');
+
+    const label = screen.getByTestId(
+      'user-event-distribution-label-prediction_market_order_placed'
+    );
+
+    expect(label).toHaveTextContent('Prediction Market order placed');
+    expect(getComputedStyle(label).transform).toBe('rotate(-82deg)');
+    expect(getComputedStyle(label).whiteSpace).toBe('nowrap');
+    expect(getComputedStyle(label).overflow).toBe('visible');
+    expect(getComputedStyle(label).textOverflow).not.toBe('ellipsis');
   });
 
   it('reloads data immediately when filters change and manually refreshes with the same filters', async () => {
@@ -410,6 +519,7 @@ describe('AppEventsAnalyticsDashboard', () => {
       },
       countsByEvent: [],
       timeSeries: [],
+      dailyTimeSeries: [],
       heatmapUtc: [],
       versionHealth: [],
       recentEvents: [],
