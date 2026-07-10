@@ -24,6 +24,7 @@ import {
   ViewCarousel,
   Settings,
   BugReport,
+  SportsSoccer,
 } from '@mui/icons-material';
 
 export default function DashboardPage() {
@@ -244,6 +245,39 @@ export default function DashboardPage() {
                   <Typography variant="body2" color="text.secondary">
                     Inspect registered-user App Event behavior, filters,
                     heatmap, and recent events
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
+              href="/dashboard/live-challenges"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'warning.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
+                    <SportsSoccer />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Live Challenges
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Review Live Match Challenge answers, shootouts, and audit
+                    diagnostics
                   </Typography>
                 </CardActionArea>
               </Card>
