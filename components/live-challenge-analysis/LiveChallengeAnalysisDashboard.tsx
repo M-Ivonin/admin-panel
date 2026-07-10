@@ -44,6 +44,15 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+const ROUND_ORDER: Record<string, number> = {
+  pre_match: 0,
+  '25min': 1,
+  halftime: 2,
+  '60min': 3,
+  '75min': 4,
+  '85min': 5,
+};
+
 export function LiveChallengeAnalysisDashboard() {
   const [status, setStatus] = useState('');
   const [from, setFrom] = useState('');
@@ -223,7 +232,7 @@ export function LiveChallengeAnalysisDashboard() {
                     gap: 2,
                     gridTemplateColumns: {
                       xs: '1fr',
-                      lg: 'minmax(320px, 420px) minmax(0, 1fr)',
+                      lg: 'minmax(260px, 315px) minmax(0, 1fr)',
                     },
                     alignItems: 'start',
                     minWidth: 0,
@@ -321,6 +330,9 @@ function ChallengeCard({
               ) : null}
             </Stack>
             <Typography variant="body2" color="text.secondary">
+              Match date {formatDateTime(item.matchDate ?? item.createdAt)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
               Answer rate {formatPercent(item.answerRate)} · Correct rate{' '}
               {formatPercent(item.correctRate)} · Missed {item.missedAnswerCount}
             </Typography>
@@ -375,6 +387,9 @@ function DetailPanel({
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <Chip size="small" label={detail.challenge.status} />
             <Chip size="small" label={`Round ${detail.challenge.currentRound ?? 'none'}`} />
+            {detail.match ? (
+              <Chip size="small" label={formatDateTime(detail.match.date)} />
+            ) : null}
             {detail.audit.preReleaseAuditUnavailable ? (
               <Chip size="small" color="warning" label="Pre-release audit unavailable" />
             ) : null}
@@ -438,28 +453,44 @@ function AnswerMatrix({
 }: {
   detail: LiveChallengeAnalysisDetailResponse;
 }) {
+  const sortedRounds = [...detail.rounds].sort(
+    (left, right) =>
+      (ROUND_ORDER[left.round] ?? Number.MAX_SAFE_INTEGER) -
+      (ROUND_ORDER[right.round] ?? Number.MAX_SAFE_INTEGER),
+  );
+  const answerColumnWidth = 132;
+
   return (
     <TableContainer
       component={Paper}
       variant="outlined"
       sx={{ maxWidth: '100%', overflowX: 'auto' }}
     >
-      <Table size="small" sx={{ minWidth: 760 }}>
+      <Table
+        size="small"
+        sx={{
+          minWidth: Math.max(860, 360 + detail.participants.length * answerColumnWidth),
+          tableLayout: 'fixed',
+        }}
+      >
         <TableHead>
           <TableRow>
-            <TableCell>Challenge Answer</TableCell>
+            <TableCell sx={{ width: 340 }}>Challenge Answer</TableCell>
             {detail.participants.map((participant) => (
-              <TableCell key={participant.participantId}>
+              <TableCell
+                key={participant.participantId}
+                sx={{ width: answerColumnWidth }}
+              >
                 {participant.displayName}
               </TableCell>
             ))}
           </TableRow>
         </TableHead>
         <TableBody>
-          {detail.rounds.flatMap((round) =>
+          {sortedRounds.flatMap((round) =>
             round.questions.map((question) => (
               <TableRow key={question.questionId}>
-                <TableCell sx={{ maxWidth: 280 }}>
+                <TableCell sx={{ width: 340, verticalAlign: 'top' }}>
                   <Typography variant="body2" fontWeight={600}>
                     {question.questionText}
                   </Typography>
@@ -472,15 +503,19 @@ function AnswerMatrix({
                     (item) => item.participantId === participant.participantId,
                   );
                   return (
-                    <TableCell key={participant.participantId}>
+                    <TableCell
+                      key={participant.participantId}
+                      sx={{ width: answerColumnWidth, verticalAlign: 'middle' }}
+                    >
                       <Chip
                         size="small"
                         color={answerStatusColor(answer?.answerStatus)}
                         label={
                           answer?.answerStatus === 'missed'
-                            ? 'Missed Challenge Answer'
+                            ? 'Missed'
                             : `${answer?.selectedAnswer ?? 'Pending'} · ${answer?.answerStatus ?? 'pending'}`
                         }
+                        sx={{ maxWidth: '100%' }}
                       />
                     </TableCell>
                   );
@@ -589,6 +624,20 @@ function ReasonList({
 
 function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  }).format(date);
 }
 
 function answerStatusColor(
