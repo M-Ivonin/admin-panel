@@ -45,6 +45,7 @@ export interface LiveChallengeAnalysisSummaryItem {
   matchId: number | null;
   status: string;
   createdAt: string;
+  matchDate: string | null;
   matchLabel: string | null;
   participantCount: number;
   humanParticipantCount: number;

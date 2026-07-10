@@ -46,6 +46,7 @@ const summaryResponse = {
       matchId: 91001,
       status: 'active',
       createdAt: '2026-07-10T12:00:00.000Z',
+      matchDate: '2026-07-10T12:30:00.000Z',
       matchLabel: 'Kyiv FC vs Lviv FC',
       participantCount: 3,
       humanParticipantCount: 2,
@@ -130,6 +131,54 @@ const detailResponse = {
     },
   ],
   rounds: [
+    {
+      round: '75min',
+      roundLabel: "75'",
+      questions: [
+        {
+          questionId: 'question-late',
+          round: '75min',
+          roundLabel: "75'",
+          questionKey: 'challenge.question.goal_75_90',
+          questionText: 'Will there be a goal between 75 and 90 minutes?',
+          options: ['Yes', 'No'],
+          pointsValue: 10,
+          expiresAt: null,
+          resolvedAt: null,
+          correctAnswer: null,
+          answerCounts: {},
+          answers: [
+            {
+              participantId: 'participant-alex',
+              selectedAnswer: 'Yes',
+              answerStatus: 'pending' as const,
+              isCorrect: null,
+              pointsEarned: 0,
+              answeredAt: '2026-07-10T13:45:00.000Z',
+              responseTimeMs: 4500000,
+            },
+            {
+              participantId: 'participant-mira',
+              selectedAnswer: null,
+              answerStatus: 'pending' as const,
+              isCorrect: null,
+              pointsEarned: 0,
+              answeredAt: null,
+              responseTimeMs: null,
+            },
+            {
+              participantId: 'participant-ai',
+              selectedAnswer: null,
+              answerStatus: 'pending' as const,
+              isCorrect: null,
+              pointsEarned: 0,
+              answeredAt: null,
+              responseTimeMs: null,
+            },
+          ],
+        },
+      ],
+    },
     {
       round: 'pre_match',
       roundLabel: 'Pre-match',
@@ -253,6 +302,9 @@ describe('LiveChallengeAnalysisDashboard', () => {
       await screen.findByText('Live Match Challenge Analysis'),
     ).toBeInTheDocument();
     expect(await screen.findByText('Kyiv FC vs Lviv FC')).toBeInTheDocument();
+    expect(
+      screen.getByText('Match date Jul 10, 2026, 12:30 PM'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Total challenges')).toBeInTheDocument();
     expect(screen.getByText('Missed Challenge Answers')).toBeInTheDocument();
     expect(screen.getByText('Challenge Shootout completed')).toBeInTheDocument();
@@ -265,7 +317,15 @@ describe('LiveChallengeAnalysisDashboard', () => {
     expect(screen.getByText('alex@example.com')).toBeInTheDocument();
     expect(screen.getAllByText('Mira Analyst').length).toBeGreaterThan(0);
     expect(screen.getByText('Who will win the match?')).toBeInTheDocument();
-    expect(screen.getByText('Missed Challenge Answer')).toBeInTheDocument();
+    expect(screen.getByText('Missed')).toBeInTheDocument();
+    expect(screen.queryByText('Missed Challenge Answer')).not.toBeInTheDocument();
+    expect(
+      screen
+        .getByText('Who will win the match?')
+        .compareDocumentPosition(
+          screen.getByText('Will there be a goal between 75 and 90 minutes?'),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByText('Who will have more shots on target?')).toBeInTheDocument();
     expect(screen.getByText('Diagnostics')).toBeInTheDocument();
     expect(screen.getByText('Product reasons')).toBeInTheDocument();
