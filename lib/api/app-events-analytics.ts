@@ -69,7 +69,16 @@ export interface AppEventsUnreadSocialActivityChannelTypeBreakdown {
   unreadCount: number;
 }
 
+export interface AppEventsUserEventDistributionItem {
+  eventKey: string;
+  category: string;
+  count: number;
+  uniqueUsers: number;
+  share: number;
+}
+
 export interface AppEventsAnalyticsBreakdowns {
+  userEventsDistribution: AppEventsUserEventDistributionItem[];
   unreadSocialActivityByChannelType: AppEventsUnreadSocialActivityChannelTypeBreakdown[];
 }
 
