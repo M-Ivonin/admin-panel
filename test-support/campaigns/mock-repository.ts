@@ -261,6 +261,13 @@ const EDITOR_SOURCE_EVENTS: CampaignSourceEventOption[] = [
       'A joined live challenge starts soon and the backend emitted the CRM source event.',
   },
   {
+    eventKey: 'live_challenge_match_started',
+    producerKey: 'crm_source_events',
+    label: 'Live challenge match started',
+    description:
+      'A match attached to an active live challenge started and the backend emitted the CRM source event.',
+  },
+  {
     eventKey: 'live_challenge_results',
     producerKey: 'crm_source_events',
     label: 'Live challenge results available',

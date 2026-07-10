@@ -215,6 +215,30 @@ const EMPTY_CATALOG: CampaignEditorCatalog = {
   },
 };
 
+function catalogArray<T>(value: T[] | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeCampaignEditorCatalog(
+  catalog: Partial<CampaignEditorCatalog> | null | undefined
+): CampaignEditorCatalog {
+  return {
+    savedSegments: catalogArray(catalog?.savedSegments),
+    scenarioTemplates: catalogArray(catalog?.scenarioTemplates),
+    retentionStageOptions: catalogArray(catalog?.retentionStageOptions),
+    tokens: catalogArray(catalog?.tokens),
+    deeplinkOptions: catalogArray(catalog?.deeplinkOptions),
+    sourceEvents: catalogArray(catalog?.sourceEvents),
+    sendGuardOptions: catalogArray(catalog?.sendGuardOptions),
+    goalOptions: catalogArray(catalog?.goalOptions),
+    defaults: {
+      eventMaxSendsPerUser:
+        catalog?.defaults?.eventMaxSendsPerUser ??
+        EMPTY_CATALOG.defaults.eventMaxSendsPerUser,
+    },
+  };
+}
+
 const DEFAULT_DIALOGS: CampaignEditorDialogs = {
   saveTemplate: false,
   sendTest: false,
@@ -282,7 +306,7 @@ export function createCampaignEditorState(
 
   return {
     draft: initialDraft,
-    catalog,
+    catalog: normalizeCampaignEditorCatalog(catalog),
     estimate: null,
     activeStep: CampaignEditorStep.AUDIENCE,
     activeContentStepKey: getFirstJourneyStepKey(initialDraft),
@@ -322,7 +346,7 @@ export function campaignEditorReducer(
       return {
         ...state,
         draft: nextDraft,
-        catalog: action.catalog ?? state.catalog,
+        catalog: normalizeCampaignEditorCatalog(action.catalog ?? state.catalog),
         activeStep: action.activeStep ?? state.activeStep,
         activeContentStepKey: getFirstJourneyStepKey(nextDraft),
         estimate: null,
@@ -343,7 +367,7 @@ export function campaignEditorReducer(
     case 'setCatalog':
       return {
         ...state,
-        catalog: action.catalog,
+        catalog: normalizeCampaignEditorCatalog(action.catalog),
       };
     case 'setActiveStep':
       return {
