@@ -274,12 +274,13 @@ export function AppEventsAnalyticsDashboard() {
       1
     );
   }, [data]);
+  const dailyTimeSeries = data?.dailyTimeSeries ?? [];
   const maxTimeSeries = useMemo(() => {
     return Math.max(
-      ...(data?.timeSeries.map((bucket) => bucket.count) ?? [0]),
+      ...dailyTimeSeries.map((bucket) => bucket.count),
       1
     );
-  }, [data]);
+  }, [dailyTimeSeries]);
   const heatmapIndex = useMemo(() => {
     const map = new Map<string, AppEventsHeatmapBucket>();
     data?.heatmapUtc.forEach((bucket) => {
@@ -672,21 +673,22 @@ export function AppEventsAnalyticsDashboard() {
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight={700} gutterBottom>
-                    Time Series
+                    Daily Activity Trend
                   </Typography>
                   <Stack direction="row" spacing={1} alignItems="end">
-                    {data.timeSeries.length === 0 ? (
+                    {dailyTimeSeries.length === 0 ? (
                       <Typography color="text.secondary">
                         No daily buckets in this range.
                       </Typography>
                     ) : (
-                      data.timeSeries.slice(-14).map((bucket) => (
+                      dailyTimeSeries.slice(-14).map((bucket) => (
                         <Box
-                          key={`${bucket.bucketStart}:${bucket.eventKey}`}
+                          key={bucket.bucketStart}
                           sx={{ flex: 1, minWidth: 32 }}
                         >
                           <Box
-                            title={`${formatEventLabel(bucket.eventKey)}: ${bucket.count} events`}
+                            aria-label={`${bucket.bucketStart.slice(0, 10)} ${bucket.count} ${pluralize(bucket.count, 'event')} ${bucket.uniqueUsers} ${pluralize(bucket.uniqueUsers, 'user')}`}
+                            title={`${bucket.count.toLocaleString()} ${pluralize(bucket.count, 'event')}, ${bucket.uniqueUsers.toLocaleString()} ${pluralize(bucket.uniqueUsers, 'user')}`}
                             sx={{
                               height: 112,
                               display: 'flex',
@@ -747,6 +749,15 @@ function UserEventsDistributionCard({
 }) {
   const totalEvents = items.reduce((sum, item) => sum + item.count, 0);
   const maxCount = Math.max(...items.map((item) => item.count), 1);
+  const sortedItems = [...items].sort((left, right) => {
+    if (left.count !== right.count) {
+      return left.count - right.count;
+    }
+
+    return formatEventLabel(left.eventKey).localeCompare(
+      formatEventLabel(right.eventKey)
+    );
+  });
 
   return (
     <Card>
@@ -779,44 +790,91 @@ function UserEventsDistributionCard({
               No user events in this range.
             </Typography>
           ) : (
-            <Box
-              sx={{
-                height: 18,
-                display: 'flex',
-                gap: 0.25,
-                borderRadius: 1,
-                overflow: 'hidden',
-                bgcolor: 'action.hover',
-              }}
-            >
-              {items.map((item) => {
-                const eventLabel = formatEventLabel(item.eventKey);
-                const sharePercent = Math.round(item.share * 1000) / 10;
+            <>
+              <Box
+                sx={{
+                  height: 18,
+                  display: 'flex',
+                  gap: 0.25,
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  bgcolor: 'action.hover',
+                }}
+              >
+                {sortedItems.map((item) => {
+                  const eventLabel = formatEventLabel(item.eventKey);
+                  const sharePercent = Math.round(item.share * 1000) / 10;
 
-                return (
-                  <ButtonBase
-                    key={item.eventKey}
-                    onClick={() => onSelectEvent(item.eventKey)}
-                    aria-label={`Open user event distribution for ${eventLabel}`}
-                    title={`${eventLabel}: ${item.count.toLocaleString()} events, ${item.uniqueUsers.toLocaleString()} users, ${sharePercent}%`}
-                    sx={{
-                      flexGrow: Math.max(item.share, 0.02),
-                      flexBasis: 0,
-                      minWidth: 20,
-                      height: '100%',
-                      bgcolor: userEventDistributionColor(
-                        item.count,
-                        maxCount
-                      ),
-                      transition: 'filter 120ms ease, opacity 120ms ease',
-                      '&:hover': {
-                        filter: 'brightness(1.12)',
-                      },
-                    }}
-                  />
-                );
-              })}
-            </Box>
+                  return (
+                    <ButtonBase
+                      key={item.eventKey}
+                      onClick={() => onSelectEvent(item.eventKey)}
+                      aria-label={`Open user event distribution for ${eventLabel}`}
+                      title={`${eventLabel}: ${item.count.toLocaleString()} events, ${item.uniqueUsers.toLocaleString()} users, ${sharePercent}%`}
+                      sx={{
+                        flex: '1 1 0',
+                        minWidth: 20,
+                        height: '100%',
+                        bgcolor: userEventDistributionColor(
+                          item.count,
+                          maxCount
+                        ),
+                        transition: 'filter 120ms ease, opacity 120ms ease',
+                        '&:hover': {
+                          filter: 'brightness(1.12)',
+                        },
+                      }}
+                    />
+                  );
+                })}
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 0.25,
+                  minHeight: 168,
+                  pt: 1.5,
+                  overflow: 'visible',
+                }}
+              >
+                {sortedItems.map((item) => {
+                  const eventLabel = formatEventLabel(item.eventKey);
+
+                  return (
+                    <Box
+                      key={`${item.eventKey}-label`}
+                      sx={{
+                        flex: '1 1 0',
+                        minWidth: 20,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-end',
+                        height: 156,
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Typography
+                        data-testid={`user-event-distribution-label-${item.eventKey}`}
+                        variant="caption"
+                        title={eventLabel}
+                        sx={{
+                          display: 'block',
+                          transform: 'rotate(-82deg)',
+                          transformOrigin: 'left center',
+                          color: 'text.secondary',
+                          fontSize: 11,
+                          lineHeight: 1,
+                          overflow: 'visible',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {eventLabel}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </>
           )}
         </Stack>
       </CardContent>
@@ -832,7 +890,16 @@ function VersionHealthCard({
   onOpen: () => void;
 }) {
   const totalEvents = items.reduce((sum, item) => sum + item.count, 0);
-  const topVersion = items[0] ?? null;
+  const maxCount = Math.max(...items.map((item) => item.count), 1);
+  const sortedItems = [...items].sort((left, right) => {
+    if (left.count !== right.count) {
+      return left.count - right.count;
+    }
+
+    return left.appVersion.localeCompare(right.appVersion);
+  });
+  const topVersion =
+    [...items].sort((left, right) => right.count - left.count)[0] ?? null;
 
   return (
     <Card>
@@ -849,23 +916,17 @@ function VersionHealthCard({
         }}
       >
         <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={1.5}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-            justifyContent="space-between"
-          >
-            <Stack spacing={0.25}>
+          <Stack spacing={1.25}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              justifyContent="space-between"
+            >
               <Typography variant="subtitle1" fontWeight={700}>
                 App Version Health
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {items.length === 0
-                  ? 'No app version metadata in this range.'
-                  : 'Tap to inspect version, platform, and target app breakdown.'}
-              </Typography>
-            </Stack>
-            {items.length > 0 && topVersion ? (
+              {items.length > 0 && topVersion ? (
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 <Chip
                   size="small"
@@ -883,7 +944,95 @@ function VersionHealthCard({
                   label={topVersion.appVersion}
                 />
               </Stack>
-            ) : null}
+              ) : null}
+            </Stack>
+
+            {items.length === 0 ? (
+              <Typography color="text.secondary">
+                No app version metadata in this range.
+              </Typography>
+            ) : (
+              <>
+                <Box
+                  sx={{
+                    height: 18,
+                    display: 'flex',
+                    gap: 0.25,
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    bgcolor: 'action.hover',
+                  }}
+                >
+                  {sortedItems.map((item) => {
+                    const key = `${item.appVersion}-${item.platform}-${item.targetApp}`;
+
+                    return (
+                      <Box
+                        key={key}
+                        data-testid={`app-version-health-segment-${key}`}
+                        title={`${item.appVersion}: ${item.count.toLocaleString()} events, ${item.uniqueUsers.toLocaleString()} users`}
+                        sx={{
+                          flex: '1 1 0',
+                          minWidth: 20,
+                          height: '100%',
+                          bgcolor: userEventDistributionColor(
+                            item.count,
+                            maxCount
+                          ),
+                        }}
+                      />
+                    );
+                  })}
+                </Box>
+                <Box
+                  data-testid="app-version-health-label-rail"
+                  sx={{
+                    display: 'flex',
+                    gap: 0.25,
+                    minHeight: 72,
+                    pt: 0.75,
+                    overflow: 'visible',
+                  }}
+                >
+                  {sortedItems.map((item) => {
+                    const key = `${item.appVersion}-${item.platform}-${item.targetApp}`;
+
+                    return (
+                      <Box
+                        key={`${key}-label`}
+                        sx={{
+                          flex: '1 1 0',
+                          minWidth: 20,
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'flex-end',
+                          height: 64,
+                          overflow: 'visible',
+                        }}
+                      >
+                        <Typography
+                          data-testid={`app-version-health-label-${key}`}
+                          variant="caption"
+                          title={`${item.appVersion} ${item.platform} ${item.targetApp}`}
+                          sx={{
+                            display: 'block',
+                            transform: 'rotate(-86deg)',
+                            transformOrigin: 'left center',
+                            color: 'text.secondary',
+                            fontSize: 10,
+                            lineHeight: 1,
+                            overflow: 'visible',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {item.appVersion}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </>
+            )}
           </Stack>
         </CardContent>
       </ButtonBase>
