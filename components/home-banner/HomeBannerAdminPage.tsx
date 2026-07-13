@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -14,12 +13,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import {
-  ArrowBack,
-  DeleteOutline,
-  ImageOutlined,
-  Save,
-} from '@mui/icons-material';
+import { DeleteOutline, ImageOutlined, Save } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   getHomeBannerAdminConfig,
@@ -241,33 +236,11 @@ export function HomeBannerAdminPage() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box
-            sx={{
-              maxWidth: 1100,
-              mx: 'auto',
-              px: { xs: 2, sm: 3, lg: 4 },
-              py: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <Link href="/dashboard">
-              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-                Back
-              </Button>
-            </Link>
-            <Box>
-              <Typography variant="h5" fontWeight="bold" color="text.primary">
-                Home Banner
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Manage the dynamic banner shown on the app Home screen.
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+        <AdminPageHeader
+          title="Home Banner"
+          subtitle="Manage the dynamic banner shown on the app Home screen."
+          maxWidth={1100}
+        />
 
         <Box
           sx={{

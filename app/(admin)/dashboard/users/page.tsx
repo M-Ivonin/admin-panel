@@ -30,7 +30,8 @@ import {
   Typography,
   Alert,
 } from '@mui/material';
-import { ArrowBack, Refresh, Search, Chat } from '@mui/icons-material';
+import { Refresh, Search, Chat } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUsers,
   User,
@@ -371,32 +372,7 @@ export default function UsersPage() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        {/* Header */}
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box
-            sx={{
-              maxWidth: 1280,
-              mx: 'auto',
-              px: { xs: 2, sm: 3, lg: 4 },
-              py: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <Link href="/dashboard">
-              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-                Back
-              </Button>
-            </Link>
-            <Typography variant="h5" fontWeight="bold" color="text.primary">
-              Users
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              ({total} total)
-            </Typography>
-          </Box>
-        </Paper>
+        <AdminPageHeader title="Users" subtitle={`${total} total`} />
 
         {/* Main content */}
         <Box

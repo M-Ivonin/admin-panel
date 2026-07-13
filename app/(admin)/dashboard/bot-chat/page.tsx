@@ -6,15 +6,13 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useChat } from '@/lib/hooks/useChat';
 import { UserSelect } from '@/components/chat/UserSelect';
 import { ChatDisplay } from '@/components/chat/ChatDisplay';
-import Link from 'next/link';
 import {
   Box,
   Paper,
   Typography,
-  Button,
   CircularProgress,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 function BotChatContent() {
   const searchParams = useSearchParams();
@@ -31,19 +29,7 @@ function BotChatContent() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        {/* Header */}
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Link href="/dashboard">
-              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-                Back
-              </Button>
-            </Link>
-            <Typography variant="h5" fontWeight="bold" color="text.primary">
-              Bot Chat History
-            </Typography>
-          </Box>
-        </Paper>
+        <AdminPageHeader title="Bot Chat History" />
 
         {/* Main content */}
         <Box sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>

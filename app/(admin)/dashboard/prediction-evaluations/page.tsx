@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   Accordion,
   AccordionDetails,
@@ -26,11 +25,11 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  ArrowBack,
   ExpandMore,
   Refresh,
   Search,
 } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   FixtureEvaluationGroup,
@@ -540,35 +539,10 @@ export default function PredictionEvaluationsPage() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box
-            sx={{
-              maxWidth: 1280,
-              mx: 'auto',
-              px: { xs: 2, sm: 3, lg: 4 },
-              py: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Link href="/dashboard">
-              <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-                Back
-              </Button>
-            </Link>
-            <Box>
-              <Typography variant="h5" fontWeight="bold" color="text.primary">
-                Prediction Evaluation
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Review grouped evaluation results by fixture, source, slot, and
-                market.
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+        <AdminPageHeader
+          title="Prediction Evaluation"
+          subtitle="Review grouped evaluation results by fixture, source, slot, and market."
+        />
 
         <Box
           sx={{

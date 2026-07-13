@@ -301,6 +301,10 @@ describe('LiveChallengeAnalysisDashboard', () => {
     expect(
       await screen.findByText('Live Match Challenge Analysis'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
     expect(await screen.findByText('Kyiv FC vs Lviv FC')).toBeInTheDocument();
     expect(
       screen.getByText('Match date Jul 10, 2026, 12:30 PM'),

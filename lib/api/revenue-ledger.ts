@@ -26,10 +26,7 @@ export type TenjinSdkDispatchStatus =
   | 'client_reported_failed'
   | 'expired_without_client_report';
 
-export type RevenueLedgerSortField =
-  | 'createdAt'
-  | 'eventTime'
-  | 'grossAmount';
+export type RevenueLedgerSortField = 'createdAt' | 'eventTime' | 'grossAmount';
 
 export type RevenueLedgerSortOrder = 'asc' | 'desc';
 
@@ -85,6 +82,32 @@ export interface RevenueLedgerUsdDailyRevenuePoint {
   negativeCount: number;
 }
 
+export interface RevenueLedgerStoreCommissionPeriod {
+  store: RevenueLedgerStore;
+  ratePercent: 0 | 15 | 30;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+}
+
+export interface RevenueLedgerStoreAdjustedRevenueSummary {
+  baseCurrency: 'USD';
+  grossAmountUsd: string;
+  estimatedStoreCommissionUsd: string;
+  estimatedNetAmountUsd: string;
+  rateDate: string | null;
+  source: string;
+  sourceUrl: string;
+  missingCurrencies: string[];
+  commissionSchedule: RevenueLedgerStoreCommissionPeriod[];
+}
+
+export interface RevenueLedgerStoreAdjustedDailyRevenuePoint {
+  date: string;
+  grossAmountUsd: string;
+  estimatedStoreCommissionUsd: string;
+  estimatedNetAmountUsd: string;
+}
+
 export interface RevenueLedgerSummary {
   totalEntries: number;
   recordedPositiveCount: number;
@@ -94,6 +117,10 @@ export interface RevenueLedgerSummary {
   byCurrency: RevenueLedgerCurrencySummary[];
   usdRevenue?: RevenueLedgerUsdRevenueSummary | null;
   dailyUsdRevenue?: RevenueLedgerUsdDailyRevenuePoint[] | null;
+  storeAdjustedRevenue?: RevenueLedgerStoreAdjustedRevenueSummary | null;
+  dailyStoreAdjustedRevenue?:
+    | RevenueLedgerStoreAdjustedDailyRevenuePoint[]
+    | null;
 }
 
 export interface PaginatedRevenueLedgerEntriesResponse {
@@ -126,7 +153,7 @@ export interface RevenueLedgerFilters {
 }
 
 export async function getRevenueLedgerEntries(
-  params: RevenueLedgerFilters = {},
+  params: RevenueLedgerFilters = {}
 ): Promise<PaginatedRevenueLedgerEntriesResponse> {
   const searchParams = new URLSearchParams();
 
@@ -151,16 +178,16 @@ export async function getRevenueLedgerEntries(
   if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
 
   params.eventTypes?.forEach((eventType) =>
-    searchParams.append('eventTypes', eventType),
+    searchParams.append('eventTypes', eventType)
   );
   params.directions?.forEach((direction) =>
-    searchParams.append('directions', direction),
+    searchParams.append('directions', direction)
   );
   params.businessStatuses?.forEach((businessStatus) =>
-    searchParams.append('businessStatuses', businessStatus),
+    searchParams.append('businessStatuses', businessStatus)
   );
   params.tenjinDispatchStatuses?.forEach((tenjinDispatchStatus) =>
-    searchParams.append('tenjinDispatchStatuses', tenjinDispatchStatus),
+    searchParams.append('tenjinDispatchStatuses', tenjinDispatchStatus)
   );
 
   const queryString = searchParams.toString();

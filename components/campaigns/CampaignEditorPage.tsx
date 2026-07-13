@@ -41,7 +41,6 @@ import {
   Typography,
 } from '@mui/material';
 import {
-  ArrowBack,
   Add,
   Archive,
   Delete,
@@ -50,6 +49,7 @@ import {
   Save,
   Science,
 } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { RetentionStage, getUser, type User } from '@/lib/api/users';
 import { getStoredAuthUser } from '@/lib/auth';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -1775,39 +1775,47 @@ export function CampaignEditorPage({
     state.isDirty
   );
   const scheduleDialogTitle = getScheduleDialogTitle(state.draft);
+  const pageHeader = (
+    <AdminPageHeader
+      title={mode === 'create' ? 'Create campaign' : 'Edit campaign'}
+      subtitle={
+        loading ? 'Loading campaign…' : state.draft.name.trim() || 'Campaign builder'
+      }
+      backHref="/dashboard/campaigns"
+      backLabel="Back to campaigns"
+      titleAddon={loading ? undefined : (
+        <Chip
+          label={formatStatus(state.draft.status)}
+          sx={getStatusChipStyles(state.draft.status)}
+        />
+      )}
+      maxWidth={1440}
+    />
+  );
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: '70vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <CircularProgress />
+      <Box sx={{ minHeight: '100vh', bgcolor: COLORS.canvas }}>
+        {pageHeader}
+        <Box
+          sx={{
+            minHeight: '70vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: COLORS.canvas, px: 3, py: 4 }}>
-      <Stack spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => router.push('/dashboard/campaigns')}
-            sx={{ color: COLORS.textSecondary }}
-          >
-            Back to campaigns
-          </Button>
-          <Chip
-            label={formatStatus(state.draft.status)}
-            sx={getStatusChipStyles(state.draft.status)}
-          />
-        </Stack>
-
+    <Box sx={{ minHeight: '100vh', bgcolor: COLORS.canvas }}>
+      {pageHeader}
+      <Box sx={{ maxWidth: 1440, mx: 'auto', px: 3, py: 4 }}>
+        <Stack spacing={2}>
         {error ? <Alert severity="error">{error}</Alert> : null}
         {state.lastActionResult ? (
           <Alert severity="success">
@@ -2003,7 +2011,7 @@ export function CampaignEditorPage({
           </SectionCard>
 
           <SectionCard
-            title={mode === 'create' ? 'Create campaign' : 'Edit campaign'}
+            title="Campaign details"
             action={
               <Button
                 startIcon={<Save />}
@@ -4157,6 +4165,7 @@ export function CampaignEditorPage({
           setIsUserPickerOpen(false);
         }}
       />
+      </Box>
     </Box>
   );
 }

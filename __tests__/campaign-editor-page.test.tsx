@@ -98,6 +98,20 @@ describe('CampaignEditorPage', () => {
     window.localStorage.clear();
   });
 
+  it('keeps Back to campaigns available while the editor is loading', () => {
+    jest
+      .spyOn(campaignsRepository, 'loadEditor')
+      .mockImplementation(() => new Promise(() => undefined));
+
+    render(<CampaignEditorPage mode="create" />);
+
+    expect(
+      screen.getByRole('link', { name: 'Back to campaigns' })
+    ).toHaveAttribute('href', '/dashboard/campaigns');
+    expect(screen.getByText('Loading campaign…')).toBeInTheDocument();
+    expect(screen.queryByText('Draft')).not.toBeInTheDocument();
+  });
+
   it('shows the exact approved step labels', async () => {
     render(<CampaignEditorPage mode="create" />);
 

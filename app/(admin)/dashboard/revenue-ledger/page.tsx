@@ -1,7 +1,6 @@
 'use client';
 
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -27,7 +26,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Clear, Refresh } from '@mui/icons-material';
+import { Clear, Refresh } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { RevenueLedgerAccessGate } from '@/modules/revenue-ledger/RevenueLedgerAccessGate';
 import {
@@ -40,6 +40,8 @@ import {
   RevenueLedgerSortField,
   RevenueLedgerSortOrder,
   RevenueLedgerStore,
+  RevenueLedgerStoreAdjustedDailyRevenuePoint,
+  RevenueLedgerStoreCommissionPeriod,
   RevenueLedgerSummary,
   RevenueLedgerUsdDailyRevenuePoint,
   TenjinSdkDispatchStatus,
@@ -59,6 +61,8 @@ const EMPTY_SUMMARY: RevenueLedgerSummary = {
   byCurrency: [],
   usdRevenue: null,
   dailyUsdRevenue: [],
+  storeAdjustedRevenue: null,
+  dailyStoreAdjustedRevenue: [],
 };
 
 const STORE_OPTIONS: Array<{ value: RevenueLedgerStore; label: string }> = [
@@ -191,9 +195,11 @@ function formatUsdNumber(value: number) {
 }
 
 function formatUsdTick(value: number) {
-  return value < 0
-    ? `-$${formatUsdNumber(Math.abs(value))}`
-    : `$${formatUsdNumber(value)}`;
+  const normalizedValue = Math.abs(value) < 0.005 ? 0 : value;
+
+  return normalizedValue < 0
+    ? `-$${formatUsdNumber(Math.abs(normalizedValue))}`
+    : `$${formatUsdNumber(normalizedValue)}`;
 }
 
 function formatChartDate(value: string) {
@@ -223,10 +229,11 @@ function toUtcDatePart(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
-function buildDailyUsdRevenueRange(
-  points: RevenueLedgerUsdDailyRevenuePoint[] | null | undefined,
-  dateRange: { dateFrom: string; dateTo: string }
-) {
+function buildDailyRevenueRange<T extends { date: string }>(
+  points: T[] | null | undefined,
+  dateRange: { dateFrom: string; dateTo: string },
+  createEmptyPoint: (date: string) => T
+): T[] {
   if (points === null || points === undefined) {
     return [];
   }
@@ -262,23 +269,18 @@ function buildDailyUsdRevenueRange(
     const date = new Date(start.getTime() + index * dayMs);
     const datePart = toUtcDatePart(date);
 
-    return (
-      pointsByDate.get(datePart) ?? {
-        date: datePart,
-        netGrossAmountUsd: '0.00',
-        positiveGrossAmountUsd: '0.00',
-        negativeGrossAmountUsd: '0.00',
-        positiveCount: 0,
-        negativeCount: 0,
-      }
-    );
+    return pointsByDate.get(datePart) ?? createEmptyPoint(datePart);
   });
 }
 
-function buildUsdRevenueChart(
-  points: RevenueLedgerUsdDailyRevenuePoint[] | null | undefined
-) {
-  const visiblePoints = points ?? [];
+interface RevenueChartPoint {
+  date: string;
+  primaryAmountUsd: string;
+  secondaryAmountUsd: string;
+  supplementalAmountUsd: string;
+}
+
+function buildUsdRevenueChart(points: RevenueChartPoint[]) {
   const width = 760;
   const height = 260;
   const padding = {
@@ -289,14 +291,14 @@ function buildUsdRevenueChart(
   };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
-  const numericPoints = visiblePoints.map((point) => ({
+  const numericPoints = points.map((point) => ({
     ...point,
-    net: Number(point.netGrossAmountUsd),
-    positive: Number(point.positiveGrossAmountUsd),
-    negative: Number(point.negativeGrossAmountUsd),
+    primary: Number(point.primaryAmountUsd),
+    secondary: Number(point.secondaryAmountUsd),
+    supplemental: Number(point.supplementalAmountUsd),
   }));
   const finiteValues = numericPoints
-    .flatMap((point) => [point.net, point.positive, point.negative])
+    .flatMap((point) => [point.primary, point.secondary])
     .filter(Number.isFinite);
   const rawMin = Math.min(0, ...finiteValues);
   const rawMax = Math.max(0, ...finiteValues);
@@ -318,19 +320,19 @@ function buildUsdRevenueChart(
   const linePath = numericPoints
     .map((point, index) => {
       const command = index === 0 ? 'M' : 'L';
-      return `${command}${xForIndex(index).toFixed(2)} ${yForValue(point.net).toFixed(2)}`;
+      return `${command}${xForIndex(index).toFixed(2)} ${yForValue(point.secondary).toFixed(2)}`;
+    })
+    .join(' ');
+  const primaryLinePath = numericPoints
+    .map((point, index) => {
+      const command = index === 0 ? 'M' : 'L';
+      return `${command}${xForIndex(index).toFixed(2)} ${yForValue(point.primary).toFixed(2)}`;
     })
     .join(' ');
   const tickValues =
     rawMin < 0
       ? [roundedMax, roundedMax / 2, 0, roundedMin / 2, roundedMin]
-      : [
-          roundedMax,
-          roundedMax * 0.75,
-          roundedMax * 0.5,
-          roundedMax * 0.25,
-          0,
-        ];
+      : [roundedMax, roundedMax * 0.75, roundedMax * 0.5, roundedMax * 0.25, 0];
   const xLabelIndexes = numericPoints
     .map((_, index) => index)
     .filter((index) => {
@@ -344,16 +346,18 @@ function buildUsdRevenueChart(
         index % Math.ceil(numericPoints.length / 4) === 0
       );
     });
-  const totalPositive = numericPoints.reduce(
-    (sum, point) => sum + (Number.isFinite(point.positive) ? point.positive : 0),
+  const totalPrimary = numericPoints.reduce(
+    (sum, point) => sum + (Number.isFinite(point.primary) ? point.primary : 0),
     0
   );
-  const totalNegative = numericPoints.reduce(
-    (sum, point) => sum + (Number.isFinite(point.negative) ? point.negative : 0),
+  const totalSupplemental = numericPoints.reduce(
+    (sum, point) =>
+      sum + (Number.isFinite(point.supplemental) ? point.supplemental : 0),
     0
   );
-  const totalNet = numericPoints.reduce(
-    (sum, point) => sum + (Number.isFinite(point.net) ? point.net : 0),
+  const totalSecondary = numericPoints.reduce(
+    (sum, point) =>
+      sum + (Number.isFinite(point.secondary) ? point.secondary : 0),
     0
   );
 
@@ -362,16 +366,29 @@ function buildUsdRevenueChart(
     height,
     padding,
     linePath,
+    primaryLinePath,
     numericPoints,
     tickValues,
     xLabelIndexes,
     xForIndex,
     yForValue,
-    totalPositive,
-    totalNegative,
-    totalNet,
-    hasNegativeRevenue: totalNegative < 0,
+    totalPrimary,
+    totalSupplemental,
+    totalSecondary,
+    hasNegativeSupplemental: totalSupplemental < 0,
   };
+}
+
+function formatCommissionScheduleLabel(
+  period: RevenueLedgerStoreCommissionPeriod
+) {
+  const store = period.store === 'google_play' ? 'Google Play' : 'App Store';
+  const range =
+    period.effectiveFrom || period.effectiveTo
+      ? ` (${period.effectiveFrom ?? 'start'} – ${period.effectiveTo ?? 'present'})`
+      : '';
+
+  return `${store} ${period.ratePercent}%${range}`;
 }
 
 function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
@@ -386,11 +403,11 @@ function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
 function toLocalDateTimeInputValue(value: Date): string {
   const pad = (numberValue: number) => numberValue.toString().padStart(2, '0');
 
-  return [
-    value.getFullYear(),
-    pad(value.getMonth() + 1),
-    pad(value.getDate()),
-  ].join('-') + `T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  return (
+    [value.getFullYear(), pad(value.getMonth() + 1), pad(value.getDate())].join(
+      '-'
+    ) + `T${pad(value.getHours())}:${pad(value.getMinutes())}`
+  );
 }
 
 function getDefaultDateRange() {
@@ -587,12 +604,61 @@ function RevenueLedgerContent() {
   const usdRevenueChart = useMemo(
     () =>
       buildUsdRevenueChart(
-        buildDailyUsdRevenueRange(summary.dailyUsdRevenue, dateRange)
+        buildDailyRevenueRange(
+          summary.dailyUsdRevenue,
+          dateRange,
+          (date): RevenueLedgerUsdDailyRevenuePoint => ({
+            date,
+            netGrossAmountUsd: '0.00',
+            positiveGrossAmountUsd: '0.00',
+            negativeGrossAmountUsd: '0.00',
+            positiveCount: 0,
+            negativeCount: 0,
+          })
+        ).map((point) => ({
+          date: point.date,
+          primaryAmountUsd: point.positiveGrossAmountUsd,
+          secondaryAmountUsd: point.netGrossAmountUsd,
+          supplementalAmountUsd: point.negativeGrossAmountUsd,
+        }))
       ),
     [summary.dailyUsdRevenue, dateRange]
   );
+  const storeAdjustedRevenueChart = useMemo(() => {
+    if (!summary.dailyStoreAdjustedRevenue) {
+      return null;
+    }
+
+    const points = buildDailyRevenueRange(
+      summary.dailyStoreAdjustedRevenue,
+      dateRange,
+      (date): RevenueLedgerStoreAdjustedDailyRevenuePoint => ({
+        date,
+        grossAmountUsd: '0.00',
+        estimatedStoreCommissionUsd: '0.00',
+        estimatedNetAmountUsd: '0.00',
+      })
+    ).map((point) => ({
+      date: point.date,
+      primaryAmountUsd: point.grossAmountUsd,
+      secondaryAmountUsd: point.estimatedNetAmountUsd,
+      supplementalAmountUsd: point.estimatedStoreCommissionUsd,
+    }));
+
+    return buildUsdRevenueChart(points);
+  }, [summary.dailyStoreAdjustedRevenue, dateRange]);
+  const hasStoreAdjustedRevenue = Boolean(
+    summary.storeAdjustedRevenue && storeAdjustedRevenueChart
+  );
+  const visibleRevenueChart = hasStoreAdjustedRevenue
+    ? storeAdjustedRevenueChart
+    : usdRevenueChart;
+  const activeUsdRevenueMetadata = hasStoreAdjustedRevenue
+    ? summary.storeAdjustedRevenue
+    : summary.usdRevenue;
   const shouldShowUsdRevenueChart =
-    summary.totalEntries > 0 && usdRevenueChart.numericPoints.length > 0;
+    summary.totalEntries > 0 &&
+    Boolean(visibleRevenueChart?.numericPoints.length);
 
   const handleIdentityFilterChange =
     (key: keyof typeof identityFilters) =>
@@ -642,29 +708,7 @@ function RevenueLedgerContent() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Box
-          sx={{
-            maxWidth: 1440,
-            mx: 'auto',
-            px: { xs: 2, sm: 3, lg: 4 },
-            py: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            flexWrap: 'wrap',
-          }}
-        >
-          <Link href="/dashboard">
-            <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-              Back
-            </Button>
-          </Link>
-          <Typography variant="h5" fontWeight="bold" color="text.primary">
-            Revenue Ledger
-          </Typography>
-        </Box>
-      </Paper>
+      <AdminPageHeader title="Revenue Ledger" maxWidth={1440} />
 
       <Box
         sx={{
@@ -802,40 +846,128 @@ function RevenueLedgerContent() {
               spacing={{ xs: 1.5, md: 5 }}
               sx={{ mb: 2, alignItems: { xs: 'flex-start', md: 'center' } }}
             >
-              <Box>
-                <Typography variant="body2" color="primary.main">
-                  Total USD revenue
-                </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {formatUsdTick(usdRevenueChart.totalNet)}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Positive revenue
-                </Typography>
-                <Typography variant="h5" fontWeight={700}>
-                  {formatUsdTick(usdRevenueChart.totalPositive)}
-                </Typography>
-              </Box>
-              {usdRevenueChart.hasNegativeRevenue && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Negative revenue
-                  </Typography>
-                  <Typography variant="h5" fontWeight={700}>
-                    {formatUsdTick(usdRevenueChart.totalNegative)}
-                  </Typography>
-                </Box>
+              {hasStoreAdjustedRevenue && summary.storeAdjustedRevenue ? (
+                <>
+                  <Box>
+                    <Typography variant="body2" color="primary.main">
+                      Gross USD revenue
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatUsdTick(
+                        Number(summary.storeAdjustedRevenue.grossAmountUsd)
+                      )}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Estimated store commission
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatUsdTick(
+                        -Math.abs(
+                          Number(
+                            summary.storeAdjustedRevenue
+                              .estimatedStoreCommissionUsd
+                          )
+                        )
+                      )}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="success.main">
+                      Estimated net revenue
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatUsdTick(
+                        Number(
+                          summary.storeAdjustedRevenue.estimatedNetAmountUsd
+                        )
+                      )}
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <Box>
+                    <Typography variant="body2" color="primary.main">
+                      Total USD revenue
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatUsdTick(usdRevenueChart.totalSecondary)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Positive revenue
+                    </Typography>
+                    <Typography variant="h5" fontWeight={700}>
+                      {formatUsdTick(usdRevenueChart.totalPrimary)}
+                    </Typography>
+                  </Box>
+                  {usdRevenueChart.hasNegativeSupplemental && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Negative revenue
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700}>
+                        {formatUsdTick(usdRevenueChart.totalSupplemental)}
+                      </Typography>
+                    </Box>
+                  )}
+                </>
               )}
             </Stack>
+
+            {activeUsdRevenueMetadata && (
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                {activeUsdRevenueMetadata.missingCurrencies.length > 0 && (
+                  <Alert severity="warning">
+                    <strong>Partial USD estimate.</strong> Excluded currencies:{' '}
+                    {activeUsdRevenueMetadata.missingCurrencies.join(', ')}.
+                  </Alert>
+                )}
+                <Typography variant="caption" color="text.secondary">
+                  FX source: {activeUsdRevenueMetadata.source}
+                  {activeUsdRevenueMetadata.rateDate
+                    ? `; rate date ${activeUsdRevenueMetadata.rateDate}`
+                    : ''}
+                  .
+                </Typography>
+              </Stack>
+            )}
+
+            {hasStoreAdjustedRevenue && summary.storeAdjustedRevenue && (
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  {summary.storeAdjustedRevenue.commissionSchedule.map(
+                    (period, index) => (
+                      <Chip
+                        key={`${period.store}-${period.effectiveFrom}-${index}`}
+                        label={formatCommissionScheduleLabel(period)}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )
+                  )}
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
+                  Estimated net uses configured store commission by ledger
+                  creation date. Tenjin may still differ because of dispatch
+                  eligibility, refunds, taxes, and rounding.
+                </Typography>
+              </Stack>
+            )}
 
             <Box sx={{ width: '100%', overflowX: 'auto' }}>
               <Box
                 component="svg"
                 role="img"
-                aria-label="Daily USD revenue chart"
-                viewBox={`0 0 ${usdRevenueChart.width} ${usdRevenueChart.height}`}
+                aria-label={
+                  hasStoreAdjustedRevenue
+                    ? 'Daily gross and estimated net USD revenue chart'
+                    : 'Daily USD revenue chart'
+                }
+                viewBox={`0 0 ${visibleRevenueChart?.width ?? 760} ${visibleRevenueChart?.height ?? 260}`}
                 sx={{
                   display: 'block',
                   width: '100%',
@@ -843,17 +975,21 @@ function RevenueLedgerContent() {
                   height: 'auto',
                 }}
               >
-                <title>Daily USD revenue chart</title>
-                {usdRevenueChart.tickValues.map((value, index) => {
-                  const y = usdRevenueChart.yForValue(value);
+                <title>
+                  {hasStoreAdjustedRevenue
+                    ? 'Daily gross and estimated net USD revenue chart'
+                    : 'Daily USD revenue chart'}
+                </title>
+                {visibleRevenueChart?.tickValues.map((value, index) => {
+                  const y = visibleRevenueChart.yForValue(value);
 
                   return (
                     <g key={`${value}-${index}`}>
                       <line
-                        x1={usdRevenueChart.padding.left}
+                        x1={visibleRevenueChart.padding.left}
                         x2={
-                          usdRevenueChart.width -
-                          usdRevenueChart.padding.right -
+                          visibleRevenueChart.width -
+                          visibleRevenueChart.padding.right -
                           8
                         }
                         y1={y}
@@ -864,8 +1000,8 @@ function RevenueLedgerContent() {
                       />
                       <text
                         x={
-                          usdRevenueChart.width -
-                          usdRevenueChart.padding.right +
+                          visibleRevenueChart.width -
+                          visibleRevenueChart.padding.right +
                           4
                         }
                         y={y + 4}
@@ -878,39 +1014,53 @@ function RevenueLedgerContent() {
                     </g>
                   );
                 })}
-                {usdRevenueChart.linePath && (
+                {hasStoreAdjustedRevenue &&
+                  visibleRevenueChart?.primaryLinePath && (
+                    <path
+                      d={visibleRevenueChart.primaryLinePath}
+                      fill="none"
+                      stroke="#75a5ff"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray="6 5"
+                    />
+                  )}
+                {visibleRevenueChart?.linePath && (
                   <path
-                    d={usdRevenueChart.linePath}
+                    d={visibleRevenueChart.linePath}
                     fill="none"
-                    stroke="#75a5ff"
+                    stroke={hasStoreAdjustedRevenue ? '#2e9d68' : '#75a5ff'}
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 )}
-                {usdRevenueChart.numericPoints.map((point, index) => (
+                {visibleRevenueChart?.numericPoints.map((point, index) => (
                   <circle
                     key={`${point.date}-${index}`}
-                    cx={usdRevenueChart.xForIndex(index)}
-                    cy={usdRevenueChart.yForValue(point.net)}
+                    cx={visibleRevenueChart.xForIndex(index)}
+                    cy={visibleRevenueChart.yForValue(point.secondary)}
                     r="4.5"
                     fill="#202020"
                     stroke="#75a5ff"
                     strokeWidth="2"
                   >
                     <title>
-                      {`${formatChartDate(point.date)}: total ${formatUsdTick(point.net)}, positive ${formatUsdTick(point.positive)}, negative ${formatUsdTick(point.negative)}`}
+                      {hasStoreAdjustedRevenue
+                        ? `${formatChartDate(point.date)}: gross ${formatUsdTick(point.primary)}, commission ${formatUsdTick(-Math.abs(point.supplemental))}, estimated net ${formatUsdTick(point.secondary)}`
+                        : `${formatChartDate(point.date)}: total ${formatUsdTick(point.secondary)}, positive ${formatUsdTick(point.primary)}, negative ${formatUsdTick(point.supplemental)}`}
                     </title>
                   </circle>
                 ))}
-                {usdRevenueChart.xLabelIndexes.map((index) => {
-                  const point = usdRevenueChart.numericPoints[index];
+                {visibleRevenueChart?.xLabelIndexes.map((index) => {
+                  const point = visibleRevenueChart.numericPoints[index];
 
                   return (
                     <text
                       key={point.date}
-                      x={usdRevenueChart.xForIndex(index)}
-                      y={usdRevenueChart.height - 18}
+                      x={visibleRevenueChart.xForIndex(index)}
+                      y={visibleRevenueChart.height - 18}
                       fill="currentColor"
                       opacity="0.68"
                       fontSize="12"

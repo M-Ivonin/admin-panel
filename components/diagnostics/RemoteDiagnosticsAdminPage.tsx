@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Autocomplete,
@@ -16,7 +15,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, BugReport, OpenInNew } from '@mui/icons-material';
+import { BugReport, OpenInNew } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   buildDiagnosticsBackendLokiUrl,
   buildDiagnosticsLokiUrl,
@@ -680,17 +680,63 @@ export function RemoteDiagnosticsAdminPage() {
     }
   }
 
+  const pageHeader = (
+    <AdminPageHeader
+      title="Remote Diagnostics"
+      subtitle="Temporary mobile diagnostics policies and backend log forwarding"
+      icon={<BugReport color="error" />}
+      actions={isLoading ? undefined : (
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TextField
+            select
+            SelectProps={{ native: true }}
+            label="Backend logs"
+            size="small"
+            value={backendLogSetting.mode}
+            onChange={(event) =>
+              handleBackendLogModeChange(
+                event.target.value as DiagnosticsBackendLogMode
+              )
+            }
+            disabled={isMutating}
+            sx={{ minWidth: 180 }}
+          >
+            {BACKEND_LOG_MODES.map((mode) => (
+              <option key={mode.value} value={mode.value}>
+                {mode.label}
+              </option>
+            ))}
+          </TextField>
+          {backendLokiUrl && (
+            <Button
+              href={backendLokiUrl}
+              target="_blank"
+              rel="noreferrer"
+              size="small"
+              endIcon={<OpenInNew />}
+            >
+              Backend Grafana
+            </Button>
+          )}
+        </Stack>
+      )}
+    />
+  );
+
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <CircularProgress />
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        {pageHeader}
+        <Box
+          sx={{
+            minHeight: 'calc(100vh - 73px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
@@ -712,68 +758,7 @@ export function RemoteDiagnosticsAdminPage() {
           <Typography fontWeight={700}>Applying policy changes...</Typography>
         </Stack>
       </Backdrop>
-      <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Box
-          sx={{
-            maxWidth: 1280,
-            mx: 'auto',
-            px: { xs: 2, sm: 3, lg: 4 },
-            py: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <Link href="/dashboard">
-            <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-              Back
-            </Button>
-          </Link>
-          <BugReport color="error" />
-          <Box>
-            <Typography variant="h5" fontWeight={700} color="text.primary">
-              Remote Diagnostics
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Temporary mobile diagnostics policies and backend log forwarding
-            </Typography>
-          </Box>
-          <Box sx={{ flex: 1 }} />
-          <Stack direction="row" spacing={1} alignItems="center">
-            <TextField
-              select
-              SelectProps={{ native: true }}
-              label="Backend logs"
-              size="small"
-              value={backendLogSetting.mode}
-              onChange={(event) =>
-                handleBackendLogModeChange(
-                  event.target.value as DiagnosticsBackendLogMode
-                )
-              }
-              disabled={isMutating}
-              sx={{ minWidth: 180 }}
-            >
-              {BACKEND_LOG_MODES.map((mode) => (
-                <option key={mode.value} value={mode.value}>
-                  {mode.label}
-                </option>
-              ))}
-            </TextField>
-            {backendLokiUrl && (
-              <Button
-                href={backendLokiUrl}
-                target="_blank"
-                rel="noreferrer"
-                size="small"
-                endIcon={<OpenInNew />}
-              >
-                Backend Grafana
-              </Button>
-            )}
-          </Stack>
-        </Box>
-      </Paper>
+      {pageHeader}
 
       <Box
         sx={{ maxWidth: 1280, mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}

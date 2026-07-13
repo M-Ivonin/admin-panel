@@ -28,12 +28,12 @@ import {
 } from '@mui/material';
 import {
   Add,
-  ArrowBack,
   Edit,
   InfoOutlined,
   RestartAlt,
   Search,
 } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import type {
   CampaignEntryTriggerType,
   CampaignListItem,
@@ -1158,78 +1158,21 @@ export function CampaignsOverviewPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: COLORS.canvas }}>
-      <Box sx={{ maxWidth: 1440, mx: 'auto', px: 3, py: 3 }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
-          sx={{ mb: 3 }}
-        >
-          <Box>
-            <Typography
-              sx={{
-                color: COLORS.textMuted,
-                fontFamily: 'IBM Plex Mono, monospace',
-                fontSize: 12,
-                fontWeight: 500,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                mb: 1,
-              }}
-            >
-              CRM orchestration / campaigns
-            </Typography>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBack />}
-                onClick={() => router.push('/dashboard')}
-                sx={{
-                  borderColor: COLORS.stroke,
-                  color: COLORS.textPrimary,
-                  borderRadius: 999,
-                }}
-              >
-                Back
-              </Button>
-              <Box>
-                <Typography
-                  sx={{
-                    color: COLORS.textPrimary,
-                    fontFamily: 'Roboto, var(--font-geist-sans), sans-serif',
-                    fontSize: 40,
-                    fontWeight: 700,
-                    lineHeight: 1.05,
-                  }}
-                >
-                  Campaigns
-                </Typography>
-                <Typography
-                  sx={{ color: COLORS.textSecondary, fontSize: 14, mt: 0.5 }}
-                >
-                  Overview, filters, and lifecycle monitoring for every campaign
-                  in flight.
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-
+      <AdminPageHeader
+        title="Campaigns"
+        subtitle="Overview, filters, and lifecycle monitoring for every campaign in flight."
+        actions={
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => router.push('/dashboard/campaigns/new')}
-            sx={{
-              borderRadius: 999,
-              bgcolor: COLORS.accent,
-              px: 2.25,
-              py: 1.1,
-              '&:hover': { bgcolor: COLORS.scheduled },
-            }}
           >
             New Campaign
           </Button>
-        </Stack>
-
+        }
+        maxWidth={1440}
+      />
+      <Box sx={{ maxWidth: 1440, mx: 'auto', px: 3, py: 3 }}>
         {overview && (
           <Box
             sx={{

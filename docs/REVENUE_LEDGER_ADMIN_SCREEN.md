@@ -60,3 +60,24 @@ The UI exposes only backend allowlisted sort fields:
 The summary is calculated by the backend for the filtered scope, not by summing the current browser page.
 
 Money is grouped by currency. Rows with missing amount or currency are excluded from monetary totals and counted separately.
+
+When the backend provides the store-adjusted summary, the USD chart shows:
+
+- gross ledger revenue;
+- estimated Google Play/App Store commission;
+- estimated net revenue after that commission.
+
+The graph keeps gross and estimated net as separate lines and displays the
+effective commission periods returned by the backend. The copy intentionally
+labels net and commission as estimates: Tenjin can still differ because some
+server-side events are not SDK-dispatchable and because refund, tax, and
+rounding rules are external to this screen.
+
+The UI remains backward compatible with a backend that has not yet added the
+store-adjusted fields; in that case it renders the previous gross-only USD
+summary.
+
+If the exchange-rate response does not cover every filtered currency, the
+screen labels the USD values as a partial estimate, lists the excluded
+currencies, and shows the FX source and rate date. Currency-specific ledger
+totals remain visible above the chart.
