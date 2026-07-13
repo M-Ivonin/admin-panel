@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -9,11 +8,11 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  Paper,
   TextField,
   Typography,
 } from '@mui/material';
-import { ArrowBack, Lock } from '@mui/icons-material';
+import { Lock } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface RevenueLedgerAccessGateProps {
   children: ReactNode;
@@ -113,28 +112,7 @@ export function RevenueLedgerAccessGate({
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Box
-          sx={{
-            maxWidth: 1280,
-            mx: 'auto',
-            px: { xs: 2, sm: 3, lg: 4 },
-            py: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <Link href="/dashboard">
-            <Button variant="outlined" size="small" startIcon={<ArrowBack />}>
-              Back
-            </Button>
-          </Link>
-          <Typography variant="h5" fontWeight="bold" color="text.primary">
-            Revenue Ledger
-          </Typography>
-        </Box>
-      </Paper>
+      <AdminPageHeader title="Revenue Ledger" />
 
       <Box
         sx={{

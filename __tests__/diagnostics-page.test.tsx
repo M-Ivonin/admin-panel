@@ -113,6 +113,12 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+async function waitForDiagnosticsLoaded() {
+  await waitFor(() => {
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+}
+
 describe('RemoteDiagnosticsPage', () => {
   beforeEach(() => {
     jest
@@ -147,10 +153,56 @@ describe('RemoteDiagnosticsPage', () => {
     jest.restoreAllMocks();
   });
 
+  it('keeps Back available while diagnostics are loading', async () => {
+    const policies = createDeferred<{ items: DiagnosticsPolicy[] }>();
+    const targets = createDeferred<{
+      platforms: string[];
+      recentUsers: string[];
+      recentDevices: string[];
+      appVersionBuilds: { appVersion: string; buildNumber: string }[];
+    }>();
+    const backendLogs = createDeferred<{
+      mode: 'production';
+      updatedByEmail: null;
+      updatedAt: null;
+    }>();
+    (getDiagnosticsPolicies as jest.Mock).mockReturnValue(policies.promise);
+    (getDiagnosticsTargetOptions as jest.Mock).mockReturnValue(targets.promise);
+    (getDiagnosticsBackendLogSetting as jest.Mock).mockReturnValue(
+      backendLogs.promise
+    );
+
+    render(<RemoteDiagnosticsPage />);
+
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute(
+      'href',
+      '/dashboard'
+    );
+
+    await act(async () => {
+      policies.resolve({ items: [activePolicy] });
+      targets.resolve({
+        platforms: ['android', 'ios'],
+        recentUsers: ['recent@example.com'],
+        recentDevices: ['device-1'],
+        appVersionBuilds: [{ appVersion: '1.2.3', buildNumber: '45' }],
+      });
+      backendLogs.resolve({
+        mode: 'production',
+        updatedByEmail: null,
+        updatedAt: null,
+      });
+      await Promise.all([policies.promise, targets.promise, backendLogs.promise]);
+    });
+
+    await waitForDiagnosticsLoaded();
+    expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
+  });
+
   it('keeps diagnostics fully usable without reading capability gates', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    await waitForDiagnosticsLoaded();
     expect(getDiagnosticsPolicies).toHaveBeenCalledWith({ activeOnly: true });
     expect(screen.queryByText(/Write access required/i)).toBeNull();
     expect(screen.getByRole('button', { name: 'Create policy' })).toBeEnabled();
@@ -163,7 +215,7 @@ describe('RemoteDiagnosticsPage', () => {
 
     render(<RemoteDiagnosticsPage />);
 
-    expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    await waitForDiagnosticsLoaded();
     expect(screen.queryByText('Forbidden')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Target type'), {
@@ -183,7 +235,7 @@ describe('RemoteDiagnosticsPage', () => {
 
     render(<RemoteDiagnosticsPage />);
 
-    expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
+    await waitForDiagnosticsLoaded();
     const backendLogs = screen.getByLabelText('Backend logs');
     expect(backendLogs).toHaveValue('production');
     expect(
@@ -242,7 +294,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('updates backend log forwarding from the header without creating a policy', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Backend logs'), {
@@ -262,7 +314,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('validates TTL, reason, target details, and global sample rate before create', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     fireEvent.change(screen.getByLabelText('Target type'), {
       target: { value: 'global_sample' },
@@ -317,7 +369,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('creates user policies with selected and manually entered email chips', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     const userEmails = screen.getByLabelText('User emails');
     fireEvent.change(userEmails, {
@@ -351,7 +403,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('creates device policies with selected and manually entered device chips', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     fireEvent.change(screen.getByLabelText('Target type'), {
       target: { value: 'device' },
@@ -389,7 +441,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('keeps target-specific fields directly under the target type selector', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     const targetColumn = screen.getByTestId('diagnostics-target-column');
 
@@ -421,7 +473,7 @@ describe('RemoteDiagnosticsPage', () => {
 
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     const userEmails = screen.getByLabelText('User emails');
     fireEvent.change(userEmails, {
@@ -470,7 +522,7 @@ describe('RemoteDiagnosticsPage', () => {
   it('creates target-specific payloads and disables active policies', async () => {
     render(<RemoteDiagnosticsPage />);
 
-    await screen.findByText('Remote Diagnostics');
+    await waitForDiagnosticsLoaded();
 
     const targetType = screen.getByLabelText('Target type');
     const reason = screen.getByLabelText('Reason');

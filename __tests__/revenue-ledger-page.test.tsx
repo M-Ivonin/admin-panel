@@ -115,6 +115,44 @@ const populatedResponse = {
         negativeCount: 0,
       },
     ],
+    storeAdjustedRevenue: {
+      baseCurrency: 'USD',
+      grossAmountUsd: '9.99',
+      estimatedStoreCommissionUsd: '3.00',
+      estimatedNetAmountUsd: '6.99',
+      rateDate: '2026-07-10',
+      source: 'ExchangeRate-API Open Access',
+      sourceUrl: 'https://www.exchangerate-api.com',
+      missingCurrencies: [],
+      commissionSchedule: [
+        {
+          store: 'google_play',
+          ratePercent: 30,
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+        {
+          store: 'app_store',
+          ratePercent: 30,
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+      ],
+    },
+    dailyStoreAdjustedRevenue: [
+      {
+        date: '2026-07-09',
+        grossAmountUsd: '4.99',
+        estimatedStoreCommissionUsd: '1.50',
+        estimatedNetAmountUsd: '3.49',
+      },
+      {
+        date: '2026-07-10',
+        grossAmountUsd: '5.00',
+        estimatedStoreCommissionUsd: '1.50',
+        estimatedNetAmountUsd: '3.50',
+      },
+    ],
   },
 };
 
@@ -133,15 +171,21 @@ describe('RevenueLedgerPage', () => {
 
     expect(await screen.findByText('Revenue Ledger')).toBeTruthy();
     expect(await screen.findByText('pro_monthly')).toBeTruthy();
-    expect(screen.getAllByText('Total USD revenue').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('9.99 USD').length).toBeGreaterThan(0);
+    expect(screen.getByText('Gross USD revenue')).toBeTruthy();
+    expect(screen.getByText('Estimated store commission')).toBeTruthy();
+    expect(screen.getByText('Estimated net revenue')).toBeTruthy();
     expect(screen.getAllByText('9.99 USD').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('img', { name: 'Daily USD revenue chart' })
+      screen.getByRole('img', {
+        name: 'Daily gross and estimated net USD revenue chart',
+      })
     ).toBeTruthy();
-    expect(screen.getByText('Positive revenue')).toBeTruthy();
-    expect(screen.queryByText('Negative revenue')).toBeNull();
-    expect(screen.getAllByText('$9.99').length).toBeGreaterThan(0);
+    expect(screen.getByText('Google Play 30%')).toBeTruthy();
+    expect(
+      screen.getByText(/configured store commission by ledger creation date/i)
+    ).toBeTruthy();
+    expect(screen.getByText('$6.99')).toBeTruthy();
+    expect(screen.queryByText(/\$-0\.00/)).toBeNull();
     expect(screen.getByText('Order: order-1')).toBeTruthy();
     expect(screen.getByText('Client Reported Sent')).toBeTruthy();
     expect(getRevenueLedgerEntries).toHaveBeenCalledWith(
@@ -176,6 +220,52 @@ describe('RevenueLedgerPage', () => {
     });
 
     expect(screen.getByText('Jun 17')).toBeTruthy();
+  });
+
+  it('keeps the gross-only chart while the backend is on the previous response contract', async () => {
+    (getRevenueLedgerEntries as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      summary: {
+        ...populatedResponse.summary,
+        usdRevenue: {
+          ...populatedResponse.summary.usdRevenue,
+          missingCurrencies: ['EUR'],
+        },
+        storeAdjustedRevenue: undefined,
+        dailyStoreAdjustedRevenue: undefined,
+      },
+    });
+
+    render(<RevenueLedgerPage />);
+
+    expect(await screen.findByText('Total USD revenue')).toBeTruthy();
+    expect(
+      screen.getByRole('img', { name: 'Daily USD revenue chart' })
+    ).toBeTruthy();
+    expect(screen.queryByText('Estimated store commission')).toBeNull();
+    expect(screen.getByText(/partial USD estimate/i)).toBeTruthy();
+    expect(screen.getByText(/excluded currencies: EUR/i)).toBeTruthy();
+  });
+
+  it('labels the USD estimate as partial when exchange rates are missing', async () => {
+    (getRevenueLedgerEntries as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      summary: {
+        ...populatedResponse.summary,
+        storeAdjustedRevenue: {
+          ...populatedResponse.summary.storeAdjustedRevenue,
+          missingCurrencies: ['EUR'],
+        },
+      },
+    });
+
+    render(<RevenueLedgerPage />);
+
+    expect(await screen.findByText(/partial USD estimate/i)).toBeTruthy();
+    expect(screen.getByText(/excluded currencies: EUR/i)).toBeTruthy();
+    expect(
+      screen.getByText(/ExchangeRate-API Open Access.*2026-07-10/i)
+    ).toBeTruthy();
   });
 
   it('starts with the last week date range and only operator-facing identity filters', async () => {
@@ -221,7 +311,8 @@ describe('RevenueLedgerPage', () => {
           grossAmount: null,
           currency: null,
           tenjinDispatchStatus: 'not_applicable',
-          dispatchSkipReason: 'google_play_subscription_canceled_not_revenue_v1',
+          dispatchSkipReason:
+            'google_play_subscription_canceled_not_revenue_v1',
         },
       ],
     });

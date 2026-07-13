@@ -3,10 +3,10 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import Link from 'next/link';
 import {
   Box,
-  Paper,
   Typography,
   Button,
   Card,
@@ -39,33 +39,11 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        {/* Header */}
-        <Paper elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Box
-            sx={{
-              maxWidth: 1280,
-              mx: 'auto',
-              px: { xs: 2, sm: 3, lg: 4 },
-              py: 2,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <Box>
-              <Typography variant="h5" fontWeight="bold" color="text.primary">
-                Admin Dashboard
-              </Typography>
-              {user && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
-                >
-                  Welcome, {user.name} ({user.email})
-                </Typography>
-              )}
-            </Box>
+        <AdminPageHeader
+          title="Admin Dashboard"
+          subtitle={user ? `Welcome, ${user.name} (${user.email})` : undefined}
+          showBack={false}
+          actions={
             <Button
               variant="outlined"
               size="small"
@@ -74,8 +52,8 @@ export default function DashboardPage() {
             >
               Logout
             </Button>
-          </Box>
-        </Paper>
+          }
+        />
 
         {/* Main content */}
         <Box

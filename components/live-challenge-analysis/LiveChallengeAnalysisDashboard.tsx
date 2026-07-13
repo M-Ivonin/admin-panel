@@ -26,6 +26,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Refresh, SportsSoccer } from '@mui/icons-material';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getLiveChallengeAnalysis,
   getLiveChallengeAnalysisDetail,
@@ -140,33 +141,28 @@ export function LiveChallengeAnalysisDashboard() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <AdminPageHeader
+        title="Live Match Challenge Analysis"
+        subtitle={
+          <>
+            Audit release {data?.metadata.auditReleaseDate ?? '2026-07-10'} ·{' '}
+            {data?.metadata.auditRetentionMonths ?? 2} month retention
+          </>
+        }
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={() => void loadSummary()}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+        }
+        maxWidth={1440}
+      />
       <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
         <Stack spacing={3}>
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={2}
-            alignItems={{ xs: 'stretch', md: 'center' }}
-            justifyContent="space-between"
-          >
-            <Box>
-              <Typography variant="h4" fontWeight={700}>
-                Live Match Challenge Analysis
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Audit release {data?.metadata.auditReleaseDate ?? '2026-07-10'} ·{' '}
-                {data?.metadata.auditRetentionMonths ?? 2} month retention
-              </Typography>
-            </Box>
-            <Button
-              variant="outlined"
-              startIcon={<Refresh />}
-              onClick={() => void loadSummary()}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
-          </Stack>
-
           <Paper
             variant="outlined"
             sx={{
