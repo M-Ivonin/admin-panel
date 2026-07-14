@@ -14,6 +14,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
@@ -21,6 +22,7 @@ import {
   OnboardingFunnelAnalyticsResponse,
   OnboardingFunnelHeatmapBucket,
   OnboardingFunnelRecentEvent,
+  OnboardingFunnelTimeSeriesBucket,
 } from '@/lib/api/onboarding-analytics';
 
 const STEP_LABELS: Record<string, string> = {
@@ -162,12 +164,6 @@ export function OnboardingAnalyticsDashboard() {
 
   const maxStepViews = useMemo(() => {
     return Math.max(...(data?.steps.map((step) => step.views) ?? [0]), 1);
-  }, [data]);
-  const maxTimeSeries = useMemo(() => {
-    return Math.max(
-      ...(data?.timeSeries.map((bucket) => bucket.started) ?? [0]),
-      1
-    );
   }, [data]);
   const heatmapIndex = useMemo(() => {
     const map = new Map<string, OnboardingFunnelHeatmapBucket>();
@@ -364,82 +360,36 @@ export function OnboardingAnalyticsDashboard() {
                 </CardContent>
               </Card>
 
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
-                  gap: 2,
-                }}
-              >
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
-                      Transitions
-                    </Typography>
-                    <Stack divider={<Divider />} spacing={1}>
-                      {data.transitions.map((transition) => (
-                        <Stack
-                          key={`${transition.from}:${transition.to}`}
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
-                          <Typography variant="body2">
-                            {STEP_LABELS[transition.from] ?? transition.from} to{' '}
-                            {STEP_LABELS[transition.to] ?? transition.to}
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label={`${formatPercent(transition.rate)} / ${
-                              transition.sessions
-                            } sessions`}
-                          />
-                        </Stack>
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    Transitions
+                  </Typography>
+                  <Stack divider={<Divider />} spacing={1}>
+                    {data.transitions.map((transition) => (
+                      <Stack
+                        key={`${transition.from}:${transition.to}`}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Typography variant="body2">
+                          {STEP_LABELS[transition.from] ?? transition.from} to{' '}
+                          {STEP_LABELS[transition.to] ?? transition.to}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={`${formatPercent(transition.rate)} / ${
+                            transition.sessions
+                          } sessions`}
+                        />
+                      </Stack>
+                    ))}
+                  </Stack>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" fontWeight={700} gutterBottom>
-                      Time Series
-                    </Typography>
-                    <Stack direction="row" spacing={1} alignItems="end">
-                      {data.timeSeries.slice(-14).map((bucket) => (
-                        <Box key={bucket.date} sx={{ flex: 1, minWidth: 16 }}>
-                          <Box
-                            title={`${bucket.date}: ${bucket.started} started`}
-                            sx={{
-                              height: 96,
-                              display: 'flex',
-                              alignItems: 'end',
-                              bgcolor: 'action.hover',
-                              borderRadius: 1,
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: '100%',
-                                height: `${(bucket.started / maxTimeSeries) * 100}%`,
-                                bgcolor: 'success.main',
-                              }}
-                            />
-                          </Box>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ display: 'block', mt: 0.5 }}
-                          >
-                            {bucket.date.slice(5)}
-                          </Typography>
-                        </Box>
-                      ))}
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Box>
+              <OnboardingHistoryChart timeSeries={data.timeSeries} />
 
               <Card>
                 <CardContent>
@@ -606,6 +556,213 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       </CardContent>
     </Card>
   );
+}
+
+function OnboardingHistoryChart({
+  timeSeries,
+}: {
+  timeSeries: OnboardingFunnelTimeSeriesBucket[];
+}) {
+  const theme = useTheme();
+  const chartWidth = Math.max(1040, (timeSeries.length - 1) * 112 + 104);
+  const chartHeight = 280;
+  const plot = { top: 24, right: 64, bottom: 48, left: 24 };
+  const maxSessions = Math.max(
+    ...timeSeries.flatMap((bucket) => [bucket.started, bucket.completed]),
+    1
+  );
+  const axisMax = Math.max(4, Math.ceil(maxSessions / 4) * 4);
+  const plotWidth = chartWidth - plot.left - plot.right;
+  const plotHeight = chartHeight - plot.top - plot.bottom;
+  const xForIndex = (index: number) =>
+    timeSeries.length <= 1
+      ? plot.left + 24
+      : plot.left + (index / (timeSeries.length - 1)) * plotWidth;
+  const yForValue = (value: number) =>
+    plot.top + (1 - value / axisMax) * plotHeight;
+  const startedPoints = timeSeries
+    .map((bucket, index) => `${xForIndex(index)},${yForValue(bucket.started)}`)
+    .join(' ');
+  const completedPoints = timeSeries
+    .map((bucket, index) => `${xForIndex(index)},${yForValue(bucket.completed)}`)
+    .join(' ');
+
+  return (
+    <Card>
+      <CardContent>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          spacing={1}
+          sx={{ mb: 1 }}
+        >
+          <Box>
+            <Typography variant="h6" component="h2" fontWeight={700}>
+              Onboarding History
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Daily onboarding sessions in the selected date range.
+            </Typography>
+          </Box>
+          <Stack
+            component="ul"
+            aria-label="Chart legend"
+            direction="row"
+            spacing={2}
+            sx={{ p: 0, m: 0, listStyle: 'none' }}
+          >
+            <ChartLegendItem
+              label="Started"
+              color={theme.palette.primary.light}
+              dashed
+            />
+            <ChartLegendItem
+              label="Completed"
+              color={theme.palette.success.main}
+            />
+          </Stack>
+        </Stack>
+
+        {timeSeries.length === 0 ? (
+          <Typography color="text.secondary" sx={{ py: 6 }}>
+            No onboarding history in this range.
+          </Typography>
+        ) : (
+          <Box
+            component="figure"
+            aria-label="Daily started and completed onboarding sessions"
+            sx={{ m: 0, overflowX: 'auto' }}
+          >
+            <svg
+              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              width="100%"
+              height={chartHeight}
+              style={{ display: 'block', minWidth: chartWidth }}
+            >
+              {Array.from({ length: 5 }, (_, index) => {
+                const value = axisMax - (axisMax / 4) * index;
+                const y = yForValue(value);
+                return (
+                  <g key={value} aria-hidden="true">
+                    <line
+                      x1={plot.left}
+                      x2={chartWidth - plot.right}
+                      y1={y}
+                      y2={y}
+                      stroke={theme.palette.divider}
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={chartWidth - plot.right + 12}
+                      y={y + 4}
+                      fill={theme.palette.text.secondary}
+                      fontSize="12"
+                    >
+                      {value}
+                    </text>
+                  </g>
+                );
+              })}
+
+              <polyline
+                role="img"
+                aria-label="Completed onboarding sessions line"
+                points={completedPoints}
+                fill="none"
+                stroke={theme.palette.success.main}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <polyline
+                role="img"
+                aria-label="Started onboarding sessions line"
+                points={startedPoints}
+                fill="none"
+                stroke={theme.palette.primary.light}
+                strokeWidth="3"
+                strokeDasharray="8 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {timeSeries.map((bucket, index) => {
+                const x = xForIndex(index);
+                const label = `${bucket.date}: ${bucket.started} started, ${bucket.completed} completed`;
+                return (
+                  <g key={bucket.date} role="img" aria-label={label}>
+                    <title>{label}</title>
+                    <circle
+                      cx={x}
+                      cy={yForValue(bucket.started)}
+                      r="6"
+                      fill={theme.palette.background.paper}
+                      stroke={theme.palette.primary.light}
+                      strokeWidth="3"
+                    />
+                    <circle
+                      cx={x}
+                      cy={yForValue(bucket.completed)}
+                      r="3.5"
+                      fill={theme.palette.background.paper}
+                      stroke={theme.palette.success.main}
+                      strokeWidth="3"
+                    />
+                    <text
+                      aria-hidden="true"
+                      x={x}
+                      y={chartHeight - 14}
+                      textAnchor="middle"
+                      fill={theme.palette.text.secondary}
+                      fontSize="12"
+                    >
+                      {formatChartDate(bucket.date)}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ChartLegendItem({
+  label,
+  color,
+  dashed = false,
+}: {
+  label: string;
+  color: string;
+  dashed?: boolean;
+}) {
+  return (
+    <Stack component="li" direction="row" spacing={0.75} alignItems="center">
+      <Box
+        aria-hidden="true"
+        sx={{
+          width: 28,
+          borderTop: '3px solid',
+          borderColor: color,
+          borderStyle: dashed ? 'dashed' : 'solid',
+        }}
+      />
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+    </Stack>
+  );
+}
+
+function formatChartDate(date: string): string {
+  return new Date(`${date}T00:00:00.000Z`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    timeZone: 'UTC',
+  });
 }
 
 function HeatmapRow({

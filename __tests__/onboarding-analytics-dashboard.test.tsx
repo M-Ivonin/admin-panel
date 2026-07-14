@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { OnboardingAnalyticsDashboard } from '@/components/onboarding-analytics/OnboardingAnalyticsDashboard';
 import { getOnboardingFunnelAnalytics } from '@/lib/api/onboarding-analytics';
 
@@ -61,7 +67,7 @@ describe('OnboardingAnalyticsDashboard', () => {
   it('loads the last 7 days by default on first page open', async () => {
     render(<OnboardingAnalyticsDashboard />);
 
-    expect(await screen.findByText('Started')).toBeInTheDocument();
+    expect(await screen.findByText('50%')).toBeInTheDocument();
 
     expect(getOnboardingFunnelAnalytics).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -76,7 +82,7 @@ describe('OnboardingAnalyticsDashboard', () => {
   it('renders platform, locale, and app version filters as dropdowns', async () => {
     render(<OnboardingAnalyticsDashboard />);
 
-    expect(await screen.findByText('Started')).toBeInTheDocument();
+    expect(await screen.findByText('50%')).toBeInTheDocument();
 
     expect(
       screen.getByRole('combobox', { name: /platform/i })
@@ -92,7 +98,7 @@ describe('OnboardingAnalyticsDashboard', () => {
   it('reloads data immediately when a filter date changes and manually refreshes with the same filters', async () => {
     render(<OnboardingAnalyticsDashboard />);
 
-    expect(await screen.findByText('Started')).toBeInTheDocument();
+    expect(await screen.findByText('50%')).toBeInTheDocument();
     const refreshButton = screen.getByRole('button', { name: 'Refresh' });
 
     fireEvent.change(screen.getByLabelText('From'), {
@@ -132,12 +138,63 @@ describe('OnboardingAnalyticsDashboard', () => {
   it('renders the dashboard navigation header', async () => {
     render(<OnboardingAnalyticsDashboard />);
 
-    expect(await screen.findByText('Started')).toBeInTheDocument();
+    expect(await screen.findByText('50%')).toBeInTheDocument();
 
     const backLink = screen.getByRole('link', { name: /back/i });
     expect(backLink).toHaveAttribute('href', '/dashboard');
     expect(
       screen.getByRole('heading', { name: 'Onboarding Analytics' })
+    ).toBeInTheDocument();
+  });
+
+  it('renders daily started and completed onboarding history as two lines', async () => {
+    (getOnboardingFunnelAnalytics as jest.Mock).mockResolvedValue({
+      ...analyticsResponse,
+      range: {
+        from: '2026-07-01T00:00:00.000Z',
+        to: '2026-07-03T23:59:59.999Z',
+        timezone: 'UTC',
+      },
+      timeSeries: [
+        { date: '2026-07-01', started: 2, completed: 1, dropOff: 1 },
+        { date: '2026-07-02', started: 4, completed: 3, dropOff: 1 },
+        { date: '2026-07-03', started: 5, completed: 5, dropOff: 0 },
+      ],
+    });
+
+    render(<OnboardingAnalyticsDashboard />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Onboarding History' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('figure', {
+        name: 'Daily started and completed onboarding sessions',
+      })
+    ).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Chart legend' });
+    expect(within(legend).getByText('Started')).toBeInTheDocument();
+    expect(within(legend).getByText('Completed')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Started onboarding sessions line' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: 'Completed onboarding sessions line' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: '2026-07-01: 2 started, 1 completed',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: '2026-07-02: 4 started, 3 completed',
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', {
+        name: '2026-07-03: 5 started, 5 completed',
+      })
     ).toBeInTheDocument();
   });
 
