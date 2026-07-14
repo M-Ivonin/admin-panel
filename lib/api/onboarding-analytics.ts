@@ -39,6 +39,7 @@ export interface OnboardingFunnelTimeSeriesBucket {
   date: string;
   started: number;
   completed: number;
+  completionRate: number;
   dropOff: number;
 }
 

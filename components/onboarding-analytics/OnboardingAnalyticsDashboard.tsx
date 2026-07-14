@@ -566,25 +566,35 @@ function OnboardingHistoryChart({
   const theme = useTheme();
   const chartWidth = Math.max(1040, (timeSeries.length - 1) * 112 + 104);
   const chartHeight = 280;
-  const plot = { top: 24, right: 64, bottom: 48, left: 24 };
+  const plot = { top: 24, right: 64, bottom: 48, left: 48 };
   const maxSessions = Math.max(
-    ...timeSeries.flatMap((bucket) => [bucket.started, bucket.completed]),
+    ...timeSeries.map((bucket) => bucket.started),
     1
   );
   const axisMax = Math.max(4, Math.ceil(maxSessions / 4) * 4);
   const plotWidth = chartWidth - plot.left - plot.right;
   const plotHeight = chartHeight - plot.top - plot.bottom;
+  const hasValidCompletionRates = timeSeries.every((bucket) =>
+    Number.isFinite(bucket.completionRate)
+  );
   const xForIndex = (index: number) =>
     timeSeries.length <= 1
       ? plot.left + 24
       : plot.left + (index / (timeSeries.length - 1)) * plotWidth;
-  const yForValue = (value: number) =>
+  const yForStarted = (value: number) =>
     plot.top + (1 - value / axisMax) * plotHeight;
+  const yForCompletionRate = (value: number) =>
+    plot.top + (1 - Math.min(Math.max(value, 0), 1)) * plotHeight;
   const startedPoints = timeSeries
-    .map((bucket, index) => `${xForIndex(index)},${yForValue(bucket.started)}`)
+    .map(
+      (bucket, index) => `${xForIndex(index)},${yForStarted(bucket.started)}`
+    )
     .join(' ');
-  const completedPoints = timeSeries
-    .map((bucket, index) => `${xForIndex(index)},${yForValue(bucket.completed)}`)
+  const completionRatePoints = timeSeries
+    .map(
+      (bucket, index) =>
+        `${xForIndex(index)},${yForCompletionRate(bucket.completionRate)}`
+    )
     .join(' ');
 
   return (
@@ -602,7 +612,7 @@ function OnboardingHistoryChart({
               Onboarding History
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Daily onboarding sessions in the selected date range.
+              Daily starts and completion rate for each start-date cohort.
             </Typography>
           </Box>
           <Stack
@@ -618,7 +628,7 @@ function OnboardingHistoryChart({
               dashed
             />
             <ChartLegendItem
-              label="Completed"
+              label="Completed %"
               color={theme.palette.success.main}
             />
           </Stack>
@@ -628,10 +638,15 @@ function OnboardingHistoryChart({
           <Typography color="text.secondary" sx={{ py: 6 }}>
             No onboarding history in this range.
           </Typography>
+        ) : !hasValidCompletionRates ? (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Completion history is unavailable until the analytics backend is
+            updated.
+          </Alert>
         ) : (
           <Box
             component="figure"
-            aria-label="Daily started and completed onboarding sessions"
+            aria-label="Daily started onboarding sessions and completion rate"
             sx={{ m: 0, overflowX: 'auto' }}
           >
             <svg
@@ -641,10 +656,11 @@ function OnboardingHistoryChart({
               style={{ display: 'block', minWidth: chartWidth }}
             >
               {Array.from({ length: 5 }, (_, index) => {
-                const value = axisMax - (axisMax / 4) * index;
-                const y = yForValue(value);
+                const startedValue = axisMax - (axisMax / 4) * index;
+                const completionPercent = 100 - index * 25;
+                const y = yForStarted(startedValue);
                 return (
-                  <g key={value} aria-hidden="true">
+                  <g key={startedValue} aria-hidden="true">
                     <line
                       x1={plot.left}
                       x2={chartWidth - plot.right}
@@ -654,12 +670,21 @@ function OnboardingHistoryChart({
                       strokeWidth="1"
                     />
                     <text
+                      x={plot.left - 12}
+                      y={y + 4}
+                      textAnchor="end"
+                      fill={theme.palette.text.secondary}
+                      fontSize="12"
+                    >
+                      {startedValue}
+                    </text>
+                    <text
                       x={chartWidth - plot.right + 12}
                       y={y + 4}
                       fill={theme.palette.text.secondary}
                       fontSize="12"
                     >
-                      {value}
+                      {completionPercent}%
                     </text>
                   </g>
                 );
@@ -667,8 +692,8 @@ function OnboardingHistoryChart({
 
               <polyline
                 role="img"
-                aria-label="Completed onboarding sessions line"
-                points={completedPoints}
+                aria-label="Onboarding completion rate line"
+                points={completionRatePoints}
                 fill="none"
                 stroke={theme.palette.success.main}
                 strokeWidth="3"
@@ -689,13 +714,13 @@ function OnboardingHistoryChart({
 
               {timeSeries.map((bucket, index) => {
                 const x = xForIndex(index);
-                const label = `${bucket.date}: ${bucket.started} started, ${bucket.completed} completed`;
+                const label = `${bucket.date}: ${bucket.started} started, ${formatPercent(bucket.completionRate)} completed`;
                 return (
                   <g key={bucket.date} role="img" aria-label={label}>
                     <title>{label}</title>
                     <circle
                       cx={x}
-                      cy={yForValue(bucket.started)}
+                      cy={yForStarted(bucket.started)}
                       r="6"
                       fill={theme.palette.background.paper}
                       stroke={theme.palette.primary.light}
@@ -703,7 +728,7 @@ function OnboardingHistoryChart({
                     />
                     <circle
                       cx={x}
-                      cy={yForValue(bucket.completed)}
+                      cy={yForCompletionRate(bucket.completionRate)}
                       r="3.5"
                       fill={theme.palette.background.paper}
                       stroke={theme.palette.success.main}
