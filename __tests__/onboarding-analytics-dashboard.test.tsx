@@ -156,9 +156,27 @@ describe('OnboardingAnalyticsDashboard', () => {
         timezone: 'UTC',
       },
       timeSeries: [
-        { date: '2026-07-01', started: 2, completed: 1, dropOff: 1 },
-        { date: '2026-07-02', started: 4, completed: 3, dropOff: 1 },
-        { date: '2026-07-03', started: 5, completed: 5, dropOff: 0 },
+        {
+          date: '2026-07-01',
+          started: 2,
+          completed: 1,
+          completionRate: 0.5,
+          dropOff: 1,
+        },
+        {
+          date: '2026-07-02',
+          started: 4,
+          completed: 3,
+          completionRate: 0.75,
+          dropOff: 1,
+        },
+        {
+          date: '2026-07-03',
+          started: 5,
+          completed: 5,
+          completionRate: 1,
+          dropOff: 0,
+        },
       ],
     });
 
@@ -169,31 +187,31 @@ describe('OnboardingAnalyticsDashboard', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('figure', {
-        name: 'Daily started and completed onboarding sessions',
+        name: 'Daily started onboarding sessions and completion rate',
       })
     ).toBeInTheDocument();
     const legend = screen.getByRole('list', { name: 'Chart legend' });
     expect(within(legend).getByText('Started')).toBeInTheDocument();
-    expect(within(legend).getByText('Completed')).toBeInTheDocument();
+    expect(within(legend).getByText('Completed %')).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Started onboarding sessions line' })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Completed onboarding sessions line' })
+      screen.getByRole('img', { name: 'Onboarding completion rate line' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
-        name: '2026-07-01: 2 started, 1 completed',
+        name: '2026-07-01: 2 started, 50% completed',
       })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
-        name: '2026-07-02: 4 started, 3 completed',
+        name: '2026-07-02: 4 started, 75% completed',
       })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
-        name: '2026-07-03: 5 started, 5 completed',
+        name: '2026-07-03: 5 started, 100% completed',
       })
     ).toBeInTheDocument();
   });
