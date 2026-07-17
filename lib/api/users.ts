@@ -43,6 +43,10 @@ export interface User {
   latestAppProfile?: UserLatestAppProfile;
 }
 
+export interface PaginatedUser extends User {
+  registered_at: string | null;
+}
+
 export enum RetentionStage {
   NEW = 'NEW',
   CURRENT = 'CURRENT',
@@ -76,7 +80,7 @@ export interface GetUsersParams {
 }
 
 export interface PaginatedUsersResponse {
-  users: User[];
+  users: PaginatedUser[];
   total: number;
   page: number;
   limit: number;

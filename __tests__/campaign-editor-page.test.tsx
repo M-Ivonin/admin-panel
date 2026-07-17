@@ -7,7 +7,12 @@ import {
   within,
 } from '@testing-library/react';
 import { CampaignEditorPage } from '@/components/campaigns/CampaignEditorPage';
-import { getUser, getUsers, type User } from '@/lib/api/users';
+import {
+  getUser,
+  getUsers,
+  type PaginatedUser,
+  type User,
+} from '@/lib/api/users';
 import { createEmptyCampaignDraft } from '@/modules/campaigns/defaults';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { MISSING_TRACKED_GOAL_WARNING } from '@/modules/campaigns/selectors';
@@ -59,7 +64,11 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
-function createCampaignUser(id: string, name: string, email: string): User {
+function createCampaignUser(
+  id: string,
+  name: string,
+  email: string
+): PaginatedUser {
   return {
     id,
     email,
@@ -69,6 +78,7 @@ function createCampaignUser(id: string, name: string, email: string): User {
     telegram_id: null,
     phone_number: null,
     timezone: 'UTC',
+    registered_at: null,
     first_seen_at: null,
     last_active_at: null,
     previous_active_at: null,
@@ -1468,6 +1478,7 @@ describe('CampaignEditorPage', () => {
           telegram_id: null,
           phone_number: null,
           timezone: 'UTC',
+          registered_at: null,
           first_seen_at: null,
           last_active_at: null,
           previous_active_at: null,
@@ -1673,6 +1684,7 @@ describe('CampaignEditorPage', () => {
           telegram_id: null,
           phone_number: null,
           timezone: 'UTC',
+          registered_at: null,
           first_seen_at: null,
           last_active_at: null,
           previous_active_at: null,

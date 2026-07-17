@@ -35,6 +35,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUsers,
   User,
+  PaginatedUser,
   RetentionStage,
   PaginatedUsersResponse,
   RetentionCounts,
@@ -75,7 +76,12 @@ function getPlanColor(
 }
 
 function normalizePlanIdentifier(value: string | null | undefined): string {
-  return value?.trim().toLowerCase().replace(/[\s.-]+/g, '_') ?? '';
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .replace(/[\s.-]+/g, '_') ?? ''
+  );
 }
 
 function resolveSirBroPlanTier(plan: string | null | undefined) {
@@ -176,9 +182,7 @@ function getRetentionChipSx(
   };
 }
 
-function getAppProfileChip(
-  appProfile: UserLatestAppProfile | undefined
-): {
+function getAppProfileChip(appProfile: UserLatestAppProfile | undefined): {
   label: string;
   color: 'default' | 'primary' | 'secondary';
   variant: 'filled' | 'outlined';
@@ -216,7 +220,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 export default function UsersPage() {
   // Data state
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<PaginatedUser[]>([]);
   const [total, setTotal] = useState(0);
   const [retentionCounts, setRetentionCounts] =
     useState<RetentionCounts | null>(null);
@@ -573,17 +577,17 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <TableSortLabel
-                          active={sortBy === 'first_seen_at'}
+                          active={sortBy === 'registered_at'}
                           direction={
-                            sortBy === 'first_seen_at'
+                            sortBy === 'registered_at'
                               ? sortOrder === 'ASC'
                                 ? 'asc'
                                 : 'desc'
                               : 'desc'
                           }
-                          onClick={() => handleSort('first_seen_at')}
+                          onClick={() => handleSort('registered_at')}
                         >
-                          First Seen
+                          Registered At
                         </TableSortLabel>
                       </TableCell>
                       <TableCell>
@@ -716,7 +720,7 @@ export default function UsersPage() {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {formatDate(user.first_seen_at)}
+                            {formatDate(user.registered_at)}
                           </Typography>
                         </TableCell>
                         <TableCell>
