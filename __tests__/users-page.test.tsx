@@ -1,7 +1,13 @@
-import { render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import UsersPage from '@/app/(admin)/dashboard/users/page';
 import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
-import { getUsers, RetentionStage, type User } from '@/lib/api/users';
+import { getUsers, RetentionStage, type PaginatedUser } from '@/lib/api/users';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -23,7 +29,7 @@ jest.mock('@/lib/api/campaigns', () => ({
 const mockedGetUsers = jest.mocked(getUsers);
 const mockedGetCampaignEditorCatalog = jest.mocked(getCampaignEditorCatalog);
 
-function createUser(overrides: Partial<User>): User {
+function createUser(overrides: Partial<PaginatedUser>): PaginatedUser {
   return {
     id: 'user_default',
     telegram_id: null,
@@ -32,6 +38,7 @@ function createUser(overrides: Partial<User>): User {
     phone_number: null,
     email: null,
     timezone: 'UTC',
+    registered_at: null,
     first_seen_at: null,
     last_active_at: null,
     previous_active_at: null,
@@ -76,6 +83,7 @@ describe('UsersPage', () => {
           id: 'sirbro_user',
           name_app: 'SirBro User',
           latestAppProfile: 'SirBro',
+          registered_at: '2025-07-18T10:17:14.012Z',
         }),
         createUser({
           id: 'tipsterbro_user',
@@ -115,7 +123,7 @@ describe('UsersPage', () => {
       'Plan',
       'Level',
       'XP / Points',
-      'First Seen',
+      'Registered At',
       'Last Active',
       'Language',
       'Partner',
@@ -131,11 +139,23 @@ describe('UsersPage', () => {
     expect(unknownRow).not.toBeNull();
 
     expect(within(sirbroRow!).getByText('SirBro')).toBeTruthy();
+    expect(within(sirbroRow!).getByText('Jul 18, 2025')).toBeTruthy();
     expect(within(tipsterbroRow!).getByText('TipsterBro')).toBeTruthy();
     expect(within(unknownRow!).getByText('Unknown')).toBeTruthy();
     expect(
       screen.queryByPlaceholderText(/filter by app/i)
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Registered At' }));
+
+    await waitFor(() => {
+      expect(mockedGetUsers).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'registered_at',
+          sortOrder: 'DESC',
+        })
+      );
+    });
   });
 
   it('renders app-effective plans instead of cross-app billing plans', async () => {
