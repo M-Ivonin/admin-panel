@@ -238,7 +238,7 @@ export default function UsersPage() {
   const [partnerFilter, setPartnerFilter] = useState('');
 
   // Sorting state
-  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState('registered_at');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   // UI state

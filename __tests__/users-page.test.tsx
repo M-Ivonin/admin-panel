@@ -146,13 +146,22 @@ describe('UsersPage', () => {
       screen.queryByPlaceholderText(/filter by app/i)
     ).not.toBeInTheDocument();
 
+    await waitFor(() => {
+      expect(mockedGetUsers).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sortBy: 'registered_at',
+          sortOrder: 'DESC',
+        })
+      );
+    });
+
     fireEvent.click(screen.getByRole('button', { name: 'Registered At' }));
 
     await waitFor(() => {
       expect(mockedGetUsers).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sortBy: 'registered_at',
-          sortOrder: 'DESC',
+          sortOrder: 'ASC',
         })
       );
     });
