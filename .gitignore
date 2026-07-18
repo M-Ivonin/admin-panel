@@ -48,3 +48,12 @@ next-env.d.ts
 # codex-orchestrator runtime files
 .codex-orchestrator/workspaces/
 .codex-orchestrator/state/
+
+# codex-orchestrator runtime files
+.codex-orchestrator/proofs/
+
+# codex-orchestrator v2 runtime start
+.codex-orchestrator/workspaces-v2/
+.codex-orchestrator/v2/state/
+.codex-orchestrator/v2/proofs/
+# codex-orchestrator v2 runtime end
