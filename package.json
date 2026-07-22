@@ -18,6 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify:stage": "npm run lint && npm test -- --runInBand && rm -rf .next && npm run build && npm run typecheck",
     "smoke:routes": "node ./scripts/smoke-routes.mjs",
+    "deploy:updated-home-analytics:preview": "node ./scripts/deploy-updated-home-analytics-preview.mjs",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -58,6 +59,7 @@
     "postcss": "^8.0.0",
     "prettier": "^3.0.0",
     "tailwindcss": "^3.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vercel": "56.5.0"
   }
 }

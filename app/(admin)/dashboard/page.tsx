@@ -229,6 +229,38 @@ export default function DashboardPage() {
             </Link>
 
             <Link
+              href="/dashboard/updated-home-analytics"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'success.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
+                    <Analytics />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Updated Home Analytics
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Review Home performance, conversion, revenue, and retention
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
               href="/dashboard/live-challenges"
               style={{ textDecoration: 'none' }}
             >
