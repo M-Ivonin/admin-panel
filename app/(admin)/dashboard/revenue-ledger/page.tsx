@@ -80,6 +80,7 @@ const EVENT_TYPE_OPTIONS: Array<{
   { value: 'subscription_recovered', label: 'Subscription recovered' },
   { value: 'subscription_restarted', label: 'Subscription restarted' },
   { value: 'consumable_purchase', label: 'Consumable purchase' },
+  { value: 'pass_purchase', label: 'Pass purchase' },
   { value: 'refund', label: 'Refund' },
   { value: 'voided', label: 'Voided' },
 ];
@@ -472,13 +473,21 @@ function getTenjinChipColor(
 }
 
 function getIdentityLines(entry: RevenueLedgerEntry): string[] {
-  return [
+  const storeIdentityLines = [
     entry.orderId ? `Order: ${entry.orderId}` : null,
     entry.transactionId ? `Tx: ${entry.transactionId}` : null,
     entry.originalTransactionId
       ? `Original: ${entry.originalTransactionId}`
       : null,
-    entry.purchaseToken ? `Token: ${entry.purchaseToken}` : null,
+  ].filter((value): value is string => Boolean(value));
+  if (storeIdentityLines.length > 0) {
+    return storeIdentityLines;
+  }
+  return [
+    entry.commerceEntitlementId
+      ? `Entitlement: ${entry.commerceEntitlementId}`
+      : null,
+    entry.commerceEventId ? `Commerce event: ${entry.commerceEventId}` : null,
   ].filter((value): value is string => Boolean(value));
 }
 

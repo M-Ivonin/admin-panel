@@ -1,5 +1,11 @@
 # Revenue Ledger Admin Screen
 
+The event-type filter includes `Pass purchase` and sends the exact backend value
+`pass_purchase`. When a Full Access row has no legacy Store order, token, or
+transaction identity, the identity column falls back to safe
+`commerceEntitlementId` and `commerceEventId` UUIDs. Raw provider references are
+never rendered.
+
 ## Scope
 
 The admin screen at `/dashboard/revenue-ledger` provides a read-only table for inspecting revenue ledger rows, gross revenue snapshots, correction rows, and Tenjin SDK dispatch state.

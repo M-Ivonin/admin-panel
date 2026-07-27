@@ -56,7 +56,6 @@ const populatedResponse = {
       grossAmount: '9.99',
       currency: 'USD',
       orderId: 'order-1',
-      purchaseToken: 'purchase-token-1',
       transactionId: null,
       originalTransactionId: null,
       eventTime: '2026-04-27T10:00:00.000Z',
@@ -321,6 +320,48 @@ describe('RevenueLedgerPage', () => {
 
     expect(await screen.findByText('Auto-renew canceled')).toBeTruthy();
     expect(screen.queryByText('Subscription Canceled')).toBeNull();
+  });
+
+  it('renders safe commerce identity for a pass purchase without Store identifiers', async () => {
+    (getRevenueLedgerEntries as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      items: [
+        {
+          ...populatedResponse.items[0],
+          id: 'ledger-pass',
+          eventType: 'pass_purchase',
+          productId: 'sirbro_full_24h',
+          orderId: null,
+          commerceEntitlementId: 'entitlement-1',
+          commerceEventId: 'event-1',
+        },
+      ],
+    });
+
+    render(<RevenueLedgerPage />);
+
+    expect(await screen.findByText('Pass Purchase')).toBeTruthy();
+    expect(screen.getByText('Entitlement: entitlement-1')).toBeTruthy();
+    expect(screen.getByText('Commerce event: event-1')).toBeTruthy();
+    expect(screen.queryByText(/secret-hash/)).toBeNull();
+  });
+
+  it('does not render raw Store purchase tokens', async () => {
+    (getRevenueLedgerEntries as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      items: [
+        {
+          ...populatedResponse.items[0],
+          purchaseToken: 'raw-store-secret',
+        },
+      ],
+    });
+
+    render(<RevenueLedgerPage />);
+
+    expect(await screen.findByText('Initial Subscription')).toBeTruthy();
+    expect(screen.queryByText(/raw-store-secret/)).toBeNull();
+    expect(screen.queryByText(/^Token:/)).toBeNull();
   });
 
   it('shows loading and then the empty state', async () => {

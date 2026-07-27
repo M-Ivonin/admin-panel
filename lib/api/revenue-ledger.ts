@@ -9,6 +9,7 @@ export type RevenueLedgerEventType =
   | 'subscription_recovered'
   | 'subscription_restarted'
   | 'consumable_purchase'
+  | 'pass_purchase'
   | 'refund'
   | 'voided';
 
@@ -42,9 +43,10 @@ export interface RevenueLedgerEntry {
   grossAmount: string | null;
   currency: string | null;
   orderId: string | null;
-  purchaseToken: string | null;
   transactionId: string | null;
   originalTransactionId: string | null;
+  commerceEntitlementId: string | null;
+  commerceEventId: string | null;
   eventTime: string | null;
   skipReason: string | null;
   dispatchSkipReason: string | null;
