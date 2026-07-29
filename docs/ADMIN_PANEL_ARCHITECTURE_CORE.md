@@ -10,7 +10,7 @@
 По состоянию на `2026-03-27` публичная homepage SirBro уже:
 
 - реализована в [`/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
-- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/[lang]/page.tsx)
+- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/[lang]/page.tsx>)
 - синхронизирована с актуальным Pencil-источником `Q0YlO` из `/Users/serhiimytakii/Downloads/sirbro.pen`
 - задеплоена как текущая production homepage
 
@@ -55,9 +55,9 @@
 
 Что выполнено:
 
-- приложение разделено на route groups: [`app/(public)`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)), [`app/(auth)`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(auth)), [`app/(admin)`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(admin)), [`app/(deeplink)`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(deeplink))
+- приложение разделено на route groups: [`app/(public)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)>), [`app/(auth)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(auth)>), [`app/(admin)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(admin)>), [`app/(deeplink)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(deeplink)>)
 - `dashboard` оставлен в одной канонической admin-ветке
-- `/` переведен на server-side redirect через [`proxy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/proxy.ts) и [`app/(public)/page.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/page.tsx)
+- `/` переведен на server-side redirect через [`proxy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/proxy.ts) и [`app/(public)/page.tsx`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/page.tsx>)
 - public, auth, admin и deeplink получили независимые root layouts
 
 ### Этап 3. Config и HTTP Layer Separation
@@ -80,7 +80,7 @@
 - metadata builders вынесены в [`modules/seo/metadata.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/metadata.ts)
 - schema builders вынесены в [`modules/seo/schema.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/schema.ts)
 - registry индексируемых public routes вынесен в [`modules/seo/route-registry.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/route-registry.ts)
-- `sitemap.xml` генерируется через [`app/(public)/sitemap.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts)
+- `sitemap.xml` генерируется через [`app/(public)/sitemap.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts>)
 - `robots.txt` оставлен в одном route handler source of truth
 
 ### Этап 5. Content Contracts и Repository Layer
@@ -221,8 +221,8 @@
 - registry индексируемых public routes: [`modules/seo/route-registry.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/route-registry.ts)
 - page metadata builders: [`modules/seo/metadata.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/metadata.ts)
 - structured data builders: [`modules/seo/schema.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/schema.ts)
-- sitemap route: [`app/(public)/sitemap.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts)
-- robots route: [`app/(public)/robots.txt/route.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/robots.txt/route.ts)
+- sitemap route: [`app/(public)/sitemap.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts>)
+- robots route: [`app/(public)/robots.txt/route.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/robots.txt/route.ts>)
 - approved IA source of truth: [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
 - technical handoff for next public layer: [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
 
