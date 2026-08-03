@@ -154,6 +154,11 @@ export interface RevenueLedgerFilters {
   sortOrder?: RevenueLedgerSortOrder;
 }
 
+export const TENJIN_ISSUE_STATUSES: TenjinSdkDispatchStatus[] = [
+  'client_reported_failed',
+  'expired_without_client_report',
+];
+
 export async function getRevenueLedgerEntries(
   params: RevenueLedgerFilters = {}
 ): Promise<PaginatedRevenueLedgerEntriesResponse> {
@@ -209,4 +214,22 @@ export async function getRevenueLedgerEntries(
   }
 
   return response.json();
+}
+
+/** Returns the number of failed or expired Tenjin dispatches in a time range. */
+export async function getTenjinDispatchIssueCount(params: {
+  dateFrom: string;
+  dateTo: string;
+}): Promise<number> {
+  const response = await getRevenueLedgerEntries({
+    page: 1,
+    limit: 1,
+    tenjinDispatchStatuses: TENJIN_ISSUE_STATUSES,
+    dateFrom: params.dateFrom,
+    dateTo: params.dateTo,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
+
+  return response.total;
 }
