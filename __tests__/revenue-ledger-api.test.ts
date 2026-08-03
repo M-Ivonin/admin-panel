@@ -1,5 +1,8 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
-import { getRevenueLedgerEntries } from '@/lib/api/revenue-ledger';
+import {
+  getRevenueLedgerEntries,
+  getTenjinDispatchIssueCount,
+} from '@/lib/api/revenue-ledger';
 
 jest.mock('@/modules/http/admin-auth-client', () => ({
   adminAuthFetch: jest.fn(),
@@ -63,5 +66,23 @@ describe('getRevenueLedgerEntries', () => {
     });
 
     await expect(getRevenueLedgerEntries()).rejects.toThrow('Forbidden');
+  });
+
+  it('counts failed and expired Tenjin dispatches in the requested range', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ total: 3 }),
+    });
+
+    await expect(
+      getTenjinDispatchIssueCount({
+        dateFrom: '2026-07-03T00:00:00.000Z',
+        dateTo: '2026-07-10T23:59:59.999Z',
+      })
+    ).resolves.toBe(3);
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/revenue-ledger/admin/entries?page=1&limit=1&dateFrom=2026-07-03T00%3A00%3A00.000Z&dateTo=2026-07-10T23%3A59%3A59.999Z&sortBy=createdAt&sortOrder=desc&tenjinDispatchStatuses=client_reported_failed&tenjinDispatchStatuses=expired_without_client_report',
+      method: 'GET',
+    });
   });
 });

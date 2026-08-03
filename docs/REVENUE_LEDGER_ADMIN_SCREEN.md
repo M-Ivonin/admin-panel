@@ -12,6 +12,19 @@ The admin screen at `/dashboard/revenue-ledger` provides a read-only table for i
 
 It does not support ledger edits, manual corrections, refund actions, reconciliation, CSV export, backfill, or free-text search.
 
+## Tenjin Dispatch Alert
+
+The screen shows an operator alert when the last seven days contain Tenjin
+dispatch rows with `client_reported_failed` or
+`expired_without_client_report`. The alert count comes from the same filtered
+backend read model and its action applies the matching date and status filters.
+It also clears unrelated ledger filters so the affected-row view matches the
+global alert count. If the health query fails, the screen shows a monitoring
+warning instead of treating the failed check as zero issues.
+
+The backend expires dispatches without a client report through its hourly stale
+dispatch job after the configured stale window (24 hours by default).
+
 ## Backend Endpoint
 
 The screen reads only through:

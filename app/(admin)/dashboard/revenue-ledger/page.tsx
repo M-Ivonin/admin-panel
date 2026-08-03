@@ -44,8 +44,10 @@ import {
   RevenueLedgerStoreCommissionPeriod,
   RevenueLedgerSummary,
   RevenueLedgerUsdDailyRevenuePoint,
+  TENJIN_ISSUE_STATUSES,
   TenjinSdkDispatchStatus,
   getRevenueLedgerEntries,
+  getTenjinDispatchIssueCount,
 } from '@/lib/api/revenue-ledger';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -392,13 +394,18 @@ function formatCommissionScheduleLabel(
   return `${store} ${period.ratePercent}%${range}`;
 }
 
-function toIsoTimestampFromLocalDateTime(value: string): string | undefined {
+function toIsoTimestampFromLocalDateTime(
+  value: string,
+  endOfMinute = false
+): string | undefined {
   if (!value) {
     return undefined;
   }
 
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  if (endOfMinute) parsed.setSeconds(59, 999);
+  return parsed.toISOString();
 }
 
 function toLocalDateTimeInputValue(value: Date): string {
@@ -416,7 +423,7 @@ function getDefaultDateRange() {
   const dateFrom = new Date(today);
   const dateTo = new Date(today);
 
-  dateFrom.setDate(today.getDate() - 7);
+  dateFrom.setDate(today.getDate() - 6);
   dateFrom.setHours(0, 0, 0, 0);
   dateTo.setHours(23, 59, 0, 0);
 
@@ -519,6 +526,9 @@ function RevenueLedgerContent() {
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tenjinIssueCount, setTenjinIssueCount] = useState(0);
+  const [tenjinMonitoringError, setTenjinMonitoringError] = useState(false);
+  const [tenjinIssueRange] = useState(getDefaultDateRange);
 
   const filters = useMemo<RevenueLedgerFilters>(
     () => ({
@@ -535,7 +545,7 @@ function RevenueLedgerContent() {
       userId: identityFilters.userId.trim() || undefined,
       orderId: identityFilters.orderId.trim() || undefined,
       dateFrom: toIsoTimestampFromLocalDateTime(dateRange.dateFrom),
-      dateTo: toIsoTimestampFromLocalDateTime(dateRange.dateTo),
+      dateTo: toIsoTimestampFromLocalDateTime(dateRange.dateTo, true),
       sortBy,
       sortOrder,
     }),
@@ -598,6 +608,36 @@ function RevenueLedgerContent() {
       active = false;
     };
   }, [filters, refreshNonce]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTenjinIssueCount() {
+      const dateFrom = toIsoTimestampFromLocalDateTime(
+        tenjinIssueRange.dateFrom
+      );
+      const dateTo = toIsoTimestampFromLocalDateTime(
+        tenjinIssueRange.dateTo,
+        true
+      );
+      if (!dateFrom || !dateTo) return;
+
+      try {
+        const count = await getTenjinDispatchIssueCount({ dateFrom, dateTo });
+        if (active) {
+          setTenjinIssueCount(count);
+          setTenjinMonitoringError(false);
+        }
+      } catch {
+        if (active) setTenjinMonitoringError(true);
+      }
+    }
+
+    void loadTenjinIssueCount();
+    return () => {
+      active = false;
+    };
+  }, [refreshNonce, tenjinIssueRange]);
 
   const hasActiveFilters =
     Boolean(store) ||
@@ -715,6 +755,17 @@ function RevenueLedgerContent() {
     setPage(0);
   };
 
+  const showTenjinIssues = () => {
+    setStore('');
+    setEventTypes([]);
+    setDirections([]);
+    setBusinessStatuses([]);
+    setTenjinDispatchStatuses(TENJIN_ISSUE_STATUSES);
+    setIdentityFilters({ productId: '', userId: '', orderId: '' });
+    setDateRange(tenjinIssueRange);
+    setPage(0);
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AdminPageHeader title="Revenue Ledger" maxWidth={1440} />
@@ -727,6 +778,29 @@ function RevenueLedgerContent() {
           py: 4,
         }}
       >
+        {tenjinMonitoringError && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            <strong>Tenjin monitoring is unavailable.</strong> Refresh the page
+            to retry the dispatch health check.
+          </Alert>
+        )}
+
+        {tenjinIssueCount > 0 && (
+          <Alert
+            severity="error"
+            sx={{ mb: 3 }}
+            action={
+              <Button color="inherit" size="small" onClick={showTenjinIssues}>
+                View affected rows
+              </Button>
+            }
+          >
+            <strong>{tenjinIssueCount} Tenjin dispatch issues detected.</strong>{' '}
+            Failed SDK dispatches or purchases without a client report in the
+            last 7 days.
+          </Alert>
+        )}
+
         <Box
           sx={{
             display: 'grid',

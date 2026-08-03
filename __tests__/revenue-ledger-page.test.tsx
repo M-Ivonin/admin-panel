@@ -6,7 +6,10 @@ import {
   waitFor,
 } from '@testing-library/react';
 import RevenueLedgerPage from '@/app/(admin)/dashboard/revenue-ledger/page';
-import { getRevenueLedgerEntries } from '@/lib/api/revenue-ledger';
+import {
+  getRevenueLedgerEntries,
+  getTenjinDispatchIssueCount,
+} from '@/lib/api/revenue-ledger';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -29,7 +32,12 @@ jest.mock('next/link', () => ({
 }));
 
 jest.mock('@/lib/api/revenue-ledger', () => ({
+  TENJIN_ISSUE_STATUSES: [
+    'client_reported_failed',
+    'expired_without_client_report',
+  ],
   getRevenueLedgerEntries: jest.fn(),
+  getTenjinDispatchIssueCount: jest.fn(),
 }));
 
 const emptySummary = {
@@ -159,6 +167,8 @@ describe('RevenueLedgerPage', () => {
   beforeEach(() => {
     (getRevenueLedgerEntries as jest.Mock).mockReset();
     (getRevenueLedgerEntries as jest.Mock).mockResolvedValue(populatedResponse);
+    (getTenjinDispatchIssueCount as jest.Mock).mockReset();
+    (getTenjinDispatchIssueCount as jest.Mock).mockResolvedValue(0);
   });
 
   afterEach(() => {
@@ -195,6 +205,57 @@ describe('RevenueLedgerPage', () => {
         sortOrder: 'desc',
       })
     );
+  });
+
+  it('alerts operators about recent Tenjin dispatch issues', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-10T12:34:00.000Z'));
+    (getTenjinDispatchIssueCount as jest.Mock).mockResolvedValue(2);
+
+    render(<RevenueLedgerPage />);
+
+    expect(
+      await screen.findByText(/2 Tenjin dispatch issues detected/i)
+    ).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Order ID'), {
+      target: { value: 'unrelated-order' },
+    });
+    await waitFor(() => {
+      expect(getRevenueLedgerEntries).toHaveBeenLastCalledWith(
+        expect.objectContaining({ orderId: 'unrelated-order' })
+      );
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: /view affected rows/i })
+    );
+
+    await waitFor(() => {
+      expect(getRevenueLedgerEntries).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenjinDispatchStatuses: [
+            'client_reported_failed',
+            'expired_without_client_report',
+          ],
+          dateFrom: new Date('2026-07-04T00:00').toISOString(),
+          dateTo: new Date('2026-07-10T23:59:59.999').toISOString(),
+        })
+      );
+      expect(
+        (getRevenueLedgerEntries as jest.Mock).mock.calls.at(-1)?.[0]
+      ).not.toEqual(expect.objectContaining({ orderId: expect.any(String) }));
+    });
+  });
+
+  it('warns when Tenjin monitoring cannot be checked', async () => {
+    (getTenjinDispatchIssueCount as jest.Mock).mockRejectedValue(
+      new Error('monitor unavailable')
+    );
+
+    render(<RevenueLedgerPage />);
+
+    expect(
+      await screen.findByText(/Tenjin monitoring is unavailable/i)
+    ).toBeTruthy();
   });
 
   it('pads the chart to the selected date range when From moves earlier', async () => {
@@ -274,15 +335,15 @@ describe('RevenueLedgerPage', () => {
     render(<RevenueLedgerPage />);
 
     expect(await screen.findByText('Revenue Ledger')).toBeTruthy();
-    expect(screen.getByLabelText('From')).toHaveValue('2026-07-03T00:00');
+    expect(screen.getByLabelText('From')).toHaveValue('2026-07-04T00:00');
     expect(screen.getByLabelText('To')).toHaveValue('2026-07-10T23:59');
     expect(screen.queryByLabelText('Purchase token')).toBeNull();
     expect(screen.queryByLabelText('Transaction ID')).toBeNull();
     expect(screen.queryByLabelText('Original transaction ID')).toBeNull();
     expect(getRevenueLedgerEntries).toHaveBeenCalledWith(
       expect.objectContaining({
-        dateFrom: new Date('2026-07-03T00:00').toISOString(),
-        dateTo: new Date('2026-07-10T23:59').toISOString(),
+        dateFrom: new Date('2026-07-04T00:00').toISOString(),
+        dateTo: new Date('2026-07-10T23:59:59.999').toISOString(),
       })
     );
 
