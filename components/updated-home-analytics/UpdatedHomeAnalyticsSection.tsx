@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
 import type {
   UpdatedHomeDashboardBlock,
@@ -10,6 +9,7 @@ import {
   formatDimensions,
   formatMetricUnit,
   formatMetricValue,
+  metricExplanation,
   metricValues,
 } from './presentation';
 
@@ -128,7 +128,6 @@ function MetricRow({
   definition: UpdatedHomeMetricDefinition;
   value?: UpdatedHomeMetricValue;
 }) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const numeratorDefinition = value?.formula.numerator ?? definition.numerator;
   const denominatorDefinition = value?.formula.denominator ?? definition.denominator;
   const distinctUsers = /distinct users/i.test(
@@ -140,7 +139,7 @@ function MetricRow({
       data-testid="updated-home-metric-row"
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) auto' },
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '250px 145px minmax(0, 1fr)' },
         alignItems: { xs: 'start', md: 'center' },
         gap: { xs: 1.5, md: '18px' },
         minWidth: 0,
@@ -157,12 +156,18 @@ function MetricRow({
         {distinctUsers ? (
           <Typography sx={{ color: '#D8FBE9', fontSize: 10 }}>Distinct users</Typography>
         ) : null}
-        <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 9, overflowWrap: 'anywhere' }}>
+        <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+          DIMENSIONS
+        </Typography>
+        <Typography sx={{ color: '#A3A3A3', fontFamily: mono, fontSize: 9, overflowWrap: 'anywhere' }}>
           {formatDimensions(value?.dimensions)}
         </Typography>
       </Stack>
 
       <Stack gap="4px" minWidth={0}>
+        <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+          VALUE
+        </Typography>
         <Typography
           sx={{
             color: !value || value.value === null ? '#F0A63A' : '#6D4AFF',
@@ -174,74 +179,84 @@ function MetricRow({
         >
           {formatMetricValue(value)}
         </Typography>
-        <Typography sx={{ color: '#8B8B8F', fontSize: 10 }}>
-          Unit: {formatMetricUnit(value)}
+        <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+          UNIT
+        </Typography>
+        <Typography sx={{ color: '#A3A3A3', fontSize: 10 }}>
+          {formatMetricUnit(value)}
         </Typography>
         {!value || value.value === null ? (
-          <Typography sx={{ color: '#F0A63A', fontSize: 11 }}>
+          <Typography sx={{ color: '#F0A63A', fontSize: 10 }}>
             No data for selected period
           </Typography>
         ) : null}
       </Stack>
 
-      <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-        <Box
-          component="button"
-          type="button"
-          aria-expanded={detailsOpen}
-          onClick={() => setDetailsOpen((open) => !open)}
-          sx={{
-            appearance: 'none',
-            border: 0,
-            bgcolor: 'transparent',
-            color: '#A3A3A3',
-            cursor: 'pointer',
-            p: 0,
-            font: 'inherit',
-            fontSize: 11,
-            fontWeight: 600,
-            '&:hover': { color: '#F5F5F5' },
-          }}
-        >
-          Calculation details {detailsOpen ? '−' : '+'}
-        </Box>
-        {detailsOpen ? (
-          <Stack gap="4px" minWidth={0} sx={{ mt: 1, pt: 1, borderTop: '1px solid #3A3A3A' }}>
-            <DefinitionLine label="NUM" value={numeratorDefinition} />
-            <DefinitionLine label="DEN" value={denominatorDefinition ?? 'none'} />
-            <DefinitionLine label="WINDOW" value={definition.window} mono />
-          </Stack>
-        ) : null}
+      <Stack gap="5px" minWidth={0}>
+        <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+          WHAT IT SHOWS
+        </Typography>
+        <Typography sx={{ color: '#C8C8CA', fontSize: 11, lineHeight: 1.45 }}>
+          {metricExplanation(definition.key)}
+        </Typography>
+      </Stack>
+
+      <Box
+        sx={{
+          gridColumn: '1 / -1',
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            sm: 'repeat(2, minmax(0, 1fr))',
+            lg: 'repeat(4, minmax(0, 1fr))',
+          },
+          gap: { xs: 1.25, sm: 1.5 },
+          minWidth: 0,
+          pt: 1.5,
+          borderTop: '1px solid #3A3A3A',
+        }}
+      >
+        <TraceField label="NUMERATOR VALUE" value={formatBackendNumber(value?.numerator)} />
+        <TraceField label="DENOMINATOR VALUE" value={formatBackendNumber(value?.denominator)} />
+        <TraceField label="FORMULA NUM" value={numeratorDefinition} />
+        <TraceField label="FORMULA DEN" value={denominatorDefinition ?? 'None'} />
+        <TraceField label="WINDOW" value={definition.window} />
+        <TraceField label="COMPLETENESS" value={value?.completeness.reason ?? 'None'} />
+        <TraceField label="N/A REASON" value={value?.naReason ?? 'None'} warning={Boolean(value?.naReason)} />
       </Box>
     </Box>
   );
 }
 
-function DefinitionLine({
+function formatBackendNumber(value: number | null | undefined): string {
+  return value === null || value === undefined ? 'N/A' : String(value);
+}
+
+function TraceField({
   label,
   value,
-  mono: useMono = false,
   warning = false,
 }: {
   label: string;
   value: string;
-  mono?: boolean;
   warning?: boolean;
 }) {
   return (
-    <Typography
-      component="div"
-      sx={{
-        color: warning ? '#F0A63A' : useMono ? '#8B8B8F' : '#A3A3A3',
-        fontFamily: useMono ? mono : 'inherit',
-        fontSize: useMono || warning ? 9 : 10,
-        overflowWrap: 'anywhere',
-      }}
-    >
-      <Box component="span" sx={{ fontWeight: 700, mr: 0.75 }}>
+    <Stack gap="4px" minWidth={0}>
+      <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
         {label}
-      </Box>
-      {value}
-    </Typography>
+      </Typography>
+      <Typography
+        sx={{
+          color: warning ? '#F0A63A' : '#A3A3A3',
+          fontFamily: mono,
+          fontSize: 10,
+          lineHeight: 1.4,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {value}
+      </Typography>
+    </Stack>
   );
 }

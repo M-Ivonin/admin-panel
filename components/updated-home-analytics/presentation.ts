@@ -37,6 +37,34 @@ const DISPLAY_LABELS: Readonly<Record<string, string>> = {
   prediction_result_viewed: 'Prediction result viewed',
 };
 
+const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
+  home_load_success_rate: 'Share of Home load attempts that finished successfully.',
+  controlled_load_failure_rate: 'Share of Home load attempts that ended with a controlled loading error.',
+  module_reach_rate: 'Share of Home visitors who scrolled far enough to see a module.',
+  module_ctr: 'Share of users who opened a module after seeing it.',
+  positions_4_9_reach_rate: 'Share of Home visitors who reached modules in positions 4 through 9.',
+  active_home_time_ms: 'Typical time users actively spend on Home.',
+  home_exit_without_interaction_rate: 'Share of Home visits that ended without any interaction.',
+  free_pick_activation_funnel: 'Shows how users progress from opening Home to opening the Free Pick prediction card.',
+  full_access_funnel: 'Shows how users progress from seeing the offer to completing a verified purchase.',
+  conversion_by_product_country: 'Share of exposed users who completed a verified purchase for this product and placement.',
+  collection_assisted_conversion_rate: 'Share of users who purchased after interacting with a collection.',
+  top_picks_activation_funnel: 'Shows how paid users progress from a Top Pick preview to Full Analysis.',
+  parlay_engagement_rate: 'Share of users who opened a parlay after seeing it.',
+  section_reach_rate: 'Share of Full Analysis visits in which users reached a specific section.',
+  meaningful_full_analysis_rate: 'Share of Full Analysis visits with meaningful reading or interaction.',
+  top_picks_result_return_funnel: 'Shows how users progress from opening a Top Pick to returning for its result.',
+  pass_24h_repeat_purchase_rate: 'Share of 24-hour pass buyers who purchased another pass within the eligible period.',
+  premium_usage_before_expiry: 'Share of pass holders who used a premium feature before their pass expired.',
+  pass_to_monthly_conversion_rate: 'Share of expired pass users who later purchased a monthly subscription.',
+  subscription_cannibalization_pp: 'Estimated change in subscription conversion associated with pass exposure.',
+  verified_started_rate: 'Share of started purchases that were verified successfully.',
+  duplicate_purchase_attempt_count: 'Number of additional purchase attempts after the first attempt.',
+  purchase_failure_count: 'Number of purchase attempts that ended in a controlled failure.',
+  verification_latency_ms: 'Typical time between starting a purchase and successful verification.',
+  d1_d7_d30_retention: 'Share of users who repeated the same core action after 1, 7, or 30 days.',
+};
+
 const BACKEND_STAGE_ORDER: Readonly<Record<string, readonly string[]>> = {
   free_pick_activation_funnel: [
     'home_viewed',
@@ -77,6 +105,13 @@ export function displayLabel(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+export function metricExplanation(metricKey: string): string {
+  return (
+    METRIC_EXPLANATIONS[metricKey] ??
+    `Shows ${displayLabel(metricKey).toLowerCase()} for the selected period.`
+  );
 }
 
 export function dashboardsById(

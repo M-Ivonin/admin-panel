@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { UpdatedHomeAnalyticsDashboard } from '@/components/updated-home-analytics/UpdatedHomeAnalyticsDashboard';
 import { getUpdatedHomeAnalytics } from '@/lib/api/updated-home-analytics';
 
@@ -94,13 +94,29 @@ describe('Updated Home dashboard backend projection rendering', () => {
     expect(within(overview).getByText('Full Analysis opened')).toBeInTheDocument();
     expect(within(overview).queryByText(/Free Pick.*Full Analysis/i)).not.toBeInTheDocument();
 
-    expect(screen.queryByText('backend numerator for home_load_success_rate')).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: /Calculation details/ })[0]);
-    expect(screen.getByText('backend numerator for home_load_success_rate')).toBeInTheDocument();
-    expect(screen.getByText('backend denominator for home_load_success_rate')).toBeInTheDocument();
-    expect(screen.getByText('backend UTC window')).toBeInTheDocument();
-    expect(screen.queryByText('Final observation window is incomplete.')).not.toBeInTheDocument();
-    expect(screen.queryByText('backend N/A for free_pick_impression')).not.toBeInTheDocument();
+    const firstMetric = screen.getAllByTestId('updated-home-metric-row')[0];
+    expect(firstMetric).toHaveTextContent('WHAT IT SHOWS');
+    expect(firstMetric).toHaveTextContent(
+      'Share of Home load attempts that finished successfully.'
+    );
+    expect(firstMetric).toHaveTextContent('DIMENSIONSAccess State: Full access');
+    expect(firstMetric).toHaveTextContent('VALUE40');
+    expect(firstMetric).toHaveTextContent('UNITusers');
+    expect(firstMetric).toHaveTextContent('NUMERATOR VALUE40');
+    expect(firstMetric).toHaveTextContent('DENOMINATOR VALUEN/A');
+    expect(firstMetric).toHaveTextContent(
+      'FORMULA NUMbackend numerator for home_load_success_rate'
+    );
+    expect(firstMetric).toHaveTextContent(
+      'FORMULA DENbackend denominator for home_load_success_rate'
+    );
+    expect(firstMetric).toHaveTextContent('WINDOWbackend UTC window');
+    expect(firstMetric).toHaveTextContent(
+      'COMPLETENESSFinal observation window is incomplete.'
+    );
+    expect(firstMetric).toHaveTextContent('N/A REASONNone');
+    expect(screen.getByText('backend N/A for free_pick_impression')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Calculation details/ })).not.toBeInTheDocument();
 
     expect(screen.getAllByTestId('updated-home-dashboard-section').map((section) => section.getAttribute('aria-label'))).toEqual([
       'Home',
