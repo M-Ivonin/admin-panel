@@ -200,63 +200,6 @@ function MetricRow({
           {metricExplanation(definition.key)}
         </Typography>
       </Stack>
-
-      <Box
-        sx={{
-          gridColumn: '1 / -1',
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            sm: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(4, minmax(0, 1fr))',
-          },
-          gap: { xs: 1.25, sm: 1.5 },
-          minWidth: 0,
-          pt: 1.5,
-          borderTop: '1px solid #3A3A3A',
-        }}
-      >
-        <TraceField label="NUMERATOR VALUE" value={formatBackendNumber(value?.numerator)} />
-        <TraceField label="DENOMINATOR VALUE" value={formatBackendNumber(value?.denominator)} />
-        <TraceField label="FORMULA NUM" value={numeratorDefinition} />
-        <TraceField label="FORMULA DEN" value={denominatorDefinition ?? 'None'} />
-        <TraceField label="WINDOW" value={definition.window} />
-        <TraceField label="COMPLETENESS" value={value?.completeness.reason ?? 'None'} />
-        <TraceField label="N/A REASON" value={value?.naReason ?? 'None'} warning={Boolean(value?.naReason)} />
-      </Box>
     </Box>
-  );
-}
-
-function formatBackendNumber(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'N/A' : String(value);
-}
-
-function TraceField({
-  label,
-  value,
-  warning = false,
-}: {
-  label: string;
-  value: string;
-  warning?: boolean;
-}) {
-  return (
-    <Stack gap="4px" minWidth={0}>
-      <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
-        {label}
-      </Typography>
-      <Typography
-        sx={{
-          color: warning ? '#F0A63A' : '#A3A3A3',
-          fontFamily: mono,
-          fontSize: 10,
-          lineHeight: 1.4,
-          overflowWrap: 'anywhere',
-        }}
-      >
-        {value}
-      </Typography>
-    </Stack>
   );
 }

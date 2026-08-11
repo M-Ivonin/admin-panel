@@ -102,20 +102,11 @@ describe('Updated Home dashboard backend projection rendering', () => {
     expect(firstMetric).toHaveTextContent('DIMENSIONSAccess State: Full access');
     expect(firstMetric).toHaveTextContent('VALUE40');
     expect(firstMetric).toHaveTextContent('UNITusers');
-    expect(firstMetric).toHaveTextContent('NUMERATOR VALUE40');
-    expect(firstMetric).toHaveTextContent('DENOMINATOR VALUEN/A');
-    expect(firstMetric).toHaveTextContent(
-      'FORMULA NUMbackend numerator for home_load_success_rate'
-    );
-    expect(firstMetric).toHaveTextContent(
-      'FORMULA DENbackend denominator for home_load_success_rate'
-    );
-    expect(firstMetric).toHaveTextContent('WINDOWbackend UTC window');
-    expect(firstMetric).toHaveTextContent(
-      'COMPLETENESSFinal observation window is incomplete.'
-    );
-    expect(firstMetric).toHaveTextContent('N/A REASONNone');
-    expect(screen.getByText('backend N/A for free_pick_impression')).toBeInTheDocument();
+    expect(firstMetric).not.toHaveTextContent('NUMERATOR VALUE');
+    expect(firstMetric).not.toHaveTextContent('FORMULA NUM');
+    expect(firstMetric).not.toHaveTextContent('WINDOW');
+    expect(firstMetric).not.toHaveTextContent('COMPLETENESS');
+    expect(screen.queryByText('backend N/A for free_pick_impression')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Calculation details/ })).not.toBeInTheDocument();
 
     expect(screen.getAllByTestId('updated-home-dashboard-section').map((section) => section.getAttribute('aria-label'))).toEqual([

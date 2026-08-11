@@ -170,19 +170,10 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(firstMetric).toHaveTextContent('DIMENSIONSAccess State: Full access');
     expect(firstMetric).toHaveTextContent('VALUE40');
     expect(firstMetric).toHaveTextContent('UNITusers');
-    expect(firstMetric).toHaveTextContent('NUMERATOR VALUE40');
-    expect(firstMetric).toHaveTextContent('DENOMINATOR VALUEN/A');
-    expect(firstMetric).toHaveTextContent(
-      'FORMULA NUMdistinct users in home_load_success_rate'
-    );
-    expect(firstMetric).toHaveTextContent(
-      'FORMULA DENdistinct eligible users for home_load_success_rate'
-    );
-    expect(firstMetric).toHaveTextContent('WINDOWbackend UTC window');
-    expect(firstMetric).toHaveTextContent(
-      'COMPLETENESSThe final 30 seconds are excluded while Home views may remain open.'
-    );
-    expect(firstMetric).toHaveTextContent('N/A REASONNone');
+    expect(firstMetric).not.toHaveTextContent('NUMERATOR VALUE');
+    expect(firstMetric).not.toHaveTextContent('FORMULA NUM');
+    expect(firstMetric).not.toHaveTextContent('WINDOW');
+    expect(firstMetric).not.toHaveTextContent('COMPLETENESS');
     expect(screen.queryByRole('button', { name: /Calculation details/ })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
@@ -289,15 +280,12 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     render(<UpdatedHomeAnalyticsDashboard />);
     expect((await screen.findAllByText(/No eligible observations in this range/)).length).toBeGreaterThan(0);
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
-    expect(screen.getByText('Exact backend N/A reason.')).toBeInTheDocument();
+    expect(screen.queryByText('Exact backend N/A reason.')).not.toBeInTheDocument();
     expect(screen.getByText('No data for selected period')).toBeInTheDocument();
     const naMetric = screen.getAllByTestId('updated-home-metric-row')[0];
     expect(naMetric).toHaveTextContent('WHAT IT SHOWS');
-    expect(naMetric).toHaveTextContent('NUMERATOR VALUEN/A');
-    expect(naMetric).toHaveTextContent('DENOMINATOR VALUE40');
     expect(naMetric).toHaveTextContent('VALUEN/A');
     expect(naMetric).toHaveTextContent('UNITusers');
-    expect(naMetric).toHaveTextContent('N/A REASONExact backend N/A reason.');
   });
 
   it('renders partial and unsupported states from the response', async () => {
@@ -308,7 +296,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     });
     render(<UpdatedHomeAnalyticsDashboard />);
     expect((await screen.findAllByText('Partial observation window')).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(completeness.reason).length).toBeGreaterThan(0);
+    expect(screen.queryByText(completeness.reason)).not.toBeInTheDocument();
     const unsupported = screen.getByRole('region', { name: 'Full Analysis' });
     expect(within(unsupported).getByText('Unsupported response')).toBeInTheDocument();
     expect(within(unsupported).getByText('This section was not returned by the backend.')).toBeInTheDocument();
