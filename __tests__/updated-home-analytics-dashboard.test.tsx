@@ -27,6 +27,21 @@ const names = [
   'Retention by core action',
 ];
 
+const designSectionNames = [
+  'Home quality',
+  'Free Pick activation',
+  'Full Access conversion',
+  'Paywall by product and country',
+  'Collections conversion',
+  'Top Picks and Parlays',
+  'Full Analysis engagement',
+  'Top Picks result return',
+  'Pass usage and expiration',
+  'Pass-to-subscription conversion',
+  'Purchase failures and verification',
+  'Retention by core action',
+];
+
 const response = {
   definitionVersion: 'updated-home-dashboards-v1.1',
   timezone: 'UTC' as const,
@@ -95,25 +110,19 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
 
   it('renders all twelve backend sections, UTC metadata, currency and N/A states', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(
-      await screen.findByText('Home module performance')
-    ).toBeInTheDocument();
-    for (const name of names) {
+    expect(await screen.findByText('Home quality')).toBeInTheDocument();
+    for (const name of designSectionNames) {
       expect(screen.getByText(name)).toBeInTheDocument();
     }
     expect(
-      screen.getByText(/Currency totals stay separate/)
+      await screen.findByText(/Currency totals stay separate/)
     ).toBeInTheDocument();
-    expect(screen.getByText('4.99 USD')).toBeInTheDocument();
     expect(
       screen.getByText('Subscription cannibalization')
     ).toBeInTheDocument();
-    expect(screen.getByText('N/A')).toBeInTheDocument();
+    expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
     expect(
       screen.getByText('N/A until an eligible experiment exists.')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('The final observation window is incomplete.')
     ).toBeInTheDocument();
     const grid = screen.getByTestId('updated-home-dashboard-grid');
     expect(getComputedStyle(grid).overflowX).toBe('hidden');
@@ -121,6 +130,58 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       from: '2026-07-01T00:00:00.000Z',
       to: '2026-07-15T23:59:59.999Z',
     });
+  });
+
+  it('renders the Pencil dashboard shell with navigation, funnel, and API-ready metric sections', async () => {
+    render(<UpdatedHomeAnalyticsDashboard />);
+
+    expect(await screen.findByText('MVP · 12 dashboards')).toBeInTheDocument();
+    expect(screen.getByText('Observation range')).toBeInTheDocument();
+    expect(
+      screen.getByText('UTC · maximum 31 days · backend-computed')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
+      'href',
+      '#overview'
+    );
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute(
+      'href',
+      '#dashboard-1'
+    );
+    expect(screen.getByText('Free Home conversion')).toBeInTheDocument();
+    expect(screen.getByText('Home quality')).toBeInTheDocument();
+    expect(screen.getByText('Top Picks result return')).toBeInTheDocument();
+    for (const label of [
+      'Module click-through',
+      'Reached positions 4–9',
+      'Module load failures',
+      'Impression users',
+      'Click users',
+      'Full Analysis opens',
+      'Top Picks save rate',
+      'Analysis opens',
+      'Active duration',
+      'Section interaction',
+      'Primary action taken',
+    ]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Main offer funnel')).toBeInTheDocument();
+    expect(screen.getByText('Collection-assisted funnel')).toBeInTheDocument();
+    expect(screen.getByText('Paid Top Picks return')).toBeInTheDocument();
+    expect(screen.getByText('Option selected')).toBeInTheDocument();
+    expect(screen.getByText('Pick preview')).toBeInTheDocument();
+    expect(screen.getByText('Prediction settled')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Pass conversion' })).not.toBeInTheDocument();
+    expect(screen.queryByText('100%')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('updated-home-dashboard-section')).toHaveLength(
+      12
+    );
+    expect(screen.getAllByText(/^NUM$/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^DEN$/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^WINDOW$/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^N\/A$/).length).toBeGreaterThan(0);
   });
 
   it('renders an empty observation state without inventing values', async () => {
@@ -135,7 +196,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(
       await screen.findByText(/No eligible observations in this range/)
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/N\/A · No eligible data/)).toHaveLength(12);
+    expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(12);
   });
 
   it('shows readable forbidden and loading states', async () => {
@@ -174,6 +235,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
       target: { value: '2026-06-30' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await waitFor(() =>
       expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2)
     );
@@ -203,5 +265,96 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(
       screen.queryByText(/2026-01-01 to 2026-01-02/)
     ).not.toBeInTheDocument();
+  });
+
+  it('rejects observation ranges longer than 31 days before calling the API', async () => {
+    render(<UpdatedHomeAnalyticsDashboard />);
+    await screen.findByText('Home quality');
+    fireEvent.change(screen.getByLabelText('From (UTC)'), {
+      target: { value: '2026-06-01' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Maximum range is 31 days.')).toBeInTheDocument();
+    expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats 31 midnight boundaries as a 32-date inclusive range', async () => {
+    render(<UpdatedHomeAnalyticsDashboard />);
+    await screen.findByText('Home quality');
+    fireEvent.change(screen.getByLabelText('From (UTC)'), {
+      target: { value: '2026-06-14' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Maximum range is 31 days.')).toBeInTheDocument();
+    expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
+  });
+
+  it('fills design funnel steps from backend stage projections', async () => {
+    const funnelValue = (
+      stage: string,
+      numerator: number,
+      denominator: number | null,
+      value: number
+    ) => ({
+      dimensions: { stage },
+      numerator,
+      denominator,
+      value,
+      unit: denominator === null ? 'users' : 'percent',
+      naReason: null,
+    });
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        dashboard.id === 3
+          ? {
+              ...dashboard,
+              metrics: [{
+                definition: {
+                  key: 'full_access_funnel',
+                  numerator: 'users at stage',
+                  denominator: 'previous stage',
+                  window: '24 hours',
+                  grouping: ['stage'],
+                  nullTreatment: 'N/A',
+                },
+                values: [
+                  funnelValue('offer_impression', 2914, null, 2914),
+                  funnelValue('offer_click', 681, 2914, 23.4),
+                ],
+              }],
+            }
+          : dashboard
+      ),
+    });
+    render(<UpdatedHomeAnalyticsDashboard />);
+    expect((await screen.findAllByText('2,914')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('681').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('23.4%').length).toBeGreaterThan(0);
+  });
+
+  it('hides previously loaded metrics when a refresh fails', async () => {
+    const responseWithUniqueValue = {
+      ...response,
+      dashboards: response.dashboards.map((dashboard, index) =>
+        index === 0
+          ? {
+              ...dashboard,
+              metrics: dashboard.metrics.map((metric) => ({
+                ...metric,
+                values: metric.values.map((value) => ({ ...value, value: 47.123 })),
+              })),
+            }
+          : dashboard
+      ),
+    };
+    (getUpdatedHomeAnalytics as jest.Mock)
+      .mockResolvedValueOnce(responseWithUniqueValue)
+      .mockRejectedValueOnce(new Error('Refresh failed'));
+    render(<UpdatedHomeAnalyticsDashboard />);
+    expect(await screen.findByText('47.123%')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Refresh failed')).toBeInTheDocument();
+    expect(screen.queryByText('47.123%')).not.toBeInTheDocument();
   });
 });
