@@ -1,113 +1,117 @@
-import { Box, Chip, Stack, Typography } from '@mui/material';
-import type { UpdatedHomeDashboardBlock } from '@/lib/api/updated-home-analytics';
+import { useState } from 'react';
+import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
+import type {
+  UpdatedHomeDashboardBlock,
+  UpdatedHomeMetricDefinition,
+  UpdatedHomeMetricValue,
+} from '@/lib/api/updated-home-analytics';
 import {
+  displayLabel,
   formatDimensions,
   formatMetricUnit,
   formatMetricValue,
-  findMetricStage,
-  type FunnelTemplate,
-  type MetricTemplate,
-  UPDATED_HOME_FUNNELS,
-  UPDATED_HOME_METRICS,
+  metricValues,
 } from './presentation';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 
 type UpdatedHomeAnalyticsSectionProps = {
-  id: number;
-  title: string;
-  status: 'ready' | 'window';
-  dashboard?: UpdatedHomeDashboardBlock;
+  label: string;
+  dashboards: Array<UpdatedHomeDashboardBlock | undefined>;
 };
 
 export function UpdatedHomeAnalyticsSection({
-  id,
-  title,
-  status,
-  dashboard,
+  label,
+  dashboards,
 }: UpdatedHomeAnalyticsSectionProps) {
-  const isComplete = status === 'ready';
-  const funnel = UPDATED_HOME_FUNNELS[id];
-  const templates = UPDATED_HOME_METRICS[id] ?? [];
+  const availableDashboards = dashboards.filter(
+    (dashboard): dashboard is UpdatedHomeDashboardBlock => dashboard !== undefined
+  );
+  const sectionId = dashboards.find(Boolean)?.id ?? label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const incomplete = availableDashboards.some(
+    (dashboard) => !dashboard.observationCompleteness.isComplete
+  );
 
   return (
     <Box
       component="section"
-      id={`dashboard-${id}`}
+      id={`dashboard-${sectionId}`}
+      aria-label={label}
       data-testid="updated-home-dashboard-section"
       sx={{
+        minWidth: 0,
         scrollMarginTop: 24,
         border: '1px solid #343434',
         borderRadius: '12px',
         bgcolor: '#222222',
-        p: '20px',
+        p: { xs: '14px', sm: '20px' },
       }}
     >
       <Stack
-        direction="row"
-        alignItems="center"
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
         justifyContent="space-between"
-        gap={2}
+        gap={1.5}
         sx={{ mb: '14px' }}
       >
-        <Stack direction="row" alignItems="center" gap="12px" minWidth={0}>
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              flex: '0 0 34px',
-              display: 'grid',
-              placeItems: 'center',
-              borderRadius: '8px',
-              bgcolor: '#5B4BFF',
-              color: '#fff',
-              fontFamily: mono,
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
-            {id}
-          </Box>
-          <Typography sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700 }}>
-            {title}
-          </Typography>
-        </Stack>
+        <Typography sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700 }}>
+          {label}
+        </Typography>
         <Chip
-          label={isComplete ? 'MVP ready' : 'Observation window'}
+          label={
+            availableDashboards.length === 0
+              ? 'Unsupported response'
+              : incomplete
+                ? 'Partial observation window'
+                : 'Complete observation window'
+          }
           size="small"
           sx={{
-            flexShrink: 0,
-            height: 28,
-            bgcolor: isComplete ? '#173926' : '#3A2B12',
-            color: isComplete ? '#D8FBE9' : '#F8E5BF',
+            maxWidth: '100%',
+            bgcolor: availableDashboards.length === 0 || incomplete ? '#3A2B12' : '#173926',
+            color: availableDashboards.length === 0 || incomplete ? '#F8E5BF' : '#D8FBE9',
             fontSize: 11,
             fontWeight: 600,
-            '& .MuiChip-label': { px: '10px' },
           }}
         />
       </Stack>
 
-      {funnel ? (
-        <DesignFunnel funnel={funnel} dashboard={dashboard} />
+      {availableDashboards.length === 0 ? (
+        <Alert severity="warning">This section was not returned by the backend.</Alert>
+      ) : (
+        <Stack gap={2}>
+          {availableDashboards.map((dashboard) => (
+            <DashboardProjection key={dashboard.id} dashboard={dashboard} />
+          ))}
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
+function DashboardProjection({ dashboard }: { dashboard: UpdatedHomeDashboardBlock }) {
+  const hasMetricValues = dashboard.metrics.some((metric) => metric.values.length > 0);
+
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Stack gap={0.75} sx={{ mb: 1.5 }}>
+        <Typography sx={{ color: '#F5F5F5', fontSize: 15, fontWeight: 700 }}>
+          {dashboard.name}
+        </Typography>
+      </Stack>
+
+      {!hasMetricValues ? (
+        <Alert severity="info">No eligible observations in this range.</Alert>
       ) : (
         <Box sx={{ overflow: 'hidden', border: '1px solid #3A3A3A', borderRadius: '8px' }}>
-          {templates.flatMap((template) => {
-            const metric = dashboard?.metrics.find(
-              (candidate) => candidate.definition.key === template.sourceKey
-            );
-            const matchingValues = (metric?.values ?? []).filter(
-              (value) => !template.sourceStage || value.dimensions.stage === template.sourceStage
-            );
-            const values = matchingValues.length ? matchingValues : [undefined];
+          {dashboard.metrics.flatMap((metric) => {
+            const orderedValues = metricValues(dashboard, metric.definition.key);
+            const values = orderedValues.length > 0 ? orderedValues : [undefined];
             return values.map((value, index) => (
               <MetricRow
-                key={`${template.id}-${index}`}
-                template={template}
-                value={
-                  value && template.valueField === 'numerator'
-                    ? { ...value, value: value.numerator, unit: 'users' }
-                    : value
-                }
+                key={`${metric.definition.key}-${index}`}
+                definition={metric.definition}
+                value={value}
               />
             ));
           })}
@@ -118,125 +122,99 @@ export function UpdatedHomeAnalyticsSection({
 }
 
 function MetricRow({
-  template,
+  definition,
   value,
 }: {
-  template: MetricTemplate;
-  value?: UpdatedHomeDashboardBlock['metrics'][number]['values'][number];
+  definition: UpdatedHomeMetricDefinition;
+  value?: UpdatedHomeMetricValue;
 }) {
-  const dimensions = formatDimensions(value?.dimensions);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const numeratorDefinition = value?.formula.numerator ?? definition.numerator;
+  const denominatorDefinition = value?.formula.denominator ?? definition.denominator;
+  const distinctUsers = /distinct users/i.test(
+    `${numeratorDefinition} ${denominatorDefinition ?? ''}`
+  );
 
   return (
     <Box
+      data-testid="updated-home-metric-row"
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '270px 145px minmax(0, 1fr)' },
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) auto' },
         alignItems: { xs: 'start', md: 'center' },
         gap: { xs: 1.5, md: '18px' },
+        minWidth: 0,
         bgcolor: '#2A2A2A',
-        px: '16px',
+        px: { xs: '12px', sm: '16px' },
         py: '14px',
         '&:not(:last-child)': { borderBottom: '1px solid #3A3A3A' },
       }}
     >
       <Stack gap="5px" minWidth={0}>
         <Typography sx={{ color: '#F5F5F5', fontSize: 13, fontWeight: 700 }}>
-          {template.title}
+          {displayLabel(definition.key)}
         </Typography>
-        <Typography
-          sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 9, overflowWrap: 'anywhere' }}
-        >
-          GROUP BY&nbsp;&nbsp;{template.grouping.join(' · ')}
-        </Typography>
-        {dimensions ? (
-          <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 9 }}>
-            {dimensions}
-          </Typography>
+        {distinctUsers ? (
+          <Typography sx={{ color: '#D8FBE9', fontSize: 10 }}>Distinct users</Typography>
         ) : null}
+        <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 9, overflowWrap: 'anywhere' }}>
+          {formatDimensions(value?.dimensions)}
+        </Typography>
       </Stack>
-      <Stack gap="4px">
+
+      <Stack gap="4px" minWidth={0}>
         <Typography
-          sx={{ color: value?.value === null ? '#F0A63A' : '#6D4AFF', fontFamily: mono, fontSize: 20, fontWeight: 700 }}
+          sx={{
+            color: !value || value.value === null ? '#F0A63A' : '#6D4AFF',
+            fontFamily: mono,
+            fontSize: 20,
+            fontWeight: 700,
+            overflowWrap: 'anywhere',
+          }}
         >
           {formatMetricValue(value)}
         </Typography>
         <Typography sx={{ color: '#8B8B8F', fontSize: 10 }}>
-          {formatMetricUnit(value)}
+          Unit: {formatMetricUnit(value)}
         </Typography>
+        {!value || value.value === null ? (
+          <Typography sx={{ color: '#F0A63A', fontSize: 11 }}>
+            No data for selected period
+          </Typography>
+        ) : null}
       </Stack>
-      <Stack gap="4px" minWidth={0}>
-        <DefinitionLine label="NUM" value={template.numerator} />
-        <DefinitionLine label="DEN" value={template.denominator ?? 'none'} />
-        <DefinitionLine label="WINDOW" value={template.window} mono />
-        <DefinitionLine
-          label="N/A"
-          value={value?.naReason ?? template.nullTreatment}
-          warning
-        />
-      </Stack>
-    </Box>
-  );
-}
 
-function DesignFunnel({
-  funnel,
-  dashboard,
-}: {
-  funnel: FunnelTemplate;
-  dashboard?: UpdatedHomeDashboardBlock;
-}) {
-  return (
-    <Box sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: '20px' }}>
-      <Stack direction="row" justifyContent="space-between" gap={2} sx={{ mb: '18px' }}>
-        <Typography sx={{ color: '#F5F5F5', fontSize: 17, fontWeight: 700 }}>
-          {funnel.title}
-        </Typography>
-        <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 11 }}>
-          {funnel.meta}
-        </Typography>
-      </Stack>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(2, minmax(0, 1fr))',
-            md: `repeat(${funnel.steps.length}, minmax(0, 1fr))`,
-          },
-          gap: 1,
-        }}
-      >
-        {funnel.steps.map((step) => {
-          const value = findMetricStage(dashboard, funnel.sourceKey, funnel.sourceStages?.[step]);
-          return (
-          <Box key={step} sx={{ minWidth: 0, px: 0.5 }}>
-            <Typography sx={{ color: '#F5F5F5', fontFamily: mono, fontSize: 18, fontWeight: 700 }}>
-              {formatFunnelCount(value)}
-            </Typography>
-            <Typography sx={{ color: '#A3A3A3', fontSize: 11, minHeight: 22 }}>
-              {step}
-            </Typography>
-            <Box sx={{ height: 3, my: 0.75, borderRadius: 999, bgcolor: '#3A3A3A' }} />
-            <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 10 }}>
-              {formatFunnelRate(value)}
-            </Typography>
-          </Box>
-          );
-        })}
+      <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <Box
+          component="button"
+          type="button"
+          aria-expanded={detailsOpen}
+          onClick={() => setDetailsOpen((open) => !open)}
+          sx={{
+            appearance: 'none',
+            border: 0,
+            bgcolor: 'transparent',
+            color: '#A3A3A3',
+            cursor: 'pointer',
+            p: 0,
+            font: 'inherit',
+            fontSize: 11,
+            fontWeight: 600,
+            '&:hover': { color: '#F5F5F5' },
+          }}
+        >
+          Calculation details {detailsOpen ? '−' : '+'}
+        </Box>
+        {detailsOpen ? (
+          <Stack gap="4px" minWidth={0} sx={{ mt: 1, pt: 1, borderTop: '1px solid #3A3A3A' }}>
+            <DefinitionLine label="NUM" value={numeratorDefinition} />
+            <DefinitionLine label="DEN" value={denominatorDefinition ?? 'none'} />
+            <DefinitionLine label="WINDOW" value={definition.window} mono />
+          </Stack>
+        ) : null}
       </Box>
     </Box>
   );
-}
-
-function formatFunnelCount(value?: UpdatedHomeDashboardBlock['metrics'][number]['values'][number]) {
-  return value?.numerator === null || value?.numerator === undefined
-    ? 'N/A'
-    : value.numerator.toLocaleString('en-US');
-}
-
-function formatFunnelRate(value?: UpdatedHomeDashboardBlock['metrics'][number]['values'][number]) {
-  if (!value) return 'awaiting API';
-  if (value.denominator === null && value.numerator !== null) return '100%';
-  return value.value === null ? 'N/A' : `${value.value}%`;
 }
 
 function DefinitionLine({

@@ -13,13 +13,23 @@ import {
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUpdatedHomeAnalytics,
-  type UpdatedHomeDashboardBlock,
   type UpdatedHomeAnalyticsResponse,
+  type UpdatedHomeDashboardBlock,
+  type UpdatedHomeMetricValue,
 } from '@/lib/api/updated-home-analytics';
 import { UpdatedHomeAnalyticsSection } from './UpdatedHomeAnalyticsSection';
-import { dashboardsById, findMetricStage, UPDATED_HOME_SECTIONS } from './presentation';
+import {
+  dashboardsById,
+  displayLabel,
+  formatMetricUnit,
+  formatMetricValue,
+  hasObservedValues,
+  metricValues,
+  UPDATED_HOME_SECTIONS,
+} from './presentation';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
+const MAX_RANGE_DAYS = 90;
 
 function defaultRange(): { from: string; to: string } {
   const to = new Date();
@@ -52,7 +62,6 @@ export function UpdatedHomeAnalyticsDashboard() {
       if (requestId === latestRequestId.current) setData(response);
     } catch (caught) {
       if (requestId === latestRequestId.current) {
-        setData(null);
         setError(caught instanceof Error ? caught.message : 'Unknown error');
       }
     } finally {
@@ -74,8 +83,8 @@ export function UpdatedHomeAnalyticsDashboard() {
       setRangeError('Choose a valid UTC date range.');
       return;
     }
-    if ((toTime - fromTime) / 86_400_000 >= 31) {
-      setRangeError('Maximum range is 31 days.');
+    if ((toTime - fromTime) / 86_400_000 >= MAX_RANGE_DAYS) {
+      setRangeError(`Maximum range is ${MAX_RANGE_DAYS} days.`);
       return;
     }
     setRangeError(null);
@@ -88,25 +97,20 @@ export function UpdatedHomeAnalyticsDashboard() {
   }, [appliedRange.from, appliedRange.to, from, load, to]);
 
   const dashboardMap = useMemo(() => dashboardsById(data), [data]);
-  const hasValues =
-    data?.dashboards.some((dashboard) =>
-      dashboard.metrics.some((metric) => metric.values.length > 0)
-    ) ?? false;
 
   return (
     <Box sx={{ minWidth: 0, minHeight: '100vh', bgcolor: '#111111' }}>
       <AdminPageHeader
         title="Updated Home Analytics"
-        subtitle="Product performance, conversion and retention · UTC"
+        subtitle="Backend-owned product performance, conversion and retention · UTC"
         maxWidth={1440}
         actions={<DataStatus />}
       />
 
       <Stack
         component="main"
-        id="overview"
         gap="24px"
-        sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, pt: 3, pb: 5 }}
+        sx={{ maxWidth: 1440, minWidth: 0, mx: 'auto', px: { xs: 2, md: 4 }, pt: 3, pb: 5 }}
       >
         <FilterPanel
           from={from}
@@ -118,30 +122,31 @@ export function UpdatedHomeAnalyticsDashboard() {
           onRefresh={refresh}
         />
 
-        {error ? <Alert severity="error">{error}</Alert> : null}
-        {data ? (
-          <Alert severity={hasValues ? 'info' : 'warning'}>
-            UTC · {data.range.from.slice(0, 10)} to {data.range.to.slice(0, 10)}. Currency totals stay separate.
-            {!hasValues && ' No eligible observations in this range.'}
-          </Alert>
+        {loading ? (
+          <Alert severity="info" role="status">Loading backend analytics…</Alert>
         ) : null}
+        {error ? <Alert severity="error">{error}</Alert> : null}
 
-        <DashboardIndex />
-        <FreeHomeFunnel dashboards={dashboardMap} />
-
-        <Box data-testid="updated-home-dashboard-grid" sx={{ display: 'contents', overflowX: 'hidden' }}>
-          {UPDATED_HOME_SECTIONS.map((section) => (
-            <UpdatedHomeAnalyticsSection
-              key={section.id}
-              id={section.id}
-              title={section.title}
-              status={section.status}
-              dashboard={dashboardMap.get(section.id)}
-            />
-          ))}
-        </Box>
-
-        <CoverageFooter />
+        {data && !loading && !error ? (
+          <>
+            <Alert severity={hasObservedValues(data) ? 'info' : 'warning'}>
+              UTC · {data.range.from.slice(0, 10)} to {data.range.to.slice(0, 10)} · {data.definitionVersion}.
+              {!hasObservedValues(data) && ' No eligible observations in this range.'}
+            </Alert>
+            <DashboardIndex />
+            <Overview dashboards={dashboardMap} />
+            <Box data-testid="updated-home-dashboard-grid" sx={{ display: 'grid', minWidth: 0, gap: '24px', overflowX: 'clip' }}>
+              {UPDATED_HOME_SECTIONS.map((section) => (
+                <UpdatedHomeAnalyticsSection
+                  key={section.label}
+                  label={section.label}
+                  dashboards={section.dashboardIds.map((id) => dashboardMap.get(id))}
+                />
+              ))}
+            </Box>
+            <CoverageFooter />
+          </>
+        ) : null}
       </Stack>
     </Box>
   );
@@ -149,15 +154,10 @@ export function UpdatedHomeAnalyticsDashboard() {
 
 function DataStatus() {
   return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      gap={1}
-      sx={{ bgcolor: '#173926', borderRadius: 999, px: 1.5, py: 1 }}
-    >
+    <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#173926', borderRadius: 999, px: 1.5, py: 1 }}>
       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#68C96B' }} />
       <Typography sx={{ color: '#D8FBE9', fontSize: 12, fontWeight: 600 }}>
-        MVP · 12 dashboards
+        12 backend dashboards
       </Typography>
     </Stack>
   );
@@ -181,13 +181,13 @@ function FilterPanel({
   onRefresh: () => void;
 }) {
   return (
-    <Box sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: '18px' }}>
-      <Stack direction="row" justifyContent="space-between" gap={2} sx={{ mb: 2 }}>
+    <Box sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: { xs: '14px', sm: '18px' } }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} sx={{ mb: 2 }}>
         <Typography sx={{ color: '#F5F5F5', fontSize: 15, fontWeight: 600 }}>
           Observation range
         </Typography>
         <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 11 }}>
-          UTC · maximum 31 days · backend-computed
+          UTC · maximum 90 days · backend-computed
         </Typography>
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'flex-end' }} gap="12px">
@@ -197,7 +197,7 @@ function FilterPanel({
           value={from}
           onChange={(event) => onFromChange(event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: { xs: '100%', sm: 170 }, '& .MuiInputBase-root': { height: 56 } }}
+          sx={{ width: { xs: '100%', sm: 180 }, '& .MuiInputBase-root': { height: 56 } }}
         />
         <TextField
           label="To (UTC)"
@@ -205,9 +205,13 @@ function FilterPanel({
           value={to}
           onChange={(event) => onToChange(event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: { xs: '100%', sm: 170 }, '& .MuiInputBase-root': { height: 56 } }}
+          sx={{ width: { xs: '100%', sm: 180 }, '& .MuiInputBase-root': { height: 56 } }}
         />
-        <Button variant="contained" onClick={onRefresh} sx={{ width: { xs: '100%', sm: 160 }, height: 56 }}>
+        <Button
+          variant="contained"
+          onClick={onRefresh}
+          sx={{ width: { xs: '100%', sm: 160 }, height: 56 }}
+        >
           Refresh
         </Button>
         {loading ? <CircularProgress size={22} aria-label="Loading Updated Home analytics" /> : null}
@@ -218,23 +222,23 @@ function FilterPanel({
 }
 
 function DashboardIndex() {
-  const links = [{ label: 'Overview', href: '#overview', active: true }].concat(
-    UPDATED_HOME_SECTIONS.filter((section) => 'nav' in section).map((section) => ({
-      label: section.nav,
-      href: `#dashboard-${section.id}`,
-      active: false,
-    }))
-  );
+  const links = [
+    { label: 'Overview', href: '#overview' },
+    ...UPDATED_HOME_SECTIONS.map((section) => ({
+      label: section.label,
+      href: `#dashboard-${section.dashboardIds[0]}`,
+    })),
+  ];
   return (
     <Box component="nav" aria-label="Updated Home dashboard sections" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-      {links.map((link) => (
+      {links.map((link, index) => (
         <Box
           key={link.href}
           component="a"
           href={link.href}
           sx={{
-            color: link.active ? '#fff' : '#A3A3A3',
-            bgcolor: link.active ? '#5B4BFF' : '#222222',
+            color: index === 0 ? '#fff' : '#A3A3A3',
+            bgcolor: index === 0 ? '#5B4BFF' : '#222222',
             border: '1px solid #343434',
             borderRadius: 999,
             px: 1.5,
@@ -251,78 +255,79 @@ function DashboardIndex() {
   );
 }
 
-const FUNNEL_STEPS = [
-  { label: 'Home viewed', dashboardId: 2, sourceKey: 'free_pick_activation_funnel', stage: 'home_viewed' },
-  { label: 'Free Pick seen', dashboardId: 2, sourceKey: 'free_pick_activation_funnel', stage: 'free_pick_impression' },
-  { label: 'Free Pick opened', dashboardId: 2, sourceKey: 'free_pick_activation_funnel', stage: 'free_pick_clicked' },
-  { label: 'Analysis opened' },
-  { label: 'Offer seen', dashboardId: 3, sourceKey: 'full_access_funnel', stage: 'offer_impression' },
-  { label: 'Offer clicked', dashboardId: 3, sourceKey: 'full_access_funnel', stage: 'offer_click' },
-  { label: 'Paywall viewed', dashboardId: 3, sourceKey: 'full_access_funnel', stage: 'paywall_view' },
-  { label: 'Purchase started', dashboardId: 3, sourceKey: 'full_access_funnel', stage: 'purchase_start' },
-  { label: 'Verified purchase', dashboardId: 3, sourceKey: 'full_access_funnel', stage: 'verified_purchase' },
-] as const;
-
-function FreeHomeFunnel({ dashboards }: { dashboards: Map<number, UpdatedHomeDashboardBlock> }) {
+function Overview({ dashboards }: { dashboards: Map<number, UpdatedHomeDashboardBlock> }) {
   return (
-    <Box sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: '20px' }}>
-      <Stack direction="row" justifyContent="space-between" gap={2} sx={{ mb: '18px' }}>
-        <Typography sx={{ color: '#F5F5F5', fontSize: 17, fontWeight: 700 }}>
-          Free Home conversion
-        </Typography>
-        <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 11 }}>
-          Distinct users · previous-step rate
-        </Typography>
-      </Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(9, minmax(0, 1fr))' }, gap: 1 }}>
-        {FUNNEL_STEPS.map((step) => {
-          const value = findMetricStage(
-            'dashboardId' in step ? dashboards.get(step.dashboardId) : undefined,
-            'sourceKey' in step ? step.sourceKey : undefined,
-            'stage' in step ? step.stage : undefined
-          );
-          return (
-          <Box key={step.label} sx={{ minWidth: 0, px: 0.5 }}>
-            <Typography sx={{ color: '#F5F5F5', fontFamily: mono, fontSize: 18, fontWeight: 700 }}>{formatFunnelCount(value)}</Typography>
-            <Typography sx={{ color: '#A3A3A3', fontSize: 11, minHeight: 22 }}>{step.label}</Typography>
-            <Box sx={{ height: 3, my: 0.75, borderRadius: 999, bgcolor: '#3A3A3A' }} />
-            <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 10 }}>{formatFunnelRate(value)}</Typography>
-          </Box>
-          );
-        })}
+    <Box
+      component="section"
+      id="overview"
+      role="region"
+      aria-label="Overview"
+      sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: { xs: '14px', sm: '20px' } }}
+    >
+      <Typography sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700, mb: 2 }}>
+        Overview
+      </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
+        <Journey
+          title="Free Pick → Prediction Card"
+          values={metricValues(dashboards.get(2), 'free_pick_activation_funnel')}
+        />
+        <Journey
+          title="Paid Top Picks: Prediction Card → Full Analysis"
+          values={metricValues(dashboards.get(6), 'top_picks_activation_funnel')}
+        />
       </Box>
     </Box>
   );
 }
 
-function formatFunnelCount(value?: UpdatedHomeDashboardBlock['metrics'][number]['values'][number]) {
-  return value?.numerator === null || value?.numerator === undefined
-    ? 'N/A'
-    : value.numerator.toLocaleString('en-US');
-}
-
-function formatFunnelRate(value?: UpdatedHomeDashboardBlock['metrics'][number]['values'][number]) {
-  if (!value) return 'awaiting API';
-  if (value.denominator === null && value.numerator !== null) return '100%';
-  return value.value === null ? 'N/A' : `${value.value}%`;
+function Journey({ title, values }: { title: string; values: UpdatedHomeMetricValue[] }) {
+  return (
+    <Box sx={{ minWidth: 0, border: '1px solid #3A3A3A', borderRadius: '10px', bgcolor: '#171717', p: { xs: '12px', sm: '16px' } }}>
+      <Typography sx={{ color: '#F5F5F5', fontSize: 15, fontWeight: 700 }}>{title}</Typography>
+      <Typography sx={{ color: '#8B8B8F', fontSize: 11, mt: 0.5, mb: 1.5 }}>
+        Distinct users · previous-stage conversion
+      </Typography>
+      {values.length === 0 ? (
+        <Typography sx={{ color: '#F0A63A', fontSize: 12 }}>Not returned by the backend.</Typography>
+      ) : (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: `repeat(${values.length}, minmax(0, 1fr))` }, gap: 1 }}>
+          {values.map((value, index) => {
+            const stage = typeof value.dimensions.stage === 'string'
+              ? value.dimensions.stage
+              : `stage_${index + 1}`;
+            return (
+              <Box key={`${stage}-${index}`} sx={{ minWidth: 0, borderLeft: '3px solid #5B4BFF', pl: 1 }}>
+                <Typography sx={{ color: value.value === null ? '#F0A63A' : '#F5F5F5', fontFamily: mono, fontSize: 16, fontWeight: 700, overflowWrap: 'anywhere' }}>
+                  {formatMetricValue(value)}
+                </Typography>
+                <Typography sx={{ color: '#A3A3A3', fontSize: 11, overflowWrap: 'anywhere' }}>
+                  {displayLabel(stage)}
+                </Typography>
+                <Typography sx={{ color: '#8B8B8F', fontSize: 9 }}>
+                  {formatMetricUnit(value)}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 function CoverageFooter() {
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={3} sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#171717', p: '20px' }}>
+    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#171717', p: '20px' }}>
       <Stack gap={1}>
-        <Typography sx={{ color: '#F5F5F5', fontSize: 16, fontWeight: 700 }}>MVP measurement coverage</Typography>
-        <Typography sx={{ color: '#A3A3A3', fontSize: 12 }}>12 dashboards · revenue excluded · Feed, Challenges and Quests deferred · conversion metrics use distinct users.</Typography>
+        <Typography sx={{ color: '#F5F5F5', fontSize: 16, fontWeight: 700 }}>Backend projection coverage</Typography>
+        <Typography sx={{ color: '#A3A3A3', fontSize: 12 }}>
+          12 dashboards · backend values and definitions shown without frontend recomputation.
+        </Typography>
       </Stack>
-      <Stack direction="row" flexWrap="wrap" gap={1}>
-        <Legend label="● MVP ready" color="#D8FBE9" background="#173926" />
-        <Legend label="● Partial window" color="#F8E5BF" background="#3A2B12" />
-        <Legend label="N/A explicit" color="#A3A3A3" background="#2A2A2A" />
-      </Stack>
+      <Typography sx={{ color: '#A3A3A3', bgcolor: '#2A2A2A', borderRadius: 999, px: 1.25, py: 1, fontFamily: mono, fontSize: 10, fontWeight: 600 }}>
+        Missing values remain N/A
+      </Typography>
     </Stack>
   );
-}
-
-function Legend({ label, color, background }: { label: string; color: string; background: string }) {
-  return <Typography sx={{ color, bgcolor: background, borderRadius: 999, px: 1.25, py: 1, fontFamily: mono, fontSize: 10, fontWeight: 600 }}>{label}</Typography>;
 }

@@ -1,40 +1,29 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { UpdatedHomeAnalyticsDashboard } from '@/components/updated-home-analytics/UpdatedHomeAnalyticsDashboard';
+import {
+  displayLabel,
+  formatMetricUnit,
+  formatMetricValue,
+} from '@/components/updated-home-analytics/presentation';
 import { getUpdatedHomeAnalytics } from '@/lib/api/updated-home-analytics';
 
 jest.mock('@/lib/api/updated-home-analytics', () => ({
   getUpdatedHomeAnalytics: jest.fn(),
 }));
 
-const names = [
-  'Home module performance',
-  'Free Pick activation',
-  'Full Access conversion',
-  'Paywall by product and country',
-  'Collections conversion',
-  'Top Picks and Parlays',
-  'Full Analysis engagement',
-  'Completed Prediction Loops',
-  'Pass usage and expiration',
-  'Pass-to-subscription conversion',
-  'Purchase failures and verification',
-  'Retention by core action',
-];
+const completeness = {
+  isComplete: false,
+  reason: 'The final 30 seconds are excluded while Home views may remain open.',
+};
 
-const designSectionNames = [
+const dashboardNames = [
   'Home quality',
   'Free Pick activation',
   'Full Access conversion',
   'Paywall by product and country',
-  'Collections conversion',
+  'Collections assisted conversion',
   'Top Picks and Parlays',
-  'Full Analysis engagement',
+  'Paid Top Picks Full Analysis',
   'Top Picks result return',
   'Pass usage and expiration',
   'Pass-to-subscription conversion',
@@ -42,149 +31,230 @@ const designSectionNames = [
   'Retention by core action',
 ];
 
-const response = {
-  definitionVersion: 'updated-home-dashboards-v1.1',
-  timezone: 'UTC' as const,
-  range: {
-    from: '2026-07-01T00:00:00.000Z',
-    to: '2026-07-15T23:59:59.999Z',
-  },
-  dashboards: names.map((name, index) => ({
-    id: index + 1,
-    name,
-    definitionVersion: 'updated-home-dashboards-v1.1',
-    observationCompleteness: {
-      isComplete: index !== 0,
-      reason:
-        index === 0 ? 'The final observation window is incomplete.' : null,
-    },
-    dimensions: [],
-    metrics: [
-      {
-        definition: {
-          key:
-            index === 9
-              ? 'subscription_cannibalization_pp'
-              : index === 2
-                ? 'revenue_per_home_user'
-                : 'home_load_success_rate',
-          numerator: 'eligible users',
-          denominator: 'exposed users',
-          window: 'requested UTC range',
-          grouping: [],
-          nullTreatment: 'N/A when empty',
-        },
-        values: [
-          index === 9
-            ? {
-                dimensions: {},
-                numerator: null,
-                denominator: null,
-                value: null,
-                unit: 'percentage_points',
-                naReason: 'N/A until an eligible experiment exists.',
-              }
-            : {
-                dimensions: index === 2 ? { currency: 'USD' } : {},
-                numerator: 1,
-                denominator: 2,
-                value: index === 2 ? 4.99 : 50,
-                unit: index === 2 ? 'currency_per_user' : 'percent',
-                naReason: null,
-              },
-        ],
-      },
-    ],
-  })),
+const metricKeys = [
+  'home_load_success_rate',
+  'free_pick_activation_funnel',
+  'full_access_funnel',
+  'conversion_by_product_country',
+  'collection_assisted_conversion_rate',
+  'top_picks_activation_funnel',
+  'section_reach_rate',
+  'top_picks_result_return_funnel',
+  'pass_24h_repeat_purchase_rate',
+  'pass_to_monthly_conversion_rate',
+  'verified_started_rate',
+  'd1_d7_d30_retention',
+];
+
+const stages: Readonly<Record<number, readonly string[]>> = {
+  2: [
+    'home_viewed',
+    'free_pick_impression',
+    'free_pick_clicked',
+    'free_pick_prediction_card_opened',
+  ],
+  6: ['preview_impression', 'preview_click', 'full_analysis_opened'],
+  8: [
+    'preview_clicked',
+    'full_analysis_opened',
+    'prediction_saved',
+    'settlement_eligible',
+    'prediction_result_viewed',
+  ],
 };
 
+function makeResponse() {
+  return {
+    definitionVersion: 'updated-home-dashboards-v1.1',
+    timezone: 'UTC' as const,
+    range: {
+      from: '2026-07-28T00:00:00.000Z',
+      to: '2026-08-11T23:59:59.999Z',
+    },
+    dashboards: dashboardNames.map((name, index) => {
+      const id = index + 1;
+      const key = metricKeys[index];
+      const valueStages = stages[id] ?? [''];
+      return {
+        id,
+        name,
+        definitionVersion: 'updated-home-dashboards-v1.1',
+        observationCompleteness: completeness,
+        dimensions: valueStages[0] ? ['stage'] : ['access_state'],
+        metrics: [
+          {
+            definition: {
+              key,
+              numerator: `distinct users in ${key}`,
+              denominator: `distinct eligible users for ${key}`,
+              window: 'backend UTC window',
+              grouping: valueStages[0] ? ['stage'] : ['access_state'],
+              nullTreatment: `backend N/A rule for ${key}`,
+            },
+            values: valueStages.map((stage, valueIndex) => ({
+              formula: {
+                numerator: `distinct users in ${key}`,
+                denominator: `distinct eligible users for ${key}`,
+              },
+              dimensions: stage ? { stage } : { accessState: 'full_access' },
+              numerator: valueIndex === 0 ? 40 : 20,
+              denominator: valueIndex === 0 ? null : 40,
+              value: valueIndex === 0 ? 40 : 50,
+              unit: valueIndex === 0 ? 'users' : 'percent',
+              completeness,
+              naReason: null,
+            })),
+          },
+        ],
+      };
+    }),
+  };
+}
+
 describe('UpdatedHomeAnalyticsDashboard', () => {
+  it('presents millisecond metrics in seconds', () => {
+    const value = {
+      value: 8250,
+      unit: 'milliseconds',
+    } as Parameters<typeof formatMetricValue>[0];
+
+    expect(formatMetricValue(value)).toBe('8.25 s');
+    expect(formatMetricUnit(value)).toBe('seconds');
+    expect(displayLabel('active_home_time_ms')).toBe('Active home time');
+    expect(displayLabel('verification_latency_ms')).toBe('Verification latency');
+  });
+
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-07-15T10:00:00.000Z'));
+    jest.setSystemTime(new Date('2026-08-11T10:00:00.000Z'));
     (getUpdatedHomeAnalytics as jest.Mock).mockReset();
-    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue(response);
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue(makeResponse());
   });
 
   afterEach(() => jest.useRealTimers());
 
-  it('renders all twelve backend sections, UTC metadata, currency and N/A states', async () => {
+  it('applies a UTC range and exposes every backend section and trace field', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(await screen.findByText('Home quality')).toBeInTheDocument();
-    for (const name of designSectionNames) {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    }
+    expect(await screen.findByRole('region', { name: 'Overview' })).toBeInTheDocument();
+
+    expect(screen.getByLabelText('From (UTC)')).toBeInTheDocument();
+    expect(screen.getByLabelText('To (UTC)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByText('UTC · maximum 90 days · backend-computed')).toBeInTheDocument();
+
+    const sectionLabels = screen
+      .getAllByTestId('updated-home-dashboard-section')
+      .map((section) => section.getAttribute('aria-label'));
+    expect(sectionLabels).toEqual([
+      'Home',
+      'Free Pick',
+      'Full Access',
+      'Paywall',
+      'Collections',
+      'Top Picks/Parlays',
+      'Full Analysis',
+      'Top Picks Result Return',
+      'Passes',
+      'Purchases',
+      'Retention',
+    ]);
+    const passes = screen.getByRole('region', { name: 'Passes' });
+    expect(within(passes).getByText('Pass usage and expiration')).toBeInTheDocument();
+    expect(within(passes).getByText('Pass-to-subscription conversion')).toBeInTheDocument();
+
+    expect(screen.queryByText(/^NUM$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^DEN$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^WINDOW$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^COMPLETENESS$/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Calculation details/ }).length).toBeGreaterThanOrEqual(12);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Calculation details/ })[0]);
+    expect(screen.getByText(/^NUM$/)).toBeInTheDocument();
+    expect(screen.getByText(/^DEN$/)).toBeInTheDocument();
+    expect(screen.getByText(/^WINDOW$/)).toBeInTheDocument();
+    expect(screen.queryByText(/^COMPLETENESS$/)).not.toBeInTheDocument();
     expect(
-      await screen.findByText(/Currency totals stay separate/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Subscription cannibalization')
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
-    expect(
-      screen.getByText('N/A until an eligible experiment exists.')
-    ).toBeInTheDocument();
-    const grid = screen.getByTestId('updated-home-dashboard-grid');
-    expect(getComputedStyle(grid).overflowX).toBe('hidden');
-    expect(getUpdatedHomeAnalytics).toHaveBeenCalledWith({
-      from: '2026-07-01T00:00:00.000Z',
-      to: '2026-07-15T23:59:59.999Z',
+      screen.queryByText('The final 30 seconds are excluded while Home views may remain open.')
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('From (UTC)'), {
+      target: { value: '2026-05-14' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2));
+    expect(getUpdatedHomeAnalytics).toHaveBeenLastCalledWith({
+      from: '2026-05-14T00:00:00.000Z',
+      to: '2026-08-11T23:59:59.999Z',
     });
   });
 
-  it('renders the Pencil dashboard shell with navigation, funnel, and API-ready metric sections', async () => {
+  it('renders only backend-supported stages in the three journeys', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        [2, 6, 8].includes(dashboard.id)
+          ? {
+              ...dashboard,
+              metrics: dashboard.metrics.map((metric) => ({
+                ...metric,
+                values: [...metric.values].reverse(),
+              })),
+            }
+          : dashboard
+      ),
+    });
     render(<UpdatedHomeAnalyticsDashboard />);
+    const overview = await screen.findByRole('region', { name: 'Overview' });
+    expect(within(overview).getByText('Free Pick → Prediction Card')).toBeInTheDocument();
+    expect(within(overview).getByText('Paid Top Picks: Prediction Card → Full Analysis')).toBeInTheDocument();
+    expect(within(overview).getByText('Prediction Card opened')).toBeInTheDocument();
+    expect(within(overview).getByText('Full Analysis opened')).toBeInTheDocument();
+    expect(within(overview).queryByText(/Free Pick.*Full Analysis/i)).not.toBeInTheDocument();
+    const overviewText = overview.textContent ?? '';
+    expect(overviewText.indexOf('Home viewed')).toBeLessThan(
+      overviewText.indexOf('Prediction Card opened')
+    );
+    expect(overviewText.indexOf('Prediction Card impression')).toBeLessThan(
+      overviewText.indexOf('Full Analysis opened')
+    );
 
-    expect(await screen.findByText('MVP · 12 dashboards')).toBeInTheDocument();
-    expect(screen.getByText('Observation range')).toBeInTheDocument();
-    expect(
-      screen.getByText('UTC · maximum 31 days · backend-computed')
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute(
-      'href',
-      '#overview'
-    );
-    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute(
-      'href',
-      '#dashboard-1'
-    );
-    expect(screen.getByText('Free Home conversion')).toBeInTheDocument();
-    expect(screen.getByText('Home quality')).toBeInTheDocument();
-    expect(screen.getByText('Top Picks result return')).toBeInTheDocument();
+    const resultReturn = screen.getByRole('region', { name: 'Top Picks Result Return' });
     for (const label of [
-      'Module click-through',
-      'Reached positions 4–9',
-      'Module load failures',
-      'Impression users',
-      'Click users',
-      'Full Analysis opens',
-      'Top Picks save rate',
-      'Analysis opens',
-      'Active duration',
-      'Section interaction',
-      'Primary action taken',
+      'Prediction Card clicked',
+      'Full Analysis opened',
+      'Prediction saved',
+      'Settlement eligible',
+      'Prediction result viewed',
     ]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(within(resultReturn).getByText(new RegExp(label))).toBeInTheDocument();
     }
-    expect(screen.getByText('Main offer funnel')).toBeInTheDocument();
-    expect(screen.getByText('Collection-assisted funnel')).toBeInTheDocument();
-    expect(screen.getByText('Paid Top Picks return')).toBeInTheDocument();
-    expect(screen.getByText('Option selected')).toBeInTheDocument();
-    expect(screen.getByText('Pick preview')).toBeInTheDocument();
-    expect(screen.getByText('Prediction settled')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Pass conversion' })).not.toBeInTheDocument();
-    expect(screen.queryByText('100%')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('updated-home-dashboard-section')).toHaveLength(
-      12
-    );
-    expect(screen.getAllByText(/^NUM$/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/^DEN$/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/^WINDOW$/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/^N\/A$/).length).toBeGreaterThan(0);
+    const resultRows = within(resultReturn).getAllByTestId('updated-home-metric-row');
+    expect(resultRows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Prediction Card clicked'),
+      expect.stringContaining('Full Analysis opened'),
+      expect.stringContaining('Prediction saved'),
+      expect.stringContaining('Settlement eligible'),
+      expect.stringContaining('Prediction result viewed'),
+    ]);
+    expect(within(resultReturn).queryByText(/alert|breakdown|next/i)).not.toBeInTheDocument();
   });
 
-  it('renders an empty observation state without inventing values', async () => {
+  it('keeps loading and transport errors explicit and does not show stale metrics', async () => {
+    let rejectRequest: (reason: Error) => void = () => undefined;
+    (getUpdatedHomeAnalytics as jest.Mock).mockImplementation(
+      () => new Promise((_, reject) => { rejectRequest = reject; })
+    );
+    render(<UpdatedHomeAnalyticsDashboard />);
+    expect(screen.getByLabelText('Loading Updated Home analytics')).toBeInTheDocument();
+    expect(screen.getByText('Loading backend analytics…')).toBeInTheDocument();
+    await act(async () => rejectRequest(new Error('Forbidden')));
+    expect(await screen.findByText('Forbidden')).toBeInTheDocument();
+    expect(screen.queryByTestId('updated-home-dashboard-grid')).not.toBeInTheDocument();
+  });
+
+  it('renders empty and N/A states without turning missing values into zero', async () => {
+    const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
       ...response,
       dashboards: response.dashboards.map((dashboard) => ({
@@ -193,168 +263,59 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       })),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(
-      await screen.findByText(/No eligible observations in this range/)
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('N/A').length).toBeGreaterThanOrEqual(12);
+    expect((await screen.findAllByText(/No eligible observations in this range/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
   });
 
-  it('shows readable forbidden and loading states', async () => {
-    let rejectRequest: (reason: Error) => void = () => undefined;
-    (getUpdatedHomeAnalytics as jest.Mock).mockImplementation(
-      () =>
-        new Promise((_, reject) => {
-          rejectRequest = reject;
-        })
-    );
+  it('renders partial and unsupported states from the response', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.filter((dashboard) => dashboard.id !== 7),
+    });
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(
-      screen.getByLabelText('Loading Updated Home analytics')
-    ).toBeInTheDocument();
-    rejectRequest(new Error('Forbidden'));
-    expect(await screen.findByText('Forbidden')).toBeInTheDocument();
+    expect((await screen.findAllByText('Partial observation window')).length).toBeGreaterThan(0);
+    expect(screen.queryByText(completeness.reason)).not.toBeInTheDocument();
+    const unsupported = screen.getByRole('region', { name: 'Full Analysis' });
+    expect(within(unsupported).getByText('Unsupported response')).toBeInTheDocument();
+    expect(within(unsupported).getByText('This section was not returned by the backend.')).toBeInTheDocument();
+  });
+
+  it('rejects more than 90 inclusive UTC dates before calling the API', async () => {
+    render(<UpdatedHomeAnalyticsDashboard />);
+    await screen.findByRole('region', { name: 'Overview' });
+    fireEvent.change(screen.getByLabelText('From (UTC)'), {
+      target: { value: '2026-05-13' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Maximum range is 90 days.')).toBeInTheDocument();
+    expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
   });
 
   it('does not let an older request overwrite a newer range', async () => {
+    const response = makeResponse();
     let resolveOlder: (value: typeof response) => void = () => undefined;
     let resolveNewer: (value: typeof response) => void = () => undefined;
     (getUpdatedHomeAnalytics as jest.Mock)
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveOlder = resolve;
-          })
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveNewer = resolve;
-          })
-      );
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveNewer = resolve; }));
     render(<UpdatedHomeAnalyticsDashboard />);
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
-      target: { value: '2026-06-30' },
+      target: { value: '2026-07-27' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() =>
-      expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2)
-    );
+    await waitFor(() => expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2));
 
-    await act(async () => {
-      resolveNewer({
-        ...response,
-        range: {
-          from: '2026-06-30T00:00:00.000Z',
-          to: '2026-07-15T23:59:59.999Z',
-        },
-      });
-    });
-    expect(
-      await screen.findByText(/2026-06-30 to 2026-07-15/)
-    ).toBeInTheDocument();
-
-    await act(async () => {
-      resolveOlder({
-        ...response,
-        range: {
-          from: '2026-01-01T00:00:00.000Z',
-          to: '2026-01-02T23:59:59.999Z',
-        },
-      });
-    });
-    expect(
-      screen.queryByText(/2026-01-01 to 2026-01-02/)
-    ).not.toBeInTheDocument();
-  });
-
-  it('rejects observation ranges longer than 31 days before calling the API', async () => {
-    render(<UpdatedHomeAnalyticsDashboard />);
-    await screen.findByText('Home quality');
-    fireEvent.change(screen.getByLabelText('From (UTC)'), {
-      target: { value: '2026-06-01' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(await screen.findByText('Maximum range is 31 days.')).toBeInTheDocument();
-    expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
-  });
-
-  it('treats 31 midnight boundaries as a 32-date inclusive range', async () => {
-    render(<UpdatedHomeAnalyticsDashboard />);
-    await screen.findByText('Home quality');
-    fireEvent.change(screen.getByLabelText('From (UTC)'), {
-      target: { value: '2026-06-14' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(await screen.findByText('Maximum range is 31 days.')).toBeInTheDocument();
-    expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
-  });
-
-  it('fills design funnel steps from backend stage projections', async () => {
-    const funnelValue = (
-      stage: string,
-      numerator: number,
-      denominator: number | null,
-      value: number
-    ) => ({
-      dimensions: { stage },
-      numerator,
-      denominator,
-      value,
-      unit: denominator === null ? 'users' : 'percent',
-      naReason: null,
-    });
-    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+    await act(async () => resolveNewer({
       ...response,
-      dashboards: response.dashboards.map((dashboard) =>
-        dashboard.id === 3
-          ? {
-              ...dashboard,
-              metrics: [{
-                definition: {
-                  key: 'full_access_funnel',
-                  numerator: 'users at stage',
-                  denominator: 'previous stage',
-                  window: '24 hours',
-                  grouping: ['stage'],
-                  nullTreatment: 'N/A',
-                },
-                values: [
-                  funnelValue('offer_impression', 2914, null, 2914),
-                  funnelValue('offer_click', 681, 2914, 23.4),
-                ],
-              }],
-            }
-          : dashboard
-      ),
-    });
-    render(<UpdatedHomeAnalyticsDashboard />);
-    expect((await screen.findAllByText('2,914')).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('681').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('23.4%').length).toBeGreaterThan(0);
-  });
+      range: { from: '2026-07-27T00:00:00.000Z', to: '2026-08-11T23:59:59.999Z' },
+    }));
+    expect(await screen.findByText(/2026-07-27 to 2026-08-11/)).toBeInTheDocument();
 
-  it('hides previously loaded metrics when a refresh fails', async () => {
-    const responseWithUniqueValue = {
+    await act(async () => resolveOlder({
       ...response,
-      dashboards: response.dashboards.map((dashboard, index) =>
-        index === 0
-          ? {
-              ...dashboard,
-              metrics: dashboard.metrics.map((metric) => ({
-                ...metric,
-                values: metric.values.map((value) => ({ ...value, value: 47.123 })),
-              })),
-            }
-          : dashboard
-      ),
-    };
-    (getUpdatedHomeAnalytics as jest.Mock)
-      .mockResolvedValueOnce(responseWithUniqueValue)
-      .mockRejectedValueOnce(new Error('Refresh failed'));
-    render(<UpdatedHomeAnalyticsDashboard />);
-    expect(await screen.findByText('47.123%')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(await screen.findByText('Refresh failed')).toBeInTheDocument();
-    expect(screen.queryByText('47.123%')).not.toBeInTheDocument();
+      range: { from: '2026-01-01T00:00:00.000Z', to: '2026-01-02T23:59:59.999Z' },
+    }));
+    expect(screen.queryByText(/2026-01-01 to 2026-01-02/)).not.toBeInTheDocument();
   });
 });

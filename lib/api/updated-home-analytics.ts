@@ -14,12 +14,24 @@ export interface UpdatedHomeMetricDefinition {
   nullTreatment: string;
 }
 
+export interface UpdatedHomeCompleteness {
+  isComplete: boolean;
+  reason: string | null;
+}
+
+export interface UpdatedHomeMetricFormula {
+  numerator: string;
+  denominator: string | null;
+}
+
 export interface UpdatedHomeMetricValue {
+  formula: UpdatedHomeMetricFormula;
   dimensions: Record<string, unknown>;
   numerator: number | null;
   denominator: number | null;
   value: number | null;
   unit: string;
+  completeness: UpdatedHomeCompleteness;
   naReason: string | null;
 }
 
@@ -27,10 +39,7 @@ export interface UpdatedHomeDashboardBlock {
   id: number;
   name: string;
   definitionVersion: string;
-  observationCompleteness: {
-    isComplete: boolean;
-    reason: string | null;
-  };
+  observationCompleteness: UpdatedHomeCompleteness;
   dimensions: string[];
   metrics: Array<{
     definition: UpdatedHomeMetricDefinition;
