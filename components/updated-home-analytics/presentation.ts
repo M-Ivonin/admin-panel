@@ -48,7 +48,7 @@ const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
   free_pick_activation_funnel: 'Shows how users progress from opening Home to opening the Free Pick prediction card.',
   full_access_funnel: 'Shows how users progress from seeing the offer to completing a verified purchase.',
   conversion_by_product_country: 'Share of exposed users who completed a verified purchase for this product and placement.',
-  collection_assisted_conversion_rate: 'Share of users who purchased after interacting with a collection.',
+  collection_assisted_conversion_rate: 'Share of collection-page viewers who completed a collection-attributed verified purchase within seven days.',
   top_picks_activation_funnel: 'Shows how paid users progress from a Top Pick preview to Full Analysis.',
   parlay_engagement_rate: 'Share of users who opened a parlay after seeing it.',
   section_reach_rate: 'Share of Full Analysis visits in which users reached a specific section.',
