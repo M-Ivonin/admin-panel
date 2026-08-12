@@ -239,6 +239,80 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(within(resultReturn).queryByText(/alert|breakdown|next/i)).not.toBeInTheDocument();
   });
 
+  it('groups Home quality dimensions under one metric heading', async () => {
+    const response = makeResponse();
+    const home = response.dashboards[0];
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: [
+        {
+          ...home,
+          metrics: [
+            {
+              definition: {
+                key: 'module_reach_rate',
+                numerator: 'distinct users with module impression',
+                denominator: 'distinct users with settled Home view',
+                window: 'backend UTC window',
+                grouping: ['module_name', 'module_position'],
+                nullTreatment: 'N/A when no settled Home users',
+              },
+              values: [
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'feed', modulePosition: 6 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'feed', modulePosition: 7 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+              ],
+            },
+          ],
+        },
+        ...response.dashboards.slice(1),
+      ],
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const homeSection = await screen.findByRole('region', { name: 'Home' });
+    const metric = within(homeSection).getByTestId('updated-home-grouped-metric');
+
+    expect(within(metric).getAllByText('Module reach rate')).toHaveLength(1);
+    expect(within(metric).getByText('2 breakdowns')).toBeInTheDocument();
+    expect(within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')).toBeInTheDocument();
+    expect(within(within(metric).getByRole('button')).getByText('16.67%')).toBeInTheDocument();
+    expect(
+      within(metric).getAllByText('Share of Home visitors who scrolled far enough to see a module.')
+    ).toHaveLength(1);
+    const toggle = within(metric).getByRole('button');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    expect(within(metric).getByText('Module Name: Feed · Module Position: 6')).toBeInTheDocument();
+    expect(within(metric).getByText('Module Name: Feed · Module Position: 7')).toBeInTheDocument();
+    expect(within(metric).getAllByText('16.67%')).toHaveLength(3);
+  });
+
   it('keeps loading and transport errors explicit and does not show stale metrics', async () => {
     let rejectRequest: (reason: Error) => void = () => undefined;
     (getUpdatedHomeAnalytics as jest.Mock).mockImplementation(
