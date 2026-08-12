@@ -347,6 +347,48 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(screen.queryByTestId('updated-home-dashboard-grid')).not.toBeInTheDocument();
   });
 
+  it('groups large dimensional breakdowns outside Home without inventing an average', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        dashboard.id === 4
+          ? {
+              ...dashboard,
+              metrics: [{
+                ...dashboard.metrics[0],
+                definition: {
+                  ...dashboard.metrics[0].definition,
+                  key: 'conversion_by_product_country',
+                  grouping: ['country', 'placement', 'product_id'],
+                },
+                values: [
+                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'offers', productId: 'pro' }, value: 20, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'home_main_offer', productId: 'pass' }, value: 10, unit: 'percent' },
+                ],
+              }],
+            }
+          : dashboard
+      ),
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const paywall = await screen.findByRole('region', { name: 'Paywall' });
+    const metric = within(paywall).getByTestId('updated-home-grouped-metric');
+    expect(within(metric).getByText('2 breakdowns')).toBeInTheDocument();
+    expect(within(metric).queryByText(/average across breakdowns/i)).not.toBeInTheDocument();
+    expect(within(metric).getByText('BREAKDOWNS')).toBeInTheDocument();
+
+    fireEvent.click(within(metric).getByRole('button'));
+    expect(within(metric).getByText('COUNTRY')).toBeInTheDocument();
+    expect(within(metric).getByText('PLACEMENT')).toBeInTheDocument();
+    expect(within(metric).getByText('PRODUCT ID')).toBeInTheDocument();
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row').map((row) => row.textContent)).toEqual([
+      expect.stringContaining('USHome main offerPass10%percent'),
+      expect.stringContaining('USOffersPro20%percent'),
+    ]);
+  });
+
   it('renders empty and N/A states without turning missing values into zero', async () => {
     const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({

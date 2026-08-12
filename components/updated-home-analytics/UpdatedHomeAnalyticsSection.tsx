@@ -117,7 +117,7 @@ function DashboardProjection({ dashboard }: { dashboard: UpdatedHomeDashboardBlo
           {dashboard.metrics.flatMap((metric) => {
             const orderedValues = metricValues(dashboard, metric.definition.key);
             const values = orderedValues.length > 0 ? orderedValues : [undefined];
-            if (dashboard.id === 1 && values.length > 1) {
+            if (shouldGroupMetric(dashboard.id, values.length)) {
               return (
                 <GroupedMetric
                   key={metric.definition.key}
@@ -156,12 +156,15 @@ function GroupedMetric({
   const isModuleBreakdown = values.every(
     (value) => typeof value.dimensions.moduleName === 'string'
   );
-  const displayedValues = isModuleBreakdown
-    ? [...values].sort(compareModuleBreakdowns)
-    : values;
-  const breakdownColumns = isModuleBreakdown
-    ? { xs: 'minmax(0, 1fr) 64px 95px', sm: 'minmax(0, 1fr) 90px 130px 110px' }
-    : { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' };
+  const dimensionKeys = isModuleBreakdown
+    ? ['moduleName', 'modulePosition']
+    : Object.keys(values[0]?.dimensions ?? {});
+  const displayedValues = [...values].sort((left, right) =>
+    compareDimensionBreakdowns(left, right, dimensionKeys)
+  );
+  const breakdownColumns = dimensionKeys.length === 1
+    ? { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' }
+    : `repeat(${dimensionKeys.length}, minmax(120px, 1fr)) 130px 110px`;
 
   return (
     <Accordion
@@ -211,10 +214,10 @@ function GroupedMetric({
           </Stack>
           <Stack gap="2px" minWidth={0}>
             <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
-              {summary.label.toUpperCase()}
+              {(summary?.label ?? 'Breakdowns').toUpperCase()}
             </Typography>
-            <Typography sx={{ color: '#6D4AFF', fontFamily: mono, fontSize: 18, fontWeight: 700 }}>
-              {summary.value}
+            <Typography sx={{ color: summary ? '#6D4AFF' : '#C8C8CA', fontFamily: mono, fontSize: 18, fontWeight: 700 }}>
+              {summary?.value ?? values.length}
             </Typography>
           </Stack>
           <Stack gap="4px" minWidth={0}>
@@ -228,19 +231,21 @@ function GroupedMetric({
         </Box>
       </AccordionSummary>
 
-      <AccordionDetails sx={{ p: 0, borderTop: '1px solid #3A3A3A' }}>
+      <AccordionDetails sx={{ p: 0, borderTop: '1px solid #3A3A3A', overflowX: 'auto' }}>
         <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: breakdownColumns,
+          minWidth: dimensionKeys.length > 1 ? 620 : 0,
           gap: '12px',
           px: { xs: '12px', sm: '16px' },
           py: '8px',
           bgcolor: '#252525',
         }}
         >
-          <ColumnLabel>{isModuleBreakdown ? 'MODULE NAME' : 'DIMENSIONS'}</ColumnLabel>
-          {isModuleBreakdown ? <ColumnLabel>POSITION</ColumnLabel> : null}
+          {dimensionKeys.map((key) => (
+            <ColumnLabel key={key}>{dimensionColumnLabel(key)}</ColumnLabel>
+          ))}
           <ColumnLabel>VALUE</ColumnLabel>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}><ColumnLabel>UNIT</ColumnLabel></Box>
         </Box>
@@ -252,24 +257,19 @@ function GroupedMetric({
           sx={{
             display: 'grid',
             gridTemplateColumns: breakdownColumns,
+            minWidth: dimensionKeys.length > 1 ? 620 : 0,
             alignItems: 'center',
             gap: '12px',
-            minWidth: 0,
             px: { xs: '12px', sm: '16px' },
             py: '10px',
             '&:not(:last-child)': { borderBottom: '1px solid #363636' },
           }}
         >
-          <Typography sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10, overflowWrap: 'anywhere' }}>
-            {isModuleBreakdown
-              ? displayLabel(String(value.dimensions.moduleName))
-              : formatDimensions(value.dimensions)}
-          </Typography>
-          {isModuleBreakdown ? (
-            <Typography sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10 }}>
-              {String(value.dimensions.modulePosition ?? '—')}
+          {dimensionKeys.map((key) => (
+            <Typography key={key} sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10, overflowWrap: 'anywhere' }}>
+              {formatDimensionValue(value.dimensions[key])}
             </Typography>
-          ) : null}
+          ))}
           <Stack gap="2px" minWidth={0}>
             <Typography
               sx={{
@@ -296,27 +296,32 @@ function GroupedMetric({
   );
 }
 
-function compareModuleBreakdowns(
+function compareDimensionBreakdowns(
   left: UpdatedHomeMetricValue,
-  right: UpdatedHomeMetricValue
+  right: UpdatedHomeMetricValue,
+  dimensionKeys: string[]
 ): number {
-  const byName = String(left.dimensions.moduleName).localeCompare(
-    String(right.dimensions.moduleName),
-    'en',
-    { sensitivity: 'base' }
-  );
-  if (byName !== 0) return byName;
-  return Number(left.dimensions.modulePosition ?? 0) - Number(right.dimensions.modulePosition ?? 0);
+  for (const key of dimensionKeys) {
+    const leftValue = left.dimensions[key];
+    const rightValue = right.dimensions[key];
+    const comparison = typeof leftValue === 'number' && typeof rightValue === 'number'
+      ? leftValue - rightValue
+      : String(leftValue ?? '').localeCompare(String(rightValue ?? ''), 'en', { sensitivity: 'base' });
+    if (comparison !== 0) return comparison;
+  }
+  return 0;
 }
 
 function metricSummary(
   metricKey: string,
   values: UpdatedHomeMetricValue[]
-): { label: string; value: string } {
+): { label: string; value: string } | null {
   if (metricKey === 'active_home_time_ms') {
     const mean = values.find((value) => value.dimensions.statistic === 'mean');
     return { label: 'Mean', value: formatMetricValue(mean) };
   }
+
+  if (!HOME_SUMMARY_METRICS.has(metricKey)) return null;
 
   const observed = values.filter((value) => value.value !== null);
   if (observed.length === 0) return { label: 'Average across breakdowns', value: 'N/A' };
@@ -325,6 +330,28 @@ function metricSummary(
     label: 'Average across breakdowns',
     value: formatMetricValue({ ...observed[0], value: Number(average.toFixed(2)) }),
   };
+}
+
+const HOME_SUMMARY_METRICS = new Set([
+  'home_load_success_rate',
+  'module_reach_rate',
+  'module_ctr',
+  'positions_4_9_reach_rate',
+  'active_home_time_ms',
+  'home_exit_without_interaction_rate',
+]);
+
+function shouldGroupMetric(dashboardId: number, valueCount: number): boolean {
+  return valueCount > 1 && [1, 4, 5, 9, 11].includes(dashboardId);
+}
+
+function formatDimensionValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return typeof value === 'string' ? displayLabel(value) : String(value);
+}
+
+function dimensionColumnLabel(key: string): string {
+  return key === 'modulePosition' ? 'POSITION' : displayLabel(key).toUpperCase();
 }
 
 function ColumnLabel({ children }: { children: string }) {
