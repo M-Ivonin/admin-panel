@@ -1,4 +1,18 @@
-import { Alert, Box, Chip, Stack, Typography } from '@mui/material';
+'use client';
+
+import { useState } from 'react';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Stack,
+  Typography,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type {
   UpdatedHomeDashboardBlock,
   UpdatedHomeMetricDefinition,
@@ -107,6 +121,15 @@ function DashboardProjection({ dashboard }: { dashboard: UpdatedHomeDashboardBlo
           {dashboard.metrics.flatMap((metric) => {
             const orderedValues = metricValues(dashboard, metric.definition.key);
             const values = orderedValues.length > 0 ? orderedValues : [undefined];
+            if (shouldGroupMetric(dashboard.id, values.length)) {
+              return (
+                <GroupedMetric
+                  key={metric.definition.key}
+                  definition={metric.definition}
+                  values={orderedValues}
+                />
+              );
+            }
             return values.map((value, index) => (
               <MetricRow
                 key={`${metric.definition.key}-${index}`}
@@ -118,6 +141,263 @@ function DashboardProjection({ dashboard }: { dashboard: UpdatedHomeDashboardBlo
         </Box>
       )}
     </Box>
+  );
+}
+
+function GroupedMetric({
+  definition,
+  values,
+}: {
+  definition: UpdatedHomeMetricDefinition;
+  values: UpdatedHomeMetricValue[];
+}) {
+  const numeratorDefinition = values[0]?.formula.numerator ?? definition.numerator;
+  const denominatorDefinition = values[0]?.formula.denominator ?? definition.denominator;
+  const distinctUsers = /distinct users/i.test(
+    `${numeratorDefinition} ${denominatorDefinition ?? ''}`
+  );
+  const summary = metricSummary(definition.key, values);
+  const isCollectionBreakdown = definition.key === 'collection_assisted_conversion_rate';
+  const [showZeroCollections, setShowZeroCollections] = useState(false);
+  const collectionCounts = isCollectionBreakdown ? countCollectionValues(values) : null;
+  const isModuleBreakdown = values.every(
+    (value) => typeof value.dimensions.moduleName === 'string'
+  );
+  const dimensionKeys = isModuleBreakdown
+    ? ['moduleName', 'modulePosition']
+    : Object.keys(values[0]?.dimensions ?? {});
+  const displayedValues = [...values]
+    .filter((value) => !isCollectionBreakdown || showZeroCollections || value.value !== 0)
+    .sort((left, right) => compareDimensionBreakdowns(left, right, dimensionKeys));
+  const breakdownColumns = dimensionKeys.length === 1
+    ? { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' }
+    : `repeat(${dimensionKeys.length}, minmax(120px, 1fr)) 130px 110px`;
+
+  return (
+    <Accordion
+      data-testid="updated-home-grouped-metric"
+      disableGutters
+      sx={{
+        minWidth: 0,
+        bgcolor: '#2A2A2A',
+        color: 'inherit',
+        boxShadow: 'none',
+        '&::before': { display: 'none' },
+        '&:not(:last-child)': { borderBottom: '1px solid #3A3A3A' },
+      }}
+    >
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon sx={{ color: '#A3A3A3' }} />}
+        aria-label={`Show ${displayLabel(definition.key)} breakdown`}
+        sx={{
+          px: { xs: '12px', sm: '16px' },
+          py: '8px',
+          minHeight: 72,
+          '& .MuiAccordionSummary-content': { my: 0, minWidth: 0 },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '250px 170px minmax(0, 1fr)' },
+            alignItems: 'center',
+            gap: { xs: 1, md: '18px' },
+            width: '100%',
+            minWidth: 0,
+          }}
+        >
+          <Stack gap="4px" minWidth={0}>
+            <Typography sx={{ color: '#F5F5F5', fontSize: 13, fontWeight: 700 }}>
+              {displayLabel(definition.key)}
+            </Typography>
+            <Stack direction="row" gap={1} flexWrap="wrap">
+              {distinctUsers ? (
+                <Typography sx={{ color: '#D8FBE9', fontSize: 10 }}>Distinct users</Typography>
+              ) : null}
+              <Typography sx={{ color: '#8B8B8F', fontSize: 10 }}>
+                {values.length} breakdowns
+              </Typography>
+              {collectionCounts ? (
+                <Typography sx={{ color: '#A3A3A3', fontSize: 10 }}>
+                  {collectionCounts.converting} converting · {collectionCounts.zero} with 0% · {collectionCounts.na} N/A
+                </Typography>
+              ) : null}
+            </Stack>
+          </Stack>
+          <Stack gap="2px" minWidth={0}>
+            <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+              {(summary?.label ?? 'Breakdowns').toUpperCase()}
+            </Typography>
+            <Typography sx={{ color: summary ? '#6D4AFF' : '#C8C8CA', fontFamily: mono, fontSize: 18, fontWeight: 700 }}>
+              {summary?.value ?? values.length}
+            </Typography>
+          </Stack>
+          <Stack gap="4px" minWidth={0}>
+            <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+              WHAT IT SHOWS
+            </Typography>
+            <Typography sx={{ color: '#C8C8CA', fontSize: 11, lineHeight: 1.45 }}>
+              {metricExplanation(definition.key)}
+            </Typography>
+          </Stack>
+        </Box>
+      </AccordionSummary>
+
+      <AccordionDetails sx={{ p: 0, borderTop: '1px solid #3A3A3A', overflowX: 'auto' }}>
+        {isCollectionBreakdown && collectionCounts && collectionCounts.zero > 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: { xs: '12px', sm: '16px' }, py: '8px', bgcolor: '#252525' }}>
+            <Button
+              size="small"
+              onClick={() => setShowZeroCollections((visible) => !visible)}
+              sx={{ color: '#B9A8FF', fontSize: 10, textTransform: 'none' }}
+            >
+              {showZeroCollections ? 'Hide 0% collections' : 'Show 0% collections'}
+            </Button>
+          </Box>
+        ) : null}
+        <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: breakdownColumns,
+          minWidth: dimensionKeys.length > 1 ? 620 : 0,
+          gap: '12px',
+          px: { xs: '12px', sm: '16px' },
+          py: '8px',
+          bgcolor: '#252525',
+        }}
+        >
+          {dimensionKeys.map((key) => (
+            <ColumnLabel key={key}>{dimensionColumnLabel(key)}</ColumnLabel>
+          ))}
+          <ColumnLabel>VALUE</ColumnLabel>
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}><ColumnLabel>UNIT</ColumnLabel></Box>
+        </Box>
+
+        {displayedValues.map((value, index) => (
+        <Box
+          key={`${definition.key}-${index}`}
+          data-testid="updated-home-metric-value-row"
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: breakdownColumns,
+            minWidth: dimensionKeys.length > 1 ? 620 : 0,
+            alignItems: 'center',
+            gap: '12px',
+            px: { xs: '12px', sm: '16px' },
+            py: '10px',
+            '&:not(:last-child)': { borderBottom: '1px solid #363636' },
+          }}
+        >
+          {dimensionKeys.map((key) => (
+            <Typography key={key} sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10, overflowWrap: 'anywhere' }}>
+              {formatDimensionValue(value.dimensions[key])}
+            </Typography>
+          ))}
+          <Stack gap="2px" minWidth={0}>
+            <Typography
+              sx={{
+                color: value.value === null ? '#F0A63A' : '#6D4AFF',
+                fontFamily: mono,
+                fontSize: 16,
+                fontWeight: 700,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {formatMetricValue(value)}
+            </Typography>
+            {value.value === null ? (
+              <Typography sx={{ color: '#F0A63A', fontSize: 9 }}>No data</Typography>
+            ) : null}
+          </Stack>
+          <Typography sx={{ display: { xs: 'none', sm: 'block' }, color: '#A3A3A3', fontSize: 10 }}>
+            {formatMetricUnit(value)}
+          </Typography>
+        </Box>
+        ))}
+      </AccordionDetails>
+    </Accordion>
+  );
+}
+
+function compareDimensionBreakdowns(
+  left: UpdatedHomeMetricValue,
+  right: UpdatedHomeMetricValue,
+  dimensionKeys: string[]
+): number {
+  for (const key of dimensionKeys) {
+    const leftValue = left.dimensions[key];
+    const rightValue = right.dimensions[key];
+    const comparison = typeof leftValue === 'number' && typeof rightValue === 'number'
+      ? leftValue - rightValue
+      : String(leftValue ?? '').localeCompare(String(rightValue ?? ''), 'en', { sensitivity: 'base' });
+    if (comparison !== 0) return comparison;
+  }
+  return 0;
+}
+
+function metricSummary(
+  metricKey: string,
+  values: UpdatedHomeMetricValue[]
+): { label: string; value: string } | null {
+  if (metricKey === 'active_home_time_ms') {
+    const mean = values.find((value) => value.dimensions.statistic === 'mean');
+    return { label: 'Mean', value: formatMetricValue(mean) };
+  }
+
+  if (!HOME_SUMMARY_METRICS.has(metricKey)) return null;
+
+  const observed = values.filter((value) => value.value !== null);
+  if (observed.length === 0) return { label: 'Average across breakdowns', value: 'N/A' };
+  const average = observed.reduce((sum, value) => sum + (value.value ?? 0), 0) / observed.length;
+  return {
+    label: 'Average across breakdowns',
+    value: formatMetricValue({ ...observed[0], value: Number(average.toFixed(2)) }),
+  };
+}
+
+const HOME_SUMMARY_METRICS = new Set([
+  'home_load_success_rate',
+  'module_reach_rate',
+  'module_ctr',
+  'positions_4_9_reach_rate',
+  'active_home_time_ms',
+  'home_exit_without_interaction_rate',
+]);
+
+function shouldGroupMetric(dashboardId: number, valueCount: number): boolean {
+  return valueCount > 1 && [1, 4, 5, 9, 11].includes(dashboardId);
+}
+
+function formatDimensionValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return typeof value === 'string' ? displayLabel(value) : String(value);
+}
+
+function countCollectionValues(values: UpdatedHomeMetricValue[]): {
+  converting: number;
+  zero: number;
+  na: number;
+} {
+  return values.reduce(
+    (counts, value) => {
+      if (value.value === null) counts.na += 1;
+      else if (value.value === 0) counts.zero += 1;
+      else if (value.value > 0) counts.converting += 1;
+      return counts;
+    },
+    { converting: 0, zero: 0, na: 0 }
+  );
+}
+
+function dimensionColumnLabel(key: string): string {
+  return key === 'modulePosition' ? 'POSITION' : displayLabel(key).toUpperCase();
+}
+
+function ColumnLabel({ children }: { children: string }) {
+  return (
+    <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
+      {children}
+    </Typography>
   );
 }
 

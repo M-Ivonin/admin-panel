@@ -239,6 +239,101 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(within(resultReturn).queryByText(/alert|breakdown|next/i)).not.toBeInTheDocument();
   });
 
+  it('groups Home quality dimensions under one metric heading', async () => {
+    const response = makeResponse();
+    const home = response.dashboards[0];
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: [
+        {
+          ...home,
+          metrics: [
+            {
+              definition: {
+                key: 'module_reach_rate',
+                numerator: 'distinct users with module impression',
+                denominator: 'distinct users with settled Home view',
+                window: 'backend UTC window',
+                grouping: ['module_name', 'module_position'],
+                nullTreatment: 'N/A when no settled Home users',
+              },
+              values: [
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'feed', modulePosition: 7 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'access_status', modulePosition: 1 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'feed', modulePosition: 6 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+              ],
+            },
+          ],
+        },
+        ...response.dashboards.slice(1),
+      ],
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const homeSection = await screen.findByRole('region', { name: 'Home' });
+    const metric = within(homeSection).getByTestId('updated-home-grouped-metric');
+
+    expect(within(metric).getAllByText('Module reach rate')).toHaveLength(1);
+    expect(within(metric).getByText('3 breakdowns')).toBeInTheDocument();
+    expect(within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')).toBeInTheDocument();
+    expect(within(within(metric).getByRole('button')).getByText('16.67%')).toBeInTheDocument();
+    expect(
+      within(metric).getAllByText('Share of Home visitors who scrolled far enough to see a module.')
+    ).toHaveLength(1);
+    const toggle = within(metric).getByRole('button');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    expect(within(metric).getByText('MODULE NAME')).toBeInTheDocument();
+    expect(within(metric).getByText('POSITION')).toBeInTheDocument();
+    const rows = within(metric).getAllByTestId('updated-home-metric-value-row');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Access status116.67%percent'),
+      expect.stringContaining('Feed616.67%percent'),
+      expect.stringContaining('Feed716.67%percent'),
+    ]);
+    expect(within(metric).queryByText(/Module Name:/)).not.toBeInTheDocument();
+    expect(within(metric).queryByText(/Module Position:/)).not.toBeInTheDocument();
+    expect(within(metric).getAllByText('16.67%')).toHaveLength(4);
+  });
+
   it('keeps loading and transport errors explicit and does not show stale metrics', async () => {
     let rejectRequest: (reason: Error) => void = () => undefined;
     (getUpdatedHomeAnalytics as jest.Mock).mockImplementation(
@@ -250,6 +345,84 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     await act(async () => rejectRequest(new Error('Forbidden')));
     expect(await screen.findByText('Forbidden')).toBeInTheDocument();
     expect(screen.queryByTestId('updated-home-dashboard-grid')).not.toBeInTheDocument();
+  });
+
+  it('groups large dimensional breakdowns outside Home without inventing an average', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        dashboard.id === 4
+          ? {
+              ...dashboard,
+              metrics: [{
+                ...dashboard.metrics[0],
+                definition: {
+                  ...dashboard.metrics[0].definition,
+                  key: 'conversion_by_product_country',
+                  grouping: ['country', 'placement', 'product_id'],
+                },
+                values: [
+                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'offers', productId: 'pro' }, value: 20, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'home_main_offer', productId: 'pass' }, value: 10, unit: 'percent' },
+                ],
+              }],
+            }
+          : dashboard
+      ),
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const paywall = await screen.findByRole('region', { name: 'Paywall' });
+    const metric = within(paywall).getByTestId('updated-home-grouped-metric');
+    expect(within(metric).getByText('2 breakdowns')).toBeInTheDocument();
+    expect(within(metric).queryByText(/average across breakdowns/i)).not.toBeInTheDocument();
+    expect(within(metric).getByText('BREAKDOWNS')).toBeInTheDocument();
+
+    fireEvent.click(within(metric).getByRole('button'));
+    expect(within(metric).getByText('COUNTRY')).toBeInTheDocument();
+    expect(within(metric).getByText('PLACEMENT')).toBeInTheDocument();
+    expect(within(metric).getByText('PRODUCT ID')).toBeInTheDocument();
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row').map((row) => row.textContent)).toEqual([
+      expect.stringContaining('USHome main offerPass10%percent'),
+      expect.stringContaining('USOffersPro20%percent'),
+    ]);
+  });
+
+  it('hides zero-value collection breakdowns until requested', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        dashboard.id === 5
+          ? {
+              ...dashboard,
+              metrics: [{
+                ...dashboard.metrics[0],
+                definition: { ...dashboard.metrics[0].definition, key: 'collection_assisted_conversion_rate' },
+                values: [
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:1', collectionType: 'matchday' }, value: 0, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:2', collectionType: 'matchday' }, value: 25, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:3', collectionType: 'matchday' }, value: null, unit: 'percent' },
+                ],
+              }],
+            }
+          : dashboard
+      ),
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const collections = await screen.findByRole('region', { name: 'Collections' });
+    const metric = within(collections).getByTestId('updated-home-grouped-metric');
+    expect(within(metric).getByText('1 converting · 1 with 0% · 1 N/A')).toBeInTheDocument();
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(2);
+    expect(within(metric).queryByText('League:1')).not.toBeInTheDocument();
+
+    fireEvent.click(within(metric).getByRole('button', { name: /Show Collection assisted conversion rate breakdown/ }));
+    fireEvent.click(within(metric).getByRole('button', { name: 'Show 0% collections' }));
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(3);
+    expect(within(metric).getByText('League:1')).toBeInTheDocument();
+    expect(within(metric).getByRole('button', { name: 'Hide 0% collections' })).toBeInTheDocument();
   });
 
   it('renders empty and N/A states without turning missing values into zero', async () => {

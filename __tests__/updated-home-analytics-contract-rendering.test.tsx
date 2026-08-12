@@ -109,6 +109,11 @@ describe('Updated Home dashboard backend projection rendering', () => {
     expect(screen.queryByText('backend N/A for free_pick_impression')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Calculation details/ })).not.toBeInTheDocument();
 
+    const collections = screen.getByRole('region', { name: 'Collections' });
+    expect(collections).toHaveTextContent(
+      'Share of collection-page viewers who completed a collection-attributed verified purchase within seven days.'
+    );
+
     expect(screen.getAllByTestId('updated-home-dashboard-section').map((section) => section.getAttribute('aria-label'))).toEqual([
       'Home',
       'Free Pick',
