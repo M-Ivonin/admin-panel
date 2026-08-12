@@ -1,9 +1,13 @@
+'use client';
+
+import { useState } from 'react';
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
   Alert,
   Box,
+  Button,
   Chip,
   Stack,
   Typography,
@@ -153,15 +157,18 @@ function GroupedMetric({
     `${numeratorDefinition} ${denominatorDefinition ?? ''}`
   );
   const summary = metricSummary(definition.key, values);
+  const isCollectionBreakdown = definition.key === 'collection_assisted_conversion_rate';
+  const [showZeroCollections, setShowZeroCollections] = useState(false);
+  const collectionCounts = isCollectionBreakdown ? countCollectionValues(values) : null;
   const isModuleBreakdown = values.every(
     (value) => typeof value.dimensions.moduleName === 'string'
   );
   const dimensionKeys = isModuleBreakdown
     ? ['moduleName', 'modulePosition']
     : Object.keys(values[0]?.dimensions ?? {});
-  const displayedValues = [...values].sort((left, right) =>
-    compareDimensionBreakdowns(left, right, dimensionKeys)
-  );
+  const displayedValues = [...values]
+    .filter((value) => !isCollectionBreakdown || showZeroCollections || value.value !== 0)
+    .sort((left, right) => compareDimensionBreakdowns(left, right, dimensionKeys));
   const breakdownColumns = dimensionKeys.length === 1
     ? { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' }
     : `repeat(${dimensionKeys.length}, minmax(120px, 1fr)) 130px 110px`;
@@ -210,6 +217,11 @@ function GroupedMetric({
               <Typography sx={{ color: '#8B8B8F', fontSize: 10 }}>
                 {values.length} breakdowns
               </Typography>
+              {collectionCounts ? (
+                <Typography sx={{ color: '#A3A3A3', fontSize: 10 }}>
+                  {collectionCounts.converting} converting · {collectionCounts.zero} with 0% · {collectionCounts.na} N/A
+                </Typography>
+              ) : null}
             </Stack>
           </Stack>
           <Stack gap="2px" minWidth={0}>
@@ -232,6 +244,17 @@ function GroupedMetric({
       </AccordionSummary>
 
       <AccordionDetails sx={{ p: 0, borderTop: '1px solid #3A3A3A', overflowX: 'auto' }}>
+        {isCollectionBreakdown && collectionCounts && collectionCounts.zero > 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: { xs: '12px', sm: '16px' }, py: '8px', bgcolor: '#252525' }}>
+            <Button
+              size="small"
+              onClick={() => setShowZeroCollections((visible) => !visible)}
+              sx={{ color: '#B9A8FF', fontSize: 10, textTransform: 'none' }}
+            >
+              {showZeroCollections ? 'Hide 0% collections' : 'Show 0% collections'}
+            </Button>
+          </Box>
+        ) : null}
         <Box
         sx={{
           display: 'grid',
@@ -348,6 +371,22 @@ function shouldGroupMetric(dashboardId: number, valueCount: number): boolean {
 function formatDimensionValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   return typeof value === 'string' ? displayLabel(value) : String(value);
+}
+
+function countCollectionValues(values: UpdatedHomeMetricValue[]): {
+  converting: number;
+  zero: number;
+  na: number;
+} {
+  return values.reduce(
+    (counts, value) => {
+      if (value.value === null) counts.na += 1;
+      else if (value.value === 0) counts.zero += 1;
+      else if (value.value > 0) counts.converting += 1;
+      return counts;
+    },
+    { converting: 0, zero: 0, na: 0 }
+  );
 }
 
 function dimensionColumnLabel(key: string): string {

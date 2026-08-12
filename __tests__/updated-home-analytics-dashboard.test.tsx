@@ -389,6 +389,42 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     ]);
   });
 
+  it('hides zero-value collection breakdowns until requested', async () => {
+    const response = makeResponse();
+    (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
+      ...response,
+      dashboards: response.dashboards.map((dashboard) =>
+        dashboard.id === 5
+          ? {
+              ...dashboard,
+              metrics: [{
+                ...dashboard.metrics[0],
+                definition: { ...dashboard.metrics[0].definition, key: 'collection_assisted_conversion_rate' },
+                values: [
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:1', collectionType: 'matchday' }, value: 0, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:2', collectionType: 'matchday' }, value: 25, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:3', collectionType: 'matchday' }, value: null, unit: 'percent' },
+                ],
+              }],
+            }
+          : dashboard
+      ),
+    });
+
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const collections = await screen.findByRole('region', { name: 'Collections' });
+    const metric = within(collections).getByTestId('updated-home-grouped-metric');
+    expect(within(metric).getByText('1 converting · 1 with 0% · 1 N/A')).toBeInTheDocument();
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(2);
+    expect(within(metric).queryByText('League:1')).not.toBeInTheDocument();
+
+    fireEvent.click(within(metric).getByRole('button', { name: /Show Collection assisted conversion rate breakdown/ }));
+    fireEvent.click(within(metric).getByRole('button', { name: 'Show 0% collections' }));
+    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(3);
+    expect(within(metric).getByText('League:1')).toBeInTheDocument();
+    expect(within(metric).getByRole('button', { name: 'Hide 0% collections' })).toBeInTheDocument();
+  });
+
   it('renders empty and N/A states without turning missing values into zero', async () => {
     const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
