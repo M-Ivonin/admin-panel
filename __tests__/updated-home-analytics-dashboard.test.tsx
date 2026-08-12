@@ -263,7 +263,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
                     numerator: 'distinct users with module impression',
                     denominator: 'distinct users with settled Home view',
                   },
-                  dimensions: { moduleName: 'feed', modulePosition: 6 },
+                  dimensions: { moduleName: 'feed', modulePosition: 7 },
                   numerator: 1,
                   denominator: 6,
                   value: 16.67,
@@ -276,7 +276,20 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
                     numerator: 'distinct users with module impression',
                     denominator: 'distinct users with settled Home view',
                   },
-                  dimensions: { moduleName: 'feed', modulePosition: 7 },
+                  dimensions: { moduleName: 'access_status', modulePosition: 1 },
+                  numerator: 1,
+                  denominator: 6,
+                  value: 16.67,
+                  unit: 'percent',
+                  completeness,
+                  naReason: null,
+                },
+                {
+                  formula: {
+                    numerator: 'distinct users with module impression',
+                    denominator: 'distinct users with settled Home view',
+                  },
+                  dimensions: { moduleName: 'feed', modulePosition: 6 },
                   numerator: 1,
                   denominator: 6,
                   value: 16.67,
@@ -297,7 +310,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     const metric = within(homeSection).getByTestId('updated-home-grouped-metric');
 
     expect(within(metric).getAllByText('Module reach rate')).toHaveLength(1);
-    expect(within(metric).getByText('2 breakdowns')).toBeInTheDocument();
+    expect(within(metric).getByText('3 breakdowns')).toBeInTheDocument();
     expect(within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')).toBeInTheDocument();
     expect(within(within(metric).getByRole('button')).getByText('16.67%')).toBeInTheDocument();
     expect(
@@ -308,9 +321,17 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
-    expect(within(metric).getByText('Module Name: Feed · Module Position: 6')).toBeInTheDocument();
-    expect(within(metric).getByText('Module Name: Feed · Module Position: 7')).toBeInTheDocument();
-    expect(within(metric).getAllByText('16.67%')).toHaveLength(3);
+    expect(within(metric).getByText('MODULE NAME')).toBeInTheDocument();
+    expect(within(metric).getByText('POSITION')).toBeInTheDocument();
+    const rows = within(metric).getAllByTestId('updated-home-metric-value-row');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Access status116.67%percent'),
+      expect.stringContaining('Feed616.67%percent'),
+      expect.stringContaining('Feed716.67%percent'),
+    ]);
+    expect(within(metric).queryByText(/Module Name:/)).not.toBeInTheDocument();
+    expect(within(metric).queryByText(/Module Position:/)).not.toBeInTheDocument();
+    expect(within(metric).getAllByText('16.67%')).toHaveLength(4);
   });
 
   it('keeps loading and transport errors explicit and does not show stale metrics', async () => {

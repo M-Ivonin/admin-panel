@@ -153,6 +153,15 @@ function GroupedMetric({
     `${numeratorDefinition} ${denominatorDefinition ?? ''}`
   );
   const summary = metricSummary(definition.key, values);
+  const isModuleBreakdown = values.every(
+    (value) => typeof value.dimensions.moduleName === 'string'
+  );
+  const displayedValues = isModuleBreakdown
+    ? [...values].sort(compareModuleBreakdowns)
+    : values;
+  const breakdownColumns = isModuleBreakdown
+    ? { xs: 'minmax(0, 1fr) 64px 95px', sm: 'minmax(0, 1fr) 90px 130px 110px' }
+    : { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' };
 
   return (
     <Accordion
@@ -223,25 +232,26 @@ function GroupedMetric({
         <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' },
+          gridTemplateColumns: breakdownColumns,
           gap: '12px',
           px: { xs: '12px', sm: '16px' },
           py: '8px',
           bgcolor: '#252525',
         }}
         >
-          <ColumnLabel>DIMENSIONS</ColumnLabel>
+          <ColumnLabel>{isModuleBreakdown ? 'MODULE NAME' : 'DIMENSIONS'}</ColumnLabel>
+          {isModuleBreakdown ? <ColumnLabel>POSITION</ColumnLabel> : null}
           <ColumnLabel>VALUE</ColumnLabel>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}><ColumnLabel>UNIT</ColumnLabel></Box>
         </Box>
 
-        {values.map((value, index) => (
+        {displayedValues.map((value, index) => (
         <Box
           key={`${definition.key}-${index}`}
           data-testid="updated-home-metric-value-row"
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' },
+            gridTemplateColumns: breakdownColumns,
             alignItems: 'center',
             gap: '12px',
             minWidth: 0,
@@ -251,8 +261,15 @@ function GroupedMetric({
           }}
         >
           <Typography sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10, overflowWrap: 'anywhere' }}>
-            {formatDimensions(value.dimensions)}
+            {isModuleBreakdown
+              ? displayLabel(String(value.dimensions.moduleName))
+              : formatDimensions(value.dimensions)}
           </Typography>
+          {isModuleBreakdown ? (
+            <Typography sx={{ color: '#B8B8BA', fontFamily: mono, fontSize: 10 }}>
+              {String(value.dimensions.modulePosition ?? '—')}
+            </Typography>
+          ) : null}
           <Stack gap="2px" minWidth={0}>
             <Typography
               sx={{
@@ -277,6 +294,19 @@ function GroupedMetric({
       </AccordionDetails>
     </Accordion>
   );
+}
+
+function compareModuleBreakdowns(
+  left: UpdatedHomeMetricValue,
+  right: UpdatedHomeMetricValue
+): number {
+  const byName = String(left.dimensions.moduleName).localeCompare(
+    String(right.dimensions.moduleName),
+    'en',
+    { sensitivity: 'base' }
+  );
+  if (byName !== 0) return byName;
+  return Number(left.dimensions.modulePosition ?? 0) - Number(right.dimensions.modulePosition ?? 0);
 }
 
 function metricSummary(
