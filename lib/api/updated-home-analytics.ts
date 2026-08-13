@@ -12,6 +12,11 @@ export interface UpdatedHomeMetricDefinition {
   window: string;
   grouping: string[];
   nullTreatment: string;
+  stages?: Array<{
+    name: string;
+    stageOrdinal: number;
+    sourceEvent: string;
+  }>;
 }
 
 export interface UpdatedHomeCompleteness {

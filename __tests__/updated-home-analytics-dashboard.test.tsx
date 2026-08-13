@@ -187,7 +187,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     });
   });
 
-  it('renders only backend-supported stages in the three journeys', async () => {
+  it('keeps Overview compact and leaves detailed funnels in their sections', async () => {
     const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
       ...response,
@@ -205,38 +205,17 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     });
     render(<UpdatedHomeAnalyticsDashboard />);
     const overview = await screen.findByRole('region', { name: 'Overview' });
-    expect(within(overview).getByText('Free Pick → Prediction Card')).toBeInTheDocument();
-    expect(within(overview).getByText('Paid Top Picks: Prediction Card → Full Analysis')).toBeInTheDocument();
-    expect(within(overview).getByText('Prediction Card opened')).toBeInTheDocument();
-    expect(within(overview).getByText('Full Analysis opened')).toBeInTheDocument();
-    expect(within(overview).queryByText(/Free Pick.*Full Analysis/i)).not.toBeInTheDocument();
-    const overviewText = overview.textContent ?? '';
-    expect(overviewText.indexOf('Home viewed')).toBeLessThan(
-      overviewText.indexOf('Prediction Card opened')
-    );
-    expect(overviewText.indexOf('Prediction Card impression')).toBeLessThan(
-      overviewText.indexOf('Full Analysis opened')
-    );
+    expect(within(overview).queryByTestId('updated-home-funnel')).not.toBeInTheDocument();
+    expect(within(overview).getByRole('link', { name: /Free Pick activation/i })).toHaveAttribute('href', '#dashboard-2');
+    expect(within(overview).getByRole('link', { name: /Paid Top Picks activation/i })).toHaveAttribute('href', '#dashboard-6');
+    expect(within(overview).getByRole('link', { name: /Full Access purchase conversion/i })).toHaveAttribute('href', '#dashboard-3');
+    expect(within(overview).getByRole('link', { name: /Home load success rate/i })).toHaveAttribute('href', '#dashboard-1');
 
-    const resultReturn = screen.getByRole('region', { name: 'Top Picks Result Return' });
-    for (const label of [
-      'Prediction Card clicked',
-      'Full Analysis opened',
-      'Prediction saved',
-      'Settlement eligible',
-      'Prediction result viewed',
-    ]) {
-      expect(within(resultReturn).getByText(new RegExp(label))).toBeInTheDocument();
-    }
-    const resultRows = within(resultReturn).getAllByTestId('updated-home-metric-row');
-    expect(resultRows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining('Prediction Card clicked'),
-      expect.stringContaining('Full Analysis opened'),
-      expect.stringContaining('Prediction saved'),
-      expect.stringContaining('Settlement eligible'),
-      expect.stringContaining('Prediction result viewed'),
-    ]);
-    expect(within(resultReturn).queryByText(/alert|breakdown|next/i)).not.toBeInTheDocument();
+    const freePick = screen.getByRole('region', { name: 'Free Pick' });
+    expect(within(freePick).getByText('Free pick activation funnel')).toBeInTheDocument();
+    const topPicks = screen.getByRole('region', { name: 'Top Picks/Parlays' });
+    expect(within(topPicks).getByText('Top picks activation funnel')).toBeInTheDocument();
+
   });
 
   it('groups Home quality dimensions under one metric heading', async () => {
@@ -401,9 +380,9 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
                 ...dashboard.metrics[0],
                 definition: { ...dashboard.metrics[0].definition, key: 'collection_assisted_conversion_rate' },
                 values: [
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:1', collectionType: 'matchday' }, value: 0, unit: 'percent' },
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:2', collectionType: 'matchday' }, value: 25, unit: 'percent' },
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:3', collectionType: 'matchday' }, value: null, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:1', collectionName: 'Premier League Picks', collectionType: 'matchday' }, value: 0, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:2', collectionName: 'Championship Picks', collectionType: 'matchday' }, value: 25, unit: 'percent' },
+                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:3', collectionName: 'La Liga Picks', collectionType: 'matchday' }, value: null, unit: 'percent' },
                 ],
               }],
             }
@@ -419,6 +398,8 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(within(metric).queryByText('League:1')).not.toBeInTheDocument();
 
     fireEvent.click(within(metric).getByRole('button', { name: /Show Collection assisted conversion rate breakdown/ }));
+    expect(within(metric).getByText('COLLECTION NAME')).toBeInTheDocument();
+    expect(within(metric).getByText('Championship Picks')).toBeInTheDocument();
     fireEvent.click(within(metric).getByRole('button', { name: 'Show 0% collections' }));
     expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(3);
     expect(within(metric).getByText('League:1')).toBeInTheDocument();

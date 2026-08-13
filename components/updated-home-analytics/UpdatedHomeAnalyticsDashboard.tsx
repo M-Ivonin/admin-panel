@@ -20,8 +20,6 @@ import {
 import { UpdatedHomeAnalyticsSection } from './UpdatedHomeAnalyticsSection';
 import {
   dashboardsById,
-  displayLabel,
-  formatMetricUnit,
   formatMetricValue,
   hasObservedValues,
   metricValues,
@@ -35,7 +33,10 @@ function defaultRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to);
   from.setUTCDate(from.getUTCDate() - 14);
-  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10),
+  };
 }
 
 export function UpdatedHomeAnalyticsDashboard() {
@@ -79,7 +80,11 @@ export function UpdatedHomeAnalyticsDashboard() {
   const refresh = useCallback(() => {
     const fromTime = Date.parse(`${from}T00:00:00.000Z`);
     const toTime = Date.parse(`${to}T00:00:00.000Z`);
-    if (!Number.isFinite(fromTime) || !Number.isFinite(toTime) || fromTime > toTime) {
+    if (
+      !Number.isFinite(fromTime) ||
+      !Number.isFinite(toTime) ||
+      fromTime > toTime
+    ) {
       setRangeError('Choose a valid UTC date range.');
       return;
     }
@@ -110,7 +115,14 @@ export function UpdatedHomeAnalyticsDashboard() {
       <Stack
         component="main"
         gap="24px"
-        sx={{ maxWidth: 1440, minWidth: 0, mx: 'auto', px: { xs: 2, md: 4 }, pt: 3, pb: 5 }}
+        sx={{
+          maxWidth: 1440,
+          minWidth: 0,
+          mx: 'auto',
+          px: { xs: 2, md: 4 },
+          pt: 3,
+          pb: 5,
+        }}
       >
         <FilterPanel
           from={from}
@@ -123,24 +135,38 @@ export function UpdatedHomeAnalyticsDashboard() {
         />
 
         {loading ? (
-          <Alert severity="info" role="status">Loading backend analytics…</Alert>
+          <Alert severity="info" role="status">
+            Loading backend analytics…
+          </Alert>
         ) : null}
         {error ? <Alert severity="error">{error}</Alert> : null}
 
         {data && !loading && !error ? (
           <>
             <Alert severity={hasObservedValues(data) ? 'info' : 'warning'}>
-              UTC · {data.range.from.slice(0, 10)} to {data.range.to.slice(0, 10)} · {data.definitionVersion}.
-              {!hasObservedValues(data) && ' No eligible observations in this range.'}
+              UTC · {data.range.from.slice(0, 10)} to{' '}
+              {data.range.to.slice(0, 10)} · {data.definitionVersion}.
+              {!hasObservedValues(data) &&
+                ' No eligible observations in this range.'}
             </Alert>
             <DashboardIndex />
             <Overview dashboards={dashboardMap} />
-            <Box data-testid="updated-home-dashboard-grid" sx={{ display: 'grid', minWidth: 0, gap: '24px', overflowX: 'clip' }}>
+            <Box
+              data-testid="updated-home-dashboard-grid"
+              sx={{
+                display: 'grid',
+                minWidth: 0,
+                gap: '24px',
+                overflowX: 'clip',
+              }}
+            >
               {UPDATED_HOME_SECTIONS.map((section) => (
                 <UpdatedHomeAnalyticsSection
                   key={section.label}
                   label={section.label}
-                  dashboards={section.dashboardIds.map((id) => dashboardMap.get(id))}
+                  dashboards={section.dashboardIds.map((id) =>
+                    dashboardMap.get(id)
+                  )}
                 />
               ))}
             </Box>
@@ -154,8 +180,15 @@ export function UpdatedHomeAnalyticsDashboard() {
 
 function DataStatus() {
   return (
-    <Stack direction="row" alignItems="center" gap={1} sx={{ bgcolor: '#173926', borderRadius: 999, px: 1.5, py: 1 }}>
-      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#68C96B' }} />
+    <Stack
+      direction="row"
+      alignItems="center"
+      gap={1}
+      sx={{ bgcolor: '#173926', borderRadius: 999, px: 1.5, py: 1 }}
+    >
+      <Box
+        sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#68C96B' }}
+      />
       <Typography sx={{ color: '#D8FBE9', fontSize: 12, fontWeight: 600 }}>
         12 backend dashboards
       </Typography>
@@ -181,8 +214,20 @@ function FilterPanel({
   onRefresh: () => void;
 }) {
   return (
-    <Box sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: { xs: '14px', sm: '18px' } }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={1} sx={{ mb: 2 }}>
+    <Box
+      sx={{
+        border: '1px solid #343434',
+        borderRadius: '12px',
+        bgcolor: '#222222',
+        p: { xs: '14px', sm: '18px' },
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        gap={1}
+        sx={{ mb: 2 }}
+      >
         <Typography sx={{ color: '#F5F5F5', fontSize: 15, fontWeight: 600 }}>
           Observation range
         </Typography>
@@ -190,14 +235,21 @@ function FilterPanel({
           UTC · maximum 90 days · backend-computed
         </Typography>
       </Stack>
-      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'flex-end' }} gap="12px">
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ sm: 'flex-end' }}
+        gap="12px"
+      >
         <TextField
           label="From (UTC)"
           type="date"
           value={from}
           onChange={(event) => onFromChange(event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: { xs: '100%', sm: 180 }, '& .MuiInputBase-root': { height: 56 } }}
+          sx={{
+            width: { xs: '100%', sm: 180 },
+            '& .MuiInputBase-root': { height: 56 },
+          }}
         />
         <TextField
           label="To (UTC)"
@@ -205,7 +257,10 @@ function FilterPanel({
           value={to}
           onChange={(event) => onToChange(event.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ width: { xs: '100%', sm: 180 }, '& .MuiInputBase-root': { height: 56 } }}
+          sx={{
+            width: { xs: '100%', sm: 180 },
+            '& .MuiInputBase-root': { height: 56 },
+          }}
         />
         <Button
           variant="contained"
@@ -214,9 +269,18 @@ function FilterPanel({
         >
           Refresh
         </Button>
-        {loading ? <CircularProgress size={22} aria-label="Loading Updated Home analytics" /> : null}
+        {loading ? (
+          <CircularProgress
+            size={22}
+            aria-label="Loading Updated Home analytics"
+          />
+        ) : null}
       </Stack>
-      {error ? <Alert severity="warning" sx={{ mt: 1.5 }}>{error}</Alert> : null}
+      {error ? (
+        <Alert severity="warning" sx={{ mt: 1.5 }}>
+          {error}
+        </Alert>
+      ) : null}
     </Box>
   );
 }
@@ -230,7 +294,11 @@ function DashboardIndex() {
     })),
   ];
   return (
-    <Box component="nav" aria-label="Updated Home dashboard sections" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+    <Box
+      component="nav"
+      aria-label="Updated Home dashboard sections"
+      sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+    >
       {links.map((link, index) => (
         <Box
           key={link.href}
@@ -255,77 +323,195 @@ function DashboardIndex() {
   );
 }
 
-function Overview({ dashboards }: { dashboards: Map<number, UpdatedHomeDashboardBlock> }) {
+function Overview({
+  dashboards,
+}: {
+  dashboards: Map<number, UpdatedHomeDashboardBlock>;
+}) {
   return (
     <Box
       component="section"
       id="overview"
       role="region"
       aria-label="Overview"
-      sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#222222', p: { xs: '14px', sm: '20px' } }}
+      sx={{
+        border: '1px solid #343434',
+        borderRadius: '12px',
+        bgcolor: '#222222',
+        p: { xs: '14px', sm: '20px' },
+      }}
     >
-      <Typography sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700, mb: 2 }}>
+      <Typography
+        sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700, mb: 2 }}
+      >
         Overview
       </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
-        <Journey
-          title="Free Pick → Prediction Card"
-          values={metricValues(dashboards.get(2), 'free_pick_activation_funnel')}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            md: 'repeat(2, minmax(0, 1fr))',
+            lg: 'repeat(4, minmax(0, 1fr))',
+          },
+          gap: 2,
+        }}
+      >
+        <OverviewKpi
+          title="Free Pick activation"
+          value={overviewStageValue(
+            dashboards.get(2),
+            'free_pick_activation_funnel',
+            'free_pick_prediction_card_opened'
+          )}
+          detail="Prediction Card opened"
+          href="#dashboard-2"
         />
-        <Journey
-          title="Paid Top Picks: Prediction Card → Full Analysis"
-          values={metricValues(dashboards.get(6), 'top_picks_activation_funnel')}
+        <OverviewKpi
+          title="Paid Top Picks activation"
+          value={overviewStageValue(
+            dashboards.get(6),
+            'top_picks_activation_funnel',
+            'full_analysis_opened'
+          )}
+          detail="Full Analysis opened"
+          href="#dashboard-6"
+        />
+        <OverviewKpi
+          title="Full Access purchase conversion"
+          value={overviewStageValue(
+            dashboards.get(3),
+            'full_access_funnel',
+            'verified_purchase'
+          )}
+          detail="Verified purchase"
+          href="#dashboard-3"
+        />
+        <OverviewKpi
+          title="Home load success rate"
+          value={overviewMetricValue(
+            dashboards.get(1),
+            'home_load_success_rate'
+          )}
+          detail="Home quality"
+          href="#dashboard-1"
         />
       </Box>
     </Box>
   );
 }
 
-function Journey({ title, values }: { title: string; values: UpdatedHomeMetricValue[] }) {
+function OverviewKpi({
+  title,
+  value,
+  detail,
+  href,
+}: {
+  title: string;
+  value?: UpdatedHomeMetricValue;
+  detail: string;
+  href: string;
+}) {
   return (
-    <Box sx={{ minWidth: 0, border: '1px solid #3A3A3A', borderRadius: '10px', bgcolor: '#171717', p: { xs: '12px', sm: '16px' } }}>
-      <Typography sx={{ color: '#F5F5F5', fontSize: 15, fontWeight: 700 }}>{title}</Typography>
-      <Typography sx={{ color: '#8B8B8F', fontSize: 11, mt: 0.5, mb: 1.5 }}>
-        Distinct users · previous-stage conversion
+    <Box
+      component="a"
+      href={href}
+      aria-label={`${title}: ${value ? formatMetricValue(value) : 'N/A'}`}
+      sx={{
+        minWidth: 0,
+        border: '1px solid #3A3A3A',
+        borderRadius: '10px',
+        bgcolor: '#171717',
+        color: 'inherit',
+        p: { xs: '13px', sm: '14px' },
+        textDecoration: 'none',
+        transition: 'border-color 120ms ease, background-color 120ms ease',
+        '&:hover, &:focus-visible': {
+          borderColor: '#6D4AFF',
+          bgcolor: '#1D1B29',
+          outline: 'none',
+        },
+      }}
+    >
+      <Typography sx={{ color: '#A3A3A3', fontSize: 12, fontWeight: 600 }}>
+        {title}
       </Typography>
-      {values.length === 0 ? (
-        <Typography sx={{ color: '#F0A63A', fontSize: 12 }}>Not returned by the backend.</Typography>
-      ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: `repeat(${values.length}, minmax(0, 1fr))` }, gap: 1 }}>
-          {values.map((value, index) => {
-            const stage = typeof value.dimensions.stage === 'string'
-              ? value.dimensions.stage
-              : `stage_${index + 1}`;
-            return (
-              <Box key={`${stage}-${index}`} sx={{ minWidth: 0, borderLeft: '3px solid #5B4BFF', pl: 1 }}>
-                <Typography sx={{ color: value.value === null ? '#F0A63A' : '#F5F5F5', fontFamily: mono, fontSize: 16, fontWeight: 700, overflowWrap: 'anywhere' }}>
-                  {formatMetricValue(value)}
-                </Typography>
-                <Typography sx={{ color: '#A3A3A3', fontSize: 11, overflowWrap: 'anywhere' }}>
-                  {displayLabel(stage)}
-                </Typography>
-                <Typography sx={{ color: '#8B8B8F', fontSize: 9 }}>
-                  {formatMetricUnit(value)}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-      )}
+      <Typography
+        sx={{
+          color: value?.value === null || !value ? '#F0A63A' : '#F5F5F5',
+          fontFamily: mono,
+          fontSize: 24,
+          fontWeight: 700,
+          mt: 0.75,
+        }}
+      >
+        {value ? formatMetricValue(value) : 'N/A'}
+      </Typography>
+      <Typography sx={{ color: '#8B8B8F', fontSize: 11, mt: 0.5 }}>
+        {detail} · Open details
+      </Typography>
     </Box>
   );
 }
 
+function overviewStageValue(
+  dashboard: UpdatedHomeDashboardBlock | undefined,
+  metricKey: string,
+  stage: string
+): UpdatedHomeMetricValue | undefined {
+  return metricValues(dashboard, metricKey).find(
+    (value) => value.dimensions.stage === stage
+  );
+}
+
+function overviewMetricValue(
+  dashboard: UpdatedHomeDashboardBlock | undefined,
+  metricKey: string
+): UpdatedHomeMetricValue | undefined {
+  const values = metricValues(dashboard, metricKey);
+  const first = values[0];
+  if (!first) return undefined;
+  return values.every(
+    (value) => value.value === first.value && value.unit === first.unit
+  )
+    ? first
+    : undefined;
+}
+
 function CoverageFooter() {
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} sx={{ border: '1px solid #343434', borderRadius: '12px', bgcolor: '#171717', p: '20px' }}>
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      justifyContent="space-between"
+      gap={2}
+      sx={{
+        border: '1px solid #343434',
+        borderRadius: '12px',
+        bgcolor: '#171717',
+        p: '20px',
+      }}
+    >
       <Stack gap={1}>
-        <Typography sx={{ color: '#F5F5F5', fontSize: 16, fontWeight: 700 }}>Backend projection coverage</Typography>
+        <Typography sx={{ color: '#F5F5F5', fontSize: 16, fontWeight: 700 }}>
+          Backend projection coverage
+        </Typography>
         <Typography sx={{ color: '#A3A3A3', fontSize: 12 }}>
-          12 dashboards · backend values and definitions shown without frontend recomputation.
+          12 dashboards · backend values and definitions shown without frontend
+          recomputation.
         </Typography>
       </Stack>
-      <Typography sx={{ color: '#A3A3A3', bgcolor: '#2A2A2A', borderRadius: 999, px: 1.25, py: 1, fontFamily: mono, fontSize: 10, fontWeight: 600 }}>
+      <Typography
+        sx={{
+          color: '#A3A3A3',
+          bgcolor: '#2A2A2A',
+          borderRadius: 999,
+          px: 1.25,
+          py: 1,
+          fontFamily: mono,
+          fontSize: 10,
+          fontWeight: 600,
+        }}
+      >
         Missing values remain N/A
       </Typography>
     </Stack>
