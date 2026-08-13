@@ -140,6 +140,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(screen.getByLabelText('From (UTC)')).toBeInTheDocument();
     expect(screen.getByLabelText('To (UTC)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export JSON' })).toBeEnabled();
     expect(screen.getByText('UTC · maximum 90 days · backend-computed')).toBeInTheDocument();
 
     const sectionLabels = screen
