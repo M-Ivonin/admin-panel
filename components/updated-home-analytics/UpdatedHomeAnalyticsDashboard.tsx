@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUpdatedHomeAnalytics,
@@ -18,6 +19,7 @@ import {
   type UpdatedHomeMetricValue,
 } from '@/lib/api/updated-home-analytics';
 import { UpdatedHomeAnalyticsSection } from './UpdatedHomeAnalyticsSection';
+import { downloadUpdatedHomeAnalyticsJson } from './export';
 import {
   dashboardsById,
   formatMetricValue,
@@ -109,7 +111,20 @@ export function UpdatedHomeAnalyticsDashboard() {
         title="Updated Home Analytics"
         subtitle="Backend-owned product performance, conversion and retention · UTC"
         maxWidth={1440}
-        actions={<DataStatus />}
+        actions={
+          <Stack direction="row" alignItems="center" gap={1}>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<DownloadOutlinedIcon />}
+              disabled={!data || loading || Boolean(error)}
+              onClick={() => data && downloadUpdatedHomeAnalyticsJson(data)}
+            >
+              Export JSON
+            </Button>
+            <DataStatus />
+          </Stack>
+        }
       />
 
       <Stack
