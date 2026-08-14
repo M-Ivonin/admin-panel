@@ -21,6 +21,7 @@ export const UPDATED_HOME_SECTIONS: readonly UpdatedHomeSectionDefinition[] = [
   { label: 'Passes', dashboardIds: [9, 10] },
   { label: 'Purchases', dashboardIds: [11] },
   { label: 'Retention', dashboardIds: [12] },
+  { label: 'AI Chat', dashboardIds: [13] },
 ];
 
 const DISPLAY_LABELS: Readonly<Record<string, string>> = {
@@ -48,6 +49,8 @@ const DISPLAY_LABELS: Readonly<Record<string, string>> = {
   paywall_viewed: 'Paywall viewed',
   purchase_started: 'Purchase started',
   purchase_succeeded: 'Verified purchase',
+  locked_screen_viewed: 'Locked screen viewed',
+  unlock_cta_clicked: 'Unlock CTA clicked',
 };
 
 const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
@@ -75,6 +78,8 @@ const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
     'Shows same-collection discovery from card impression to Collection page view within 24 hours.',
   collection_purchase_funnel:
     'Shows the seven-day commerce journey from Collection page view to backend-verified purchase.',
+  ai_chat_unlock_funnel:
+    'Shows how locked AI Chat users progress from the unlock CTA to a backend-verified purchase.',
   top_picks_activation_funnel:
     'Shows how paid users progress from a Top Pick preview to Full Analysis.',
   parlay_engagement_rate: 'Share of users who opened a parlay after seeing it.',
@@ -174,6 +179,8 @@ export const FUNNEL_STAGE_ROLES: Readonly<
   paywall_viewed: 'commerce',
   purchase_started: 'commerce',
   purchase_succeeded: 'verified',
+  locked_screen_viewed: 'informational',
+  unlock_cta_clicked: 'interaction',
 };
 
 export const METRIC_ROLES: Readonly<Record<string, AnalyticsPresentationRole>> =

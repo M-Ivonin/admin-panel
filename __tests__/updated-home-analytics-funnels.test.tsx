@@ -185,11 +185,49 @@ const purchase = funnelMetric('collection_purchase_funnel', [
   },
 ]);
 
+const aiChatUnlock = funnelMetric('ai_chat_unlock_funnel', [
+  {
+    stage: 'locked_screen_viewed',
+    ordinal: 1,
+    numerator: 200,
+    denominator: null,
+    value: 200,
+  },
+  {
+    stage: 'unlock_cta_clicked',
+    ordinal: 2,
+    numerator: 80,
+    denominator: 200,
+    value: 40,
+  },
+  {
+    stage: 'paywall_viewed',
+    ordinal: 3,
+    numerator: 70,
+    denominator: 80,
+    value: 87.5,
+  },
+  {
+    stage: 'purchase_started',
+    ordinal: 4,
+    numerator: 20,
+    denominator: 70,
+    value: 28.57,
+  },
+  {
+    stage: 'purchase_succeeded',
+    ordinal: 5,
+    numerator: 12,
+    denominator: 20,
+    value: 60,
+  },
+]);
+
 const response = {
   definitionVersion: 'updated-home-dashboards-v1.1',
   timezone: 'UTC' as const,
   range: { from: '2026-07-28T00:00:00.000Z', to: '2026-08-05T00:00:00.000Z' },
-  dashboards: Array.from({ length: 12 }, (_, index) => {
+  dashboards: Array.from({ length: 13 }, (_, index) => {
     const id = index + 1;
     const metrics =
       id === 3
@@ -224,15 +262,17 @@ const response = {
                 ],
               },
             ]
-          : [
-              simpleMetric(
-                id === 9
-                  ? 'pass_24h_repeat_purchase_rate'
-                  : id === 10
-                    ? 'pass_to_monthly_conversion_rate'
-                    : `metric_${id}`
-              ),
-            ];
+          : id === 13
+            ? [aiChatUnlock]
+            : [
+                simpleMetric(
+                  id === 9
+                    ? 'pass_24h_repeat_purchase_rate'
+                    : id === 10
+                      ? 'pass_to_monthly_conversion_rate'
+                      : `metric_${id}`
+                ),
+              ];
     return {
       id,
       name:
@@ -258,13 +298,13 @@ describe('Updated Home numbered semantic funnels', () => {
 
   afterEach(() => jest.useRealTimers());
 
-  it('renders backend IDs 1 through 12 and keeps Pass dashboards separate', async () => {
+  it('renders backend IDs 1 through 13 and keeps Pass dashboards separate', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
     const badges = await screen.findAllByTestId(
       'updated-home-dashboard-number'
     );
     expect(badges.map((badge) => badge.textContent)).toEqual(
-      Array.from({ length: 12 }, (_, index) => String(index + 1))
+      Array.from({ length: 13 }, (_, index) => String(index + 1))
     );
     const passes = screen.getByRole('region', { name: 'Passes' });
     expect(within(passes).getByText('9')).toBeInTheDocument();
@@ -275,6 +315,21 @@ describe('Updated Home numbered semantic funnels', () => {
     expect(
       within(passes).getByText('Pass-to-subscription conversion')
     ).toBeInTheDocument();
+  });
+
+  it('renders the dedicated AI Chat unlock funnel in the shared funnel UI', async () => {
+    render(<UpdatedHomeAnalyticsDashboard />);
+    const aiChat = await screen.findByRole('region', { name: 'AI Chat' });
+    const stages = within(aiChat).getAllByTestId('updated-home-funnel-stage');
+    expect(stages.map((stage) => stage.getAttribute('data-stage'))).toEqual([
+      'locked_screen_viewed',
+      'unlock_cta_clicked',
+      'paywall_viewed',
+      'purchase_started',
+      'purchase_succeeded',
+    ]);
+    expect(stages[4]).toHaveTextContent('12');
+    expect(stages[4]).toHaveTextContent('60%');
   });
 
   it('uses backend numerator, value, order, N/A reason, and linked Collection phases', async () => {

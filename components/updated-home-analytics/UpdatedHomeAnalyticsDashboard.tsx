@@ -205,7 +205,7 @@ function DataStatus() {
         sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#68C96B' }}
       />
       <Typography sx={{ color: '#D8FBE9', fontSize: 12, fontWeight: 600 }}>
-        12 backend dashboards
+        13 backend dashboards
       </Typography>
     </Stack>
   );
@@ -511,7 +511,7 @@ function CoverageFooter() {
           Backend projection coverage
         </Typography>
         <Typography sx={{ color: '#A3A3A3', fontSize: 12 }}>
-          12 dashboards · backend values and definitions shown without frontend
+          13 dashboards · backend values and definitions shown without frontend
           recomputation.
         </Typography>
       </Stack>

@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { UpdatedHomeAnalyticsDashboard } from '@/components/updated-home-analytics/UpdatedHomeAnalyticsDashboard';
 import {
   displayLabel,
@@ -29,6 +36,7 @@ const dashboardNames = [
   'Pass-to-subscription conversion',
   'Purchase failures and verification',
   'Retention by core action',
+  'AI Chat unlock conversion',
 ];
 
 const metricKeys = [
@@ -44,6 +52,7 @@ const metricKeys = [
   'pass_to_monthly_conversion_rate',
   'verified_started_rate',
   'd1_d7_d30_retention',
+  'ai_chat_unlock_funnel',
 ];
 
 const stages: Readonly<Record<number, readonly string[]>> = {
@@ -60,6 +69,13 @@ const stages: Readonly<Record<number, readonly string[]>> = {
     'prediction_saved',
     'settlement_eligible',
     'prediction_result_viewed',
+  ],
+  13: [
+    'locked_screen_viewed',
+    'unlock_cta_clicked',
+    'paywall_viewed',
+    'purchase_started',
+    'purchase_succeeded',
   ],
 };
 
@@ -121,7 +137,9 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(formatMetricValue(value)).toBe('8.25 s');
     expect(formatMetricUnit(value)).toBe('seconds');
     expect(displayLabel('active_home_time_ms')).toBe('Active home time');
-    expect(displayLabel('verification_latency_ms')).toBe('Verification latency');
+    expect(displayLabel('verification_latency_ms')).toBe(
+      'Verification latency'
+    );
   });
 
   beforeEach(() => {
@@ -135,13 +153,17 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
 
   it('applies a UTC range and exposes every backend section and trace field', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(await screen.findByRole('region', { name: 'Overview' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('region', { name: 'Overview' })
+    ).toBeInTheDocument();
 
     expect(screen.getByLabelText('From (UTC)')).toBeInTheDocument();
     expect(screen.getByLabelText('To (UTC)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export JSON' })).toBeEnabled();
-    expect(screen.getByText('UTC · maximum 90 days · backend-computed')).toBeInTheDocument();
+    expect(
+      screen.getByText('UTC · maximum 90 days · backend-computed')
+    ).toBeInTheDocument();
 
     const sectionLabels = screen
       .getAllByTestId('updated-home-dashboard-section')
@@ -158,30 +180,41 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       'Passes',
       'Purchases',
       'Retention',
+      'AI Chat',
     ]);
     const passes = screen.getByRole('region', { name: 'Passes' });
-    expect(within(passes).getByText('Pass usage and expiration')).toBeInTheDocument();
-    expect(within(passes).getByText('Pass-to-subscription conversion')).toBeInTheDocument();
+    expect(
+      within(passes).getByText('Pass usage and expiration')
+    ).toBeInTheDocument();
+    expect(
+      within(passes).getByText('Pass-to-subscription conversion')
+    ).toBeInTheDocument();
 
     const firstMetric = screen.getAllByTestId('updated-home-metric-row')[0];
     expect(firstMetric).toHaveTextContent('WHAT IT SHOWS');
     expect(firstMetric).toHaveTextContent(
       'Share of Home load attempts that finished successfully.'
     );
-    expect(firstMetric).toHaveTextContent('DIMENSIONSAccess State: Full access');
+    expect(firstMetric).toHaveTextContent(
+      'DIMENSIONSAccess State: Full access'
+    );
     expect(firstMetric).toHaveTextContent('VALUE40');
     expect(firstMetric).toHaveTextContent('UNITusers');
     expect(firstMetric).not.toHaveTextContent('NUMERATOR VALUE');
     expect(firstMetric).not.toHaveTextContent('FORMULA NUM');
     expect(firstMetric).not.toHaveTextContent('WINDOW');
     expect(firstMetric).not.toHaveTextContent('COMPLETENESS');
-    expect(screen.queryByRole('button', { name: /Calculation details/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Calculation details/ })
+    ).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
       target: { value: '2026-05-14' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2)
+    );
     expect(getUpdatedHomeAnalytics).toHaveBeenLastCalledWith({
       from: '2026-05-14T00:00:00.000Z',
       to: '2026-08-11T23:59:59.999Z',
@@ -206,17 +239,32 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     });
     render(<UpdatedHomeAnalyticsDashboard />);
     const overview = await screen.findByRole('region', { name: 'Overview' });
-    expect(within(overview).queryByTestId('updated-home-funnel')).not.toBeInTheDocument();
-    expect(within(overview).getByRole('link', { name: /Free Pick activation/i })).toHaveAttribute('href', '#dashboard-2');
-    expect(within(overview).getByRole('link', { name: /Paid Top Picks activation/i })).toHaveAttribute('href', '#dashboard-6');
-    expect(within(overview).getByRole('link', { name: /Full Access purchase conversion/i })).toHaveAttribute('href', '#dashboard-3');
-    expect(within(overview).getByRole('link', { name: /Home load success rate/i })).toHaveAttribute('href', '#dashboard-1');
+    expect(
+      within(overview).queryByTestId('updated-home-funnel')
+    ).not.toBeInTheDocument();
+    expect(
+      within(overview).getByRole('link', { name: /Free Pick activation/i })
+    ).toHaveAttribute('href', '#dashboard-2');
+    expect(
+      within(overview).getByRole('link', { name: /Paid Top Picks activation/i })
+    ).toHaveAttribute('href', '#dashboard-6');
+    expect(
+      within(overview).getByRole('link', {
+        name: /Full Access purchase conversion/i,
+      })
+    ).toHaveAttribute('href', '#dashboard-3');
+    expect(
+      within(overview).getByRole('link', { name: /Home load success rate/i })
+    ).toHaveAttribute('href', '#dashboard-1');
 
     const freePick = screen.getByRole('region', { name: 'Free Pick' });
-    expect(within(freePick).getByText('Free pick activation funnel')).toBeInTheDocument();
+    expect(
+      within(freePick).getByText('Free pick activation funnel')
+    ).toBeInTheDocument();
     const topPicks = screen.getByRole('region', { name: 'Top Picks/Parlays' });
-    expect(within(topPicks).getByText('Top picks activation funnel')).toBeInTheDocument();
-
+    expect(
+      within(topPicks).getByText('Top picks activation funnel')
+    ).toBeInTheDocument();
   });
 
   it('groups Home quality dimensions under one metric heading', async () => {
@@ -256,7 +304,10 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
                     numerator: 'distinct users with module impression',
                     denominator: 'distinct users with settled Home view',
                   },
-                  dimensions: { moduleName: 'access_status', modulePosition: 1 },
+                  dimensions: {
+                    moduleName: 'access_status',
+                    modulePosition: 1,
+                  },
                   numerator: 1,
                   denominator: 6,
                   value: 16.67,
@@ -287,14 +338,22 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
 
     render(<UpdatedHomeAnalyticsDashboard />);
     const homeSection = await screen.findByRole('region', { name: 'Home' });
-    const metric = within(homeSection).getByTestId('updated-home-grouped-metric');
+    const metric = within(homeSection).getByTestId(
+      'updated-home-grouped-metric'
+    );
 
     expect(within(metric).getAllByText('Module reach rate')).toHaveLength(1);
     expect(within(metric).getByText('3 breakdowns')).toBeInTheDocument();
-    expect(within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')).toBeInTheDocument();
-    expect(within(within(metric).getByRole('button')).getByText('16.67%')).toBeInTheDocument();
     expect(
-      within(metric).getAllByText('Share of Home visitors who scrolled far enough to see a module.')
+      within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')
+    ).toBeInTheDocument();
+    expect(
+      within(within(metric).getByRole('button')).getByText('16.67%')
+    ).toBeInTheDocument();
+    expect(
+      within(metric).getAllByText(
+        'Share of Home visitors who scrolled far enough to see a module.'
+      )
     ).toHaveLength(1);
     const toggle = within(metric).getByRole('button');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -310,21 +369,30 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       expect.stringContaining('Feed716.67%percent'),
     ]);
     expect(within(metric).queryByText(/Module Name:/)).not.toBeInTheDocument();
-    expect(within(metric).queryByText(/Module Position:/)).not.toBeInTheDocument();
+    expect(
+      within(metric).queryByText(/Module Position:/)
+    ).not.toBeInTheDocument();
     expect(within(metric).getAllByText('16.67%')).toHaveLength(4);
   });
 
   it('keeps loading and transport errors explicit and does not show stale metrics', async () => {
     let rejectRequest: (reason: Error) => void = () => undefined;
     (getUpdatedHomeAnalytics as jest.Mock).mockImplementation(
-      () => new Promise((_, reject) => { rejectRequest = reject; })
+      () =>
+        new Promise((_, reject) => {
+          rejectRequest = reject;
+        })
     );
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect(screen.getByLabelText('Loading Updated Home analytics')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Loading Updated Home analytics')
+    ).toBeInTheDocument();
     expect(screen.getByText('Loading backend analytics…')).toBeInTheDocument();
     await act(async () => rejectRequest(new Error('Forbidden')));
     expect(await screen.findByText('Forbidden')).toBeInTheDocument();
-    expect(screen.queryByTestId('updated-home-dashboard-grid')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('updated-home-dashboard-grid')
+    ).not.toBeInTheDocument();
   });
 
   it('groups large dimensional breakdowns outside Home without inventing an average', async () => {
@@ -335,18 +403,38 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
         dashboard.id === 4
           ? {
               ...dashboard,
-              metrics: [{
-                ...dashboard.metrics[0],
-                definition: {
-                  ...dashboard.metrics[0].definition,
-                  key: 'conversion_by_product_country',
-                  grouping: ['country', 'placement', 'product_id'],
+              metrics: [
+                {
+                  ...dashboard.metrics[0],
+                  definition: {
+                    ...dashboard.metrics[0].definition,
+                    key: 'conversion_by_product_country',
+                    grouping: ['country', 'placement', 'product_id'],
+                  },
+                  values: [
+                    {
+                      ...dashboard.metrics[0].values[0],
+                      dimensions: {
+                        country: 'US',
+                        placement: 'offers',
+                        productId: 'pro',
+                      },
+                      value: 20,
+                      unit: 'percent',
+                    },
+                    {
+                      ...dashboard.metrics[0].values[0],
+                      dimensions: {
+                        country: 'US',
+                        placement: 'home_main_offer',
+                        productId: 'pass',
+                      },
+                      value: 10,
+                      unit: 'percent',
+                    },
+                  ],
                 },
-                values: [
-                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'offers', productId: 'pro' }, value: 20, unit: 'percent' },
-                  { ...dashboard.metrics[0].values[0], dimensions: { country: 'US', placement: 'home_main_offer', productId: 'pass' }, value: 10, unit: 'percent' },
-                ],
-              }],
+              ],
             }
           : dashboard
       ),
@@ -356,14 +444,20 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     const paywall = await screen.findByRole('region', { name: 'Paywall' });
     const metric = within(paywall).getByTestId('updated-home-grouped-metric');
     expect(within(metric).getByText('2 breakdowns')).toBeInTheDocument();
-    expect(within(metric).queryByText(/average across breakdowns/i)).not.toBeInTheDocument();
+    expect(
+      within(metric).queryByText(/average across breakdowns/i)
+    ).not.toBeInTheDocument();
     expect(within(metric).getByText('BREAKDOWNS')).toBeInTheDocument();
 
     fireEvent.click(within(metric).getByRole('button'));
     expect(within(metric).getByText('COUNTRY')).toBeInTheDocument();
     expect(within(metric).getByText('PLACEMENT')).toBeInTheDocument();
     expect(within(metric).getByText('PRODUCT ID')).toBeInTheDocument();
-    expect(within(metric).getAllByTestId('updated-home-metric-value-row').map((row) => row.textContent)).toEqual([
+    expect(
+      within(metric)
+        .getAllByTestId('updated-home-metric-value-row')
+        .map((row) => row.textContent)
+    ).toEqual([
       expect.stringContaining('USHome main offerPass10%percent'),
       expect.stringContaining('USOffersPro20%percent'),
     ]);
@@ -377,34 +471,84 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
         dashboard.id === 5
           ? {
               ...dashboard,
-              metrics: [{
-                ...dashboard.metrics[0],
-                definition: { ...dashboard.metrics[0].definition, key: 'collection_assisted_conversion_rate' },
-                values: [
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:1', collectionName: 'Premier League Picks', collectionType: 'matchday' }, value: 0, unit: 'percent' },
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:2', collectionName: 'Championship Picks', collectionType: 'matchday' }, value: 25, unit: 'percent' },
-                  { ...dashboard.metrics[0].values[0], dimensions: { collectionId: 'league:3', collectionName: 'La Liga Picks', collectionType: 'matchday' }, value: null, unit: 'percent' },
-                ],
-              }],
+              metrics: [
+                {
+                  ...dashboard.metrics[0],
+                  definition: {
+                    ...dashboard.metrics[0].definition,
+                    key: 'collection_assisted_conversion_rate',
+                  },
+                  values: [
+                    {
+                      ...dashboard.metrics[0].values[0],
+                      dimensions: {
+                        collectionId: 'league:1',
+                        collectionName: 'Premier League Picks',
+                        collectionType: 'matchday',
+                      },
+                      value: 0,
+                      unit: 'percent',
+                    },
+                    {
+                      ...dashboard.metrics[0].values[0],
+                      dimensions: {
+                        collectionId: 'league:2',
+                        collectionName: 'Championship Picks',
+                        collectionType: 'matchday',
+                      },
+                      value: 25,
+                      unit: 'percent',
+                    },
+                    {
+                      ...dashboard.metrics[0].values[0],
+                      dimensions: {
+                        collectionId: 'league:3',
+                        collectionName: 'La Liga Picks',
+                        collectionType: 'matchday',
+                      },
+                      value: null,
+                      unit: 'percent',
+                    },
+                  ],
+                },
+              ],
             }
           : dashboard
       ),
     });
 
     render(<UpdatedHomeAnalyticsDashboard />);
-    const collections = await screen.findByRole('region', { name: 'Collections' });
-    const metric = within(collections).getByTestId('updated-home-grouped-metric');
-    expect(within(metric).getByText('1 converting · 1 with 0% · 1 N/A')).toBeInTheDocument();
-    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(2);
+    const collections = await screen.findByRole('region', {
+      name: 'Collections',
+    });
+    const metric = within(collections).getByTestId(
+      'updated-home-grouped-metric'
+    );
+    expect(
+      within(metric).getByText('1 converting · 1 with 0% · 1 N/A')
+    ).toBeInTheDocument();
+    expect(
+      within(metric).getAllByTestId('updated-home-metric-value-row')
+    ).toHaveLength(2);
     expect(within(metric).queryByText('League:1')).not.toBeInTheDocument();
 
-    fireEvent.click(within(metric).getByRole('button', { name: /Show Collection assisted conversion rate breakdown/ }));
+    fireEvent.click(
+      within(metric).getByRole('button', {
+        name: /Show Collection assisted conversion rate breakdown/,
+      })
+    );
     expect(within(metric).getByText('COLLECTION NAME')).toBeInTheDocument();
     expect(within(metric).getByText('Championship Picks')).toBeInTheDocument();
-    fireEvent.click(within(metric).getByRole('button', { name: 'Show 0% collections' }));
-    expect(within(metric).getAllByTestId('updated-home-metric-value-row')).toHaveLength(3);
+    fireEvent.click(
+      within(metric).getByRole('button', { name: 'Show 0% collections' })
+    );
+    expect(
+      within(metric).getAllByTestId('updated-home-metric-value-row')
+    ).toHaveLength(3);
     expect(within(metric).getByText('League:1')).toBeInTheDocument();
-    expect(within(metric).getByRole('button', { name: 'Hide 0% collections' })).toBeInTheDocument();
+    expect(
+      within(metric).getByRole('button', { name: 'Hide 0% collections' })
+    ).toBeInTheDocument();
   });
 
   it('renders empty and N/A states without turning missing values into zero', async () => {
@@ -428,14 +572,22 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
             }
           : {
               ...dashboard,
-              metrics: dashboard.metrics.map((metric) => ({ ...metric, values: [] })),
+              metrics: dashboard.metrics.map((metric) => ({
+                ...metric,
+                values: [],
+              })),
             }
       ),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect((await screen.findAllByText(/No eligible observations in this range/)).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText(/No eligible observations in this range/))
+        .length
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Exact backend N/A reason.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Exact backend N/A reason.')
+    ).not.toBeInTheDocument();
     expect(screen.getByText('No data for selected period')).toBeInTheDocument();
     const naMetric = screen.getAllByTestId('updated-home-metric-row')[0];
     expect(naMetric).toHaveTextContent('WHAT IT SHOWS');
@@ -450,11 +602,19 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       dashboards: response.dashboards.filter((dashboard) => dashboard.id !== 7),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
-    expect((await screen.findAllByText('Partial observation window')).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText('Partial observation window')).length
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(completeness.reason)).not.toBeInTheDocument();
     const unsupported = screen.getByRole('region', { name: 'Full Analysis' });
-    expect(within(unsupported).getByText('Unsupported response')).toBeInTheDocument();
-    expect(within(unsupported).getByText('This section was not returned by the backend.')).toBeInTheDocument();
+    expect(
+      within(unsupported).getByText('Unsupported response')
+    ).toBeInTheDocument();
+    expect(
+      within(unsupported).getByText(
+        'This section was not returned by the backend.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('rejects more than 90 inclusive UTC dates before calling the API', async () => {
@@ -464,7 +624,9 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       target: { value: '2026-05-13' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(await screen.findByText('Maximum range is 90 days.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Maximum range is 90 days.')
+    ).toBeInTheDocument();
     expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(1);
   });
 
@@ -473,25 +635,51 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     let resolveOlder: (value: typeof response) => void = () => undefined;
     let resolveNewer: (value: typeof response) => void = () => undefined;
     (getUpdatedHomeAnalytics as jest.Mock)
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }))
-      .mockImplementationOnce(() => new Promise((resolve) => { resolveNewer = resolve; }));
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOlder = resolve;
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNewer = resolve;
+          })
+      );
     render(<UpdatedHomeAnalyticsDashboard />);
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
       target: { value: '2026-07-27' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(getUpdatedHomeAnalytics).toHaveBeenCalledTimes(2)
+    );
 
-    await act(async () => resolveNewer({
-      ...response,
-      range: { from: '2026-07-27T00:00:00.000Z', to: '2026-08-11T23:59:59.999Z' },
-    }));
-    expect(await screen.findByText(/2026-07-27 to 2026-08-11/)).toBeInTheDocument();
+    await act(async () =>
+      resolveNewer({
+        ...response,
+        range: {
+          from: '2026-07-27T00:00:00.000Z',
+          to: '2026-08-11T23:59:59.999Z',
+        },
+      })
+    );
+    expect(
+      await screen.findByText(/2026-07-27 to 2026-08-11/)
+    ).toBeInTheDocument();
 
-    await act(async () => resolveOlder({
-      ...response,
-      range: { from: '2026-01-01T00:00:00.000Z', to: '2026-01-02T23:59:59.999Z' },
-    }));
-    expect(screen.queryByText(/2026-01-01 to 2026-01-02/)).not.toBeInTheDocument();
+    await act(async () =>
+      resolveOlder({
+        ...response,
+        range: {
+          from: '2026-01-01T00:00:00.000Z',
+          to: '2026-01-02T23:59:59.999Z',
+        },
+      })
+    );
+    expect(
+      screen.queryByText(/2026-01-01 to 2026-01-02/)
+    ).not.toBeInTheDocument();
   });
 });
