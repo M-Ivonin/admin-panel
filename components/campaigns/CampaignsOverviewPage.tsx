@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import {
   Add,
+  DownloadOutlined,
   Edit,
   InfoOutlined,
   RestartAlt,
@@ -48,6 +49,7 @@ import type {
   CampaignsOverviewResponse,
 } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
+import { downloadCampaignJson } from '@/components/campaigns/export';
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -951,6 +953,9 @@ export function CampaignsOverviewPage() {
   const [resettingCampaignId, setResettingCampaignId] = useState<string | null>(
     null
   );
+  const [exportingCampaignId, setExportingCampaignId] = useState<string | null>(
+    null
+  );
   const [pendingResetCampaign, setPendingResetCampaign] =
     useState<CampaignListItem | null>(null);
   const [resetBaselineDaysAgo, setResetBaselineDaysAgo] = useState(0);
@@ -1153,6 +1158,52 @@ export function CampaignsOverviewPage() {
       );
     } finally {
       setResettingCampaignId(null);
+    }
+  }
+
+  async function handleExportCampaign(campaign: CampaignListItem) {
+    setExportingCampaignId(campaign.id);
+    setError(null);
+
+    try {
+      const [definition, metricsResponse] = await Promise.all([
+        campaignsRepository.getCampaign(campaign.id),
+        campaignsRepository.getCampaignOverviewItemMetrics({
+          campaignIds: [campaign.id],
+          statsPeriod,
+          ...statsRangeParams,
+        }),
+      ]);
+      const performance = metricsResponse.items.find(
+        (item) => item.id === campaign.id
+      );
+
+      if (!performance) {
+        throw new Error('Campaign performance is unavailable for export.');
+      }
+
+      downloadCampaignJson({
+        exportedAt: new Date().toISOString(),
+        metricsPeriod: {
+          type: statsPeriod,
+          ...(statsRangeParams.statsFrom
+            ? { from: statsRangeParams.statsFrom }
+            : {}),
+          ...(statsRangeParams.statsTo ? { to: statsRangeParams.statsTo } : {}),
+        },
+        campaign: {
+          definition,
+          performance,
+        },
+      });
+    } catch (exportError) {
+      setError(
+        exportError instanceof Error
+          ? exportError.message
+          : 'Failed to export campaign JSON.'
+      );
+    } finally {
+      setExportingCampaignId(null);
     }
   }
 
@@ -1741,6 +1792,29 @@ export function CampaignsOverviewPage() {
                               </Button>
                             </span>
                           </Tooltip>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<DownloadOutlined fontSize="small" />}
+                            disabled={exportingCampaignId === item.id}
+                            onClick={() => void handleExportCampaign(item)}
+                            sx={{
+                              borderColor: COLORS.stroke,
+                              borderRadius: 2,
+                              color: COLORS.textPrimary,
+                              height: 32,
+                              px: 1.25,
+                              textTransform: 'none',
+                              '&:hover': {
+                                borderColor: COLORS.accent,
+                                bgcolor: COLORS.accentSoft,
+                              },
+                            }}
+                          >
+                            {exportingCampaignId === item.id
+                              ? 'Exporting…'
+                              : 'Export JSON'}
+                          </Button>
                           <Button
                             size="small"
                             variant="outlined"

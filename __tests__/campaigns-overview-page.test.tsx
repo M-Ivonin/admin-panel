@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewPage';
+import { downloadCampaignJson } from '@/components/campaigns/export';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 import { createInitialCampaignsOverviewResponse } from '@/test-support/campaigns/mock-data';
@@ -57,6 +58,10 @@ jest.mock('@/modules/campaigns/repository', () => {
   };
 });
 
+jest.mock('@/components/campaigns/export', () => ({
+  downloadCampaignJson: jest.fn(),
+}));
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push,
@@ -86,6 +91,116 @@ describe('CampaignsOverviewPage', () => {
       );
     } finally {
       overviewSpy.mockRestore();
+    }
+  });
+
+  it('exports a campaign definition with fresh performance for the selected metrics period', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const campaign = seeded.items[0];
+    if (!campaign) {
+      throw new Error('Expected seeded campaign');
+    }
+    const getCampaignSpy = jest.spyOn(campaignsRepository, 'getCampaign');
+    const metricsSpy = jest.spyOn(
+      campaignsRepository,
+      'getCampaignOverviewItemMetrics'
+    );
+    const downloadSpy = downloadCampaignJson as jest.Mock;
+    downloadSpy.mockReset();
+
+    try {
+      render(<CampaignsOverviewPage />);
+      await screen.findByText(campaign.name);
+      fireEvent.click(screen.getByText('7 days'));
+      await waitFor(() => {
+        expect(metricsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ statsPeriod: 'last_7_days' })
+        );
+      });
+      metricsSpy.mockClear();
+
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /^export json$/i })[0]
+      );
+
+      await waitFor(() => {
+        expect(getCampaignSpy).toHaveBeenCalledWith(campaign.id);
+        expect(metricsSpy).toHaveBeenCalledWith({
+          campaignIds: [campaign.id],
+          statsPeriod: 'last_7_days',
+        });
+        expect(downloadSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            metricsPeriod: { type: 'last_7_days' },
+            campaign: expect.objectContaining({
+              definition: expect.objectContaining({ id: campaign.id }),
+              performance: expect.objectContaining({ id: campaign.id }),
+            }),
+          })
+        );
+      });
+    } finally {
+      getCampaignSpy.mockRestore();
+      metricsSpy.mockRestore();
+      downloadSpy.mockReset();
+    }
+  });
+
+  it('exports custom metrics bounds as the JSON export period', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const campaign = seeded.items[0];
+    if (!campaign) {
+      throw new Error('Expected seeded campaign');
+    }
+    const downloadSpy = downloadCampaignJson as jest.Mock;
+    downloadSpy.mockReset();
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview');
+
+    try {
+      render(<CampaignsOverviewPage />);
+      await screen.findByText(campaign.name);
+      fireEvent.click(screen.getByText('Custom'));
+      fireEvent.change(await screen.findByLabelText('From'), {
+        target: { value: '2026-08-01' },
+      });
+      fireEvent.change(screen.getByLabelText('To'), {
+        target: { value: '2026-08-07' },
+      });
+
+      await waitFor(() => {
+        expect(overviewSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            statsPeriod: 'custom',
+            statsFrom: expect.any(String),
+            statsTo: expect.any(String),
+          })
+        );
+      });
+
+      fireEvent.click(
+        screen.getAllByRole('button', { name: /^export json$/i })[0]
+      );
+
+      await waitFor(() => {
+        expect(downloadSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            metricsPeriod: {
+              type: 'custom',
+              from: expect.any(String),
+              to: expect.any(String),
+            },
+          })
+        );
+      });
+      expect(downloadSpy.mock.calls[0][0].metricsPeriod).not.toHaveProperty(
+        'statsFrom'
+      );
+      expect(downloadSpy.mock.calls[0][0].metricsPeriod).not.toHaveProperty(
+        'statsTo'
+      );
+    } finally {
+      overviewSpy.mockRestore();
+      downloadSpy.mockReset();
     }
   });
 
