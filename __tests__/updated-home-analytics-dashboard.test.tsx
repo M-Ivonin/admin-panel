@@ -345,11 +345,8 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(within(metric).getAllByText('Module reach rate')).toHaveLength(1);
     expect(within(metric).getByText('3 breakdowns')).toBeInTheDocument();
     expect(
-      within(metric).getByText('AVERAGE ACROSS BREAKDOWNS')
-    ).toBeInTheDocument();
-    expect(
-      within(within(metric).getByRole('button')).getByText('16.67%')
-    ).toBeInTheDocument();
+      within(metric).queryByText('AVERAGE ACROSS BREAKDOWNS')
+    ).not.toBeInTheDocument();
     expect(
       within(metric).getAllByText(
         'Share of Home visitors who scrolled far enough to see a module.'
@@ -372,7 +369,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(
       within(metric).queryByText(/Module Position:/)
     ).not.toBeInTheDocument();
-    expect(within(metric).getAllByText('16.67%')).toHaveLength(4);
+    expect(within(metric).getAllByText('16.67%')).toHaveLength(3);
   });
 
   it('keeps loading and transport errors explicit and does not show stale metrics', async () => {

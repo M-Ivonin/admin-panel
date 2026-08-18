@@ -100,7 +100,7 @@ const fullAccess = funnelMetric('full_access_funnel', [
     value: 76.9,
   },
   {
-    stage: 'option_selection',
+    stage: 'product_exposed',
     ordinal: 4,
     numerator: 406,
     denominator: 524,
@@ -346,7 +346,7 @@ describe('Updated Home numbered semantic funnels', () => {
       'offer_impression',
       'offer_click',
       'paywall_view',
-      'option_selection',
+      'product_exposed',
       'purchase_start',
       'verified_purchase',
     ]);

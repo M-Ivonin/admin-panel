@@ -39,7 +39,7 @@ const DISPLAY_LABELS: Readonly<Record<string, string>> = {
   offer_impression: 'Offer impression',
   offer_click: 'Offer click',
   paywall_view: 'Paywall view',
-  option_selection: 'Option selection',
+  product_exposed: 'Product shown',
   purchase_start: 'Purchase start',
   verified_purchase: 'Verified purchase',
   collection_card_impression: 'Card impression',
@@ -70,8 +70,12 @@ const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
     'Shows how users progress from opening Home to opening the Free Pick prediction card.',
   full_access_funnel:
     'Shows how users progress from seeing the offer to completing a verified purchase.',
+  option_change_rate:
+    'Share of paywall viewers who manually changed the preselected product.',
   conversion_by_product_country:
     'Share of exposed users who completed a verified purchase for this product and placement.',
+  unknown_country_share:
+    'Share of product exposures without a trusted storefront or backend country.',
   collection_assisted_conversion_rate:
     'Share of collection-page viewers who completed a collection-attributed verified purchase within seven days.',
   collection_discovery_funnel:
@@ -82,6 +86,10 @@ const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
     'Shows how locked AI Chat users progress from the unlock CTA to a backend-verified purchase.',
   top_picks_activation_funnel:
     'Shows how paid users progress from a Top Pick preview to Full Analysis.',
+  paid_top_picks_preview_coverage:
+    'Reconciles Top Picks module reach with locked, eligible, and incomplete paid-preview cohorts.',
+  paid_preview_instrumentation_coverage:
+    'Share of users with unlocked Top Picks who produced an eligible paid preview impression.',
   parlay_engagement_rate: 'Share of users who opened a parlay after seeing it.',
   section_reach_rate:
     'Share of Full Analysis visits in which users reached a specific section.',
@@ -169,7 +177,7 @@ export const FUNNEL_STAGE_ROLES: Readonly<
   offer_impression: 'informational',
   offer_click: 'interaction',
   paywall_view: 'progression',
-  option_selection: 'progression',
+  product_exposed: 'progression',
   purchase_start: 'commerce',
   verified_purchase: 'verified',
   collection_card_impression: 'informational',

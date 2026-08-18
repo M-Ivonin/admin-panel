@@ -273,7 +273,15 @@ function GroupedMetric({
     (value) => typeof value.dimensions.moduleName === 'string'
   );
   const dimensionKeys = isModuleBreakdown
-    ? ['moduleName', 'modulePosition']
+    ? [
+        'moduleName',
+        'modulePosition',
+        'moduleVariant',
+        'accessState',
+        'layoutPolicyVersion',
+        'compositionSignature',
+        'compositionModules',
+      ].filter((key) => values.some((value) => key in value.dimensions))
     : Object.keys(values[0]?.dimensions ?? {});
   const displayedValues = [...values]
     .filter(
@@ -513,6 +521,9 @@ function metricSummary(
   metricKey: string,
   values: UpdatedHomeMetricValue[]
 ): { label: string; value: string } | null {
+  if (values.some((value) => typeof value.dimensions.moduleName === 'string')) {
+    return null;
+  }
   if (metricKey === 'active_home_time_ms') {
     const mean = values.find((value) => value.dimensions.statistic === 'mean');
     return { label: 'Mean', value: formatMetricValue(mean) };
