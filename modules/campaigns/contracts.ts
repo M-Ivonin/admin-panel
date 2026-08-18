@@ -500,6 +500,95 @@ export interface CampaignDraft {
   createdBy: string | null;
 }
 
+export interface CampaignDeliveryAnalyticsBreakdown {
+  stepKey: string;
+  stepOrder: number | null;
+  locale: CampaignLocale;
+  appProduct: CampaignTargetApp | 'unknown_legacy';
+  deliveryRowCount: number;
+  attemptedCount: number;
+  deliveredCount: number;
+  shownCount: number;
+  openedCount: number;
+  dismissedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  inProgressCount: number;
+  ctr: number;
+  failureReasons: CampaignFailureReasonSummary[];
+}
+
+export interface CampaignDeliveryDailyMetric {
+  date: string;
+  deliveryRowCount: number;
+  attemptedCount: number;
+  deliveredCount: number;
+  openedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  inProgressCount: number;
+  uniqueRecipientCount: number;
+  ctr: number;
+}
+
+export interface CampaignSourceEventDailyMetric {
+  date: string;
+  eventKey: CampaignSourceEventKey;
+  producerKey: CampaignSourceEventProducerKey;
+  appProduct: CampaignTargetApp | 'unknown_legacy';
+  eventCount: number;
+}
+
+export interface CampaignAnalyticsExport {
+  schemaVersion: 'campaign-analytics-export-v2';
+  exportedAt: string;
+  timezone: 'UTC';
+  period: {
+    type: CampaignStatsPeriod;
+    from: string | null;
+    to: string | null;
+    activityTimestamp: string;
+  };
+  privacy: {
+    containsUserLevelData: false;
+    excludedFields: string[];
+  };
+  campaign: {
+    identity: {
+      id: string;
+      name: string;
+      status: CampaignStatus;
+      channel: CampaignChannel;
+      targetApps: CampaignTargetApp[];
+      entryTriggerType: CampaignEntryTriggerType;
+      definitionVersion: number;
+      createdAt: string;
+      updatedAt: string;
+      archivedAt: string | null;
+      createdBy: string | null;
+    };
+    definition: CampaignDraft;
+    runtime: {
+      latestAudienceEstimate: number | null;
+      nextDispatchAt: string | null;
+      lastDispatchAt: string | null;
+      lastSentCount: number | null;
+      lastTotalCount: number | null;
+      metricsResetAt: string | null;
+    };
+  };
+  performance: {
+    summary: CampaignListItem;
+    byApp: CampaignAppMetricsBucket[];
+    byContentDimensions: CampaignDeliveryAnalyticsBreakdown[];
+    daily: CampaignDeliveryDailyMetric[];
+    sourceEvents: {
+      daily: CampaignSourceEventDailyMetric[];
+    };
+    limitations: string[];
+  };
+}
+
 export interface EstimateAudienceRequest {
   channel?: CampaignChannel;
   audience: CampaignAudienceDefinition;

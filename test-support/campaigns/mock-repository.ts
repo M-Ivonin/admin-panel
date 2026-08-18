@@ -893,6 +893,63 @@ export const mockCampaignsRepository: CampaignsRepository = {
     };
   },
 
+  async getCampaignAnalyticsExport(id, params) {
+    const definition = state.drafts[id];
+    const performance = state.overviewItems.find((item) => item.id === id);
+    if (!definition || !performance) {
+      throw new Error('Campaign not found');
+    }
+
+    return {
+      schemaVersion: 'campaign-analytics-export-v2',
+      exportedAt: MOCK_TIME_ANCHOR_ISO,
+      timezone: 'UTC',
+      period: {
+        type: params.statsPeriod,
+        from: params.statsFrom ?? null,
+        to: params.statsTo ?? null,
+        activityTimestamp:
+          'COALESCE(sentAt, updatedAt, plannedSendAt, createdAt)',
+      },
+      privacy: {
+        containsUserLevelData: false,
+        excludedFields: ['recipientUserId', 'deliveryTraceId'],
+      },
+      campaign: {
+        identity: {
+          id,
+          name: definition.name,
+          status: definition.status,
+          channel: definition.channel,
+          targetApps: definition.targetApps,
+          entryTriggerType: definition.trigger.type,
+          definitionVersion: 1,
+          createdAt: definition.updatedAt ?? MOCK_TIME_ANCHOR_ISO,
+          updatedAt: definition.updatedAt ?? MOCK_TIME_ANCHOR_ISO,
+          archivedAt: null,
+          createdBy: definition.createdBy,
+        },
+        definition: clone(definition),
+        runtime: {
+          latestAudienceEstimate: performance.audience.estimate,
+          nextDispatchAt: performance.timing.timestamp,
+          lastDispatchAt: null,
+          lastSentCount: performance.progress.sentCount,
+          lastTotalCount: performance.progress.totalCount,
+          metricsResetAt: null,
+        },
+      },
+      performance: {
+        summary: clone(performance),
+        byApp: clone(performance.progress.appBuckets ?? []),
+        byContentDimensions: [],
+        daily: [],
+        sourceEvents: { daily: [] },
+        limitations: [],
+      },
+    };
+  },
+
   async loadEditor(input) {
     const catalog = buildEditorCatalog();
 

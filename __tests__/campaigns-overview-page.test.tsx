@@ -100,10 +100,13 @@ describe('CampaignsOverviewPage', () => {
     if (!campaign) {
       throw new Error('Expected seeded campaign');
     }
-    const getCampaignSpy = jest.spyOn(campaignsRepository, 'getCampaign');
     const metricsSpy = jest.spyOn(
       campaignsRepository,
       'getCampaignOverviewItemMetrics'
+    );
+    const exportSpy = jest.spyOn(
+      campaignsRepository,
+      'getCampaignAnalyticsExport'
     );
     const downloadSpy = downloadCampaignJson as jest.Mock;
     downloadSpy.mockReset();
@@ -124,24 +127,19 @@ describe('CampaignsOverviewPage', () => {
       );
 
       await waitFor(() => {
-        expect(getCampaignSpy).toHaveBeenCalledWith(campaign.id);
-        expect(metricsSpy).toHaveBeenCalledWith({
-          campaignIds: [campaign.id],
+        expect(exportSpy).toHaveBeenCalledWith(campaign.id, {
           statsPeriod: 'last_7_days',
         });
         expect(downloadSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            metricsPeriod: { type: 'last_7_days' },
-            campaign: expect.objectContaining({
-              definition: expect.objectContaining({ id: campaign.id }),
-              performance: expect.objectContaining({ id: campaign.id }),
-            }),
+            schemaVersion: 'campaign-analytics-export-v2',
+            period: expect.objectContaining({ type: 'last_7_days' }),
           })
         );
       });
     } finally {
-      getCampaignSpy.mockRestore();
       metricsSpy.mockRestore();
+      exportSpy.mockRestore();
       downloadSpy.mockReset();
     }
   });
@@ -184,20 +182,18 @@ describe('CampaignsOverviewPage', () => {
       await waitFor(() => {
         expect(downloadSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            metricsPeriod: {
+            period: expect.objectContaining({
               type: 'custom',
               from: expect.any(String),
               to: expect.any(String),
-            },
+            }),
           })
         );
       });
-      expect(downloadSpy.mock.calls[0][0].metricsPeriod).not.toHaveProperty(
+      expect(downloadSpy.mock.calls[0][0].period).not.toHaveProperty(
         'statsFrom'
       );
-      expect(downloadSpy.mock.calls[0][0].metricsPeriod).not.toHaveProperty(
-        'statsTo'
-      );
+      expect(downloadSpy.mock.calls[0][0].period).not.toHaveProperty('statsTo');
     } finally {
       overviewSpy.mockRestore();
       downloadSpy.mockReset();

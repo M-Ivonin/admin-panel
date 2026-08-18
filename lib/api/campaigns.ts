@@ -8,6 +8,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignAnalyticsExport,
   CampaignDiagnosticsResetRequest,
   CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
@@ -191,6 +192,21 @@ export async function getCampaignOverviewItemMetrics(
     response,
     'Failed to fetch campaigns overview item metrics'
   );
+}
+
+export async function getCampaignAnalyticsExport(
+  id: string,
+  params: GetCampaignOverviewStatsParams
+): Promise<CampaignAnalyticsExport> {
+  const searchParams = new URLSearchParams();
+  appendStatsPeriodParams(searchParams, params);
+
+  const response = await adminAuthFetch({
+    path: `/campaigns/admin/${id}/export?${searchParams.toString()}`,
+    method: 'GET',
+  });
+
+  return parseAdminResponse(response, 'Failed to export campaign analytics');
 }
 
 /**

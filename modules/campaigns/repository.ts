@@ -10,6 +10,7 @@ import {
   deleteCampaignTemplate,
   estimateCampaignAudience,
   getCampaignOverviewItemMetrics,
+  getCampaignAnalyticsExport,
   getCampaignsOverviewStats,
   getCampaignDraft,
   getCampaignEditorCatalog,
@@ -28,6 +29,7 @@ import type {
   ArchiveCampaignResponse,
   DeleteTemplateResponse,
   CampaignDraft,
+  CampaignAnalyticsExport,
   CampaignDiagnosticsResetRequest,
   CampaignDiagnosticsResetResponse,
   CampaignEditorCatalog,
@@ -65,6 +67,11 @@ export type GetCampaignsOverviewStatsMethod = (
 export type GetCampaignOverviewItemMetricsMethod = (
   params: GetCampaignOverviewItemMetricsParams
 ) => Promise<CampaignOverviewItemMetricsResponse>;
+
+export type GetCampaignAnalyticsExportMethod = (
+  id: string,
+  params: GetCampaignOverviewStatsParams
+) => Promise<CampaignAnalyticsExport>;
 
 export type GetCampaignEditorCatalogMethod =
   () => Promise<CampaignEditorCatalog>;
@@ -189,6 +196,7 @@ export interface CampaignsRepository {
   getCampaignsOverview: GetCampaignsOverviewMethod;
   getCampaignsOverviewStats: GetCampaignsOverviewStatsMethod;
   getCampaignOverviewItemMetrics: GetCampaignOverviewItemMetricsMethod;
+  getCampaignAnalyticsExport: GetCampaignAnalyticsExportMethod;
   loadEditor: LoadCampaignEditorMethod;
   getEditorCatalog: GetCampaignEditorCatalogMethod;
   getCampaign: GetCampaignDraftMethod;
@@ -224,6 +232,7 @@ export const campaignsRepository: CampaignsRepository = {
   getCampaignsOverview,
   getCampaignsOverviewStats,
   getCampaignOverviewItemMetrics,
+  getCampaignAnalyticsExport,
   async loadEditor(input) {
     const catalog = await getCampaignEditorCatalog();
 

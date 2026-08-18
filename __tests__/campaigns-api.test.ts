@@ -5,6 +5,7 @@ import {
   deleteCampaignTemplate,
   estimateCampaignAudience,
   getCampaignDraft,
+  getCampaignAnalyticsExport,
   getCampaignOverviewItemMetrics,
   getCampaignEditorCatalog,
   getCampaignsOverview,
@@ -83,6 +84,19 @@ describe('campaigns API helpers', () => {
     });
     expect(adminAuthFetch).toHaveBeenNthCalledWith(3, {
       path: '/campaigns/admin/overview/item-metrics?statsPeriod=last_7_days&campaignIds=cmp_1&campaignIds=cmp_2',
+      method: 'GET',
+    });
+  });
+
+  it('loads one backend-owned campaign analytics export for the selected period', async () => {
+    await getCampaignAnalyticsExport('cmp_1', {
+      statsPeriod: 'custom',
+      statsFrom: '2026-08-01T00:00:00.000Z',
+      statsTo: '2026-08-07T23:59:59.999Z',
+    });
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/campaigns/admin/cmp_1/export?statsPeriod=custom&statsFrom=2026-08-01T00%3A00%3A00.000Z&statsTo=2026-08-07T23%3A59%3A59.999Z',
       method: 'GET',
     });
   });

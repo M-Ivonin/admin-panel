@@ -1166,36 +1166,12 @@ export function CampaignsOverviewPage() {
     setError(null);
 
     try {
-      const [definition, metricsResponse] = await Promise.all([
-        campaignsRepository.getCampaign(campaign.id),
-        campaignsRepository.getCampaignOverviewItemMetrics({
-          campaignIds: [campaign.id],
+      const campaignExport =
+        await campaignsRepository.getCampaignAnalyticsExport(campaign.id, {
           statsPeriod,
           ...statsRangeParams,
-        }),
-      ]);
-      const performance = metricsResponse.items.find(
-        (item) => item.id === campaign.id
-      );
-
-      if (!performance) {
-        throw new Error('Campaign performance is unavailable for export.');
-      }
-
-      downloadCampaignJson({
-        exportedAt: new Date().toISOString(),
-        metricsPeriod: {
-          type: statsPeriod,
-          ...(statsRangeParams.statsFrom
-            ? { from: statsRangeParams.statsFrom }
-            : {}),
-          ...(statsRangeParams.statsTo ? { to: statsRangeParams.statsTo } : {}),
-        },
-        campaign: {
-          definition,
-          performance,
-        },
-      });
+        });
+      downloadCampaignJson(campaignExport);
     } catch (exportError) {
       setError(
         exportError instanceof Error

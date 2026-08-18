@@ -138,6 +138,12 @@ without waiting for delivery aggregates or live audience estimates. KPI cards
 then hydrate from `/campaigns/admin/overview/stats`, and visible row metrics
 hydrate from `/campaigns/admin/overview/item-metrics` as each response arrives.
 
+Each campaign row can download a backend-owned V2 JSON analytics snapshot for
+the currently selected stats period. The export contains the full definition,
+runtime metadata, aggregate performance, UTC daily metrics, safe content
+dimensions, and related source-event counts. It excludes raw deliveries and
+user-level identifiers.
+
 #### KPI cards
 
 The KPI cards show:
@@ -477,6 +483,7 @@ Admin access is currently guarded by:
 | `GET`    | `/campaigns/admin/overview/stats`         | Load overview KPI stats                             |
 | `GET`    | `/campaigns/admin/overview/item-metrics`  | Hydrate metrics for selected visible campaign rows  |
 | `GET`    | `/campaigns/admin/catalog`                | Load editor catalog                                 |
+| `GET`    | `/campaigns/admin/:id/export`             | Export the campaign analytics V2 snapshot           |
 | `GET`    | `/campaigns/admin/:id`                    | Load one persisted campaign draft                   |
 | `POST`   | `/campaigns/admin`                        | Create campaign draft                               |
 | `PUT`    | `/campaigns/admin/:id`                    | Update campaign draft                               |
