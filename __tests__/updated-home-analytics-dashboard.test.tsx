@@ -592,21 +592,22 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(naMetric).toHaveTextContent('UNITusers');
   });
 
-  it('renders partial and unsupported states from the response', async () => {
+  it('does not render observation-window badges and preserves unsupported states', async () => {
     const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
       ...response,
       dashboards: response.dashboards.filter((dashboard) => dashboard.id !== 7),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
+    await screen.findByRole('region', { name: 'Overview' });
     expect(
-      (await screen.findAllByText('Partial observation window')).length
-    ).toBeGreaterThan(0);
+      screen.queryByText('Partial observation window')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Complete observation window')
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(completeness.reason)).not.toBeInTheDocument();
     const unsupported = screen.getByRole('region', { name: 'Full Analysis' });
-    expect(
-      within(unsupported).getByText('Unsupported response')
-    ).toBeInTheDocument();
     expect(
       within(unsupported).getByText(
         'This section was not returned by the backend.'

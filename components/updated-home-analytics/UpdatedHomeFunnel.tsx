@@ -174,17 +174,8 @@ export function UpdatedHomeFunnel({
                     }}
                   >
                     {available
-                      ? value.completeness.isComplete
-                        ? token.cue
-                        : `${token.cue} · Partial · ${
-                            value.completeness.reason ??
-                            'Observation window is incomplete.'
-                          }`
-                      : `N/A · ${stripNaPrefix(
-                          value.naReason ??
-                            value.completeness.reason ??
-                            token.cue
-                        )}`}
+                      ? token.cue
+                      : `N/A · ${stripNaPrefix(value.naReason ?? token.cue)}`}
                   </Typography>
                 </Stack>
               );

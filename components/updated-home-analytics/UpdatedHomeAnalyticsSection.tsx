@@ -8,7 +8,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Stack,
   Typography,
 } from '@mui/material';
@@ -48,10 +47,6 @@ export function UpdatedHomeAnalyticsSection({
   const sectionId =
     dashboards.find(Boolean)?.id ??
     label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const incomplete = availableDashboards.some(
-    (dashboard) => !dashboard.observationCompleteness.isComplete
-  );
-
   return (
     <Box
       component="section"
@@ -67,39 +62,10 @@ export function UpdatedHomeAnalyticsSection({
         p: { xs: '14px', sm: '20px' },
       }}
     >
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
-        justifyContent="space-between"
-        gap={1.5}
-        sx={{ mb: '14px' }}
-      >
+      <Stack sx={{ mb: '14px' }}>
         <Typography sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700 }}>
           {label}
         </Typography>
-        <Chip
-          label={
-            availableDashboards.length === 0
-              ? 'Unsupported response'
-              : incomplete
-                ? 'Partial observation window'
-                : 'Complete observation window'
-          }
-          size="small"
-          sx={{
-            maxWidth: '100%',
-            bgcolor:
-              availableDashboards.length === 0 || incomplete
-                ? '#3A2B12'
-                : '#173926',
-            color:
-              availableDashboards.length === 0 || incomplete
-                ? '#F8E5BF'
-                : '#D8FBE9',
-            fontSize: 11,
-            fontWeight: 600,
-          }}
-        />
       </Stack>
 
       {availableDashboards.length === 0 ? (

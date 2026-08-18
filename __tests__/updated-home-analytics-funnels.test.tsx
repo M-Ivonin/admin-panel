@@ -178,10 +178,9 @@ const purchase = funnelMetric('collection_purchase_funnel', [
   {
     stage: 'purchase_succeeded',
     ordinal: 5,
-    numerator: null,
-    denominator: null,
-    value: null,
-    naReason: 'N/A: seven-day window incomplete.',
+    numerator: 19,
+    denominator: 31,
+    value: 61.29,
   },
 ]);
 
@@ -363,14 +362,14 @@ describe('Updated Home numbered semantic funnels', () => {
     ).toBeInTheDocument();
     expect(collections).toHaveTextContent('hands off into the commerce cohort');
     expect(collections).not.toHaveTextContent('Pick preview');
-    expect(collections).toHaveTextContent('N/A · seven-day window incomplete.');
+    expect(collections).not.toHaveTextContent('seven-day window incomplete');
     expect(
       within(collections).getByText('Collection assisted conversion rate')
     ).toBeInTheDocument();
     expect(within(collections).getByText('Daily Picks')).toBeInTheDocument();
   });
 
-  it('keeps returned values and units visible when the observation window is partial', async () => {
+  it('keeps returned values visible without an observation-window badge', async () => {
     const partialResponse = JSON.parse(
       JSON.stringify(response)
     ) as UpdatedHomeAnalyticsResponse;
@@ -402,7 +401,8 @@ describe('Updated Home numbered semantic funnels', () => {
       'data-presentation-role',
       'informational'
     );
-    expect(fullAccessRegion).toHaveTextContent('Partial observation window');
+    expect(fullAccessRegion).not.toHaveTextContent('Partial observation window');
+    expect(fullAccessRegion).not.toHaveTextContent('Complete observation window');
   });
 
   it('maps stable semantic roles to Pencil colors without numeric thresholds', () => {
