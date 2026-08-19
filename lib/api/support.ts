@@ -131,6 +131,7 @@ export interface SupportTicketDetailResponse {
   audit: SupportTicketAuditEvent[];
   deliveries: SupportDelivery[];
   response_expectation: {
+    locale: 'en-US' | 'es-419' | 'pt-BR';
     text: string | null;
     support_hours: { timezone: string | null; schedule: string | null };
   };

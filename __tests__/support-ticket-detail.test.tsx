@@ -129,6 +129,7 @@ const ticket = {
     },
   ],
   response_expectation: {
+    locale: 'en-US' as const,
     text: 'Usually within one business day',
     support_hours: { timezone: 'Europe/Kyiv', schedule: 'Mon-Fri 09:00-18:00' },
   },
@@ -158,8 +159,28 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('settings.png')).toBeVisible();
     expect(screen.getByText('provider_timeout')).toBeVisible();
     expect(screen.getByText('Usually within one business day')).toBeVisible();
+    expect(screen.getByText('Response expectation · en-US')).toBeVisible();
     expect(screen.getAllByText(/Aug 19, 2026/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/object_key/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the response expectation locale when expectation text is null without fallback copy', async () => {
+    (getSupportTicket as jest.Mock).mockResolvedValue({
+      ...ticket,
+      response_expectation: {
+        locale: 'es-419',
+        text: null,
+        support_hours: { timezone: null, schedule: null },
+      },
+    });
+
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+
+    expect(
+      await screen.findByText('Response expectation · es-419')
+    ).toBeVisible();
+    expect(screen.queryByText('Schedule not set')).not.toBeInTheDocument();
+    expect(screen.queryByText('Timezone not set')).not.toBeInTheDocument();
   });
 
   it('keeps private notes and explicit user replies visually and behaviorally distinct with read-back', async () => {

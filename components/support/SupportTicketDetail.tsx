@@ -208,21 +208,25 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
                   label="Assigned team"
                   value={ticket.assigned_team ?? 'Unassigned'}
                 />
-                {ticket.response_expectation.text ? (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    {ticket.response_expectation.text}
-                    {(ticket.response_expectation.support_hours.schedule ||
-                      ticket.response_expectation.support_hours.timezone) && (
-                      <Typography variant="caption" display="block">
-                        {ticket.response_expectation.support_hours.schedule ??
-                          'Schedule not set'}{' '}
-                        ·{' '}
-                        {ticket.response_expectation.support_hours.timezone ??
-                          'Timezone not set'}
-                      </Typography>
-                    )}
-                  </Alert>
-                ) : null}
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="caption" display="block">
+                    Response expectation · {ticket.response_expectation.locale}
+                  </Typography>
+                  {ticket.response_expectation.text ? (
+                    <Typography>{ticket.response_expectation.text}</Typography>
+                  ) : null}
+                  {(ticket.response_expectation.support_hours.schedule ||
+                    ticket.response_expectation.support_hours.timezone) && (
+                    <Typography variant="caption" display="block">
+                      {[
+                        ticket.response_expectation.support_hours.schedule,
+                        ticket.response_expectation.support_hours.timezone,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Typography>
+                  )}
+                </Alert>
               </Section>
 
               <Section title="Transcript">
