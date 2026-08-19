@@ -3,6 +3,7 @@ import {
   assignSupportTicket,
   changeSupportTicketPriority,
   changeSupportTicketStatus,
+  getSupportTicketAttachment,
   getSupportTicket,
   reconcileSupportTicketDeliveries,
   reopenSupportTicket,
@@ -47,6 +48,7 @@ describe('support admin api', () => {
 
   it('uses the backend-owned detail and command endpoints without client lifecycle logic', async () => {
     await getSupportTicket('ticket-1');
+    await getSupportTicketAttachment('ticket/1', 'attachment/1');
     await assignSupportTicket('ticket-1', 'tier_2');
     await changeSupportTicketPriority('ticket-1', 'urgent');
     await changeSupportTicketStatus('ticket-1', 'waiting_for_user');
@@ -59,6 +61,12 @@ describe('support admin api', () => {
 
     expect((adminAuthFetch as jest.Mock).mock.calls).toEqual([
       [{ path: '/support-chat/admin/tickets/ticket-1', method: 'GET' }],
+      [
+        {
+          path: '/support-chat/admin/tickets/ticket%2F1/attachments/attachment%2F1',
+          method: 'GET',
+        },
+      ],
       [
         {
           path: '/support-chat/admin/tickets/ticket-1/assignment',

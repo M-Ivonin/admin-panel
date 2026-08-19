@@ -80,6 +80,12 @@ export interface SupportAttachment {
   created_at: string;
 }
 
+export interface SupportAttachmentAccess {
+  attachment: SupportAttachment;
+  signed_url: string;
+  expires_in_seconds: number;
+}
+
 export interface SupportTicketReply {
   id: string;
   sender_type: string;
@@ -224,6 +230,20 @@ export async function getSupportTicket(
     method: 'GET',
   });
   return parseSupportResponse(response, 'Failed to load support ticket');
+}
+
+export async function getSupportTicketAttachment(
+  ticketId: string,
+  attachmentId: string
+): Promise<SupportAttachmentAccess> {
+  const response = await adminAuthFetch({
+    path: ticketPath(
+      ticketId,
+      `/attachments/${encodeURIComponent(attachmentId)}`
+    ),
+    method: 'GET',
+  });
+  return parseSupportResponse(response, 'Failed to open attachment');
 }
 
 export function assignSupportTicket(

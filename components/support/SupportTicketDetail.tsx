@@ -22,6 +22,7 @@ import {
   assignSupportTicket,
   changeSupportTicketPriority,
   changeSupportTicketStatus,
+  getSupportTicketAttachment,
   getSupportTicket,
   reconcileSupportTicketDeliveries,
   reopenSupportTicket,
@@ -114,6 +115,28 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
         commandError instanceof Error
           ? commandError.message
           : 'Support operation failed'
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openAttachment = async (attachmentId: string) => {
+    const key = `attachment-${attachmentId}`;
+    setBusy(key);
+    setError(null);
+    setSuccess(null);
+    try {
+      const attachment = await getSupportTicketAttachment(
+        ticketId,
+        attachmentId
+      );
+      window.open(attachment.signed_url, '_blank', 'noopener,noreferrer');
+    } catch (attachmentError) {
+      setError(
+        attachmentError instanceof Error
+          ? attachmentError.message
+          : 'Failed to open attachment'
       );
     } finally {
       setBusy(null);
@@ -550,6 +573,17 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
                       <Typography variant="caption">
                         {formatDate(attachment.created_at)}
                       </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        disabled={busy !== null}
+                        onClick={() => void openAttachment(attachment.id)}
+                        sx={{ mt: 1, display: 'flex', width: 'fit-content' }}
+                      >
+                        {busy === `attachment-${attachment.id}`
+                          ? 'Opening…'
+                          : `View ${attachment.file_name}`}
+                      </Button>
                     </Paper>
                   ))}
                   {ticket.attachments.length === 0 ? (

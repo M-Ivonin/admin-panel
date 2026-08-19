@@ -9,6 +9,7 @@ import { SupportTicketDetail } from '@/components/support/SupportTicketDetail';
 import {
   addSupportPrivateNote,
   changeSupportTicketStatus,
+  getSupportTicketAttachment,
   getSupportTicket,
   replyToSupportTicketUser,
   retrySupportDelivery,
@@ -38,6 +39,7 @@ jest.mock('@/lib/api/support', () => {
     assignSupportTicket: jest.fn(),
     changeSupportTicketPriority: jest.fn(),
     changeSupportTicketStatus: jest.fn(),
+    getSupportTicketAttachment: jest.fn(),
     getSupportTicket: jest.fn(),
     reconcileSupportTicketDeliveries: jest.fn(),
     reopenSupportTicket: jest.fn(),
@@ -139,6 +141,11 @@ describe('SupportTicketDetail', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (getSupportTicket as jest.Mock).mockResolvedValue(ticket);
+    (getSupportTicketAttachment as jest.Mock).mockResolvedValue({
+      attachment: ticket.attachments[0],
+      signed_url: 'https://private.example/signed-settings',
+      expires_in_seconds: 60,
+    });
     (addSupportPrivateNote as jest.Mock).mockResolvedValue({ changed: true });
     (replyToSupportTicketUser as jest.Mock).mockResolvedValue({
       changed: true,
@@ -162,6 +169,53 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('Response expectation · en-US')).toBeVisible();
     expect(screen.getAllByText(/Aug 19, 2026/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/object_key/i)).not.toBeInTheDocument();
+  });
+
+  it('fetches a private attachment URL only on demand and opens it without an opener or referrer', async () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+    await screen.findByText('settings.png');
+
+    expect(getSupportTicketAttachment).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('https://private.example/signed-settings')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View settings.png' }));
+
+    await waitFor(() => {
+      expect(getSupportTicketAttachment).toHaveBeenCalledWith(
+        ticket.id,
+        'attachment-1'
+      );
+      expect(open).toHaveBeenCalledWith(
+        'https://private.example/signed-settings',
+        '_blank',
+        'noopener,noreferrer'
+      );
+    });
+    expect(
+      screen.queryByText('https://private.example/signed-settings')
+    ).not.toBeInTheDocument();
+
+    open.mockRestore();
+  });
+
+  it('surfaces an attachment access failure without opening a tab', async () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    (getSupportTicketAttachment as jest.Mock).mockRejectedValue(
+      new Error('Attachment access expired')
+    );
+
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+    await screen.findByText('settings.png');
+    fireEvent.click(screen.getByRole('button', { name: 'View settings.png' }));
+
+    expect(await screen.findByText('Attachment access expired')).toBeVisible();
+    expect(open).not.toHaveBeenCalled();
+
+    open.mockRestore();
   });
 
   it('shows the response expectation locale when expectation text is null without fallback copy', async () => {
