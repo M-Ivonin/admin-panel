@@ -25,6 +25,7 @@ import {
   Settings,
   BugReport,
   SportsSoccer,
+  SupportAgent,
 } from '@mui/icons-material';
 
 export default function DashboardPage() {
@@ -75,6 +76,35 @@ export default function DashboardPage() {
               gap: 3,
             }}
           >
+            <Link href="/support/tickets" style={{ textDecoration: 'none' }}>
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: 'primary.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
+                  >
+                    <SupportAgent />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Support tickets
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Search, inspect, reply, and manage delivery outcomes
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
             {/* Bot Chat Card */}
             <Link href="/dashboard/bot-chat" style={{ textDecoration: 'none' }}>
               <Card

@@ -3,9 +3,19 @@ import type { NextRequest } from 'next/server';
 import { i18n } from '@/lib/i18n/config';
 import { DEEPLINK_ROUTE_PREFIXES } from '@/modules/deeplink/constants';
 
-const AUTH_ROUTE_PREFIXES = ['/admin-login', '/login', '/magic-auth', '/magic-verify'] as const;
-const ADMIN_ROUTE_PREFIXES = ['/dashboard'] as const;
-const STATIC_ROUTE_PREFIXES = ['/api', '/_next', '/favicon.ico', '/assets'] as const;
+const AUTH_ROUTE_PREFIXES = [
+  '/admin-login',
+  '/login',
+  '/magic-auth',
+  '/magic-verify',
+] as const;
+const ADMIN_ROUTE_PREFIXES = ['/dashboard', '/support'] as const;
+const STATIC_ROUTE_PREFIXES = [
+  '/api',
+  '/_next',
+  '/favicon.ico',
+  '/assets',
+] as const;
 const PUBLIC_INFRA_PATHS = ['/robots.txt', '/sitemap.xml'] as const;
 
 function matchesPrefix(pathname: string, prefix: string) {
@@ -54,14 +64,16 @@ export function proxy(request: NextRequest) {
   }
 
   if (pathname === '/') {
-    return NextResponse.redirect(new URL(`/${i18n.defaultLocale}`, request.url));
+    return NextResponse.redirect(
+      new URL(`/${i18n.defaultLocale}`, request.url)
+    );
   }
 
-  return NextResponse.redirect(new URL(`/${i18n.defaultLocale}${pathname}`, request.url));
+  return NextResponse.redirect(
+    new URL(`/${i18n.defaultLocale}${pathname}`, request.url)
+  );
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
