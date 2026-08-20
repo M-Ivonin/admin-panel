@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { SupportAgent } from '@mui/icons-material';
 import {
   Alert,
@@ -68,6 +69,7 @@ function label(value: string) {
 }
 
 export function SupportTicketsPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
@@ -264,9 +266,19 @@ export function SupportTicketsPage() {
                 </TableHead>
                 <TableBody>
                   {result.items.map((ticket) => (
-                    <TableRow key={ticket.id} hover>
+                    <TableRow
+                      key={ticket.id}
+                      hover
+                      onClick={() =>
+                        router.push(`/support/tickets/${ticket.id}`)
+                      }
+                      sx={{ cursor: 'pointer' }}
+                    >
                       <TableCell>
-                        <Link href={`/support/tickets/${ticket.id}`}>
+                        <Link
+                          href={`/support/tickets/${ticket.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {ticket.number}
                         </Link>
                         <Typography
@@ -356,6 +368,7 @@ function FilterSelect({
     <TextField
       select
       SelectProps={{ native: true }}
+      InputLabelProps={{ shrink: true }}
       size="small"
       label={selectLabel}
       value={value}

@@ -8,6 +8,12 @@ import {
 import { SupportTicketsPage } from '@/components/support/SupportTicketsPage';
 import { searchSupportTickets } from '@/lib/api/support';
 
+const pushMock = jest.fn();
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 jest.mock('next/link', () => ({
   __esModule: true,
   default: jest
@@ -31,6 +37,7 @@ jest.mock('@/lib/api/support', () => {
 
 describe('SupportTicketsPage', () => {
   beforeEach(() => {
+    pushMock.mockReset();
     (searchSupportTickets as jest.Mock).mockReset().mockResolvedValue({
       items: [
         {
@@ -53,6 +60,30 @@ describe('SupportTicketsPage', () => {
       total: 1,
       has_more: false,
     });
+  });
+
+  it('keeps filter labels clear of the All option', async () => {
+    render(<SupportTicketsPage />);
+
+    await screen.findByRole('link', { name: /SB-AB12CD/i });
+    for (const name of ['Category', 'Status', 'Priority', 'Plan', 'Platform']) {
+      expect(screen.getByText(name, { selector: 'label' })).toHaveClass(
+        'MuiInputLabel-shrink'
+      );
+    }
+  });
+
+  it('opens ticket breakdown when the user clicks anywhere on its row', async () => {
+    render(<SupportTicketsPage />);
+
+    const ticketLink = await screen.findByRole('link', {
+      name: /SB-AB12CD/i,
+    });
+    fireEvent.click(ticketLink.closest('tr')!);
+
+    expect(pushMock).toHaveBeenCalledWith(
+      '/support/tickets/73b7da7c-c659-49d7-8848-7c5ab7d5d5bd'
+    );
   });
 
   it('searches ticket number, user id, or email and applies all backend filters', async () => {
