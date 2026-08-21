@@ -188,16 +188,14 @@ describe('SupportTicketDetail', () => {
     (deleteSupportTicket as jest.Mock).mockResolvedValue({ deleted: true });
   });
 
-  it('shows ticket metadata without repeating the main chat transcript', async () => {
+  it('shows authoritative context, transcript, attachments, audit timestamps, and delivery outcomes', async () => {
     render(<SupportTicketDetail ticketId={ticket.id} />);
 
     expect(
       await screen.findByText('Push notifications do not arrive')
     ).toBeVisible();
-    expect(screen.queryByText('Transcript')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Notifications stopped yesterday')
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('Transcript')).toBeVisible();
+    expect(screen.getByText('Notifications stopped yesterday')).toBeVisible();
     expect(screen.getByText('settings.png')).toBeVisible();
     expect(screen.getByText('provider_timeout')).toBeVisible();
     expect(screen.getByText('Usually within one business day')).toBeVisible();
