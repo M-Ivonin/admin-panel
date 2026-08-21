@@ -10,6 +10,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -367,18 +368,24 @@ function FilterSelect({
   return (
     <TextField
       select
-      SelectProps={{ native: true }}
+      SelectProps={{
+        displayEmpty: true,
+        renderValue: (selected) => {
+          const selectedValue = String(selected);
+          return selectedValue ? label(selectedValue) : 'All';
+        },
+      }}
       InputLabelProps={{ shrink: true }}
       size="small"
       label={selectLabel}
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
-      <option value="">All</option>
+      <MenuItem value="">All</MenuItem>
       {options.map((option) => (
-        <option key={option} value={option}>
+        <MenuItem key={option} value={option}>
           {label(option)}
-        </option>
+        </MenuItem>
       ))}
     </TextField>
   );

@@ -10,6 +10,11 @@ import { searchSupportTickets } from '@/lib/api/support';
 
 const pushMock = jest.fn();
 
+function selectFilter(label: string, option: string) {
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: label }));
+  fireEvent.click(screen.getByRole('option', { name: option }));
+}
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
@@ -62,14 +67,14 @@ describe('SupportTicketsPage', () => {
     });
   });
 
-  it('keeps filter labels clear of the All option', async () => {
+  it('keeps filter labels clear of the All value', async () => {
     render(<SupportTicketsPage />);
 
     await screen.findByRole('link', { name: /SB-AB12CD/i });
     for (const name of ['Category', 'Status', 'Priority', 'Plan', 'Platform']) {
-      expect(screen.getByText(name, { selector: 'label' })).toHaveClass(
-        'MuiInputLabel-shrink'
-      );
+      const select = screen.getByRole('combobox', { name });
+      expect(select).toHaveTextContent('All');
+      expect(select).not.toHaveTextContent(name);
     }
   });
 
@@ -93,21 +98,11 @@ describe('SupportTicketsPage', () => {
     fireEvent.change(screen.getByLabelText('Search tickets'), {
       target: { value: 'user@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Category'), {
-      target: { value: 'technical_issue' },
-    });
-    fireEvent.change(screen.getByLabelText('Status'), {
-      target: { value: 'open' },
-    });
-    fireEvent.change(screen.getByLabelText('Priority'), {
-      target: { value: 'high' },
-    });
-    fireEvent.change(screen.getByLabelText('Plan'), {
-      target: { value: 'playmaker' },
-    });
-    fireEvent.change(screen.getByLabelText('Platform'), {
-      target: { value: 'ios' },
-    });
+    selectFilter('Category', 'technical issue');
+    selectFilter('Status', 'open');
+    selectFilter('Priority', 'high');
+    selectFilter('Plan', 'playmaker');
+    selectFilter('Platform', 'ios');
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
 
     await waitFor(() => {
