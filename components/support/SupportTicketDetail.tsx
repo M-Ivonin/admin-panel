@@ -82,15 +82,6 @@ function safeTechnicalData(value: unknown): unknown {
   );
 }
 
-function jsonText(value: unknown) {
-  if (typeof value === 'string') return value;
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const text = (value as Record<string, unknown>).text;
-    if (typeof text === 'string') return text;
-  }
-  return JSON.stringify(value, null, 2);
-}
-
 export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
   const router = useRouter();
   const [ticket, setTicket] = useState<SupportTicketDetailResponse | null>(
@@ -318,44 +309,6 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
                     </Typography>
                   )}
                 </Alert>
-              </Section>
-
-              <Section title="Transcript">
-                <Stack spacing={1.5}>
-                  {ticket.transcript.map((entry, index) => (
-                    <Paper
-                      key={`${entry.created_at ?? 'entry'}-${index}`}
-                      variant="outlined"
-                      sx={{ p: 2 }}
-                    >
-                      <Stack
-                        direction="row"
-                        justifyContent="space-between"
-                        gap={2}
-                      >
-                        <Typography fontWeight={700}>
-                          {entry.sender_type ?? 'Unknown sender'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDate(entry.created_at)}
-                        </Typography>
-                      </Stack>
-                      <Typography
-                        sx={{
-                          whiteSpace: 'pre-wrap',
-                          overflowWrap: 'anywhere',
-                        }}
-                      >
-                        {jsonText(entry.content)}
-                      </Typography>
-                    </Paper>
-                  ))}
-                  {ticket.transcript.length === 0 ? (
-                    <Typography color="text.secondary">
-                      No transcript recorded.
-                    </Typography>
-                  ) : null}
-                </Stack>
               </Section>
 
               <Section title="Ticket conversation">
