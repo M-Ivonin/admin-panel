@@ -13,8 +13,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { SupportAgent } from '@mui/icons-material';
+import { DownloadOutlined, SupportAgent } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { downloadSupportAuditJson } from '@/components/support/audit-export';
 import {
   SUPPORT_PRIORITIES,
   SUPPORT_STATUSES,
@@ -711,34 +712,26 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
               </Section>
 
               <Section title="Backend audit timeline">
-                <Stack spacing={1.5}>
-                  {ticket.audit.map((event) => (
-                    <Box key={event.id}>
-                      <Typography fontWeight={700}>
-                        {humanize(event.event_type)}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        display="block"
-                        color="text.secondary"
-                      >
-                        {formatDate(event.created_at)} ·{' '}
-                        {event.actor_type ?? 'unknown actor'}
-                      </Typography>
-                      {event.previous_status || event.new_status ? (
-                        <Typography variant="body2">
-                          {event.previous_status ?? 'none'} →{' '}
-                          {event.new_status ?? 'none'}
-                        </Typography>
-                      ) : null}
-                      <AuditMetadata value={event.data} />
-                    </Box>
-                  ))}
-                  {ticket.audit.length === 0 ? (
-                    <Typography color="text.secondary">
-                      No audit events recorded.
-                    </Typography>
-                  ) : null}
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                  justifyContent="space-between"
+                  gap={1.5}
+                >
+                  <Typography color="text.secondary" variant="body2">
+                    {ticket.audit.length}{' '}
+                    {ticket.audit.length === 1 ? 'event' : 'events'}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DownloadOutlined />}
+                    onClick={() =>
+                      downloadSupportAuditJson(ticket.number, ticket.audit)
+                    }
+                  >
+                    Download audit JSON
+                  </Button>
                 </Stack>
               </Section>
             </Stack>
@@ -904,17 +897,6 @@ function ReadableMetadata({ value }: { value: unknown }) {
         </Box>
       ))}
     </Stack>
-  );
-}
-
-function AuditMetadata({ value }: { value: unknown }) {
-  if (!isRecord(value) || Object.keys(value).length === 0) return null;
-
-  return (
-    <Box>
-      <ReadableMetadata value={value} />
-      <JsonDetails value={value} />
-    </Box>
   );
 }
 

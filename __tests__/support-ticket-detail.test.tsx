@@ -194,7 +194,18 @@ describe('SupportTicketDetail', () => {
     expect(screen.queryByText(/object_key/i)).not.toBeInTheDocument();
   });
 
-  it('presents context and audit metadata as readable fields without exposing delivery payloads', async () => {
+  it('keeps the audit timeline compact behind a JSON download', async () => {
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+
+    expect(
+      await screen.findByRole('button', { name: 'Download audit JSON' })
+    ).toBeVisible();
+    expect(screen.getByText('2 events')).toBeVisible();
+    expect(screen.queryByText('delivery materialized')).not.toBeInTheDocument();
+    expect(screen.queryByText('Attempt count')).not.toBeInTheDocument();
+  });
+
+  it('presents context metadata as readable fields', async () => {
     render(<SupportTicketDetail ticketId={ticket.id} />);
 
     expect(await screen.findByText('Plan')).toBeVisible();
@@ -207,15 +218,9 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('subscription-locked')).toBeVisible();
     expect(screen.getByText('Troubleshooting attempted')).toBeVisible();
     expect(screen.getByText('reinstalled')).toBeVisible();
-    expect(screen.getByText('Channel')).toBeVisible();
-    expect(screen.getByText('slack')).toBeVisible();
-    expect(screen.getByText('Delivery type')).toBeVisible();
-    expect(screen.getByText('ticket created slack root')).toBeVisible();
-    expect(screen.getByText('Attempt count')).toBeVisible();
     expect(
       screen.queryByText('Private provider payload must not be displayed')
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/\"channel\"/)).not.toBeVisible();
   });
 
   it('fetches a private attachment URL only on demand and opens it without an opener or referrer', async () => {
