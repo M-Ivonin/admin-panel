@@ -25,12 +25,28 @@ commands:
 - resolve and reopen;
 - private note and explicit user-facing reply;
 - delivery reconciliation and deliberate retry of `failed` or `unknown`
-  attempts.
+  attempts;
+- permanently delete a ticket after explicit confirmation.
 
-After every command, the UI reloads ticket detail. Status, audit timestamps,
+After state-changing commands, the UI reloads ticket detail. A successful
+delete instead returns to `/support/tickets`. Status, audit timestamps,
 conversation entries, context, private attachment metadata, and Slack/email/push
 outcomes therefore come from backend read-back. Attachment storage object keys
 and delivery payload text are not displayed.
+
+## Permanent deletion
+
+The detail header exposes `Delete ticket` as a destructive action. Its
+confirmation dialog names the ticket and explains that deletion cannot be
+undone. Cancel closes the dialog without calling the backend; `Delete
+permanently` calls `DELETE /support-chat/admin/tickets/:id` and navigates back
+to the ticket list only after success.
+
+The backend purge removes the ticket, its terminal source conversation and
+messages, replies, audit events, deliveries, ticket-derived support analytics,
+and private attachment objects. It preserves the authenticated user account
+and unrelated support conversations. If deletion fails, the page stays open
+and displays the backend error so the operator can retry.
 
 ## Private note versus user reply
 
@@ -64,7 +80,7 @@ npm run build
 For a live walkthrough, use a configured non-production backend, an existing
 admin account included in that environment's `ADMIN_EMAILS`, and a disposable
 support ticket. Verify search -> open -> private note -> user-facing reply ->
-status change -> delivery-state read-back. Inspect backend delivery/audit rows
+status change -> delivery-state read-back -> confirmed deletion. Inspect backend delivery/audit rows
 before retrying a delivery; a command response alone is not provider-success
 proof. Do not use a production inbox, Slack channel, push target, or email
 recipient without separate approval.

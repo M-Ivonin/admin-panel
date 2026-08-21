@@ -3,6 +3,7 @@ import {
   assignSupportTicket,
   changeSupportTicketPriority,
   changeSupportTicketStatus,
+  deleteSupportTicket,
   getSupportTicketAttachment,
   getSupportTicket,
   reconcileSupportTicketDeliveries,
@@ -52,6 +53,7 @@ describe('support admin api', () => {
     await assignSupportTicket('ticket-1', 'tier_2');
     await changeSupportTicketPriority('ticket-1', 'urgent');
     await changeSupportTicketStatus('ticket-1', 'waiting_for_user');
+    await deleteSupportTicket('ticket-1');
     await addSupportPrivateNote('ticket-1', 'Internal only');
     await replyToSupportTicketUser('ticket-1', 'Visible to user');
     await resolveSupportTicket('ticket-1');
@@ -86,6 +88,12 @@ describe('support admin api', () => {
           path: '/support-chat/admin/tickets/ticket-1/status',
           method: 'PATCH',
           body: JSON.stringify({ status: 'waiting_for_user' }),
+        },
+      ],
+      [
+        {
+          path: '/support-chat/admin/tickets/ticket-1',
+          method: 'DELETE',
         },
       ],
       [

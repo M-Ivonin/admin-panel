@@ -9,11 +9,18 @@ import { SupportTicketDetail } from '@/components/support/SupportTicketDetail';
 import {
   addSupportPrivateNote,
   changeSupportTicketStatus,
+  deleteSupportTicket,
   getSupportTicketAttachment,
   getSupportTicket,
   replyToSupportTicketUser,
   retrySupportDelivery,
 } from '@/lib/api/support';
+
+const pushMock = jest.fn();
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
 
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -39,6 +46,7 @@ jest.mock('@/lib/api/support', () => {
     assignSupportTicket: jest.fn(),
     changeSupportTicketPriority: jest.fn(),
     changeSupportTicketStatus: jest.fn(),
+    deleteSupportTicket: jest.fn(),
     getSupportTicketAttachment: jest.fn(),
     getSupportTicket: jest.fn(),
     reconcileSupportTicketDeliveries: jest.fn(),
@@ -177,6 +185,7 @@ describe('SupportTicketDetail', () => {
       changed: true,
     });
     (retrySupportDelivery as jest.Mock).mockResolvedValue({ deliveries: [] });
+    (deleteSupportTicket as jest.Mock).mockResolvedValue({ deleted: true });
   });
 
   it('shows authoritative context, transcript, attachments, audit timestamps, and delivery outcomes', async () => {
@@ -203,6 +212,33 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('2 events')).toBeVisible();
     expect(screen.queryByText('delivery materialized')).not.toBeInTheDocument();
     expect(screen.queryByText('Attempt count')).not.toBeInTheDocument();
+  });
+
+  it('deletes the ticket only after confirmation and returns to the list', async () => {
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Delete ticket' })
+    );
+    expect(screen.getByRole('dialog', { name: 'Delete ticket?' })).toBeVisible();
+    expect(deleteSupportTicket).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete ticket' }));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Delete permanently',
+      })
+    );
+
+    await waitFor(() => {
+      expect(deleteSupportTicket).toHaveBeenCalledWith(ticket.id);
+      expect(pushMock).toHaveBeenCalledWith('/support/tickets');
+    });
   });
 
   it('presents context metadata as readable fields', async () => {

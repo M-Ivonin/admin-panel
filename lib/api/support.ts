@@ -186,7 +186,7 @@ function ticketPath(ticketId: string, suffix = '') {
 
 async function command(
   path: string,
-  method: 'PATCH' | 'POST',
+  method: 'DELETE' | 'PATCH' | 'POST',
   body?: unknown
 ): Promise<SupportMutationResponse> {
   const response = await adminAuthFetch({
@@ -244,6 +244,14 @@ export async function getSupportTicketAttachment(
     method: 'GET',
   });
   return parseSupportResponse(response, 'Failed to open attachment');
+}
+
+export async function deleteSupportTicket(
+  ticketId: string
+): Promise<{ deleted: boolean }> {
+  return command(ticketPath(ticketId), 'DELETE') as Promise<{
+    deleted: boolean;
+  }>;
 }
 
 export function assignSupportTicket(

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -8,12 +9,20 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
-import { DownloadOutlined, SupportAgent } from '@mui/icons-material';
+import {
+  DeleteOutline,
+  DownloadOutlined,
+  SupportAgent,
+} from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { downloadSupportAuditJson } from '@/components/support/audit-export';
 import {
@@ -23,6 +32,7 @@ import {
   assignSupportTicket,
   changeSupportTicketPriority,
   changeSupportTicketStatus,
+  deleteSupportTicket,
   getSupportTicketAttachment,
   getSupportTicket,
   reconcileSupportTicketDeliveries,
@@ -82,6 +92,7 @@ function jsonText(value: unknown) {
 }
 
 export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
+  const router = useRouter();
   const [ticket, setTicket] = useState<SupportTicketDetailResponse | null>(
     null
   );
@@ -94,6 +105,7 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
   const [status, setStatus] = useState<SupportStatus>('open');
   const [privateNote, setPrivateNote] = useState('');
   const [userReply, setUserReply] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const readBack = useCallback(
     async (showLoading = false) => {
@@ -169,6 +181,24 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
     }
   };
 
+  const deleteTicket = async () => {
+    setBusy('delete-ticket');
+    setError(null);
+    setSuccess(null);
+    try {
+      await deleteSupportTicket(ticketId);
+      router.push('/support/tickets');
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'Failed to delete ticket'
+      );
+      setDeleteDialogOpen(false);
+      setBusy(null);
+    }
+  };
+
   if (loading) {
     return (
       <Stack minHeight="60vh" alignItems="center" justifyContent="center">
@@ -200,6 +230,18 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
         backLabel="All tickets"
         titleAddon={
           <Chip size="small" label={humanize(ticket.status)} color="primary" />
+        }
+        actions={
+          <Button
+            color="error"
+            variant="outlined"
+            size="small"
+            startIcon={<DeleteOutline />}
+            disabled={busy !== null}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Delete ticket
+          </Button>
         }
       />
       <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, py: 4 }}>
@@ -738,6 +780,37 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
           </Box>
         </Stack>
       </Box>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          if (busy !== 'delete-ticket') setDeleteDialogOpen(false);
+        }}
+      >
+        <DialogTitle>Delete ticket?</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mt: 1 }}>
+            This permanently deletes {ticket.number}, including its audit
+            events, deliveries, replies, and attachments. This action cannot be
+            undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            disabled={busy === 'delete-ticket'}
+            onClick={() => setDeleteDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={busy === 'delete-ticket'}
+            onClick={() => void deleteTicket()}
+          >
+            {busy === 'delete-ticket' ? 'Deleting…' : 'Delete permanently'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
