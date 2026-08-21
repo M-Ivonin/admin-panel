@@ -46,6 +46,31 @@ function humanize(value: string) {
   return value.replace(/_/g, ' ');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function displayValue(value: unknown) {
+  if (value === null || value === undefined || value === '')
+    return 'Not recorded';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+function safeTechnicalData(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(safeTechnicalData);
+  if (!isRecord(value)) return value;
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !['payload', 'object_key'].includes(key))
+      .map(([key, entry]) => [key, safeTechnicalData(entry)])
+  );
+}
+
 function jsonText(value: unknown) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -552,7 +577,7 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
               </Section>
 
               <Section title="Account, device, and issue context">
-                <JsonBlock value={ticket.context} />
+                <ContextSummary value={ticket.context} />
               </Section>
 
               <Section title="Attachments">
@@ -706,10 +731,7 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
                           {event.new_status ?? 'none'}
                         </Typography>
                       ) : null}
-                      {event.data &&
-                      Object.keys(event.data as object).length > 0 ? (
-                        <JsonBlock value={event.data} />
-                      ) : null}
+                      <AuditMetadata value={event.data} />
                     </Box>
                   ))}
                   {ticket.audit.length === 0 ? (
@@ -763,13 +785,159 @@ function JsonBlock({ value }: { value: unknown }) {
         m: 0,
         p: 1.5,
         borderRadius: 1,
-        bgcolor: 'grey.100',
+        bgcolor: 'action.hover',
+        color: 'text.primary',
+        border: 1,
+        borderColor: 'divider',
         fontSize: 12,
         whiteSpace: 'pre-wrap',
         overflowWrap: 'anywhere',
       }}
     >
-      {JSON.stringify(value, null, 2)}
+      {JSON.stringify(safeTechnicalData(value), null, 2)}
+    </Box>
+  );
+}
+
+function MetadataGrid({
+  entries,
+}: {
+  entries: Array<[label: string, value: unknown]>;
+}) {
+  const visible = entries.filter(([, value]) => value !== undefined);
+  if (visible.length === 0) return null;
+
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: 1,
+        mt: 1,
+      }}
+    >
+      {visible.map(([label, value]) => (
+        <Box
+          key={label}
+          sx={{
+            minWidth: 0,
+            p: 1.25,
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            bgcolor: 'action.hover',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" display="block">
+            {label}
+          </Typography>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            sx={{ overflowWrap: 'anywhere' }}
+          >
+            {displayValue(value)}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function ContextSummary({ value }: { value: unknown }) {
+  return (
+    <Stack spacing={2}>
+      <ReadableMetadata value={value} />
+      <JsonDetails value={value} />
+    </Stack>
+  );
+}
+
+function readableLabel(value: string) {
+  return humanize(value).replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function ReadableMetadata({ value }: { value: unknown }) {
+  const safeValue = safeTechnicalData(value);
+  if (Array.isArray(safeValue)) {
+    return (
+      <Stack spacing={1}>
+        {safeValue.map((entry, index) => (
+          <ReadableMetadata key={index} value={entry} />
+        ))}
+      </Stack>
+    );
+  }
+  if (!isRecord(safeValue)) {
+    return (
+      <Chip
+        size="small"
+        label={displayValue(safeValue)}
+        sx={{ width: 'fit-content' }}
+      />
+    );
+  }
+
+  const scalarEntries = Object.entries(safeValue).filter(
+    ([, entry]) => !isRecord(entry) && !Array.isArray(entry)
+  );
+  const nestedEntries = Object.entries(safeValue).filter(
+    ([, entry]) => isRecord(entry) || Array.isArray(entry)
+  );
+
+  return (
+    <Stack spacing={1.5}>
+      <MetadataGrid
+        entries={scalarEntries.map(([key, entry]) => [
+          readableLabel(key),
+          key.endsWith('_type') && typeof entry === 'string'
+            ? humanize(entry)
+            : entry,
+        ])}
+      />
+      {nestedEntries.map(([key, entry]) => (
+        <Box key={key}>
+          <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
+            {readableLabel(key)}
+          </Typography>
+          <ReadableMetadata value={entry} />
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
+function AuditMetadata({ value }: { value: unknown }) {
+  if (!isRecord(value) || Object.keys(value).length === 0) return null;
+
+  return (
+    <Box>
+      <ReadableMetadata value={value} />
+      <JsonDetails value={value} />
+    </Box>
+  );
+}
+
+function JsonDetails({ value }: { value: unknown }) {
+  return (
+    <Box
+      component="details"
+      sx={{
+        mt: 1.25,
+        color: 'text.secondary',
+        '&[open]': { color: 'text.primary' },
+      }}
+    >
+      <Typography
+        component="summary"
+        variant="caption"
+        sx={{ cursor: 'pointer' }}
+      >
+        Technical details
+      </Typography>
+      <Box sx={{ mt: 1 }}>
+        <JsonBlock value={value} />
+      </Box>
     </Box>
   );
 }

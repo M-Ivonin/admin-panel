@@ -74,7 +74,13 @@ const ticket = {
   ],
   context: {
     account: { plan: 'playmaker', language: 'en-US' },
-    client: { platform: 'ios', app_version: '3.2.1', device_model: 'iPhone' },
+    client: {
+      platform: 'ios',
+      os_version: '18.6',
+      app_version: '3.2.1',
+      device_model: 'iPhone',
+    },
+    issue_snapshot: { issue_id: 'subscription-locked' },
     troubleshooting_attempted: ['reinstalled'],
     articles_used: ['push-help'],
   },
@@ -115,6 +121,23 @@ const ticket = {
       new_status: 'open',
       data: {},
       created_at: '2026-08-19T08:00:00.000Z',
+    },
+    {
+      id: 'event-2',
+      event_type: 'delivery_materialized',
+      actor_type: 'system',
+      actor_id: null,
+      previous_status: null,
+      new_status: 'pending',
+      data: {
+        channel: 'slack',
+        destination: 'support-alerts',
+        delivery_type: 'ticket_created_slack_root',
+        delivery_id: 'delivery-2',
+        attempt_count: 2,
+        payload: { text: 'Private provider payload must not be displayed' },
+      },
+      created_at: '2026-08-19T08:01:00.000Z',
     },
   ],
   deliveries: [
@@ -169,6 +192,30 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('Response expectation · en-US')).toBeVisible();
     expect(screen.getAllByText(/Aug 19, 2026/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/object_key/i)).not.toBeInTheDocument();
+  });
+
+  it('presents context and audit metadata as readable fields without exposing delivery payloads', async () => {
+    render(<SupportTicketDetail ticketId={ticket.id} />);
+
+    expect(await screen.findByText('Plan')).toBeVisible();
+    expect(screen.getByText('playmaker')).toBeVisible();
+    expect(screen.getByText('Platform')).toBeVisible();
+    expect(screen.getByText('ios')).toBeVisible();
+    expect(screen.getByText('Os version')).toBeVisible();
+    expect(screen.getByText('18.6')).toBeVisible();
+    expect(screen.getByText('Issue id')).toBeVisible();
+    expect(screen.getByText('subscription-locked')).toBeVisible();
+    expect(screen.getByText('Troubleshooting attempted')).toBeVisible();
+    expect(screen.getByText('reinstalled')).toBeVisible();
+    expect(screen.getByText('Channel')).toBeVisible();
+    expect(screen.getByText('slack')).toBeVisible();
+    expect(screen.getByText('Delivery type')).toBeVisible();
+    expect(screen.getByText('ticket created slack root')).toBeVisible();
+    expect(screen.getByText('Attempt count')).toBeVisible();
+    expect(
+      screen.queryByText('Private provider payload must not be displayed')
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/\"channel\"/)).not.toBeVisible();
   });
 
   it('fetches a private attachment URL only on demand and opens it without an opener or referrer', async () => {
