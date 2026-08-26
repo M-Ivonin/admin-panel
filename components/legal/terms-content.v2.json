@@ -1,4 +1,10 @@
 {
+  "publication": {
+    "identifier": "sirbro-terms-runtime-v2.0",
+    "version": "2.0",
+    "effectiveDate": "2026-08-26"
+  },
+  "locales": {
   "en": [
     {
       "type": "paragraph",
@@ -1436,4 +1442,5 @@
       ]
     }
   ]
+  }
 }

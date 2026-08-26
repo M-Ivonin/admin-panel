@@ -26,12 +26,21 @@ const publicationLocaleBySiteLocale: Record<Locale, PublicationLocale> = {
 };
 
 const termsLastUpdatedByLocale: Record<Locale, string> = {
-  en: 'Last updated: 26 August 2026',
-  es: 'Última actualización: 26 de agosto de 2026',
-  pt: 'Última atualização: 26 de agosto de 2026',
+  en: 'Version 2.0 · Effective 26 August 2026',
+  es: 'Versión 2.0 · Vigente desde el 26 de agosto de 2026',
+  pt: 'Versão 2.0 · Em vigor desde 26 de agosto de 2026',
 };
 
-const termsBlocks = approvedTerms as Record<PublicationLocale, TermsBlock[]>;
+type ApprovedTerms = {
+  publication: {
+    identifier: 'sirbro-terms-runtime-v2.0';
+    version: '2.0';
+    effectiveDate: '2026-08-26';
+  };
+  locales: Record<PublicationLocale, TermsBlock[]>;
+};
+
+const termsRelease = approvedTerms as ApprovedTerms;
 
 export function getTermsLastUpdated(locale: Locale): string {
   return termsLastUpdatedByLocale[locale];
@@ -53,7 +62,7 @@ function renderRuns(runs: TermsRun[], keyPrefix: string) {
 }
 
 export function TermsContent({ locale = 'en' }: TermsContentProps) {
-  const blocks = termsBlocks[publicationLocaleBySiteLocale[locale]];
+  const blocks = termsRelease.locales[publicationLocaleBySiteLocale[locale]];
 
   return (
     <div className="space-y-6 text-foreground [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_p]:mb-4">

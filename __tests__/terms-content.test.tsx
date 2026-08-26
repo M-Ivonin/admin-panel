@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { getTermsLastUpdated, TermsContent } from '@/components/legal/TermsContent';
+import TermsEmbedPage from '@/app/(public)/[lang]/(legal)/terms/embed/page';
 
 describe('SirBro Terms of Service', () => {
   it('publishes the approved English service, marketing, and affiliate contract', () => {
@@ -22,7 +23,7 @@ describe('SirBro Terms of Service', () => {
         exact: false,
       })
     ).toBeInTheDocument();
-    expect(getTermsLastUpdated('en')).toBe('Last updated: 26 August 2026');
+    expect(getTermsLastUpdated('en')).toBe('Version 2.0 · Effective 26 August 2026');
   });
 
   it.each([
@@ -36,5 +37,12 @@ describe('SirBro Terms of Service', () => {
     expect(getTermsLastUpdated(locale)).toContain('26');
 
     unmount();
+  });
+
+  it('shows the approved version and effective date in the mobile embed route', async () => {
+    render(await TermsEmbedPage({ params: Promise.resolve({ lang: 'en' }) }));
+
+    expect(screen.getByText('Version 2.0 · Effective 26 August 2026')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(20);
   });
 });
