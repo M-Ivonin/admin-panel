@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Locale } from '@/lib/i18n/config';
-import { TermsContent } from '@/components/legal/TermsContent';
+import { getTermsLastUpdated, TermsContent } from '@/components/legal/TermsContent';
 import { LegalDocumentPage } from '@/components/legal/LegalDocumentPage';
 import { generateLegalPageMetadata } from '@/modules/legal/page-helpers';
 
@@ -16,7 +16,11 @@ export default async function TermsPage({ params }: { params: Promise<{ lang: Lo
   const { lang } = await params;
 
   return (
-    <LegalDocumentPage locale={lang} titleKey="terms">
+    <LegalDocumentPage
+      locale={lang}
+      titleKey="terms"
+      lastUpdated={getTermsLastUpdated(lang)}
+    >
       <TermsContent locale={lang} />
     </LegalDocumentPage>
   );

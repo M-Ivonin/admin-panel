@@ -1,0 +1,1439 @@
+{
+  "en": [
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Welcome to SirBro, an AI-powered sports insights and community app operated by LEVANTEM AI LTD, a company registered in Cyprus (address: Gladstonos, 116, M.Kyprianou House, 3&4th floor, 3032, Limassol, Cyprus)."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "These Terms of Service (\"Terms\") govern your access to and use of the SirBro mobile application, SirBro websites, email preference and partner-information pages, and related services (collectively, the \"Service\")."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "By accessing or using SirBro, you agree to be bound by these Terms. If you do not agree, you may not use the Service. Acceptance of these Terms does not constitute consent to receive optional marketing or betting-partner offers."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "1. Eligibility"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro is intended only for users aged 18 or older. By using the Service, you confirm that you are at least 18 years of age and legally capable of entering into binding contracts under applicable law. A higher minimum age may apply to a third-party offer in your country, state, or province."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "2. Overview of the Service"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro provides:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "AI-generated sports predictions, insights, and statistics;"
+          }
+        ],
+        [
+          {
+            "text": "Sports-related discussions and community chats;"
+          }
+        ],
+        [
+          {
+            "text": "Access to football data and analysis tools; and"
+          }
+        ],
+        [
+          {
+            "text": "Optional email communications and, where separately requested and legally available, information and promotional offers from third-party betting operators."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "All SirBro content and predictions are for entertainment and informational purposes only. SirBro is not a bookmaker, gambling operator, betting exchange, or payment provider. We do not accept bets or manage wagers. SirBro does not provide financial, investment, or betting advice. Any third-party offer is governed by Sections 13 to 15 below."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "3. Account Registration"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "To access certain features, you must create an account using your email address. You agree to provide accurate and up-to-date information and to protect your account credentials. You are responsible for activity conducted through your account."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "4. Acceptable Use"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "You agree not to:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "Use SirBro for any unlawful purpose;"
+          }
+        ],
+        [
+          {
+            "text": "Share, promote, or solicit betting or gambling through SirBro community features;"
+          }
+        ],
+        [
+          {
+            "text": "Post or share harmful, abusive, or misleading content;"
+          }
+        ],
+        [
+          {
+            "text": "Attempt to hack, reverse-engineer, or disrupt the Service;"
+          }
+        ],
+        [
+          {
+            "text": "Use automation, bots, or scrapers without permission;"
+          }
+        ],
+        [
+          {
+            "text": "Circumvent any age, consent, location, security, or offer-eligibility control; or"
+          }
+        ],
+        [
+          {
+            "text": "Access a third-party promotion that is unlawful or unavailable to you."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "5. Community Features"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro includes chat and community functions. You are solely responsible for the content you post. We may moderate or remove content at our discretion to maintain a safe environment and comply with applicable law."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "6. AI-Generated Content"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro uses third-party AI systems. AI-generated information may be inaccurate, incomplete, or outdated. Predictions and probabilities are estimates, not guarantees. You agree to use such information for entertainment and informational purposes only."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "7. Intellectual Property"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "All materials within the Service are owned or licensed by LEVANTEM AI LTD. You are granted a limited, non-exclusive, non-transferable license to use SirBro solely for personal, non-commercial purposes."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "8. Free Access and Premium Subscriptions"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "The App operates on a \"freemium\" model. Users may access a limited, free version of the App which includes base prediction features, standard daily limits, and basic progression."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro also offers optional, auto-renewing premium subscriptions, including the \"Playmaker\" and \"ProBro\" tiers, that unlock enhanced software functionality, higher daily prediction caps, cosmetic profile upgrades, and accelerated virtual progression (XP/BP multipliers). Available products, features, prices, and regional availability are shown in the App Store or Google Play purchase interface and may change."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "9. Subscription Billing and Cancellation"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Payment. ",
+          "bold": true
+        },
+        {
+          "text": "Payment will be charged to your Apple ID or Google Play account at confirmation of purchase."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Auto-Renewal. ",
+          "bold": true
+        },
+        {
+          "text": "Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current billing period, or within any different deadline displayed by the applicable store."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Charges. ",
+          "bold": true
+        },
+        {
+          "text": "Your store account will be charged for renewal within 24 hours before the end of the current period at the price displayed by the applicable store."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Management. ",
+          "bold": true
+        },
+        {
+          "text": "You can manage or cancel subscriptions in your App Store or Google Play account settings. SirBro cannot cancel a store subscription on your behalf. Deleting the App or your SirBro account does not automatically cancel a store subscription."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "No Refunds. ",
+          "bold": true
+        },
+        {
+          "text": "Any unused portion of a free trial period, if offered, will be forfeited when a subscription is purchased. Subscription fees are non-refundable except where required by applicable law or approved under the applicable store rules."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Purchasing a premium subscription strictly grants access to enhanced software features, visual cosmetics, and quality-of-life platform upgrades. A subscription fee is a payment for software services; it is not a deposit, wager, buy-in, or capital for live prediction mechanics. While subscriptions may increase the rate at which users earn virtual Bro Points (BP), BP remains entirely virtual, has no real-world value, and cannot be withdrawn regardless of subscription status."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "10. Virtual Currency (Bro Points / BP) and Virtual Items"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "The App uses a virtual in-app currency known as \"Bro Points\" (BP) and virtual inventory items such as Gamification Cards and Chests. BP and virtual items are strictly for entertainment. They have no real-world monetary value, cannot be redeemed for fiat currency, real-world goods, or services, and cannot be transferred, sold, or exchanged outside the App."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "You acknowledge that you do not own the BP or virtual items in your account. LEVANTEM AI LTD grants you a limited, personal, non-exclusive, non-transferable, and revocable license to use BP and virtual items solely within the App. We reserve the right to manage, regulate, control, modify, or eliminate BP and virtual items, with or without notice, subject to mandatory applicable law."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "11. Live Gamification and \"Picks\""
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "The App features live prediction mechanics, including Live Match Challenges and market simulations, where users can use BP to back certain sports outcomes by acquiring \"Picks.\" These mechanics are simulated games of skill and entertainment. Acquiring a Pick does not constitute purchasing a financial derivative, security, commodity, or placing a real-money wager. \"Net BP\" values are algorithmically determined simulations based on third-party sports data feeds and do not represent financial-market pricing."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "12. Market Halts, Errors, and Voiding Rights"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Live sports data is subject to delays, interruptions, and inaccuracies. LEVANTEM AI LTD may halt, suspend, correct, or cancel live prediction markets or events, including during VAR checks, injuries, or data-feed anomalies."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "If a technical error, latency issue, broadcast delay, data-feed manipulation, or exploit allows a user to acquire or close Picks at incorrect BP values, LEVANTEM AI LTD may void the affected Picks, reverse the transaction, and correct the corresponding BP balance."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "13. Service Communications and Optional Marketing"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "We may send messages necessary to operate your account or the Service, including security, verification, subscription, purchase, legal-policy, and support communications. These messages are not optional marketing."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Optional marketing is controlled separately. Depending on availability, you may independently choose whether to receive: (a) SirBro football predictions, match analysis, and editorial insights; (b) SirBro product, feature, and subscription updates; and (c) promotional betting-partner offers sent by SirBro. We may require double opt-in."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Marketing controls are optional and unchecked unless we already hold valid, specific, and demonstrable consent. Acceptance of these Terms is not marketing consent. You can change topics or withdraw consent at any time through preferences.sirbro.gg, an unsubscribe link, or another method we provide. Withdrawal does not affect your access to the core Service."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "14. Affiliate and Third-Party Betting Offers"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Where legally permitted and separately requested by you, SirBro may send information and promotional offers from third-party betting operators that SirBro has approved as legally eligible for promotion in your location. Depending on the jurisdiction, an operator may be locally licensed, lawfully available under a cross-border permission, or permitted to market without a locally issued license."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro may receive a fixed fee or commission when you follow an affiliate link, register, deposit, complete a qualifying transaction, or perform another specified action. This commercial relationship does not alter SirBro predictions and does not make the operator part of the SirBro Service."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "A partner link may first take you to offers.sirbro.gg, where SirBro may recheck location or eligibility and show the operator, material offer terms, an affiliate disclosure, and responsible-gambling information. You must deliberately choose whether to continue to the operator."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "The presence of an operator or offer does not constitute an endorsement, recommendation, or guarantee. SirBro does not guarantee that an operator or offer is lawful, suitable, available, or acceptable for you, or that a bonus, payout, or other benefit will be provided."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "15. Third-Party Transactions, Data, and Responsible Use"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Any operator account, age or identity verification, deposit, wager, bonus, withdrawal, dispute, or other transaction is exclusively between you and the operator and is governed by the operator’s terms, privacy policy, and applicable law. SirBro does not accept, place, settle, or manage that transaction."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Unless you provide separate and explicit consent for a specifically disclosed data-sharing arrangement, SirBro does not provide a betting operator with your email address, name, date of birth, or direct SirBro account identifier. An operator may independently collect data after you leave SirBro."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "If you choose to visit an operator, you are responsible for confirming that you meet all applicable age, location, and legal requirements. Gambling involves a risk of financial loss and other harm. Never treat a SirBro prediction as a guarantee and never gamble more than you can afford to lose."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "16. Disclaimer of Warranties"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro is provided on an \"as is\" and \"as available\" basis. LEVANTEM AI LTD makes no warranties regarding the accuracy, reliability, completeness, profitability, or availability of the Service, predictions, data, communications, or third-party offers. Nothing in these Terms excludes a warranty or consumer right that cannot legally be excluded."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "17. Limitation of Liability"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "To the fullest extent permitted by law, LEVANTEM AI LTD shall not be liable for indirect, incidental, special, or consequential damages resulting from your use of SirBro, reliance on predictions or data, or dealings with a third-party operator. Nothing in these Terms limits liability that cannot legally be limited. Mandatory consumer rights remain unaffected."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "18. Changes to These Terms"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "We may update these Terms. We will publish the revised date and provide reasonable notice of material changes where required. If applicable law requires affirmative acceptance, we will request it separately. A Terms update does not create, expand, or replace optional marketing consent."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "19. Governing Law"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "These Terms are governed by the laws of Cyprus. Subject to mandatory consumer-protection and jurisdiction rights that apply to you, disputes shall be resolved in the competent courts of Limassol, Cyprus."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "20. Contact"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Legal inquiries: legal@levantemai.pro. General support: support@levantemai.pro."
+        }
+      ]
+    }
+  ],
+  "es-419": [
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Bienvenido a SirBro, una aplicación de información deportiva y comunidad impulsada por IA, operada por LEVANTEM AI LTD, una empresa registrada en Chipre (dirección: Gladstonos, 116, M.Kyprianou House, 3&4th floor, 3032, Limassol, Chipre)."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Estos Términos de Servicio (los \"Términos\") regulan su acceso y uso de la aplicación móvil SirBro, los sitios web de SirBro, las páginas de preferencias de correo electrónico e información sobre socios y los servicios relacionados (conjuntamente, el \"Servicio\")."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Al acceder a SirBro o utilizarlo, usted acepta estos Términos. Si no está de acuerdo, no puede utilizar el Servicio. La aceptación de estos Términos no constituye consentimiento para recibir marketing opcional ni ofertas de socios de apuestas."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "1. Elegibilidad"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro está destinado únicamente a usuarios de 18 años o más. Al utilizar el Servicio, usted confirma que tiene al menos 18 años y capacidad legal para celebrar contratos vinculantes conforme a la ley aplicable. Para una oferta de terceros puede aplicarse una edad mínima superior en su país, estado o provincia."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "2. Descripción general del Servicio"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro ofrece:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "Predicciones deportivas, información y estadísticas generadas por IA;"
+          }
+        ],
+        [
+          {
+            "text": "Debates y chats comunitarios relacionados con el deporte;"
+          }
+        ],
+        [
+          {
+            "text": "Acceso a datos de fútbol y herramientas de análisis; y"
+          }
+        ],
+        [
+          {
+            "text": "Comunicaciones opcionales por correo electrónico y, cuando se soliciten por separado y estén legalmente disponibles, información y ofertas promocionales de operadores de apuestas de terceros."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Todo el contenido y las predicciones de SirBro tienen fines informativos y de entretenimiento. SirBro no es una casa de apuestas, un operador de juegos de azar, una bolsa de apuestas ni un proveedor de pagos. No aceptamos apuestas ni gestionamos jugadas. SirBro no ofrece asesoramiento financiero, de inversión ni de apuestas. Las ofertas de terceros se rigen por las Secciones 13 a 15."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "3. Registro de cuenta"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Para acceder a determinadas funciones, debe crear una cuenta utilizando su dirección de correo electrónico. Usted acepta proporcionar información exacta y actualizada y proteger sus credenciales. Es responsable de la actividad realizada a través de su cuenta."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "4. Uso aceptable"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Usted acepta no:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "Utilizar SirBro para fines ilegales;"
+          }
+        ],
+        [
+          {
+            "text": "Compartir, promover o solicitar apuestas o juegos de azar mediante las funciones de comunidad de SirBro;"
+          }
+        ],
+        [
+          {
+            "text": "Publicar o compartir contenido perjudicial, abusivo o engañoso;"
+          }
+        ],
+        [
+          {
+            "text": "Intentar hackear, aplicar ingeniería inversa o interrumpir el Servicio;"
+          }
+        ],
+        [
+          {
+            "text": "Utilizar automatizaciones, bots o scrapers sin autorización;"
+          }
+        ],
+        [
+          {
+            "text": "Eludir controles de edad, consentimiento, ubicación, seguridad o elegibilidad de ofertas; o"
+          }
+        ],
+        [
+          {
+            "text": "Acceder a una promoción de terceros que sea ilegal o no esté disponible para usted."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "5. Funciones de comunidad"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro incluye funciones de chat y comunidad. Usted es el único responsable del contenido que publica. Podemos moderar o eliminar contenido a nuestra discreción para mantener un entorno seguro y cumplir la ley aplicable."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "6. Contenido generado por IA"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro utiliza sistemas de IA de terceros. La información generada por IA puede ser inexacta, incompleta o desactualizada. Las predicciones y probabilidades son estimaciones, no garantías. Usted acepta utilizar dicha información únicamente con fines informativos y de entretenimiento."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "7. Propiedad intelectual"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Todos los materiales del Servicio son propiedad de LEVANTEM AI LTD o se utilizan bajo licencia. Se le concede una licencia limitada, no exclusiva e intransferible para utilizar SirBro únicamente con fines personales y no comerciales."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "8. Acceso gratuito y suscripciones premium"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "La Aplicación opera bajo un modelo \"freemium\". Los usuarios pueden acceder a una versión gratuita y limitada que incluye funciones básicas de predicción, límites diarios estándar y progresión básica."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro también ofrece suscripciones premium opcionales de renovación automática, incluidos los niveles \"Playmaker\" y \"ProBro\", que desbloquean funciones de software mejoradas, límites diarios de predicciones superiores, mejoras cosméticas de perfil y progresión virtual acelerada (multiplicadores de XP/BP). Los productos, funciones, precios y disponibilidad regional se muestran en la interfaz de compra de App Store o Google Play y pueden cambiar."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "9. Facturación y cancelación de suscripciones"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Pago. ",
+          "bold": true
+        },
+        {
+          "text": "El pago se cargará a su cuenta de Apple ID o Google Play al confirmar la compra."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Renovación automática. ",
+          "bold": true
+        },
+        {
+          "text": "Las suscripciones se renuevan automáticamente salvo que la renovación automática se desactive al menos 24 horas antes del final del período actual o dentro de otro plazo mostrado por la tienda aplicable."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Cargos. ",
+          "bold": true
+        },
+        {
+          "text": "La tienda cargará la renovación dentro de las 24 horas anteriores al final del período actual al precio mostrado por la tienda."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Gestión. ",
+          "bold": true
+        },
+        {
+          "text": "Puede gestionar o cancelar suscripciones en la configuración de su cuenta de App Store o Google Play. SirBro no puede cancelar una suscripción de la tienda en su nombre. Eliminar la Aplicación o su cuenta no cancela automáticamente una suscripción."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Sin reembolsos. ",
+          "bold": true
+        },
+        {
+          "text": "La parte no utilizada de una prueba gratuita, si se ofrece, se pierde al comprar una suscripción. Las tarifas no son reembolsables salvo que la ley aplicable lo exija o las reglas de la tienda lo permitan."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "La compra de una suscripción premium otorga exclusivamente acceso a funciones de software mejoradas, cosméticos visuales y mejoras de la plataforma. La tarifa es un pago por software; no es un depósito, apuesta, entrada ni capital para las mecánicas de predicción en vivo. Los Bro Points (BP) siguen siendo totalmente virtuales, no tienen valor real y no pueden retirarse."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "10. Moneda virtual (Bro Points / BP) y artículos virtuales"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "La Aplicación utiliza Bro Points (BP) y artículos virtuales como Cartas de Gamificación y Cofres. Son exclusivamente de entretenimiento, no tienen valor monetario real, no pueden canjearse por dinero, bienes o servicios y no pueden transferirse, venderse o intercambiarse fuera de la Aplicación."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Usted no es propietario de los BP ni de los artículos virtuales. LEVANTEM AI LTD le concede una licencia limitada, personal, no exclusiva, intransferible y revocable para utilizarlos dentro de la Aplicación. Nos reservamos el derecho de administrarlos, regularlos, corregirlos, modificarlos o eliminarlos, sujeto a la legislación obligatoria."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "11. Gamificación en vivo y \"Picks\""
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "La Aplicación incluye mecánicas de predicción en vivo, como Desafíos de Partidos en Vivo y simulaciones de mercado, donde los usuarios pueden utilizar BP para respaldar resultados deportivos mediante Picks. Son juegos simulados de habilidad y entretenimiento. Un Pick no es un derivado financiero, valor, materia prima ni una apuesta con dinero real. Los valores de \"BP Netos\" son simulaciones algorítmicas basadas en datos deportivos de terceros y no representan precios financieros."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "12. Suspensiones de mercado, errores y derechos de anulación"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Los datos deportivos en vivo pueden sufrir retrasos, interrupciones e inexactitudes. LEVANTEM AI LTD puede detener, suspender, corregir o cancelar mercados o eventos de predicción en vivo, incluso durante revisiones VAR, lesiones o anomalías del feed."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Si un error técnico, problema de latencia, retraso de transmisión, manipulación del feed o exploit permite abrir o cerrar Picks con valores de BP incorrectos, LEVANTEM AI LTD puede anular los Picks afectados, revertir la transacción y corregir el saldo de BP."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "13. Comunicaciones del Servicio y marketing opcional"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Podemos enviar mensajes necesarios para operar su cuenta o el Servicio, incluidos mensajes de seguridad, verificación, suscripción, compra, políticas legales y soporte. Estos mensajes no son marketing opcional."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "El marketing opcional se controla por separado. Según disponibilidad, usted puede elegir independientemente si desea recibir: (a) predicciones de fútbol, análisis de partidos e información editorial de SirBro; (b) novedades de productos, funciones y suscripciones; y (c) ofertas promocionales de socios operadores de apuestas enviadas por SirBro. Podemos exigir doble confirmación."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Los controles son opcionales y estarán desmarcados salvo que ya tengamos consentimiento válido, específico y demostrable. Aceptar estos Términos no es consentimiento de marketing. Puede cambiar temas o retirar el consentimiento en preferences.sirbro.gg, mediante un enlace de baja u otro método proporcionado. La retirada no afecta el acceso al Servicio principal."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "14. Afiliación y ofertas de terceros operadores de apuestas"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Cuando la ley lo permita y usted lo solicite por separado, SirBro puede enviar información y ofertas de operadores de apuestas de terceros que hayamos aprobado como legalmente elegibles para promoción en su ubicación. Según la jurisdicción, el operador puede tener licencia local, basarse en un permiso transfronterizo válido o estar autorizado a promocionarse sin licencia local."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro puede recibir una tarifa fija o comisión cuando usted sigue un enlace de afiliado, se registra, deposita, realiza una transacción válida o completa otra acción especificada. Esta relación comercial no modifica las predicciones ni convierte al operador en parte del Servicio."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Un enlace puede llevarlo primero a offers.sirbro.gg, donde podemos comprobar nuevamente la ubicación o elegibilidad y mostrar el operador, las condiciones materiales, la divulgación de afiliación y la información de juego responsable. Usted debe decidir expresamente si desea continuar."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "La presencia de un operador u oferta no constituye respaldo, recomendación ni garantía. SirBro no garantiza que sea legal, adecuada o disponible para usted, que el operador lo acepte ni que se entregue una bonificación, pago u otro beneficio."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "15. Transacciones de terceros, datos y uso responsable"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Toda cuenta, comprobación de edad o identidad, depósito, apuesta, bonificación, retiro, disputa u otra transacción se realiza exclusivamente entre usted y el operador y se rige por los términos, la política de privacidad y la legislación aplicable al operador. SirBro no acepta, coloca, liquida ni gestiona esa transacción."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Salvo consentimiento separado y explícito para un intercambio específicamente informado, SirBro no facilita al operador su correo electrónico, nombre, fecha de nacimiento ni identificador directo de cuenta. El operador puede recopilar datos de forma independiente después de que usted abandone SirBro."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Si decide visitar a un operador, es responsable de confirmar que cumple todos los requisitos de edad, ubicación y legalidad. Los juegos de azar implican riesgo de pérdidas económicas y otros daños. Nunca trate una predicción de SirBro como una garantía ni apueste más de lo que pueda permitirse perder."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "16. Renuncia de garantías"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "SirBro se proporciona \"tal cual\" y \"según disponibilidad\". LEVANTEM AI LTD no ofrece garantías sobre exactitud, fiabilidad, integridad, rentabilidad o disponibilidad del Servicio, predicciones, datos, comunicaciones u ofertas de terceros. Nada excluye derechos obligatorios del consumidor."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "17. Limitación de responsabilidad"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "En la máxima medida permitida por la ley, LEVANTEM AI LTD no será responsable de daños indirectos, incidentales, especiales o consecuentes derivados del uso de SirBro, de la confianza en predicciones o datos o de operaciones con un tercero. Nada limita responsabilidades que legalmente no puedan limitarse. Los derechos obligatorios del consumidor permanecen vigentes."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "18. Cambios en estos Términos"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Podemos actualizar estos Términos. Publicaremos la fecha revisada y notificaremos razonablemente cambios materiales cuando corresponda. Si la ley exige aceptación afirmativa, la solicitaremos por separado. Una actualización no crea, amplía ni sustituye el consentimiento de marketing opcional."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "19. Ley aplicable"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Estos Términos se rigen por las leyes de Chipre. Sin perjuicio de los derechos obligatorios de protección al consumidor y jurisdicción que le correspondan, las controversias se resolverán ante los tribunales competentes de Limassol, Chipre."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "20. Contacto"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Consultas legales: legal@levantemai.pro. Soporte general: support@levantemai.pro."
+        }
+      ]
+    }
+  ],
+  "pt-BR": [
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Bem-vindo ao SirBro, um aplicativo de insights esportivos e comunidade impulsionado por IA, operado pela LEVANTEM AI LTD, empresa registrada em Chipre (endereço: Gladstonos, 116, M.Kyprianou House, 3&4th floor, 3032, Limassol, Chipre)."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Estes Termos de Serviço (os \"Termos\") regem seu acesso e uso do aplicativo móvel SirBro, dos sites do SirBro, das páginas de preferências de e-mail e informações sobre parceiros e dos serviços relacionados (conjuntamente, o \"Serviço\")."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Ao acessar ou utilizar o SirBro, você concorda com estes Termos. Se não concordar, não poderá usar o Serviço. A aceitação destes Termos não constitui consentimento para marketing opcional ou ofertas de parceiros de apostas."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "1. Elegibilidade"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro é destinado apenas a usuários com 18 anos ou mais. Ao usar o Serviço, você confirma que tem pelo menos 18 anos e capacidade legal para celebrar contratos vinculantes. Uma idade mínima superior pode valer para uma oferta de terceiro em seu país, estado ou província."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "2. Visão geral do Serviço"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro oferece:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "Previsões esportivas, insights e estatísticas geradas por IA;"
+          }
+        ],
+        [
+          {
+            "text": "Discussões e chats da comunidade relacionados a esportes;"
+          }
+        ],
+        [
+          {
+            "text": "Acesso a dados de futebol e ferramentas de análise; e"
+          }
+        ],
+        [
+          {
+            "text": "Comunicações opcionais por e-mail e, quando solicitadas separadamente e legalmente disponíveis, informações e ofertas promocionais de operadores de apostas de terceiros."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Todo o conteúdo e as previsões do SirBro são informativos e destinados ao entretenimento. O SirBro não é casa de apostas, operador de jogos de azar, bolsa de apostas ou provedor de pagamentos. Não aceitamos apostas nem gerenciamos apostas. O SirBro não oferece aconselhamento financeiro, de investimento ou de apostas. Ofertas de terceiros são regidas pelas Seções 13 a 15."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "3. Registro de conta"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Para acessar determinados recursos, você deve criar uma conta com seu endereço de e-mail. Você concorda em fornecer informações exatas e atuais e proteger suas credenciais. É responsável pela atividade realizada por meio da conta."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "4. Uso aceitável"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Você concorda em não:"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        [
+          {
+            "text": "Usar o SirBro para finalidade ilegal;"
+          }
+        ],
+        [
+          {
+            "text": "Compartilhar, promover ou solicitar apostas ou jogos de azar pelos recursos da comunidade;"
+          }
+        ],
+        [
+          {
+            "text": "Publicar ou compartilhar conteúdo prejudicial, abusivo ou enganoso;"
+          }
+        ],
+        [
+          {
+            "text": "Tentar hackear, fazer engenharia reversa ou interromper o Serviço;"
+          }
+        ],
+        [
+          {
+            "text": "Usar automação, bots ou scrapers sem autorização;"
+          }
+        ],
+        [
+          {
+            "text": "Contornar controles de idade, consentimento, localização, segurança ou elegibilidade de ofertas; ou"
+          }
+        ],
+        [
+          {
+            "text": "Acessar promoção de terceiro que seja ilegal ou indisponível para você."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "5. Recursos da comunidade"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro inclui recursos de chat e comunidade. Você é o único responsável pelo conteúdo que publica. Podemos moderar ou remover conteúdo a nosso critério para manter um ambiente seguro e cumprir a lei."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "6. Conteúdo gerado por IA"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro utiliza sistemas de IA de terceiros. Informações geradas por IA podem ser imprecisas, incompletas ou desatualizadas. Previsões e probabilidades são estimativas, não garantias. Você concorda em usá-las somente para fins informativos e de entretenimento."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "7. Propriedade intelectual"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Todos os materiais do Serviço pertencem ou são licenciados à LEVANTEM AI LTD. Você recebe uma licença limitada, não exclusiva e intransferível para usar o SirBro apenas para fins pessoais e não comerciais."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "8. Acesso gratuito e assinaturas premium"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O Aplicativo opera em modelo \"freemium\". Usuários podem acessar uma versão gratuita e limitada, com recursos básicos de previsão, limites diários padrão e progressão básica."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro também oferece assinaturas premium opcionais com renovação automática, incluindo os níveis \"Playmaker\" e \"ProBro\", que liberam funcionalidades aprimoradas, limites diários maiores, melhorias visuais e progressão virtual acelerada (multiplicadores de XP/BP). Produtos, recursos, preços e disponibilidade regional são mostrados na interface de compra da App Store ou Google Play e podem mudar."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "9. Cobrança e cancelamento de assinaturas"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Pagamento. ",
+          "bold": true
+        },
+        {
+          "text": "O pagamento será cobrado na sua conta Apple ID ou Google Play na confirmação da compra."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Renovação automática. ",
+          "bold": true
+        },
+        {
+          "text": "As assinaturas são renovadas automaticamente, salvo se a renovação for desativada pelo menos 24 horas antes do fim do período atual ou dentro de outro prazo mostrado pela loja aplicável."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Cobranças. ",
+          "bold": true
+        },
+        {
+          "text": "A loja cobrará a renovação nas 24 horas anteriores ao fim do período atual pelo preço exibido por ela."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Gerenciamento. ",
+          "bold": true
+        },
+        {
+          "text": "Você pode gerenciar ou cancelar assinaturas nas configurações da sua conta da App Store ou Google Play. O SirBro não pode cancelar uma assinatura da loja em seu nome. Excluir o Aplicativo ou sua conta não cancela automaticamente a assinatura."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Sem reembolsos. ",
+          "bold": true
+        },
+        {
+          "text": "A parte não utilizada de um teste gratuito, se oferecido, será perdida ao comprar uma assinatura. As taxas não são reembolsáveis, salvo quando exigido pela lei ou permitido pelas regras da loja."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "A compra de assinatura premium concede exclusivamente acesso a recursos aprimorados, cosméticos visuais e melhorias da plataforma. A taxa é pagamento por software; não é depósito, aposta, cacife ou capital para mecânicas de previsão ao vivo. Bro Points (BP) permanecem totalmente virtuais, sem valor real e não podem ser sacados."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "10. Moeda virtual (Bro Points / BP) e itens virtuais"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O Aplicativo utiliza Bro Points (BP) e itens virtuais como Cartas de Gamificação e Baús. Eles são exclusivamente para entretenimento, não têm valor monetário real, não podem ser resgatados por dinheiro, bens ou serviços e não podem ser transferidos, vendidos ou trocados fora do Aplicativo."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Você não é proprietário dos BP ou itens virtuais. A LEVANTEM AI LTD concede licença limitada, pessoal, não exclusiva, intransferível e revogável para usá-los no Aplicativo. Reservamo-nos o direito de administrá-los, regulá-los, corrigi-los, modificá-los ou eliminá-los, sujeito à legislação obrigatória."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "11. Gamificação ao vivo e \"Picks\""
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O Aplicativo inclui mecânicas de previsão ao vivo, como Desafios de Partidas ao Vivo e simulações de mercado, onde usuários podem usar BP para apoiar resultados esportivos por meio de Picks. São jogos simulados de habilidade e entretenimento. Um Pick não é derivativo financeiro, valor mobiliário, commodity ou aposta com dinheiro real. Valores de \"BP Líquidos\" são simulações algorítmicas baseadas em dados esportivos de terceiros e não representam preços financeiros."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "12. Suspensões de mercado, erros e direitos de anulação"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Dados esportivos ao vivo podem sofrer atrasos, interrupções e imprecisões. A LEVANTEM AI LTD pode suspender, interromper, corrigir ou cancelar mercados ou eventos de previsão ao vivo, inclusive durante revisões do VAR, lesões ou anomalias do feed."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Se erro técnico, problema de latência, atraso de transmissão, manipulação do feed ou exploração permitir abrir ou fechar Picks com valores incorretos de BP, a LEVANTEM AI LTD poderá anular os Picks afetados, reverter a transação e corrigir o saldo de BP."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "13. Comunicações do Serviço e marketing opcional"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Podemos enviar mensagens necessárias para operar sua conta ou o Serviço, incluindo segurança, verificação, assinatura, compra, políticas legais e suporte. Essas mensagens não são marketing opcional."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O marketing opcional é controlado separadamente. Conforme disponibilidade, você pode escolher independentemente receber: (a) previsões de futebol, análises de partidas e insights editoriais do SirBro; (b) novidades de produtos, recursos e assinaturas; e (c) ofertas promocionais de parceiros operadores de apostas enviadas pelo SirBro. Podemos exigir dupla confirmação."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Os controles são opcionais e ficam desmarcados, salvo se já tivermos consentimento válido, específico e comprovável. Aceitar estes Termos não é consentimento de marketing. Você pode alterar temas ou retirar consentimento em preferences.sirbro.gg, por link de descadastro ou outro método fornecido. A retirada não afeta o acesso ao Serviço principal."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "14. Afiliados e ofertas de operadores de apostas de terceiros"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Quando permitido por lei e solicitado separadamente por você, o SirBro pode enviar informações e ofertas de operadores de apostas de terceiros que tenhamos aprovado como legalmente elegíveis para promoção na sua localização. Conforme a jurisdição, o operador pode ter licença local, basear-se em permissão transfronteiriça válida ou ser autorizado a promover sem licença local."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro pode receber taxa fixa ou comissão quando você segue link de afiliado, se registra, deposita, realiza transação qualificada ou conclui outra ação especificada. Essa relação comercial não altera as previsões nem torna o operador parte do Serviço."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Um link pode levar primeiro a offers.sirbro.gg, onde podemos verificar novamente localização ou elegibilidade e mostrar operador, termos materiais, divulgação de afiliado e informações de jogo responsável. Você deve decidir expressamente se deseja continuar."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "A presença de operador ou oferta não constitui endosso, recomendação ou garantia. O SirBro não garante que seja legal, adequado ou disponível para você, que o operador o aceite ou que bônus, pagamento ou outro benefício seja fornecido."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "15. Transações de terceiros, dados e uso responsável"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Qualquer conta, verificação de idade ou identidade, depósito, aposta, bônus, saque, disputa ou outra transação ocorre exclusivamente entre você e o operador e é regida pelos termos, política de privacidade e legislação aplicável ao operador. O SirBro não aceita, realiza, liquida ou gerencia essa transação."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Salvo consentimento separado e explícito para compartilhamento especificamente informado, o SirBro não fornece ao operador seu e-mail, nome, data de nascimento ou identificador direto da conta. O operador pode coletar dados de forma independente depois que você sair do SirBro."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Se decidir visitar um operador, você é responsável por confirmar que atende aos requisitos de idade, localização e legalidade. Jogos de azar envolvem risco de perdas financeiras e outros danos. Nunca trate uma previsão do SirBro como garantia nem aposte mais do que pode perder."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "16. Isenção de garantias"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "O SirBro é fornecido \"no estado em que se encontra\" e \"conforme disponível\". A LEVANTEM AI LTD não oferece garantias sobre exatidão, confiabilidade, integridade, lucratividade ou disponibilidade do Serviço, previsões, dados, comunicações ou ofertas de terceiros. Nada exclui direitos obrigatórios do consumidor."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "17. Limitação de responsabilidade"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Na extensão máxima permitida por lei, a LEVANTEM AI LTD não será responsável por danos indiretos, incidentais, especiais ou consequenciais resultantes do uso do SirBro, confiança em previsões ou dados ou transações com terceiros. Nada limita responsabilidade que não possa ser legalmente limitada. Direitos obrigatórios do consumidor permanecem inalterados."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "18. Alterações nestes Termos"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Podemos atualizar estes Termos. Publicaremos a data revisada e forneceremos aviso razoável sobre alterações materiais quando necessário. Se a lei exigir aceitação afirmativa, ela será solicitada separadamente. Uma atualização não cria, amplia ou substitui consentimento de marketing opcional."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "19. Lei aplicável"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Estes Termos são regidos pelas leis de Chipre. Sem prejuízo de direitos obrigatórios de proteção ao consumidor e jurisdição aplicáveis a você, disputas serão resolvidas pelos tribunais competentes de Limassol, Chipre."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "text": "20. Contato"
+    },
+    {
+      "type": "paragraph",
+      "runs": [
+        {
+          "text": "Questões legais: legal@levantemai.pro. Suporte geral: support@levantemai.pro."
+        }
+      ]
+    }
+  ]
+}

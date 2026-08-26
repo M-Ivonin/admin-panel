@@ -17,10 +17,12 @@ type LegalDocumentTitleKey = 'privacy' | 'terms' | 'disclaimer' | 'cookies';
 export function LegalDocumentPage({
   locale,
   titleKey,
+  lastUpdated,
   children,
 }: {
   locale: Locale;
   titleKey: LegalDocumentTitleKey;
+  lastUpdated?: string;
   children: React.ReactNode;
 }) {
   const t = getDictionary(locale);
@@ -43,7 +45,7 @@ export function LegalDocumentPage({
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={publicLegalLastUpdatedSx}>
-            {t.legal.lastUpdated}
+            {lastUpdated ?? t.legal.lastUpdated}
           </Typography>
 
           {children}
