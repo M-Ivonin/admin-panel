@@ -26,6 +26,7 @@ import {
   BugReport,
   SportsSoccer,
   SupportAgent,
+  Gavel,
 } from '@mui/icons-material';
 
 export default function DashboardPage() {
@@ -437,6 +438,33 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Manage temporary mobile diagnostics policies
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
+              href="/dashboard/partner-markets"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{ bgcolor: 'secondary.dark', width: 48, height: 48, mb: 2 }}
+                  >
+                    <Gavel />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Partner markets
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Register legal approvals, restrictions, and emergency pauses
                   </Typography>
                 </CardActionArea>
               </Card>
