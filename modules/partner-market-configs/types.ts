@@ -34,10 +34,15 @@ export interface PartnerMarketConfigInput {
 }
 
 export interface PartnerMarketConfig
-  extends Omit<PartnerMarketConfigInput, 'regionCode' | 'killSwitchReason'> {
+  extends Omit<
+    PartnerMarketConfigInput,
+    'regionCode' | 'killSwitchReason' | 'operatorLogoUrl' | 'affiliateDisclosureByLocale'
+  > {
   id: string;
   regionCode: string | null;
   killSwitchReason: string | null;
+  operatorLogoUrl: string | null;
+  affiliateDisclosureByLocale: { en: string; es: string; pt: string } | null;
   createdAt: string;
   updatedAt: string;
 }

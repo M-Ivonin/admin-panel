@@ -235,10 +235,10 @@ function PartnerMarketCard({ item, onEdit, onPause }: {
             <Detail label="Effective period" value={`${formatDate(item.effectiveFrom)} → ${item.effectiveUntil ? formatDate(item.effectiveUntil) : 'No end date'}`} />
             <Detail label="Allowed promotion" value={allowed.length ? allowed.join(', ') : 'None'} />
             <Detail label="Approved destination hosts" value={item.approvedDestinationHosts.join(', ')} />
-            <Detail label="Operator logo" value={item.operatorLogoUrl} />
-            <Detail label="Affiliate disclosure (EN)" value={item.affiliateDisclosureByLocale.en} />
-            <Detail label="Affiliate disclosure (ES)" value={item.affiliateDisclosureByLocale.es} />
-            <Detail label="Affiliate disclosure (PT)" value={item.affiliateDisclosureByLocale.pt} />
+            <Detail label="Operator logo" value={item.operatorLogoUrl ?? 'Missing'} />
+            <Detail label="Affiliate disclosure (EN)" value={item.affiliateDisclosureByLocale?.en ?? 'Missing'} />
+            <Detail label="Affiliate disclosure (ES)" value={item.affiliateDisclosureByLocale?.es ?? 'Missing'} />
+            <Detail label="Affiliate disclosure (PT)" value={item.affiliateDisclosureByLocale?.pt ?? 'Missing'} />
           </Box>
         </Stack>
       </CardContent>
@@ -385,6 +385,8 @@ function PauseDialog({ config, onClose, onPaused }: { config: PartnerMarketConfi
 function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
   return {
     ...config,
+    operatorLogoUrl: config.operatorLogoUrl ?? '',
+    affiliateDisclosureByLocale: config.affiliateDisclosureByLocale ?? { en: '', es: '', pt: '' },
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),
     approvedDestinationHosts: config.approvedDestinationHosts.join('\n'),

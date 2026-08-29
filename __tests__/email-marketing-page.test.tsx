@@ -70,6 +70,25 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(await screen.findByText('Scheduled: 2026-09-01T08:00:00.000Z · Europe/Paris')).toBeInTheDocument();
   });
 
+  it('labels raw sent state as Provider accepted in cards and detail without merging delivery counters', async () => {
+    const repo = repository();
+    const providerAccepted = { ...basePublication, state: 'sent' as const };
+    repo.list.mockResolvedValue([providerAccepted]);
+    repo.get.mockResolvedValue(providerAccepted);
+    render(<EmailMarketingDashboard repository={repo} />);
+
+    expect(await screen.findByText('Product launch')).toBeInTheDocument();
+    expect(screen.getAllByText('Provider accepted')).toHaveLength(2);
+    expect(screen.getByText('Delivered')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.queryByText('sent')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    expect(await screen.findByText('Publication detail · Provider accepted')).toBeInTheDocument();
+    expect(screen.queryByText('Publication detail · sent')).not.toBeInTheDocument();
+  });
+
   it('clears incompatible fields, submits exact locales, and reuses one create key after failure', async () => {
     const repo = repository();
     repo.list.mockResolvedValue([]);

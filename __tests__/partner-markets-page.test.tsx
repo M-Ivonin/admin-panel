@@ -102,6 +102,31 @@ describe('PartnerMarketsPage', () => {
     fireEvent.click(within(pauseDialog).getByRole('button', { name: 'Confirm pause' }));
     await waitFor(() => expect(pausePartnerMarketConfig).toHaveBeenCalledWith('config-1', ' Licence suspended '));
   });
+
+  it('shows migrated missing display data and keeps it required when editing', async () => {
+    const migratedConfig = {
+      ...config,
+      operatorLogoUrl: null,
+      affiliateDisclosureByLocale: null,
+    };
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([migratedConfig]);
+    render(<PartnerMarketsPage />);
+
+    expect(await screen.findByText('Example Bet')).toBeInTheDocument();
+    expect(screen.getAllByText('Missing')).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const editDialog = screen.getByRole('dialog', { name: 'Edit partner market' });
+    expect(within(editDialog).getByLabelText('Operator logo URL')).toHaveValue('');
+    expect(within(editDialog).getByLabelText('Affiliate disclosure (EN)')).toHaveValue('');
+    expect(within(editDialog).getByLabelText('Affiliate disclosure (ES)')).toHaveValue('');
+    expect(within(editDialog).getByLabelText('Affiliate disclosure (PT)')).toHaveValue('');
+
+    fireEvent.click(within(editDialog).getByRole('button', { name: 'Save configuration' }));
+    expect(await within(editDialog).findByText('Enter a valid HTTPS operator logo URL.')).toBeInTheDocument();
+    expect(within(editDialog).getByText('Affiliate disclosure is required for all en, es, and pt locales.')).toBeInTheDocument();
+    expect(savePartnerMarketConfig).not.toHaveBeenCalled();
+  });
 });
 
 function fillRequiredForm(container: HTMLElement): void {

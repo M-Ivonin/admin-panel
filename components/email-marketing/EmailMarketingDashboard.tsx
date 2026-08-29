@@ -198,7 +198,7 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
 function PublicationCard({ item, onOpen }: { item: EmailPublication; onOpen: () => void }) {
   return <Card><CardContent><Stack spacing={2}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-      <Box><Stack direction="row" spacing={1} alignItems="center"><Typography variant="h6">{item.definition.name}</Typography><Chip label={item.state} size="small" /></Stack><Typography color="text.secondary">{topicLabel(item.topic)} · version {item.definitionVersion} · cap {item.definition.frequencyCapHours}h</Typography>{item.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {item.schedule.scheduledAtUtc} · {item.schedule.timezone}</Typography> : null}</Box>
+      <Box><Stack direction="row" spacing={1} alignItems="center"><Typography variant="h6">{item.definition.name}</Typography><Chip label={publicationStateLabel(item.state)} size="small" /></Stack><Typography color="text.secondary">{topicLabel(item.topic)} · version {item.definitionVersion} · cap {item.definition.frequencyCapHours}h</Typography>{item.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {item.schedule.scheduledAtUtc} · {item.schedule.timezone}</Typography> : null}</Box>
       <Button variant="outlined" onClick={onOpen}>Open</Button>
     </Stack>
     <CounterGrid counters={item.counters} />
@@ -208,6 +208,10 @@ function PublicationCard({ item, onOpen }: { item: EmailPublication; onOpen: () 
 function CounterGrid({ counters }: { counters: EmailPublication['counters'] }) {
   const values: Array<[string, number]> = [['Provider accepted', counters.accepted], ['Delivered', counters.delivered], ['Bounced', counters.bounced], ['Dropped', counters.dropped], ['Skipped', counters.skipped], ['Failed', counters.failed], ['Ambiguous', counters.ambiguous], ['Pending', counters.pending]];
   return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', lg: 'repeat(8, 1fr)' }, gap: 1 }}>{values.map(([label, value]) => <Box key={label} sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="h6">{value}</Typography></Box>)}</Box>;
+}
+
+function publicationStateLabel(state: EmailPublicationState): string {
+  return state === 'sent' ? 'Provider accepted' : state;
 }
 
 type EditorProps = {
@@ -228,7 +232,7 @@ function Editor(props: EditorProps) {
   const setTopic = (topic: EmailPublicationTopic) => setDraft({ ...draft, topic, predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' });
   const canSend = selected?.state === 'approved' && !editorDirty;
   return <Card><CardContent><Stack spacing={3}>
-    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}><Box><Typography variant="h5">{selected ? `Publication detail · ${selected.state}` : 'New publication'}</Typography>{selected ? <Typography color="text.secondary">Definition version {selected.definitionVersion}</Typography> : null}{selected?.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {selected.schedule.scheduledAtUtc} · {selected.schedule.timezone}</Typography> : null}</Box>{selected ? <Button startIcon={<Refresh />} onClick={props.onRefresh}>Refresh detail</Button> : null}</Stack>
+    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}><Box><Typography variant="h5">{selected ? `Publication detail · ${publicationStateLabel(selected.state)}` : 'New publication'}</Typography>{selected ? <Typography color="text.secondary">Definition version {selected.definitionVersion}</Typography> : null}{selected?.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {selected.schedule.scheduledAtUtc} · {selected.schedule.timezone}</Typography> : null}</Box>{selected ? <Button startIcon={<Refresh />} onClick={props.onRefresh}>Refresh detail</Button> : null}</Stack>
     {selected ? <CounterGrid counters={selected.counters} /> : null}
     <Divider />
     <TextField label="Publication name" value={draft.name} onChange={(event) => set('name', event.target.value)} required />
