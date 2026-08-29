@@ -17,6 +17,7 @@ jest.mock('@/lib/api/partner-market-configs', () => ({
 
 const config = {
   id: 'config-1', operatorKey: 'example-bet', operatorLegalName: 'Example Bet Ltd', operatorDisplayName: 'Example Bet',
+  operatorLogoUrl: 'https://cdn.example/logo.png', affiliateDisclosureByLocale: { en: 'Affiliate EN', es: 'Affiliate ES', pt: 'Affiliate PT' },
   countryCode: 'FR', regionCode: null, status: 'approved' as const, licenceReference: 'LIC-1', evidenceUrl: 'https://regulator.example/evidence',
   minimumAge: 18, partnerOnlyAllowed: true, sponsoredPredictionAllowed: true, bonusAdvertisingAllowed: false, matchSpecificPromotionAllowed: false,
   requiredWarningText: '18+. Play responsibly.', responsibleGamblingUrl: 'https://example.bet/responsible', approvedDestinationHosts: ['example.bet'],
@@ -106,10 +107,14 @@ describe('PartnerMarketsPage', () => {
 function fillRequiredForm(container: HTMLElement): void {
   const values: Record<string, string> = {
     'Operator key': ' Example-Bet ', 'Operator legal name': 'Example Bet Ltd', 'Operator display name': 'Example Bet',
+    'Operator logo URL': 'https://cdn.example/logo.png',
     'Country code': 'fr', 'Licence reference': 'LIC-1', 'Evidence URL': 'https://regulator.example/evidence',
     'Required warning text': '18+. Play responsibly.', 'Responsible gambling URL': 'https://example.bet/responsible',
     'Approved destination hosts': 'EXAMPLE.BET', 'Legal reviewed at': '2026-08-01T10:00',
     'Legal review expires at': '2027-08-01T10:00', 'Effective from': '2026-08-02T10:00', 'Config version': 'legal-1',
   };
   for (const [label, value] of Object.entries(values)) fireEvent.change(within(container).getByLabelText(label), { target: { value } });
+  fireEvent.change(within(container).getByLabelText('Affiliate disclosure (EN)'), { target: { value: 'Affiliate EN' } });
+  fireEvent.change(within(container).getByLabelText('Affiliate disclosure (ES)'), { target: { value: 'Affiliate ES' } });
+  fireEvent.change(within(container).getByLabelText('Affiliate disclosure (PT)'), { target: { value: 'Affiliate PT' } });
 }

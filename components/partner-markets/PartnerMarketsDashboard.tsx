@@ -235,6 +235,10 @@ function PartnerMarketCard({ item, onEdit, onPause }: {
             <Detail label="Effective period" value={`${formatDate(item.effectiveFrom)} → ${item.effectiveUntil ? formatDate(item.effectiveUntil) : 'No end date'}`} />
             <Detail label="Allowed promotion" value={allowed.length ? allowed.join(', ') : 'None'} />
             <Detail label="Approved destination hosts" value={item.approvedDestinationHosts.join(', ')} />
+            <Detail label="Operator logo" value={item.operatorLogoUrl} />
+            <Detail label="Affiliate disclosure (EN)" value={item.affiliateDisclosureByLocale.en} />
+            <Detail label="Affiliate disclosure (ES)" value={item.affiliateDisclosureByLocale.es} />
+            <Detail label="Affiliate disclosure (PT)" value={item.affiliateDisclosureByLocale.pt} />
           </Box>
         </Stack>
       </CardContent>
@@ -281,6 +285,24 @@ function PartnerMarketFormDialog({ config, onClose, onSaved }: {
           <FormText label="Operator key" field="operatorKey" values={values} errors={errors} set={set} disabled={Boolean(config)} />
           <FormText label="Operator legal name" field="operatorLegalName" values={values} errors={errors} set={set} />
           <FormText label="Operator display name" field="operatorDisplayName" values={values} errors={errors} set={set} />
+          <FormText label="Operator logo URL" field="operatorLogoUrl" values={values} errors={errors} set={set} />
+          <Typography variant="subtitle2">Localized affiliate disclosure</Typography>
+          {(['en', 'es', 'pt'] as const).map((locale) => (
+            <TextField
+              key={locale}
+              fullWidth
+              multiline
+              minRows={2}
+              label={`Affiliate disclosure (${locale.toUpperCase()})`}
+              value={values.affiliateDisclosureByLocale[locale]}
+              onChange={(event) => set('affiliateDisclosureByLocale', {
+                ...values.affiliateDisclosureByLocale,
+                [locale]: event.target.value,
+              })}
+              error={Boolean(errors.affiliateDisclosureByLocale)}
+              helperText={locale === 'en' ? errors.affiliateDisclosureByLocale : undefined}
+            />
+          ))}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormText label="Country code" field="countryCode" values={values} errors={errors} set={set} disabled={Boolean(config)} />
             <FormText label="Region code (optional)" field="regionCode" values={values} errors={errors} set={set} disabled={Boolean(config)} />

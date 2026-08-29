@@ -10,4 +10,10 @@ describe('partner markets navigation', () => {
     render(<DashboardPage />);
     expect(screen.getByRole('link', { name: /Partner markets/ })).toHaveAttribute('href', '/dashboard/partner-markets');
   });
+
+  it('links Email Marketing separately while preserving Campaigns', () => {
+    render(<DashboardPage />);
+    expect(screen.getByRole('link', { name: /Email Marketing/ })).toHaveAttribute('href', '/dashboard/email-marketing');
+    expect(screen.getByRole('link', { name: /^Campaigns/ })).toHaveAttribute('href', '/dashboard/campaigns');
+  });
 });

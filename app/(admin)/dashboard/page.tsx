@@ -27,6 +27,7 @@ import {
   SportsSoccer,
   SupportAgent,
   Gavel,
+  MarkEmailRead,
 } from '@mui/icons-material';
 
 export default function DashboardPage() {
@@ -351,6 +352,33 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Plan, preview, and monitor push campaign lifecycles
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
+              href="/dashboard/email-marketing"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}
+                  >
+                    <MarkEmailRead />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Email Marketing
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Create, approve, schedule, and monitor manual email publications
                   </Typography>
                 </CardActionArea>
               </Card>

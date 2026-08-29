@@ -13,6 +13,8 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   operatorKey: '',
   operatorLegalName: '',
   operatorDisplayName: '',
+  operatorLogoUrl: '',
+  affiliateDisclosureByLocale: { en: '', es: '', pt: '' },
   countryCode: '',
   regionCode: '',
   status: 'draft',
@@ -54,6 +56,12 @@ export function normalizePartnerMarketConfigForm(
     operatorKey: values.operatorKey.trim().toLowerCase(),
     operatorLegalName: values.operatorLegalName.trim(),
     operatorDisplayName: values.operatorDisplayName.trim(),
+    operatorLogoUrl: values.operatorLogoUrl.trim(),
+    affiliateDisclosureByLocale: {
+      en: values.affiliateDisclosureByLocale.en.trim(),
+      es: values.affiliateDisclosureByLocale.es.trim(),
+      pt: values.affiliateDisclosureByLocale.pt.trim(),
+    },
     countryCode: values.countryCode.trim().toUpperCase(),
     regionCode: values.regionCode?.trim().toUpperCase() || undefined,
     licenceReference: values.licenceReference.trim(),
@@ -82,6 +90,13 @@ export function validatePartnerMarketConfigForm(
   requiredAndMax(errors, 'licenceReference', input.licenceReference);
   requiredAndMax(errors, 'requiredWarningText', input.requiredWarningText);
   requiredAndMax(errors, 'configVersion', input.configVersion, 80);
+
+  if (!isURL(input.operatorLogoUrl, { protocols: ['https'], require_protocol: true }) || !input.operatorLogoUrl.startsWith('https://')) {
+    errors.operatorLogoUrl = 'Enter a valid HTTPS operator logo URL.';
+  }
+  if (Object.values(input.affiliateDisclosureByLocale).some((value) => !value)) {
+    errors.affiliateDisclosureByLocale = 'Affiliate disclosure is required for all en, es, and pt locales.';
+  }
 
   if (!OPERATOR_KEY_PATTERN.test(input.operatorKey) || input.operatorKey.length > 80) {
     errors.operatorKey = 'Use lowercase kebab-case, up to 80 characters.';

@@ -7,6 +7,8 @@ const valid = {
   responsibleGamblingUrl: 'https://example.bet/responsible', approvedDestinationHosts: ' WWW.EXAMPLE.BET.\nexample.bet',
   legalReviewedAt: '2026-08-01T10:00', legalReviewExpiresAt: '2027-08-01T10:00', effectiveFrom: '2026-08-02T10:00',
   configVersion: ' legal-1 ',
+  operatorLogoUrl: ' https://cdn.example/logo.png ',
+  affiliateDisclosureByLocale: { en: ' Affiliate EN ', es: ' Affiliate ES ', pt: ' Affiliate PT ' },
 };
 
 describe('partner market config form validation', () => {
@@ -35,5 +37,14 @@ describe('partner market config form validation', () => {
   it('matches backend validator behavior for URL host characters and IDNs', () => {
     expect(validatePartnerMarketConfigForm({ ...valid, evidenceUrl: 'https://foo_bar/path' }).evidenceUrl).toMatch(/valid URL/);
     expect(validatePartnerMarketConfigForm({ ...valid, approvedDestinationHosts: 'éxample.com' }).approvedDestinationHosts).toBeUndefined();
+  });
+
+  it('requires an HTTPS operator logo and all localized affiliate disclosures', () => {
+    expect(validatePartnerMarketConfigForm({ ...valid, operatorLogoUrl: 'http://cdn.example/logo.png' }).operatorLogoUrl).toMatch(/HTTPS/);
+    expect(validatePartnerMarketConfigForm({ ...valid, affiliateDisclosureByLocale: { en: 'EN', es: '', pt: 'PT' } }).affiliateDisclosureByLocale).toMatch(/all en, es, and pt/);
+    expect(normalizePartnerMarketConfigForm(valid)).toMatchObject({
+      operatorLogoUrl: 'https://cdn.example/logo.png',
+      affiliateDisclosureByLocale: { en: 'Affiliate EN', es: 'Affiliate ES', pt: 'Affiliate PT' },
+    });
   });
 });

@@ -9,6 +9,8 @@ export interface PartnerMarketConfigInput {
   operatorKey: string;
   operatorLegalName: string;
   operatorDisplayName: string;
+  operatorLogoUrl: string;
+  affiliateDisclosureByLocale: { en: string; es: string; pt: string };
   countryCode: string;
   regionCode?: string;
   status: PartnerMarketConfigStatus;

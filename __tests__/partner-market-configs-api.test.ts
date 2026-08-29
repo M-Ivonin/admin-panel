@@ -9,6 +9,7 @@ jest.mock('@/modules/http/admin-auth-client', () => ({ adminAuthFetch: jest.fn()
 
 const input = {
   operatorKey: 'example-bet', operatorLegalName: 'Example Bet Ltd', operatorDisplayName: 'Example Bet',
+  operatorLogoUrl: 'https://cdn.example/logo.png', affiliateDisclosureByLocale: { en: 'Affiliate EN', es: 'Affiliate ES', pt: 'Affiliate PT' },
   countryCode: 'FR', status: 'draft' as const, licenceReference: 'LIC-1', evidenceUrl: 'https://regulator.example/evidence',
   minimumAge: 18, partnerOnlyAllowed: true, sponsoredPredictionAllowed: false, bonusAdvertisingAllowed: false,
   matchSpecificPromotionAllowed: false, requiredWarningText: '18+. Play responsibly.',
