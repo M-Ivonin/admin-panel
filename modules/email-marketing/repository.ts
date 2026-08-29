@@ -1,4 +1,5 @@
 import { getPartnerMarketConfigs } from '@/lib/api/partner-market-configs';
+import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
 import type { CampaignAudienceDefinition, CampaignLocale } from '@/modules/campaigns/contracts';
 import type {
   EmailMarketingRepository,
@@ -66,6 +67,29 @@ export const emailMarketingRepository: EmailMarketingRepository = {
   },
   async listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]> {
     return (await getPartnerMarketConfigs()).filter((item) => item.status === 'approved' && !item.killSwitchEnabled);
+  },
+  async listAudienceSources() {
+    const catalog = await getCampaignEditorCatalog();
+    return [
+      ...catalog.savedSegments.flatMap((segment) =>
+        segment.audienceDefinition
+          ? [{
+              id: segment.id,
+              name: segment.name,
+              description: segment.description,
+              source: 'saved_segment' as const,
+              audience: segment.audienceDefinition,
+            }]
+          : [],
+      ),
+      ...catalog.scenarioTemplates.map((template) => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        source: 'template_segment' as const,
+        audience: template.definition.audience,
+      })),
+    ];
   },
 };
 

@@ -11,7 +11,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { RetentionStage } from '@/lib/api/users';
 import type { CampaignAudienceDefinition, CampaignLocale } from '@/modules/campaigns/contracts';
 import type {
-  EmailContentByLocale, EmailMarketingRepository, EmailPublication,
+  EmailAudienceSource, EmailContentByLocale, EmailMarketingRepository, EmailPublication,
   EmailPublicationInput, EmailPublicationState, EmailPublicationTopic,
   LocalizedString, PartnerMarketProjection, PredictionReference,
 } from '@/modules/email-marketing/contracts';
@@ -60,6 +60,7 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
   const [estimate, setEstimate] = useState<{ reachableUsers: number; warnings: string[] } | null>(null);
   const [predictions, setPredictions] = useState<PredictionReference[]>([]);
   const [partners, setPartners] = useState<PartnerMarketProjection[]>([]);
+  const [audienceSources, setAudienceSources] = useState<EmailAudienceSource[]>([]);
   const [previewLocale, setPreviewLocale] = useState<CampaignLocale>('en');
   const [preview, setPreview] = useState<Awaited<ReturnType<EmailMarketingRepository['preview']>> | null>(null);
   const [scheduleLocal, setScheduleLocal] = useState('');
@@ -80,11 +81,11 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
   async function openPublication(item: EmailPublication) {
     setBusy(true); setError(null); setPreview(null);
     try {
-      const [detail, predictionItems, partnerItems] = await Promise.all([
-        repository.get(item.id), repository.listPredictionReferences(), repository.listPartnerMarketConfigs(),
+      const [detail, predictionItems, partnerItems, sourceItems] = await Promise.all([
+        repository.get(item.id), repository.listPredictionReferences(), repository.listPartnerMarketConfigs(), repository.listAudienceSources(),
       ]);
       setSelected(detail); setDraft(fromPublication(detail)); setEditorDirty(false);
-      setPredictions(predictionItems); setPartners(partnerItems);
+      setPredictions(predictionItems); setPartners(partnerItems); setAudienceSources(sourceItems);
     } catch (caught) { setError(messageOf(caught)); }
     finally { setBusy(false); }
   }
@@ -93,10 +94,10 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
     setSelected(null); setDraft(emptyDraft()); setEditorDirty(false); setPreview(null); setEstimate(null);
     createKey.current = createEmailPublicationIdempotencyKey();
     try {
-      const [predictionItems, partnerItems] = await Promise.all([
-        repository.listPredictionReferences(), repository.listPartnerMarketConfigs(),
+      const [predictionItems, partnerItems, sourceItems] = await Promise.all([
+        repository.listPredictionReferences(), repository.listPartnerMarketConfigs(), repository.listAudienceSources(),
       ]);
-      setPredictions(predictionItems); setPartners(partnerItems);
+      setPredictions(predictionItems); setPartners(partnerItems); setAudienceSources(sourceItems);
     } catch (caught) { setError(messageOf(caught)); }
   }
 
@@ -181,7 +182,7 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
           items.length === 0 ? <Card><CardContent sx={{ py: 6, textAlign: 'center' }}><Typography variant="h6">No email publications found</Typography></CardContent></Card> :
           <Stack spacing={2}>{items.map((item) => <PublicationCard key={item.id} item={item} onOpen={() => void openPublication(item)} />)}</Stack>}
         {draft ? <Editor
-          draft={draft} setDraft={(next) => { setDraft(next); setEditorDirty(true); }} selected={selected} editorDirty={editorDirty} predictions={predictions} partners={partners}
+          draft={draft} setDraft={(next) => { setDraft(next); setEditorDirty(true); }} selected={selected} editorDirty={editorDirty} predictions={predictions} partners={partners} audienceSources={audienceSources}
           estimate={estimate} busy={busy} previewLocale={previewLocale} setPreviewLocale={setPreviewLocale}
           preview={preview} onSave={() => void saveDraft()} onEstimate={() => void estimateAudience()}
           onPreview={async () => { if (!selected) return; setBusy(true); setError(null); try { setPreview(await repository.preview(selected.id, previewLocale)); } catch (caught) { setError(messageOf(caught)); } finally { setBusy(false); } }}
@@ -218,6 +219,7 @@ type EditorProps = {
   draft: EditorDraft; setDraft: (draft: EditorDraft) => void; selected: EmailPublication | null;
   editorDirty: boolean;
   predictions: PredictionReference[]; partners: PartnerMarketProjection[]; estimate: { reachableUsers: number; warnings: string[] } | null;
+  audienceSources: EmailAudienceSource[];
   busy: boolean; previewLocale: CampaignLocale; setPreviewLocale: (locale: CampaignLocale) => void;
   preview: Awaited<ReturnType<EmailMarketingRepository['preview']>> | null;
   onSave: () => void; onEstimate: () => void; onPreview: () => void; onApprove: () => void; onRefresh: () => void;
@@ -226,7 +228,7 @@ type EditorProps = {
 };
 
 function Editor(props: EditorProps) {
-  const { draft, setDraft, selected, editorDirty, predictions, partners, estimate, busy } = props;
+  const { draft, setDraft, selected, editorDirty, predictions, partners, audienceSources, estimate, busy } = props;
   const selectedPartner = partners.find((item) => item.id === draft.partnerMarketConfigId);
   const set = <K extends keyof EditorDraft>(key: K, value: EditorDraft[K]) => setDraft({ ...draft, [key]: value });
   const setTopic = (topic: EmailPublicationTopic) => setDraft({ ...draft, topic, predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' });
@@ -238,8 +240,11 @@ function Editor(props: EditorProps) {
     <TextField label="Publication name" value={draft.name} onChange={(event) => set('name', event.target.value)} required />
     <TextField select label="Publication type" value={draft.topic} onChange={(event) => setTopic(event.target.value as EmailPublicationTopic)}>{topics.map((topic) => <MenuItem key={topic.value} value={topic.value}>{topic.label}</MenuItem>)}</TextField>
     <Typography variant="subtitle1">Audience</Typography>
-    <TextField select label="Audience source" value={draft.audience.segmentSource} onChange={(event) => set('audience', { ...draft.audience, segmentSource: event.target.value as CampaignAudienceDefinition['segmentSource'], sourceSegmentId: event.target.value === 'manual_rules' ? null : draft.audience.sourceSegmentId })}><MenuItem value="manual_rules">Manual rules</MenuItem><MenuItem value="saved_segment">Saved segment</MenuItem><MenuItem value="template_segment">Template segment</MenuItem></TextField>
-    {draft.audience.segmentSource !== 'manual_rules' ? <TextField label="Source segment ID" value={draft.audience.sourceSegmentId ?? ''} onChange={(event) => set('audience', { ...draft.audience, sourceSegmentId: event.target.value })} required /> : null}
+    <TextField select label="Audience source" value={draft.audience.segmentSource} onChange={(event) => set('audience', { ...draft.audience, segmentSource: event.target.value as CampaignAudienceDefinition['segmentSource'], sourceSegmentId: null })}><MenuItem value="manual_rules">Manual rules</MenuItem><MenuItem value="saved_segment">Saved segment</MenuItem><MenuItem value="template_segment">Template segment</MenuItem></TextField>
+    {draft.audience.segmentSource !== 'manual_rules' ? <TextField select label="Saved audience" value={draft.audience.sourceSegmentId ?? ''} onChange={(event) => {
+      const source = audienceSources.find((item) => item.id === event.target.value && item.source === draft.audience.segmentSource);
+      if (source) set('audience', cloneAudience(source.audience, source));
+    }} required><MenuItem value="" disabled>Select an audience</MenuItem>{audienceSources.filter((source) => source.source === draft.audience.segmentSource).map((source) => <MenuItem key={`${source.source}:${source.id}`} value={source.id}>{source.name}</MenuItem>)}</TextField> : null}
     <Box><Typography variant="subtitle2">Retention stages</Typography><Stack direction="row" flexWrap="wrap" useFlexGap>{retentionStages.map((stage) => <FormControlLabel key={stage} control={<Checkbox checked={draft.audience.criteria.retentionStages.includes(stage)} onChange={(event) => set('audience', { ...draft.audience, criteria: { ...draft.audience.criteria, retentionStages: toggle(draft.audience.criteria.retentionStages, stage, event.target.checked) } })} />} label={stage} />)}</Stack></Box>
     <TextField label="Exact user IDs (comma-separated)" value={draft.audience.criteria.userIds.join(', ')} onChange={(event) => set('audience', { ...draft.audience, criteria: { ...draft.audience.criteria, userIds: splitValues(event.target.value) } })} />
     <Box><Typography variant="subtitle2">Recipient locales</Typography>{locales.map((locale) => <FormControlLabel key={locale} control={<Checkbox checked={draft.audience.criteria.locales.includes(locale)} onChange={(event) => set('audience', { ...draft.audience, criteria: { ...draft.audience.criteria, locales: toggle(draft.audience.criteria.locales, locale, event.target.checked) } })} />} label={locale} />)}</Box>
@@ -292,7 +297,7 @@ function fromPublication(publication: EmailPublication): EditorDraft {
 function toInput(draft: EditorDraft, partners: PartnerMarketProjection[]): EmailPublicationInput {
   if (!draft.name.trim()) throw new Error('Publication name is required.');
   if (!Number.isInteger(Number(draft.frequencyCapHours)) || Number(draft.frequencyCapHours) < 1) throw new Error('Frequency cap must be a positive whole number.');
-  if (draft.audience.criteria.retentionStages.length === 0 || draft.audience.criteria.locales.length === 0) throw new Error('Audience requires at least one retention stage and locale.');
+  if ((draft.audience.criteria.retentionStages.length === 0 && draft.audience.criteria.userIds.length === 0) || draft.audience.criteria.locales.length === 0) throw new Error('Audience requires at least one retention stage or exact user ID, and one locale.');
   if (draft.audience.segmentSource !== 'manual_rules' && !draft.audience.sourceSegmentId?.trim()) throw new Error('Source segment ID is required.');
   if (locales.some((locale) => !isComplete(draft.contentByLocale[locale]))) throw new Error('All en/es/pt subject, preheader, HTML body, and text body fields are required.');
   const input: EmailPublicationInput = { name: draft.name.trim(), topic: draft.topic, audience: draft.audience, frequencyCapHours: Number(draft.frequencyCapHours), contentByLocale: draft.contentByLocale };
@@ -325,6 +330,7 @@ function record(value: unknown): Record<string, unknown> | null { return value &
 function stringValue(value: unknown): string { return typeof value === 'string' ? value : ''; }
 function localized(value: Record<string, unknown> | null): LocalizedString { return { en: stringValue(value?.en), es: stringValue(value?.es), pt: stringValue(value?.pt) }; }
 function trimLocalized(value: LocalizedString): LocalizedString { return { en: value.en.trim(), es: value.es.trim(), pt: value.pt.trim() }; }
+function cloneAudience(audience: CampaignAudienceDefinition, source: EmailAudienceSource): CampaignAudienceDefinition { return { ...audience, segmentSource: source.source, sourceSegmentId: source.id, criteria: { ...audience.criteria, retentionStages: [...audience.criteria.retentionStages], userIds: [...audience.criteria.userIds], locales: [...audience.criteria.locales] }, suppression: { ...audience.suppression } }; }
 function toLocalDateTime(value: string): string { if (!value) return ''; const date = new Date(value); const offset = date.getTimezoneOffset() * 60_000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
 
 export function zonedLocalDateTimeToUtc(value: string, timezone: string): string {

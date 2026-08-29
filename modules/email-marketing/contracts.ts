@@ -117,6 +117,14 @@ export interface PartnerMarketProjection {
   killSwitchEnabled: boolean;
 }
 
+export interface EmailAudienceSource {
+  id: string;
+  name: string;
+  description: string;
+  source: 'saved_segment' | 'template_segment';
+  audience: CampaignAudienceDefinition;
+}
+
 export interface EmailMarketingRepository {
   list(state?: EmailPublicationState): Promise<EmailPublication[]>;
   get(id: string): Promise<EmailPublication>;
@@ -132,4 +140,5 @@ export interface EmailMarketingRepository {
   estimateAudience(audience: CampaignAudienceDefinition): Promise<{ reachableUsers: number; warnings: string[] }>;
   listPredictionReferences(): Promise<PredictionReference[]>;
   listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]>;
+  listAudienceSources(): Promise<EmailAudienceSource[]>;
 }

@@ -91,4 +91,28 @@ describe('EmailMarketingRepository HTTP contract', () => {
       name: 'EmailMarketingRepositoryError', status: 409, message: 'Exact backend conflict',
     } satisfies Partial<EmailMarketingRepositoryError>));
   });
+
+  it('projects saved segments and templates from the existing campaign catalog', async () => {
+    jest.mocked(adminAuthFetch).mockResolvedValueOnce(ok({
+      savedSegments: [{
+        id: 'saved-1', name: 'Saved one', description: 'Saved description',
+        source: 'saved_segment',
+        audienceDefinition: input.audience,
+      }],
+      scenarioTemplates: [{
+        id: 'template-1', name: 'Template one', description: 'Template description',
+        source: 'saved', definition: { audience: input.audience },
+      }],
+      retentionStageOptions: [], tokens: [], deeplinkOptions: [], sourceEvents: [],
+      sendGuardOptions: [], goalOptions: [], defaults: { eventMaxSendsPerUser: null },
+    }));
+
+    await expect(emailMarketingRepository.listAudienceSources()).resolves.toEqual([
+      expect.objectContaining({ id: 'saved-1', source: 'saved_segment', audience: input.audience }),
+      expect.objectContaining({ id: 'template-1', source: 'template_segment', audience: input.audience }),
+    ]);
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/campaigns/admin/catalog', method: 'GET',
+    });
+  });
 });

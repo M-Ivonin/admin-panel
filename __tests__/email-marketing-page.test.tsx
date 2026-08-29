@@ -43,10 +43,67 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
     estimateAudience: jest.fn().mockResolvedValue({ reachableUsers: 42, warnings: ['Backend estimate only'] }),
     listPredictionReferences: jest.fn().mockResolvedValue([{ id: 'prediction-1', analysisVersion: 4, predictionStatus: 'published', teamsNames: 'A - B' }]),
     listPartnerMarketConfigs: jest.fn().mockResolvedValue([{ id: 'partner-1', operatorDisplayName: 'Bet One', operatorLogoUrl: 'https://cdn.example/logo.png', affiliateDisclosureByLocale: { en: 'EN disclosure', es: 'ES disclosure', pt: 'PT disclosure' }, minimumAge: 18, requiredWarningText: '18+', responsibleGamblingUrl: 'https://bet.example/responsible', countryCode: 'FR', regionCode: null, status: 'approved', killSwitchEnabled: false }]),
+    listAudienceSources: jest.fn().mockResolvedValue([]),
   };
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('loads saved audience choices and copies the selected frozen criteria', async () => {
+    const repo = repository();
+    repo.list.mockResolvedValue([]);
+    repo.listAudienceSources = jest.fn().mockResolvedValue([
+      {
+        id: 'segment-dormant',
+        name: 'Dormant users',
+        description: 'Exact saved audience',
+        source: 'saved_segment',
+        audience: {
+          segmentSource: 'saved_segment',
+          sourceSegmentId: 'segment-dormant',
+          criteria: {
+            retentionStages: [RetentionStage.DEAD],
+            userIds: ['user-exact'],
+            locales: ['en'],
+          },
+          suppression: { excludeUsersWithoutPushOpens: true },
+        },
+      },
+    ]);
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('No email publications found');
+    fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await screen.findByLabelText(/^Publication name/);
+    selectOption('Audience source', 'Saved segment');
+    selectOption('Saved audience', 'Dormant users');
+
+    expect(screen.getByLabelText('Exact user IDs (comma-separated)')).toHaveValue('user-exact');
+    expect(screen.getByRole('checkbox', { name: RetentionStage.DEAD })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: RetentionStage.NEW })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'en' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'es' })).not.toBeChecked();
+  });
+
+  it('accepts an exact-user-only audience without a retention stage', async () => {
+    const repo = repository();
+    repo.list.mockResolvedValue([]);
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('No email publications found');
+    fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await screen.findByLabelText(/^Publication name/);
+    fillCommonFields();
+    fireEvent.click(screen.getByRole('checkbox', { name: RetentionStage.NEW }));
+    fireEvent.change(screen.getByLabelText('Exact user IDs (comma-separated)'), {
+      target: { value: 'user-exact' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(repo.create).toHaveBeenCalled());
+    expect(repo.create.mock.calls[0][0].audience.criteria).toEqual(
+      expect.objectContaining({ retentionStages: [], userIds: ['user-exact'] }),
+    );
+  });
+
   it('renders backend state/counters and canonical isolated preview without approving or sending', async () => {
     const repo = repository();
     render(<EmailMarketingDashboard repository={repo} />);
