@@ -1,5 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { EmailMarketingDashboard } from '@/components/email-marketing/EmailMarketingDashboard';
+import {
+  EmailMarketingDashboard,
+  zonedLocalDateTimeToUtc,
+} from '@/components/email-marketing/EmailMarketingDashboard';
 import type { EmailMarketingRepository, EmailPublication, EmailPublicationInput } from '@/modules/email-marketing/contracts';
 import { RetentionStage } from '@/lib/api/users';
 
@@ -21,6 +24,13 @@ const basePublication: EmailPublication = {
   terminalReason: null, terminalAt: null, approvedAt: null,
   createdAt: '2026-08-29T10:00:00.000Z', updatedAt: '2026-08-29T10:00:00.000Z',
 };
+
+describe('Email Marketing schedule conversion', () => {
+  it('rejects a local time that does not exist during a DST gap', () => {
+    expect(() => zonedLocalDateTimeToUtc('2026-03-29T02:30', 'Europe/Paris'))
+      .toThrow('The selected local time does not exist in the requested timezone.');
+  });
+});
 
 function repository(): jest.Mocked<EmailMarketingRepository> {
   return {

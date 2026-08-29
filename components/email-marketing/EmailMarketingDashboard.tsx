@@ -326,10 +326,15 @@ function toLocalDateTime(value: string): string { if (!value) return ''; const d
 export function zonedLocalDateTimeToUtc(value: string, timezone: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
   if (!match) throw new Error('Schedule requires a valid date and time.');
-  const desired = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
+  const requested = {
+    year: Number(match[1]), month: Number(match[2]), day: Number(match[3]),
+    hour: Number(match[4]), minute: Number(match[5]),
+  };
+  const desired = Date.UTC(requested.year, requested.month - 1, requested.day, requested.hour, requested.minute);
   let candidate = desired;
+  let formatter: Intl.DateTimeFormat;
   try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
+    formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     });
@@ -340,6 +345,11 @@ export function zonedLocalDateTimeToUtc(value: string, timezone: string): string
     }
   } catch {
     throw new Error('Enter a valid IANA timezone, for example Europe/Paris.');
+  }
+  const roundTrip = Object.fromEntries(formatter.formatToParts(new Date(candidate)).map((part) => [part.type, Number(part.value)]));
+  if (roundTrip.year !== requested.year || roundTrip.month !== requested.month || roundTrip.day !== requested.day
+    || roundTrip.hour !== requested.hour || roundTrip.minute !== requested.minute) {
+    throw new Error('The selected local time does not exist in the requested timezone.');
   }
   return new Date(candidate).toISOString();
 }

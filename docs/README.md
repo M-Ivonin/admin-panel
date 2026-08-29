@@ -20,6 +20,7 @@ deleting the backlog.
 ## Admin product contracts
 
 - [Campaigns](./CAMPAIGNS_FEATURE_OVERVIEW.md)
+- [Email Marketing](./EMAIL_MARKETING_ADMIN.md)
 - [Users](./ADMIN_USERS_SCREEN.md)
 - [Prediction evaluations](./PREDICTION_EVALUATION_ADMIN_SCREEN.md)
 - [Revenue Ledger](./REVENUE_LEDGER_ADMIN_SCREEN.md)
