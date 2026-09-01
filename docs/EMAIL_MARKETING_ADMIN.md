@@ -15,6 +15,9 @@ does not decide whether a publication or recipient is eligible for delivery.
   returned values and does not infer replacements for them.
 - Partner compliance data is a read-only backend projection. Missing or
   ineligible configuration remains a backend approval concern.
+- Prediction choices contain only future predictions with Complete Full
+  Analysis. Approval freezes the prediction projection, Full Analysis CTA, and
+  SendGrid Dynamic Template; the admin does not compose provider template data.
 
 ## Operator flow
 

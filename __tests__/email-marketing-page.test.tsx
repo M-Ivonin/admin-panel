@@ -159,8 +159,8 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(screen.getByLabelText(/^Partner market configuration/)).toBeInTheDocument();
     selectOption('Publication type', 'SirBro prediction');
     expect(screen.queryByLabelText(/^Partner market configuration/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Full Analysis CTA is frozen by the backend/)).toBeInTheDocument();
-    selectOption('Prediction and version', 'A - B · analysis v4');
+    expect(screen.getByText(/Only future predictions with Complete Full Analysis/)).toBeInTheDocument();
+    selectOption('Eligible prediction and version', 'A - B · analysis v4');
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     expect(await screen.findByText('Transport failed')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
