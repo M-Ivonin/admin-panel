@@ -120,6 +120,11 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(screen.getByRole('checkbox', { name: RetentionStage.NEW })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'en' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'es' })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: RetentionStage.NEW }));
+
+    expect(screen.getByRole('combobox', { name: 'Audience source' })).toHaveTextContent('Manual rules');
+    expect(screen.queryByRole('combobox', { name: 'Template audience' })).not.toBeInTheDocument();
   });
 
   it('accepts an exact-user-only audience without a retention stage', async () => {
