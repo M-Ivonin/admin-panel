@@ -65,31 +65,21 @@ export const emailMarketingRepository: EmailMarketingRepository = {
   async listPredictionReferences(): Promise<PredictionReference[]> {
     return (await request<{ items: PredictionReference[] }>(`${ROOT}/references/predictions`)).items;
   },
+  async listSendGridTemplates() {
+    return (await request<{ items: import('./contracts').SendGridTemplateReference[] }>(`${ROOT}/references/sendgrid-templates`)).items;
+  },
   async listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]> {
     return (await getPartnerMarketConfigs()).filter((item) => item.status === 'approved' && !item.killSwitchEnabled);
   },
   async listAudienceSources() {
     const catalog = await getCampaignEditorCatalog();
-    return [
-      ...catalog.savedSegments.flatMap((segment) =>
-        segment.audienceDefinition
-          ? [{
-              id: segment.id,
-              name: segment.name,
-              description: segment.description,
-              source: 'saved_segment' as const,
-              audience: segment.audienceDefinition,
-            }]
-          : [],
-      ),
-      ...catalog.scenarioTemplates.map((template) => ({
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        source: 'template_segment' as const,
-        audience: template.definition.audience,
-      })),
-    ];
+    return catalog.scenarioTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      source: 'template_segment' as const,
+      audience: template.definition.audience,
+    }));
   },
 };
 

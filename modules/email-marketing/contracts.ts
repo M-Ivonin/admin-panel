@@ -27,6 +27,8 @@ export interface ProductUpdateCta {
 export interface EmailPublicationInput {
   name: string;
   topic: EmailPublicationTopic;
+  sendGridTemplateId: string;
+  sendGridTemplateVersion: string;
   audience: CampaignAudienceDefinition;
   frequencyCapHours: number;
   contentByLocale: EmailContentByLocale;
@@ -47,6 +49,8 @@ export interface EmailPublicationInput {
 export interface EmailPublicationDefinition {
   name: string;
   topic?: EmailPublicationTopic;
+  sendGridTemplateId: string;
+  sendGridTemplateVersion: string;
   audience: CampaignAudienceDefinition;
   frequencyCapHours: number;
   contentByLocale: EmailContentByLocale;
@@ -125,6 +129,12 @@ export interface EmailAudienceSource {
   audience: CampaignAudienceDefinition;
 }
 
+export interface SendGridTemplateReference {
+  id: string;
+  name: string;
+  versions: Array<{ id: string; name: string; active: boolean; updatedAt: string }>;
+}
+
 export interface EmailMarketingRepository {
   list(state?: EmailPublicationState): Promise<EmailPublication[]>;
   get(id: string): Promise<EmailPublication>;
@@ -141,4 +151,5 @@ export interface EmailMarketingRepository {
   listPredictionReferences(): Promise<PredictionReference[]>;
   listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]>;
   listAudienceSources(): Promise<EmailAudienceSource[]>;
+  listSendGridTemplates(): Promise<SendGridTemplateReference[]>;
 }

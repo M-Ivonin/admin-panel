@@ -11,6 +11,8 @@ jest.mock('@/modules/http/admin-auth-client', () => ({ adminAuthFetch: jest.fn()
 const input: EmailPublicationInput = {
   name: 'Weekly product news',
   topic: 'sirbro_product_updates',
+  sendGridTemplateId: 'd-template-news',
+  sendGridTemplateVersion: 'version-1',
   audience: {
     segmentSource: 'manual_rules', sourceSegmentId: null,
     criteria: { retentionStages: [RetentionStage.CURRENT], userIds: [], locales: ['en', 'es', 'pt'] },
@@ -72,17 +74,20 @@ describe('EmailMarketingRepository HTTP contract', () => {
       .mockResolvedValueOnce(ok({ id: 'publication-1' }))
       .mockResolvedValueOnce(ok({ locale: 'es', subject: 'Exacto', preheader: 'Exacto', html: '<p>Exacto</p>', text: 'Exacto' }))
       .mockResolvedValueOnce(ok({ items: [] }))
+      .mockResolvedValueOnce(ok({ items: [] }))
       .mockResolvedValueOnce(ok({ reachableUsers: 12, warnings: [] }));
     await emailMarketingRepository.list('paused');
     await emailMarketingRepository.get('publication-1');
     await emailMarketingRepository.preview('publication-1', 'es');
     await emailMarketingRepository.listPredictionReferences();
+    await emailMarketingRepository.listSendGridTemplates();
     await emailMarketingRepository.estimateAudience(input.audience);
     expect(jest.mocked(adminAuthFetch).mock.calls.map(([request]) => request.path)).toEqual([
       '/campaigns/admin/email-publications?state=paused',
       '/campaigns/admin/email-publications/publication-1',
       '/campaigns/admin/email-publications/publication-1/preview?locale=es',
       '/campaigns/admin/email-publications/references/predictions',
+      '/campaigns/admin/email-publications/references/sendgrid-templates',
       '/campaigns/admin/email-publications/estimate-audience',
     ]);
 
@@ -92,7 +97,7 @@ describe('EmailMarketingRepository HTTP contract', () => {
     } satisfies Partial<EmailMarketingRepositoryError>));
   });
 
-  it('projects saved segments and templates from the existing campaign catalog', async () => {
+  it('projects only scenario templates from the existing campaign catalog', async () => {
     jest.mocked(adminAuthFetch).mockResolvedValueOnce(ok({
       savedSegments: [{
         id: 'saved-1', name: 'Saved one', description: 'Saved description',
@@ -108,7 +113,6 @@ describe('EmailMarketingRepository HTTP contract', () => {
     }));
 
     await expect(emailMarketingRepository.listAudienceSources()).resolves.toEqual([
-      expect.objectContaining({ id: 'saved-1', source: 'saved_segment', audience: input.audience }),
       expect.objectContaining({ id: 'template-1', source: 'template_segment', audience: input.audience }),
     ]);
     expect(adminAuthFetch).toHaveBeenCalledWith({

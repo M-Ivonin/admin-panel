@@ -11,6 +11,7 @@ const basePublication: EmailPublication = {
   topic: 'sirbro_product_updates', state: 'draft',
   definition: {
     name: 'Product launch', topic: 'sirbro_product_updates', frequencyCapHours: 24,
+    sendGridTemplateId: 'd-template-product', sendGridTemplateVersion: 'version-1',
     audience: { segmentSource: 'manual_rules', sourceSegmentId: null, criteria: { retentionStages: [RetentionStage.CURRENT], userIds: [], locales: ['en', 'es', 'pt'] }, suppression: { excludeUsersWithoutPushOpens: false } },
     contentByLocale: {
       en: { subject: 'EN subject', preheader: 'EN preheader', htmlBody: '<p>EN exact</p>', textBody: 'EN exact' },
@@ -44,22 +45,58 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
     listPredictionReferences: jest.fn().mockResolvedValue([{ id: 'prediction-1', analysisVersion: 4, predictionStatus: 'published', teamsNames: 'A - B' }]),
     listPartnerMarketConfigs: jest.fn().mockResolvedValue([{ id: 'partner-1', operatorDisplayName: 'Bet One', operatorLogoUrl: 'https://cdn.example/logo.png', affiliateDisclosureByLocale: { en: 'EN disclosure', es: 'ES disclosure', pt: 'PT disclosure' }, minimumAge: 18, requiredWarningText: '18+', responsibleGamblingUrl: 'https://bet.example/responsible', countryCode: 'FR', regionCode: null, status: 'approved', killSwitchEnabled: false }]),
     listAudienceSources: jest.fn().mockResolvedValue([]),
+    listSendGridTemplates: jest.fn().mockResolvedValue([{ id: 'd-template-product', name: 'Product updates', versions: [
+      { id: 'version-1', name: 'Version one', active: true, updatedAt: '2026-08-01 00:00:00' },
+      { id: 'version-2', name: 'Version two', active: false, updatedAt: '2026-07-01 00:00:00' },
+    ] }]),
   };
 }
 
 describe('EmailMarketingDashboard workflow', () => {
-  it('loads saved audience choices and copies the selected frozen criteria', async () => {
+  it('shows one latest campaign row and switches versions inside a detail dialog', async () => {
+    const repo = repository();
+    const version1 = { ...basePublication, id: 'pub-1', definitionVersion: 1, state: 'superseded' as const };
+    const version2 = {
+      ...basePublication,
+      id: 'pub-2',
+      definitionVersion: 2,
+      definition: { ...basePublication.definition, sendGridTemplateVersion: 'version-2' },
+    };
+    repo.list.mockResolvedValue([version1, version2]);
+    repo.get.mockImplementation(async (id) => id === 'pub-1' ? version1 : version2);
+
+    render(<EmailMarketingDashboard repository={repo} />);
+
+    expect(await screen.findByText('Product launch')).toBeInTheDocument();
+    expect(screen.getAllByText('Product launch')).toHaveLength(1);
+    expect(screen.getByText(/version 2/)).toBeInTheDocument();
+    expect(screen.queryByText('Open')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open publication Product launch' }));
+
+    const detail = await screen.findByRole('dialog', { name: 'Publication details' });
+    expect(within(detail).getByRole('combobox', { name: 'Publication version' })).toHaveTextContent('Version 2');
+    expect(within(detail).getByRole('combobox', { name: /^SendGrid template version/ })).toHaveTextContent('Version two');
+    fireEvent.mouseDown(within(detail).getByRole('combobox', { name: 'Publication version' }));
+    fireEvent.click(screen.getByRole('option', { name: /Version 1/ }));
+
+    await waitFor(() => expect(repo.get).toHaveBeenLastCalledWith('pub-1'));
+    await waitFor(() => expect(within(detail).getByRole('combobox', { name: /^SendGrid template version/ })).toHaveTextContent('Version one'));
+    expect(within(detail).getByText('Historical versions are read-only. Select the latest version to edit or run lifecycle commands.')).toBeInTheDocument();
+    expect(within(detail).queryByRole('button', { name: 'Save successor draft' })).not.toBeInTheDocument();
+  });
+
+  it('offers template audiences without exposing saved segments and copies the selected frozen criteria', async () => {
     const repo = repository();
     repo.list.mockResolvedValue([]);
     repo.listAudienceSources = jest.fn().mockResolvedValue([
       {
-        id: 'segment-dormant',
+        id: 'template-dormant',
         name: 'Dormant users',
-        description: 'Exact saved audience',
-        source: 'saved_segment',
+        description: 'Reusable template audience',
+        source: 'template_segment',
         audience: {
-          segmentSource: 'saved_segment',
-          sourceSegmentId: 'segment-dormant',
+          segmentSource: 'template_segment',
+          sourceSegmentId: 'template-dormant',
           criteria: {
             retentionStages: [RetentionStage.DEAD],
             userIds: ['user-exact'],
@@ -74,14 +111,20 @@ describe('EmailMarketingDashboard workflow', () => {
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
     await screen.findByLabelText(/^Publication name/);
-    selectOption('Audience source', 'Saved segment');
-    selectOption('Saved audience', 'Dormant users');
+    selectOption('Audience source', 'Template segment');
+    expect(screen.queryByRole('option', { name: 'Saved segment' })).not.toBeInTheDocument();
+    selectOption('Template audience', 'Dormant users');
 
     expect(screen.getByLabelText('Exact user IDs (comma-separated)')).toHaveValue('user-exact');
     expect(screen.getByRole('checkbox', { name: RetentionStage.DEAD })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: RetentionStage.NEW })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'en' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'es' })).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: RetentionStage.NEW }));
+
+    expect(screen.getByRole('combobox', { name: 'Audience source' })).toHaveTextContent('Manual rules');
+    expect(screen.queryByRole('combobox', { name: 'Template audience' })).not.toBeInTheDocument();
   });
 
   it('accepts an exact-user-only audience without a retention stage', async () => {
@@ -110,7 +153,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(await screen.findByText('Product launch')).toBeInTheDocument();
     expect(screen.getByText('Provider accepted')).toBeInTheDocument();
     for (const value of ['7', '5', '1', '3', '2', '4']) expect(screen.getAllByText(value).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open publication Product launch' }));
     await screen.findByLabelText('Preview locale');
     selectOption('Preview locale', 'es');
     fireEvent.click(screen.getByRole('button', { name: 'Load preview' }));
@@ -141,7 +184,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.queryByText('sent')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open publication Product launch' }));
     expect(await screen.findByText('Publication detail · Provider accepted')).toBeInTheDocument();
     expect(screen.queryByText('Publication detail · sent')).not.toBeInTheDocument();
   });
@@ -180,7 +223,7 @@ describe('EmailMarketingDashboard workflow', () => {
     const repo = repository();
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('Product launch');
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open publication Product launch' }));
     await waitFor(() => expect(repo.get).toHaveBeenCalled());
     await screen.findByLabelText(/^Publication name/);
     fireEvent.change(screen.getByLabelText(/^Publication name/), { target: { value: 'Product launch successor' } });
@@ -251,7 +294,7 @@ describe('EmailMarketingDashboard workflow', () => {
     repo.list.mockResolvedValue([approved]); repo.get.mockResolvedValue(approved);
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('Product launch');
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open publication Product launch' }));
     expect(await screen.findByRole('button', { name: 'Send now' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Schedule date and time'), { target: { value: '2026-09-01T10:00' } });
     fireEvent.change(screen.getByLabelText('IANA timezone'), { target: { value: 'Europe/Paris' } });
@@ -280,6 +323,7 @@ describe('EmailMarketingDashboard workflow', () => {
 
 function fillCommonFields(): void {
   fireEvent.change(screen.getByLabelText(/^Publication name/), { target: { value: 'Prediction mail' } });
+  selectOption('SendGrid template', 'Product updates');
   fireEvent.change(screen.getByLabelText(/^Frequency cap hours/), { target: { value: '24' } });
   for (const locale of ['en', 'es', 'pt']) {
     fireEvent.change(screen.getByLabelText(new RegExp(`^${locale} subject`)), { target: { value: `${locale} subject` } });
@@ -290,6 +334,6 @@ function fillCommonFields(): void {
 }
 
 function selectOption(label: string, option: string): void {
-  fireEvent.mouseDown(screen.getByRole('combobox', { name: new RegExp(`^${label}`) }));
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: new RegExp(`^${label}$`) }));
   fireEvent.click(screen.getByRole('option', { name: option }));
 }
