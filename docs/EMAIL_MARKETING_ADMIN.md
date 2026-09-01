@@ -30,6 +30,10 @@ provider API key; only stable IDs are frozen in each immutable definition.
   SendGrid Dynamic Template; the admin does not compose provider template data.
 - Only the active SendGrid template version can be selected for a new or
   successor publication. Inactive saved versions remain visible as history.
+- The backend marks each template with compatible publication topics. The
+  picker shows only templates compatible with the selected type and clears the
+  current template/version when that type changes; backend validation remains
+  authoritative on create, edit, approval, and send.
 
 ## Operator flow
 

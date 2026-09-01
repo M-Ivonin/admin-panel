@@ -45,7 +45,7 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
     listPredictionReferences: jest.fn().mockResolvedValue([{ id: 'prediction-1', analysisVersion: 4, predictionStatus: 'published', teamsNames: 'A - B' }]),
     listPartnerMarketConfigs: jest.fn().mockResolvedValue([{ id: 'partner-1', operatorDisplayName: 'Bet One', operatorLogoUrl: 'https://cdn.example/logo.png', affiliateDisclosureByLocale: { en: 'EN disclosure', es: 'ES disclosure', pt: 'PT disclosure' }, minimumAge: 18, requiredWarningText: '18+', responsibleGamblingUrl: 'https://bet.example/responsible', countryCode: 'FR', regionCode: null, status: 'approved', killSwitchEnabled: false }]),
     listAudienceSources: jest.fn().mockResolvedValue([]),
-    listSendGridTemplates: jest.fn().mockResolvedValue([{ id: 'd-template-product', name: 'Product updates', versions: [
+    listSendGridTemplates: jest.fn().mockResolvedValue([{ id: 'd-template-product', name: 'Product updates', compatibleTopics: ['sirbro_predictions', 'sirbro_product_updates', 'betting_partner_offers'], versions: [
       { id: 'version-1', name: 'Version one', active: true, updatedAt: '2026-08-01 00:00:00' },
       { id: 'version-2', name: 'Version two', active: false, updatedAt: '2026-07-01 00:00:00' },
     ] }]),
@@ -53,6 +53,27 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('filters SendGrid templates by publication type and clears the previous selection', async () => {
+    const repo = repository();
+    repo.list.mockResolvedValue([]);
+    repo.listSendGridTemplates.mockResolvedValue([
+      { id: 'd-prediction', name: 'Prediction design', compatibleTopics: ['sirbro_predictions'], versions: [{ id: 'vp', name: 'Live', active: true, updatedAt: '2026-09-01' }] },
+      { id: 'd-partner', name: 'Partner design', compatibleTopics: ['betting_partner_offers'], versions: [{ id: 'vb', name: 'Live', active: true, updatedAt: '2026-09-01' }] },
+    ]);
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('No email publications found');
+    fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await screen.findByLabelText(/^Publication name/);
+    selectOption('Publication type', 'SirBro prediction');
+    selectOption('SendGrid template', 'Prediction design');
+    expect(screen.getByRole('combobox', { name: /^SendGrid template$/ })).toHaveTextContent('Prediction design');
+    selectOption('Publication type', 'Betting partner offer');
+    expect(screen.getByRole('combobox', { name: /^SendGrid template$/ })).not.toHaveTextContent('Prediction design');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: /^SendGrid template$/ }));
+    expect(screen.getByRole('option', { name: 'Partner design' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Prediction design' })).not.toBeInTheDocument();
+  });
+
   it('shows one latest campaign row and switches versions inside a detail dialog', async () => {
     const repo = repository();
     const version1 = { ...basePublication, id: 'pub-1', definitionVersion: 1, state: 'superseded' as const };
@@ -201,6 +222,7 @@ describe('EmailMarketingDashboard workflow', () => {
     selectOption('Publication type', 'Betting partner offer');
     expect(screen.getByLabelText(/^Partner market configuration/)).toBeInTheDocument();
     selectOption('Publication type', 'SirBro prediction');
+    selectOption('SendGrid template', 'Product updates');
     expect(screen.queryByLabelText(/^Partner market configuration/)).not.toBeInTheDocument();
     expect(screen.getByText(/Only future predictions with Complete Full Analysis/)).toBeInTheDocument();
     selectOption('Eligible prediction and version', 'A - B · analysis v4');
@@ -268,6 +290,7 @@ describe('EmailMarketingDashboard workflow', () => {
     await screen.findByLabelText(/^Publication name/);
     fillCommonFields();
     selectOption('Publication type', 'Betting partner offer');
+    selectOption('SendGrid template', 'Product updates');
     selectOption('Partner market configuration', 'Bet One · FR');
     expect(screen.getByText('Backend legal/display projection (read-only)')).toBeInTheDocument();
     expect(screen.getByText(/EN disclosure: EN disclosure/)).toBeInTheDocument();

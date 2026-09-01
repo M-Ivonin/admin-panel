@@ -132,6 +132,7 @@ export interface EmailAudienceSource {
 export interface SendGridTemplateReference {
   id: string;
   name: string;
+  compatibleTopics: EmailPublicationTopic[];
   versions: Array<{ id: string; name: string; active: boolean; updatedAt: string }>;
 }
 
