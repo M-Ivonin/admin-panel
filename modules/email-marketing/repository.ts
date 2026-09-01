@@ -73,26 +73,13 @@ export const emailMarketingRepository: EmailMarketingRepository = {
   },
   async listAudienceSources() {
     const catalog = await getCampaignEditorCatalog();
-    return [
-      ...catalog.savedSegments.flatMap((segment) =>
-        segment.audienceDefinition
-          ? [{
-              id: segment.id,
-              name: segment.name,
-              description: segment.description,
-              source: 'saved_segment' as const,
-              audience: segment.audienceDefinition,
-            }]
-          : [],
-      ),
-      ...catalog.scenarioTemplates.map((template) => ({
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        source: 'template_segment' as const,
-        audience: template.definition.audience,
-      })),
-    ];
+    return catalog.scenarioTemplates.map((template) => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      source: 'template_segment' as const,
+      audience: template.definition.audience,
+    }));
   },
 };
 

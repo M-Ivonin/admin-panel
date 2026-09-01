@@ -85,18 +85,18 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(within(detail).queryByRole('button', { name: 'Save successor draft' })).not.toBeInTheDocument();
   });
 
-  it('loads saved audience choices and copies the selected frozen criteria', async () => {
+  it('offers template audiences without exposing saved segments and copies the selected frozen criteria', async () => {
     const repo = repository();
     repo.list.mockResolvedValue([]);
     repo.listAudienceSources = jest.fn().mockResolvedValue([
       {
-        id: 'segment-dormant',
+        id: 'template-dormant',
         name: 'Dormant users',
-        description: 'Exact saved audience',
-        source: 'saved_segment',
+        description: 'Reusable template audience',
+        source: 'template_segment',
         audience: {
-          segmentSource: 'saved_segment',
-          sourceSegmentId: 'segment-dormant',
+          segmentSource: 'template_segment',
+          sourceSegmentId: 'template-dormant',
           criteria: {
             retentionStages: [RetentionStage.DEAD],
             userIds: ['user-exact'],
@@ -111,8 +111,9 @@ describe('EmailMarketingDashboard workflow', () => {
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
     await screen.findByLabelText(/^Publication name/);
-    selectOption('Audience source', 'Saved segment');
-    selectOption('Saved audience', 'Dormant users');
+    selectOption('Audience source', 'Template segment');
+    expect(screen.queryByRole('option', { name: 'Saved segment' })).not.toBeInTheDocument();
+    selectOption('Template audience', 'Dormant users');
 
     expect(screen.getByLabelText('Exact user IDs (comma-separated)')).toHaveValue('user-exact');
     expect(screen.getByRole('checkbox', { name: RetentionStage.DEAD })).toBeChecked();

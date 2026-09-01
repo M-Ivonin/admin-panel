@@ -97,7 +97,7 @@ describe('EmailMarketingRepository HTTP contract', () => {
     } satisfies Partial<EmailMarketingRepositoryError>));
   });
 
-  it('projects saved segments and templates from the existing campaign catalog', async () => {
+  it('projects only scenario templates from the existing campaign catalog', async () => {
     jest.mocked(adminAuthFetch).mockResolvedValueOnce(ok({
       savedSegments: [{
         id: 'saved-1', name: 'Saved one', description: 'Saved description',
@@ -113,7 +113,6 @@ describe('EmailMarketingRepository HTTP contract', () => {
     }));
 
     await expect(emailMarketingRepository.listAudienceSources()).resolves.toEqual([
-      expect.objectContaining({ id: 'saved-1', source: 'saved_segment', audience: input.audience }),
       expect.objectContaining({ id: 'template-1', source: 'template_segment', audience: input.audience }),
     ]);
     expect(adminAuthFetch).toHaveBeenCalledWith({
