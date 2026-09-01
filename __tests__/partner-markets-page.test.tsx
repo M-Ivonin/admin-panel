@@ -5,6 +5,11 @@ import {
   pausePartnerMarketConfig,
   savePartnerMarketConfig,
 } from '@/lib/api/partner-market-configs';
+import {
+  getMarketingJurisdictions,
+  pauseMarketingJurisdiction,
+  saveMarketingJurisdiction,
+} from '@/lib/api/marketing-jurisdictions';
 
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -13,6 +18,11 @@ jest.mock('@/lib/api/partner-market-configs', () => ({
   getPartnerMarketConfigs: jest.fn(),
   pausePartnerMarketConfig: jest.fn(),
   savePartnerMarketConfig: jest.fn(),
+}));
+jest.mock('@/lib/api/marketing-jurisdictions', () => ({
+  getMarketingJurisdictions: jest.fn(),
+  pauseMarketingJurisdiction: jest.fn(),
+  saveMarketingJurisdiction: jest.fn(),
 }));
 
 const config = {
@@ -31,6 +41,90 @@ describe('PartnerMarketsPage', () => {
     (getPartnerMarketConfigs as jest.Mock).mockReset();
     (savePartnerMarketConfig as jest.Mock).mockReset();
     (pausePartnerMarketConfig as jest.Mock).mockReset();
+    (getMarketingJurisdictions as jest.Mock).mockReset().mockResolvedValue([]);
+    (saveMarketingJurisdiction as jest.Mock).mockReset();
+    (pauseMarketingJurisdiction as jest.Mock).mockReset();
+  });
+
+  it('manages jurisdiction rules in a separate tab on the Partner markets screen', async () => {
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([]);
+    (getMarketingJurisdictions as jest.Mock).mockResolvedValue([{
+      id: 'rule-1', countryCode: 'FR', regionCode: null, status: 'approved', minimumAge: 18,
+      predictionsEmailAllowed: true, productEmailAllowed: true, partnerOfferEmailAllowed: true,
+      combinedPredictionOfferAllowed: false, bonusAdvertisingAllowed: false, matchSpecificPromotionAllowed: false,
+      requiredWarningText: '18+. Play responsibly.', warningLayoutRules: {},
+      responsibleGamblingUrl: 'https://example.fr/responsible', regulatorSourceUrl: 'https://regulator.example/fr',
+      legalReviewedAt: '2026-08-01T00:00:00.000Z', legalReviewExpiresAt: '2027-08-01T00:00:00.000Z',
+      effectiveFrom: '2026-08-02T00:00:00.000Z', effectiveUntil: null, rulesVersion: 'fr-2026-08',
+      createdAt: '2026-08-01T00:00:00.000Z', updatedAt: '2026-08-01T00:00:00.000Z',
+    }]);
+    render(<PartnerMarketsPage />);
+
+    expect(await screen.findByRole('tab', { name: 'Partner configurations' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Jurisdiction rules' }));
+
+    expect(await screen.findByText('FR · Version fr-2026-08')).toBeInTheDocument();
+    expect(screen.getByText('Partner offers')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add jurisdiction rule' })).toBeEnabled();
+    expect(getMarketingJurisdictions).toHaveBeenCalledWith({ countryCode: '' });
+  });
+
+  it('keeps jurisdiction creation independent from a pending partner request', async () => {
+    (getPartnerMarketConfigs as jest.Mock).mockReturnValue(new Promise(() => undefined));
+    (getMarketingJurisdictions as jest.Mock).mockResolvedValue([]);
+    render(<PartnerMarketsPage />);
+
+    expect(screen.getByRole('button', { name: 'Add configuration' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('tab', { name: 'Jurisdiction rules' }));
+
+    expect(await screen.findByText('No jurisdiction rules found')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add jurisdiction rule' })).toBeEnabled();
+  });
+
+  it('creates a reviewed jurisdiction rule through the jurisdiction tab', async () => {
+    const savedRule = {
+      id: 'rule-1', countryCode: 'FR', regionCode: null, status: 'approved' as const, minimumAge: 18,
+      predictionsEmailAllowed: false, productEmailAllowed: false, partnerOfferEmailAllowed: true,
+      combinedPredictionOfferAllowed: false, bonusAdvertisingAllowed: false, matchSpecificPromotionAllowed: false,
+      requiredWarningText: '18+. Play responsibly.', warningLayoutRules: {},
+      responsibleGamblingUrl: 'https://example.fr/responsible', regulatorSourceUrl: 'https://regulator.example/fr',
+      legalReviewedAt: '2026-08-01T10:00:00.000Z', legalReviewExpiresAt: '2027-08-01T10:00:00.000Z',
+      effectiveFrom: '2026-08-02T10:00:00.000Z', effectiveUntil: null, rulesVersion: 'fr-2026-08',
+      statusReason: null, createdAt: '2026-08-01T10:00:00.000Z', updatedAt: '2026-08-01T10:00:00.000Z',
+    };
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([]);
+    (getMarketingJurisdictions as jest.Mock).mockResolvedValue([]);
+    (saveMarketingJurisdiction as jest.Mock).mockResolvedValue(savedRule);
+    render(<PartnerMarketsPage />);
+    await screen.findByText('No partner market configurations found');
+    fireEvent.click(screen.getByRole('tab', { name: 'Jurisdiction rules' }));
+    await screen.findByText('No jurisdiction rules found');
+    fireEvent.click(screen.getByRole('button', { name: 'Add jurisdiction rule' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add jurisdiction rule' });
+    const fields: Record<string, string> = {
+      'Country code': 'fr',
+      'Minimum age': '18',
+      'Required warning text': '18+. Play responsibly.',
+      'Responsible gambling URL': 'https://example.fr/responsible',
+      'Regulator source URL': 'https://regulator.example/fr',
+      'Legal reviewed at': '2026-08-01T10:00',
+      'Legal review expires at': '2027-08-01T10:00',
+      'Effective from': '2026-08-02T10:00',
+      'Rules version': 'fr-2026-08',
+    };
+    for (const [label, value] of Object.entries(fields)) {
+      fireEvent.change(within(dialog).getByLabelText(label), { target: { value } });
+    }
+    fireEvent.mouseDown(within(dialog).getByLabelText('Status'));
+    fireEvent.click(screen.getByRole('option', { name: 'approved' }));
+    fireEvent.click(within(dialog).getByLabelText('Partner offers'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save rule' }));
+
+    await waitFor(() => expect(saveMarketingJurisdiction).toHaveBeenCalledWith(expect.objectContaining({
+      countryCode: 'FR', status: 'approved', minimumAge: 18, partnerOfferEmailAllowed: true,
+      warningLayoutRules: {}, rulesVersion: 'fr-2026-08',
+    })));
+    expect(await screen.findByText('FR jurisdiction rule saved.')).toBeInTheDocument();
   });
 
   it('shows loading, then the list with legal facts and send warning', async () => {

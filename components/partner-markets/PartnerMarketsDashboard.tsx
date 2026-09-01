@@ -17,11 +17,14 @@ import {
   MenuItem,
   Stack,
   Switch,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
 import { Add, Edit, Gavel, PauseCircle } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { JurisdictionRulesPanel } from '@/components/partner-markets/JurisdictionRulesPanel';
 import {
   getPartnerMarketConfigs,
   pausePartnerMarketConfig,
@@ -54,6 +57,8 @@ const promotionLabels: Array<[keyof PartnerMarketConfig, string]> = [
 ];
 
 export function PartnerMarketsDashboard() {
+  const [activeTab, setActiveTab] = useState(0);
+  const [jurisdictionCreateRequested, setJurisdictionCreateRequested] = useState(false);
   const [items, setItems] = useState<PartnerMarketConfig[]>([]);
   const [operatorKey, setOperatorKey] = useState('');
   const [countryCode, setCountryCode] = useState('');
@@ -83,26 +88,42 @@ export function PartnerMarketsDashboard() {
   useEffect(() => {
     void load();
   }, [load]);
+  const handleJurisdictionCreateHandled = useCallback(
+    () => setJurisdictionCreateRequested(false),
+    []
+  );
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AdminPageHeader
         title="Partner markets"
-        subtitle="Register legal and regulatory facts for one operator and market."
+        subtitle="Manage jurisdiction rules and approved operator-market configurations."
         icon={<Gavel color="primary" />}
         actions={
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() => setEditing(null)}
-            disabled={loading}
+            onClick={() => activeTab === 0 ? setEditing(null) : setJurisdictionCreateRequested(true)}
+            disabled={activeTab === 0 && loading}
           >
-            Add configuration
+            {activeTab === 0 ? 'Add configuration' : 'Add jurisdiction rule'}
           </Button>
         }
       />
       <Box sx={{ maxWidth: 1280, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}>
         <Stack spacing={3}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, value: number) => setActiveTab(value)}
+            aria-label="Partner market administration"
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+          >
+            <Tab label="Partner configurations" />
+            <Tab label="Jurisdiction rules" />
+          </Tabs>
+          {activeTab === 0 ? <>
           <Alert severity="info">
             Draft configurations do not permit email sends. This registry records verified facts and
             restrictions; campaign eligibility is still decided by the backend with consent, age,
@@ -172,9 +193,13 @@ export function PartnerMarketsDashboard() {
               ))}
             </Stack>
           )}
+          </> : <JurisdictionRulesPanel
+            createRequested={jurisdictionCreateRequested}
+            onCreateHandled={handleJurisdictionCreateHandled}
+          />}
         </Stack>
       </Box>
-      {editing !== undefined ? (
+      {activeTab === 0 && editing !== undefined ? (
         <PartnerMarketFormDialog
           config={editing}
           onClose={() => setEditing(undefined)}
@@ -185,7 +210,7 @@ export function PartnerMarketsDashboard() {
           }}
         />
       ) : null}
-      {pausing ? (
+      {activeTab === 0 && pausing ? (
         <PauseDialog
           config={pausing}
           onClose={() => setPausing(null)}
