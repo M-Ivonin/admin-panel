@@ -65,6 +65,9 @@ export const emailMarketingRepository: EmailMarketingRepository = {
   async listPredictionReferences(): Promise<PredictionReference[]> {
     return (await request<{ items: PredictionReference[] }>(`${ROOT}/references/predictions`)).items;
   },
+  async listSendGridTemplates() {
+    return (await request<{ items: import('./contracts').SendGridTemplateReference[] }>(`${ROOT}/references/sendgrid-templates`)).items;
+  },
   async listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]> {
     return (await getPartnerMarketConfigs()).filter((item) => item.status === 'approved' && !item.killSwitchEnabled);
   },

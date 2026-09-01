@@ -4,12 +4,22 @@ The Email Marketing page is an authenticated operator surface for creating and
 running manual SirBro email publications. It executes the backend contract; it
 does not decide whether a publication or recipient is eligible for delivery.
 
+The campaign list renders one row per campaign using its latest definition
+version. Clicking anywhere on a row opens a dedicated detail dialog; when history exists, a
+version selector defaults to the latest version and can load an older exact
+backend projection. Operators select a SendGrid Dynamic Template by name and
+then one of its versions. The backend loads that catalog without exposing the
+provider API key; only stable IDs are frozen in each immutable definition.
+
 ## Ownership and boundaries
 
 - The admin page owns draft input, localized preview selection, explicit
   operator commands, and conversion of a scheduled local date and time to UTC.
 - The repository contract under `modules/email-marketing` owns authenticated
   calls to `/campaigns/admin/email-publications` and preserves backend errors.
+- Terminal labels preserve backend meaning: `sent` is provider acceptance,
+  `completed_no_send` is a zero-submission completion, `sent_with_failures` is
+  a mixed success/failure outcome, and `failed` means no accepted submission.
 - The backend owns approval, recipient eligibility, legal/display projections,
   lifecycle state, counters, and delivery outcomes. The page renders those
   returned values and does not infer replacements for them.

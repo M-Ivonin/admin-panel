@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert, Box, Button, Card, CardContent, Checkbox, Chip, CircularProgress,
+  Alert, Box, Button, Card, CardActionArea, CardContent, Checkbox, Chip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel,
   MenuItem, Stack, TextField, Typography,
 } from '@mui/material';
@@ -13,7 +13,7 @@ import type { CampaignAudienceDefinition, CampaignLocale } from '@/modules/campa
 import type {
   EmailAudienceSource, EmailContentByLocale, EmailMarketingRepository, EmailPublication,
   EmailPublicationInput, EmailPublicationState, EmailPublicationTopic,
-  LocalizedString, PartnerMarketProjection, PredictionReference,
+  LocalizedString, PartnerMarketProjection, PredictionReference, SendGridTemplateReference,
 } from '@/modules/email-marketing/contracts';
 import {
   createEmailPublicationIdempotencyKey,
@@ -32,6 +32,8 @@ const terminalStates = new Set<EmailPublicationState>(['sent', 'completed_no_sen
 type EditorDraft = {
   name: string;
   topic: EmailPublicationTopic;
+  sendGridTemplateId: string;
+  sendGridTemplateVersion: string;
   frequencyCapHours: string;
   audience: CampaignAudienceDefinition;
   contentByLocale: EmailContentByLocale;
@@ -61,6 +63,8 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
   const [predictions, setPredictions] = useState<PredictionReference[]>([]);
   const [partners, setPartners] = useState<PartnerMarketProjection[]>([]);
   const [audienceSources, setAudienceSources] = useState<EmailAudienceSource[]>([]);
+  const [sendGridTemplates, setSendGridTemplates] = useState<SendGridTemplateReference[]>([]);
+  const [sendGridCatalogUnavailable, setSendGridCatalogUnavailable] = useState(false);
   const [previewLocale, setPreviewLocale] = useState<CampaignLocale>('en');
   const [preview, setPreview] = useState<Awaited<ReturnType<EmailMarketingRepository['preview']>> | null>(null);
   const [scheduleLocal, setScheduleLocal] = useState('');
@@ -68,6 +72,7 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const createKey = useRef(createEmailPublicationIdempotencyKey());
+  const groupedItems = groupPublications(items);
 
   const loadList = useCallback(async () => {
     setLoading(true); setError(null);
@@ -81,11 +86,13 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
   async function openPublication(item: EmailPublication) {
     setBusy(true); setError(null); setPreview(null);
     try {
-      const [detail, predictionItems, partnerItems, sourceItems] = await Promise.all([
-        repository.get(item.id), repository.listPredictionReferences(), repository.listPartnerMarketConfigs(), repository.listAudienceSources(),
+      const [detail, predictionItems, partnerItems, sourceItems, templateItems] = await Promise.all([
+        repository.get(item.id), repository.listPredictionReferences().catch(() => []), repository.listPartnerMarketConfigs().catch(() => []), repository.listAudienceSources().catch(() => []), repository.listSendGridTemplates().catch(() => { setSendGridCatalogUnavailable(true); return []; }),
       ]);
       setSelected(detail); setDraft(fromPublication(detail)); setEditorDirty(false);
       setPredictions(predictionItems); setPartners(partnerItems); setAudienceSources(sourceItems);
+      setSendGridTemplates(templateItems);
+      if (templateItems.length) setSendGridCatalogUnavailable(false);
     } catch (caught) { setError(messageOf(caught)); }
     finally { setBusy(false); }
   }
@@ -94,11 +101,18 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
     setSelected(null); setDraft(emptyDraft()); setEditorDirty(false); setPreview(null); setEstimate(null);
     createKey.current = createEmailPublicationIdempotencyKey();
     try {
-      const [predictionItems, partnerItems, sourceItems] = await Promise.all([
-        repository.listPredictionReferences(), repository.listPartnerMarketConfigs(), repository.listAudienceSources(),
+      const [predictionItems, partnerItems, sourceItems, templateItems] = await Promise.all([
+        repository.listPredictionReferences().catch(() => []), repository.listPartnerMarketConfigs().catch(() => []), repository.listAudienceSources().catch(() => []), repository.listSendGridTemplates().catch(() => { setSendGridCatalogUnavailable(true); return []; }),
       ]);
       setPredictions(predictionItems); setPartners(partnerItems); setAudienceSources(sourceItems);
+      setSendGridTemplates(templateItems);
+      if (templateItems.length) setSendGridCatalogUnavailable(false);
     } catch (caught) { setError(messageOf(caught)); }
+  }
+
+  function closeEditor() {
+    if (busy) return;
+    setDraft(null); setSelected(null); setPreview(null); setEstimate(null); setEditorDirty(false); setError(null);
   }
 
   async function saveDraft() {
@@ -180,30 +194,37 @@ export function EmailMarketingDashboard({ repository = emailMarketingRepository 
         {error ? <Alert severity="error" onClose={() => setError(null)}>{error}</Alert> : null}
         {loading ? <Stack role="status" alignItems="center" py={6}><CircularProgress /><Typography sx={{ mt: 2 }}>Loading email publications…</Typography></Stack> :
           items.length === 0 ? <Card><CardContent sx={{ py: 6, textAlign: 'center' }}><Typography variant="h6">No email publications found</Typography></CardContent></Card> :
-          <Stack spacing={2}>{items.map((item) => <PublicationCard key={item.id} item={item} onOpen={() => void openPublication(item)} />)}</Stack>}
-        {draft ? <Editor
-          draft={draft} setDraft={(next) => { setDraft(next); setEditorDirty(true); }} selected={selected} editorDirty={editorDirty} predictions={predictions} partners={partners} audienceSources={audienceSources}
+          <Stack spacing={2}>{groupedItems.map(({ latest, versions }) => <PublicationCard key={latest.campaignId} item={latest} versionCount={versions.length} onOpen={() => void openPublication(latest)} />)}</Stack>}
+      </Stack>
+    </Box>
+    {draft ? <Dialog open fullWidth maxWidth="xl" aria-labelledby="publication-details-title" onClose={closeEditor} PaperProps={{ sx: { maxHeight: 'calc(100vh - 32px)' } }}>
+      <DialogTitle id="publication-details-title">{selected ? 'Publication details' : 'Create publication'}</DialogTitle>
+      <DialogContent dividers>
+        <Editor
+          draft={draft} setDraft={(next) => { setDraft(next); setEditorDirty(true); }} selected={selected} editorDirty={editorDirty} predictions={predictions} partners={partners} audienceSources={audienceSources} sendGridTemplates={sendGridTemplates} sendGridCatalogUnavailable={sendGridCatalogUnavailable}
+          versions={selected ? items.filter((item) => item.campaignId === selected.campaignId).sort((left, right) => right.definitionVersion - left.definitionVersion) : []}
+          onVersionChange={(item) => void openPublication(item)}
           estimate={estimate} busy={busy} previewLocale={previewLocale} setPreviewLocale={setPreviewLocale}
           preview={preview} onSave={() => void saveDraft()} onEstimate={() => void estimateAudience()}
           onPreview={async () => { if (!selected) return; setBusy(true); setError(null); try { setPreview(await repository.preview(selected.id, previewLocale)); } catch (caught) { setError(messageOf(caught)); } finally { setBusy(false); } }}
           onApprove={() => void approve()} onRefresh={() => void refreshDetail()}
           scheduleLocal={scheduleLocal} setScheduleLocal={setScheduleLocal} timezone={timezone} setTimezone={setTimezone}
           onSchedule={() => void schedule()} onConfirm={setConfirmation}
-        /> : null}
-      </Stack>
-    </Box>
+        />
+      </DialogContent>
+      <DialogActions><Button onClick={closeEditor} disabled={busy}>Close</Button></DialogActions>
+    </Dialog> : null}
     {confirmation ? <Dialog open onClose={busy ? undefined : () => setConfirmation(null)}><DialogTitle>{confirmation.title}</DialogTitle><DialogContent><Stack spacing={2} sx={{ mt: 1 }}><Alert severity="warning">The backend decides and returns the resulting publication state.</Alert>{confirmation.action === 'cancel' ? <TextField label="Cancellation reason" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} multiline minRows={2} /> : null}</Stack></DialogContent><DialogActions><Button onClick={() => setConfirmation(null)}>Back</Button><Button variant="contained" color={confirmation.action === 'cancel' ? 'error' : 'primary'} onClick={() => void runCommand(confirmation.action)}>{confirmation.confirmLabel}</Button></DialogActions></Dialog> : null}
   </Box>;
 }
 
-function PublicationCard({ item, onOpen }: { item: EmailPublication; onOpen: () => void }) {
-  return <Card><CardContent><Stack spacing={2}>
+function PublicationCard({ item, versionCount, onOpen }: { item: EmailPublication; versionCount: number; onOpen: () => void }) {
+  return <Card><CardActionArea onClick={onOpen} aria-label={`Open publication ${item.definition.name}`}><CardContent><Stack spacing={2}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-      <Box><Stack direction="row" spacing={1} alignItems="center"><Typography variant="h6">{item.definition.name}</Typography><Chip label={publicationStateLabel(item.state)} size="small" /></Stack><Typography color="text.secondary">{topicLabel(item.topic)} · version {item.definitionVersion} · cap {item.definition.frequencyCapHours}h</Typography>{item.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {item.schedule.scheduledAtUtc} · {item.schedule.timezone}</Typography> : null}</Box>
-      <Button variant="outlined" onClick={onOpen}>Open</Button>
+      <Box><Stack direction="row" spacing={1} alignItems="center"><Typography variant="h6">{item.definition.name}</Typography><Chip label={publicationStateLabel(item.state)} size="small" /></Stack><Typography color="text.secondary">{topicLabel(item.topic)} · version {item.definitionVersion} · {versionCount} {versionCount === 1 ? 'version' : 'versions'} · cap {item.definition.frequencyCapHours}h</Typography>{item.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {item.schedule.scheduledAtUtc} · {item.schedule.timezone}</Typography> : null}</Box>
     </Stack>
     <CounterGrid counters={item.counters} />
-  </Stack></CardContent></Card>;
+  </Stack></CardContent></CardActionArea></Card>;
 }
 
 function CounterGrid({ counters }: { counters: EmailPublication['counters'] }) {
@@ -220,6 +241,9 @@ type EditorProps = {
   editorDirty: boolean;
   predictions: PredictionReference[]; partners: PartnerMarketProjection[]; estimate: { reachableUsers: number; warnings: string[] } | null;
   audienceSources: EmailAudienceSource[];
+  sendGridTemplates: SendGridTemplateReference[];
+  sendGridCatalogUnavailable: boolean;
+  versions: EmailPublication[]; onVersionChange: (publication: EmailPublication) => void;
   busy: boolean; previewLocale: CampaignLocale; setPreviewLocale: (locale: CampaignLocale) => void;
   preview: Awaited<ReturnType<EmailMarketingRepository['preview']>> | null;
   onSave: () => void; onEstimate: () => void; onPreview: () => void; onApprove: () => void; onRefresh: () => void;
@@ -228,17 +252,26 @@ type EditorProps = {
 };
 
 function Editor(props: EditorProps) {
-  const { draft, setDraft, selected, editorDirty, predictions, partners, audienceSources, estimate, busy } = props;
+  const { draft, setDraft, selected, editorDirty, predictions, partners, audienceSources, sendGridTemplates, sendGridCatalogUnavailable, versions, estimate, busy } = props;
+  const historical = Boolean(selected && versions[0] && versions[0].id !== selected.id);
+  const updateDraft: (next: EditorDraft) => void = historical ? () => undefined : setDraft;
   const selectedPartner = partners.find((item) => item.id === draft.partnerMarketConfigId);
-  const set = <K extends keyof EditorDraft>(key: K, value: EditorDraft[K]) => setDraft({ ...draft, [key]: value });
-  const setTopic = (topic: EmailPublicationTopic) => setDraft({ ...draft, topic, predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' });
+  const selectedTemplate = sendGridTemplates.find((item) => item.id === draft.sendGridTemplateId);
+  const templateOptions = selectedTemplate || !draft.sendGridTemplateId ? sendGridTemplates : [{ id: draft.sendGridTemplateId, name: `Saved template (${draft.sendGridTemplateId})`, versions: [] }, ...sendGridTemplates];
+  const versionOptions = selectedTemplate?.versions.length ? selectedTemplate.versions : draft.sendGridTemplateVersion ? [{ id: draft.sendGridTemplateVersion, name: `Saved version (${draft.sendGridTemplateVersion})`, active: false, updatedAt: '' }] : [];
+  const set = <K extends keyof EditorDraft>(key: K, value: EditorDraft[K]) => updateDraft({ ...draft, [key]: value });
+  const setTopic = (topic: EmailPublicationTopic) => updateDraft({ ...draft, topic, predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' });
   const canSend = selected?.state === 'approved' && !editorDirty;
   return <Card><CardContent><Stack spacing={3}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}><Box><Typography variant="h5">{selected ? `Publication detail · ${publicationStateLabel(selected.state)}` : 'New publication'}</Typography>{selected ? <Typography color="text.secondary">Definition version {selected.definitionVersion}</Typography> : null}{selected?.schedule ? <Typography variant="body2" color="text.secondary">Scheduled: {selected.schedule.scheduledAtUtc} · {selected.schedule.timezone}</Typography> : null}</Box>{selected ? <Button startIcon={<Refresh />} onClick={props.onRefresh}>Refresh detail</Button> : null}</Stack>
+    {selected && versions.length > 1 ? <TextField select label="Publication version" value={selected.id} onChange={(event) => { const version = versions.find((item) => item.id === event.target.value); if (version) props.onVersionChange(version); }} disabled={busy || editorDirty}>{versions.map((version) => <MenuItem key={version.id} value={version.id}>Version {version.definitionVersion} · {publicationStateLabel(version.state)}</MenuItem>)}</TextField> : null}
+    {historical ? <Alert severity="info">Historical versions are read-only. Select the latest version to edit or run lifecycle commands.</Alert> : null}
     {selected ? <CounterGrid counters={selected.counters} /> : null}
     <Divider />
     <TextField label="Publication name" value={draft.name} onChange={(event) => set('name', event.target.value)} required />
     <TextField select label="Publication type" value={draft.topic} onChange={(event) => setTopic(event.target.value as EmailPublicationTopic)}>{topics.map((topic) => <MenuItem key={topic.value} value={topic.value}>{topic.label}</MenuItem>)}</TextField>
+    {sendGridCatalogUnavailable ? <Alert severity="warning">The SendGrid template list is temporarily unavailable. Saved publications remain viewable, but a new publication cannot be created until the catalog is available.</Alert> : null}
+    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}><TextField fullWidth select label="SendGrid template" value={draft.sendGridTemplateId} onChange={(event) => { const template = sendGridTemplates.find((item) => item.id === event.target.value); updateDraft({ ...draft, sendGridTemplateId: event.target.value, sendGridTemplateVersion: template?.versions[0]?.id ?? '' }); }} required helperText={sendGridTemplates.length ? 'Select by name; the stable ID is frozen by the backend.' : 'No SendGrid templates are available.'}>{templateOptions.map((template) => <MenuItem key={template.id} value={template.id}>{template.name}</MenuItem>)}</TextField><TextField fullWidth select label="SendGrid template version" value={draft.sendGridTemplateVersion} onChange={(event) => set('sendGridTemplateVersion', event.target.value)} required disabled={!draft.sendGridTemplateId}>{versionOptions.map((version) => <MenuItem key={version.id} value={version.id}>{version.name}{version.active ? ' · active' : ''}</MenuItem>)}</TextField></Stack>
     <Typography variant="subtitle1">Audience</Typography>
     <TextField select label="Audience source" value={draft.audience.segmentSource} onChange={(event) => set('audience', { ...draft.audience, segmentSource: event.target.value as CampaignAudienceDefinition['segmentSource'], sourceSegmentId: null })}><MenuItem value="manual_rules">Manual rules</MenuItem><MenuItem value="saved_segment">Saved segment</MenuItem><MenuItem value="template_segment">Template segment</MenuItem></TextField>
     {draft.audience.segmentSource !== 'manual_rules' ? <TextField select label="Saved audience" value={draft.audience.sourceSegmentId ?? ''} onChange={(event) => {
@@ -252,14 +285,14 @@ function Editor(props: EditorProps) {
     <TextField label="Frequency cap hours" type="number" value={draft.frequencyCapHours} onChange={(event) => set('frequencyCapHours', event.target.value)} inputProps={{ min: 1, max: 8760 }} required />
     <Button variant="outlined" onClick={props.onEstimate} disabled={busy}>Estimate audience</Button>
     {estimate ? <Alert severity="info">Backend estimate: {estimate.reachableUsers.toLocaleString('en-US')} reachable users.{estimate.warnings.map((warning) => ` ${warning}`)}</Alert> : null}
-    <LocalizedContentEditor draft={draft} setDraft={setDraft} />
+    <LocalizedContentEditor draft={draft} setDraft={updateDraft} />
     {draft.topic === 'sirbro_predictions' ? <Stack spacing={2}><Alert severity="info">Full Analysis CTA is frozen by the backend. It is not editable here.</Alert><TextField select label="Prediction and version" value={draft.predictionKey} onChange={(event) => set('predictionKey', event.target.value)} required>{predictions.map((prediction) => <MenuItem key={`${prediction.id}:${prediction.analysisVersion}`} value={`${prediction.id}:${prediction.analysisVersion}`}>{prediction.teamsNames ?? prediction.id} · analysis v{prediction.analysisVersion}</MenuItem>)}</TextField></Stack> : null}
     {draft.topic === 'sirbro_product_updates' ? <Stack spacing={2}><FormControlLabel control={<Checkbox checked={draft.productCtaEnabled} onChange={(event) => set('productCtaEnabled', event.target.checked)} />} label="Include optional first-party CTA" />{draft.productCtaEnabled ? <><TextField label="CTA HTTPS URL" value={draft.productCtaUrl} onChange={(event) => set('productCtaUrl', event.target.value)} />{locales.map((locale) => <TextField key={locale} label={`${locale} CTA label`} value={draft.productCtaLabels[locale]} onChange={(event) => set('productCtaLabels', { ...draft.productCtaLabels, [locale]: event.target.value })} />)}</> : null}</Stack> : null}
     {draft.topic === 'betting_partner_offers' ? <Stack spacing={2}><TextField select label="Partner market configuration" value={draft.partnerMarketConfigId} onChange={(event) => set('partnerMarketConfigId', event.target.value)} required>{partners.map((partner) => <MenuItem key={partner.id} value={partner.id}>{partner.operatorDisplayName} · {partner.countryCode}{partner.regionCode ? `/${partner.regionCode}` : ''}</MenuItem>)}</TextField>{selectedPartner ? <PartnerProjection partner={selectedPartner} /> : <Alert severity="warning">Only current approved configurations are selectable. Missing legal/display data remains fail-closed at backend approval.</Alert>}<LocalizedSimpleFields label="Offer headline" value={draft.offerHeadlineByLocale} onChange={(value) => set('offerHeadlineByLocale', value)} /><LocalizedSimpleFields label="Offer body" value={draft.offerBodyByLocale} onChange={(value) => set('offerBodyByLocale', value)} multiline /><LocalizedSimpleFields label="Material terms" value={draft.materialTermsByLocale} onChange={(value) => set('materialTermsByLocale', value)} multiline /><TextField label="Offer expires at" type="datetime-local" InputLabelProps={{ shrink: true }} value={draft.offerExpiresAt} onChange={(event) => set('offerExpiresAt', event.target.value)} required /><TextField label="Approved offers.sirbro.gg destination" value={draft.destinationUrl} onChange={(event) => set('destinationUrl', event.target.value)} required /></Stack> : null}
     {editorDirty && selected ? <Alert severity="warning">Unsaved changes invalidate approval controls. Save the successor draft before previewing, approving, sending, or scheduling.</Alert> : null}
-    <Stack direction="row" spacing={2}><Button variant="contained" onClick={props.onSave} disabled={busy}>{selected ? 'Save successor draft' : 'Save draft'}</Button>{selected?.state === 'draft' && !editorDirty ? <Button variant="outlined" onClick={props.onApprove} disabled={busy}>Approve</Button> : null}</Stack>
+    {!historical ? <Stack direction="row" spacing={2}><Button variant="contained" onClick={props.onSave} disabled={busy}>{selected ? 'Save successor draft' : 'Save draft'}</Button>{selected?.state === 'draft' && !editorDirty ? <Button variant="outlined" onClick={props.onApprove} disabled={busy}>Approve</Button> : null}</Stack> : null}
     {selected ? <><Divider /><Typography variant="h6">Canonical preview</Typography><Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}><TextField select label="Preview locale" value={props.previewLocale} onChange={(event) => props.setPreviewLocale(event.target.value as CampaignLocale)}>{locales.map((locale) => <MenuItem key={locale} value={locale}>{locale}</MenuItem>)}</TextField><Button variant="outlined" onClick={props.onPreview} disabled={editorDirty}>Load preview</Button></Stack>{props.preview ? <Card variant="outlined"><CardContent><Typography variant="overline">{props.preview.locale}</Typography><Typography variant="h6">{props.preview.subject}</Typography><Typography color="text.secondary">{props.preview.preheader}</Typography><Box component="iframe" title="Canonical email preview" sandbox="" srcDoc={props.preview.html} sx={{ width: '100%', minHeight: 280, border: 1, borderColor: 'divider', mt: 2 }} /><Typography component="pre" sx={{ whiteSpace: 'pre-wrap', mt: 2 }}>{props.preview.text}</Typography></CardContent></Card> : null}</> : null}
-    {selected ? <LifecycleActions selected={selected} canSend={canSend} scheduleLocal={props.scheduleLocal} setScheduleLocal={props.setScheduleLocal} timezone={props.timezone} setTimezone={props.setTimezone} onSchedule={props.onSchedule} onConfirm={props.onConfirm} /> : null}
+    {selected && !historical ? <LifecycleActions selected={selected} canSend={canSend} scheduleLocal={props.scheduleLocal} setScheduleLocal={props.setScheduleLocal} timezone={props.timezone} setTimezone={props.setTimezone} onSchedule={props.onSchedule} onConfirm={props.onConfirm} /> : null}
     {selected?.terminalReason ? <Alert severity="warning">Terminal reason: {selected.terminalReason}</Alert> : null}
   </Stack></CardContent></Card>;
 }
@@ -282,7 +315,7 @@ function LifecycleActions({ selected, canSend, scheduleLocal, setScheduleLocal, 
 }
 
 function emptyDraft(): EditorDraft {
-  return { name: '', topic: 'sirbro_product_updates', frequencyCapHours: '24', audience: { segmentSource: 'manual_rules', sourceSegmentId: null, criteria: { retentionStages: [RetentionStage.NEW], userIds: [], locales: [...locales] }, suppression: { excludeUsersWithoutPushOpens: false } }, contentByLocale: blankContent(), predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' };
+  return { name: '', topic: 'sirbro_product_updates', sendGridTemplateId: '', sendGridTemplateVersion: '', frequencyCapHours: '24', audience: { segmentSource: 'manual_rules', sourceSegmentId: null, criteria: { retentionStages: [RetentionStage.NEW], userIds: [], locales: [...locales] }, suppression: { excludeUsersWithoutPushOpens: false } }, contentByLocale: blankContent(), predictionKey: '', productCtaEnabled: false, productCtaUrl: '', productCtaLabels: blankLocalized(), partnerMarketConfigId: '', offerHeadlineByLocale: blankLocalized(), offerBodyByLocale: blankLocalized(), materialTermsByLocale: blankLocalized(), offerExpiresAt: '', destinationUrl: '' };
 }
 
 function fromPublication(publication: EmailPublication): EditorDraft {
@@ -291,16 +324,17 @@ function fromPublication(publication: EmailPublication): EditorDraft {
   const predictionId = typeof typeData.predictionId === 'string' ? typeData.predictionId : '';
   const analysisVersion = typeof typeData.analysisVersion === 'number' ? typeData.analysisVersion : 0;
   const cta = record(typeData.cta);
-  return { ...base, name: publication.definition.name, topic: publication.topic, frequencyCapHours: String(publication.definition.frequencyCapHours), audience: publication.definition.audience, contentByLocale: publication.definition.contentByLocale, predictionKey: predictionId ? `${predictionId}:${analysisVersion}` : '', productCtaEnabled: Boolean(cta), productCtaUrl: typeof cta?.url === 'string' ? cta.url : '', productCtaLabels: localized(record(cta?.labelByLocale)), partnerMarketConfigId: stringValue(typeData.partnerMarketConfigId), offerHeadlineByLocale: localized(record(typeData.offerHeadlineByLocale)), offerBodyByLocale: localized(record(typeData.offerBodyByLocale)), materialTermsByLocale: localized(record(typeData.materialTermsByLocale)), offerExpiresAt: toLocalDateTime(stringValue(typeData.offerExpiresAt)), destinationUrl: stringValue(typeData.destinationUrl) };
+  return { ...base, name: publication.definition.name, topic: publication.topic, sendGridTemplateId: publication.definition.sendGridTemplateId ?? '', sendGridTemplateVersion: publication.definition.sendGridTemplateVersion ?? '', frequencyCapHours: String(publication.definition.frequencyCapHours), audience: publication.definition.audience, contentByLocale: publication.definition.contentByLocale, predictionKey: predictionId ? `${predictionId}:${analysisVersion}` : '', productCtaEnabled: Boolean(cta), productCtaUrl: typeof cta?.url === 'string' ? cta.url : '', productCtaLabels: localized(record(cta?.labelByLocale)), partnerMarketConfigId: stringValue(typeData.partnerMarketConfigId), offerHeadlineByLocale: localized(record(typeData.offerHeadlineByLocale)), offerBodyByLocale: localized(record(typeData.offerBodyByLocale)), materialTermsByLocale: localized(record(typeData.materialTermsByLocale)), offerExpiresAt: toLocalDateTime(stringValue(typeData.offerExpiresAt)), destinationUrl: stringValue(typeData.destinationUrl) };
 }
 
 function toInput(draft: EditorDraft, partners: PartnerMarketProjection[]): EmailPublicationInput {
   if (!draft.name.trim()) throw new Error('Publication name is required.');
+  if (!draft.sendGridTemplateId.trim() || !draft.sendGridTemplateVersion.trim()) throw new Error('SendGrid template ID and version are required.');
   if (!Number.isInteger(Number(draft.frequencyCapHours)) || Number(draft.frequencyCapHours) < 1) throw new Error('Frequency cap must be a positive whole number.');
   if ((draft.audience.criteria.retentionStages.length === 0 && draft.audience.criteria.userIds.length === 0) || draft.audience.criteria.locales.length === 0) throw new Error('Audience requires at least one retention stage or exact user ID, and one locale.');
   if (draft.audience.segmentSource !== 'manual_rules' && !draft.audience.sourceSegmentId?.trim()) throw new Error('Source segment ID is required.');
   if (locales.some((locale) => !isComplete(draft.contentByLocale[locale]))) throw new Error('All en/es/pt subject, preheader, HTML body, and text body fields are required.');
-  const input: EmailPublicationInput = { name: draft.name.trim(), topic: draft.topic, audience: draft.audience, frequencyCapHours: Number(draft.frequencyCapHours), contentByLocale: draft.contentByLocale };
+  const input: EmailPublicationInput = { name: draft.name.trim(), topic: draft.topic, sendGridTemplateId: draft.sendGridTemplateId.trim(), sendGridTemplateVersion: draft.sendGridTemplateVersion.trim(), audience: draft.audience, frequencyCapHours: Number(draft.frequencyCapHours), contentByLocale: draft.contentByLocale };
   if (draft.topic === 'sirbro_predictions') {
     const [predictionId, version] = draft.predictionKey.split(':');
     if (!predictionId || !Number.isInteger(Number(version))) throw new Error('Select an exact prediction and analysis version.');
@@ -332,6 +366,17 @@ function localized(value: Record<string, unknown> | null): LocalizedString { ret
 function trimLocalized(value: LocalizedString): LocalizedString { return { en: value.en.trim(), es: value.es.trim(), pt: value.pt.trim() }; }
 function cloneAudience(audience: CampaignAudienceDefinition, source: EmailAudienceSource): CampaignAudienceDefinition { return { ...audience, segmentSource: source.source, sourceSegmentId: source.id, criteria: { ...audience.criteria, retentionStages: [...audience.criteria.retentionStages], userIds: [...audience.criteria.userIds], locales: [...audience.criteria.locales] }, suppression: { ...audience.suppression } }; }
 function toLocalDateTime(value: string): string { if (!value) return ''; const date = new Date(value); const offset = date.getTimezoneOffset() * 60_000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
+
+function groupPublications(items: EmailPublication[]): Array<{ latest: EmailPublication; versions: EmailPublication[] }> {
+  const byCampaign = new Map<string, EmailPublication[]>();
+  for (const item of items) byCampaign.set(item.campaignId, [...(byCampaign.get(item.campaignId) ?? []), item]);
+  return Array.from(byCampaign.values())
+    .map((versions) => {
+      const sorted = [...versions].sort((left, right) => right.definitionVersion - left.definitionVersion);
+      return { latest: sorted[0], versions: sorted };
+    })
+    .sort((left, right) => right.latest.updatedAt.localeCompare(left.latest.updatedAt));
+}
 
 export function zonedLocalDateTimeToUtc(value: string, timezone: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
