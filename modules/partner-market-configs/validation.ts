@@ -27,6 +27,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   matchSpecificPromotionAllowed: false,
   requiredWarningText: '',
   responsibleGamblingUrl: '',
+  operatorTermsUrl: '',
   approvedDestinationHosts: '',
   legalReviewedAt: '',
   legalReviewExpiresAt: '',
@@ -69,6 +70,7 @@ export function normalizePartnerMarketConfigForm(
     minimumAge: Number(values.minimumAge),
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
+    operatorTermsUrl: values.operatorTermsUrl.trim(),
     approvedDestinationHosts: hosts,
     legalReviewedAt: toIso(values.legalReviewedAt),
     legalReviewExpiresAt: toIso(values.legalReviewExpiresAt),
@@ -91,14 +93,26 @@ export function validatePartnerMarketConfigForm(
   requiredAndMax(errors, 'requiredWarningText', input.requiredWarningText);
   requiredAndMax(errors, 'configVersion', input.configVersion, 80);
 
-  if (!isURL(input.operatorLogoUrl, { protocols: ['https'], require_protocol: true }) || !input.operatorLogoUrl.startsWith('https://')) {
+  if (
+    !isURL(input.operatorLogoUrl, {
+      protocols: ['https'],
+      require_protocol: true,
+    }) ||
+    !input.operatorLogoUrl.startsWith('https://')
+  ) {
     errors.operatorLogoUrl = 'Enter a valid HTTPS operator logo URL.';
   }
-  if (Object.values(input.affiliateDisclosureByLocale).some((value) => !value)) {
-    errors.affiliateDisclosureByLocale = 'Affiliate disclosure is required for all en, es, and pt locales.';
+  if (
+    Object.values(input.affiliateDisclosureByLocale).some((value) => !value)
+  ) {
+    errors.affiliateDisclosureByLocale =
+      'Affiliate disclosure is required for all en, es, and pt locales.';
   }
 
-  if (!OPERATOR_KEY_PATTERN.test(input.operatorKey) || input.operatorKey.length > 80) {
+  if (
+    !OPERATOR_KEY_PATTERN.test(input.operatorKey) ||
+    input.operatorKey.length > 80
+  ) {
     errors.operatorKey = 'Use lowercase kebab-case, up to 80 characters.';
   }
   if (!COUNTRY_CODE_PATTERN.test(input.countryCode)) {
@@ -107,12 +121,26 @@ export function validatePartnerMarketConfigForm(
   if (input.regionCode && input.regionCode.length > 8) {
     errors.regionCode = 'Use 1–8 characters.';
   }
-  if (!Number.isInteger(input.minimumAge) || input.minimumAge < 18 || input.minimumAge > 125) {
+  if (
+    !Number.isInteger(input.minimumAge) ||
+    input.minimumAge < 18 ||
+    input.minimumAge > 125
+  ) {
     errors.minimumAge = 'Enter a whole number from 18 to 125.';
   }
-  if (!isBackendUrl(input.evidenceUrl)) errors.evidenceUrl = 'Enter a valid URL.';
+  if (!isBackendUrl(input.evidenceUrl))
+    errors.evidenceUrl = 'Enter a valid URL.';
   if (!isBackendUrl(input.responsibleGamblingUrl)) {
     errors.responsibleGamblingUrl = 'Enter a valid URL.';
+  }
+  if (
+    !isURL(input.operatorTermsUrl, {
+      protocols: ['https'],
+      require_protocol: true,
+    }) ||
+    !input.operatorTermsUrl.startsWith('https://')
+  ) {
+    errors.operatorTermsUrl = 'Enter a valid HTTPS operator terms URL.';
   }
   if (input.approvedDestinationHosts.length === 0) {
     errors.approvedDestinationHosts = 'Add at least one approved hostname.';
@@ -123,21 +151,33 @@ export function validatePartnerMarketConfigForm(
       (host) => !isFQDN(host, { require_tld: true })
     )
   ) {
-    errors.approvedDestinationHosts = 'Use hostnames only, without scheme, port, or path.';
+    errors.approvedDestinationHosts =
+      'Use hostnames only, without scheme, port, or path.';
   }
   validateDate(errors, 'legalReviewedAt', input.legalReviewedAt);
   validateDate(errors, 'legalReviewExpiresAt', input.legalReviewExpiresAt);
   validateDate(errors, 'effectiveFrom', input.effectiveFrom);
-  if (input.effectiveUntil) validateDate(errors, 'effectiveUntil', input.effectiveUntil);
+  if (input.effectiveUntil)
+    validateDate(errors, 'effectiveUntil', input.effectiveUntil);
 
-  if (!errors.legalReviewedAt && !errors.legalReviewExpiresAt && input.legalReviewExpiresAt <= input.legalReviewedAt) {
+  if (
+    !errors.legalReviewedAt &&
+    !errors.legalReviewExpiresAt &&
+    input.legalReviewExpiresAt <= input.legalReviewedAt
+  ) {
     errors.legalReviewExpiresAt = 'Expiry must be after the legal review date.';
   }
-  if (!errors.effectiveFrom && !errors.effectiveUntil && input.effectiveUntil && input.effectiveUntil <= input.effectiveFrom) {
+  if (
+    !errors.effectiveFrom &&
+    !errors.effectiveUntil &&
+    input.effectiveUntil &&
+    input.effectiveUntil <= input.effectiveFrom
+  ) {
     errors.effectiveUntil = 'End date must be after the effective start.';
   }
   if (values.killSwitchEnabled && !input.killSwitchReason) {
-    errors.killSwitchReason = 'A reason is required while the kill switch is enabled.';
+    errors.killSwitchReason =
+      'A reason is required while the kill switch is enabled.';
   } else if (input.killSwitchReason && input.killSwitchReason.length > 500) {
     errors.killSwitchReason = 'Use no more than 500 characters.';
   }
@@ -151,7 +191,8 @@ function requiredAndMax(
   max?: number
 ): void {
   if (!value) errors[field] = 'Required.';
-  else if (max && value.length > max) errors[field] = `Use no more than ${max} characters.`;
+  else if (max && value.length > max)
+    errors[field] = `Use no more than ${max} characters.`;
 }
 
 function validateDate(
@@ -159,7 +200,8 @@ function validateDate(
   field: keyof PartnerMarketConfigFormValues,
   value: string
 ): void {
-  if (!value || Number.isNaN(Date.parse(value))) errors[field] = 'Enter a valid date and time.';
+  if (!value || Number.isNaN(Date.parse(value)))
+    errors[field] = 'Enter a valid date and time.';
 }
 
 function isBackendUrl(value: string): boolean {

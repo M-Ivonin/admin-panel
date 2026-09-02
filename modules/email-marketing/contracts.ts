@@ -1,13 +1,26 @@
-import type { CampaignAudienceDefinition, CampaignLocale } from '@/modules/campaigns/contracts';
+import type {
+  CampaignAudienceDefinition,
+  CampaignLocale,
+} from '@/modules/campaigns/contracts';
 
 export type EmailPublicationTopic =
   | 'sirbro_predictions'
+  | 'sirbro_predictions_with_partner_offer'
   | 'sirbro_product_updates'
   | 'betting_partner_offers';
 
 export type EmailPublicationState =
-  | 'draft' | 'approved' | 'scheduled' | 'sending' | 'paused' | 'sent'
-  | 'completed_no_send' | 'sent_with_failures' | 'cancelled' | 'failed' | 'superseded';
+  | 'draft'
+  | 'approved'
+  | 'scheduled'
+  | 'sending'
+  | 'paused'
+  | 'sent'
+  | 'completed_no_send'
+  | 'sent_with_failures'
+  | 'cancelled'
+  | 'failed'
+  | 'superseded';
 
 export type EmailLocaleContent = {
   subject: string;
@@ -35,6 +48,18 @@ export interface EmailPublicationInput {
   prediction?: { predictionId: string; analysisVersion: number };
   productUpdate?: { cta?: ProductUpdateCta };
   partnerOffer?: {
+    partnerMarketConfigId: string;
+    offerHeadlineByLocale: LocalizedString;
+    offerBodyByLocale: LocalizedString;
+    materialTermsByLocale: LocalizedString;
+    offerExpiresAt: string;
+    destinationUrl: string;
+    countryCode: string;
+    regionCode?: string;
+  };
+  sponsoredPrediction?: {
+    predictionId: string;
+    analysisVersion: number;
     partnerMarketConfigId: string;
     offerHeadlineByLocale: LocalizedString;
     offerBodyByLocale: LocalizedString;
@@ -115,6 +140,7 @@ export interface PartnerMarketProjection {
   minimumAge: number;
   requiredWarningText: string;
   responsibleGamblingUrl: string;
+  operatorTermsUrl?: string | null;
   countryCode: string;
   regionCode: string | null;
   status: string;
@@ -133,22 +159,38 @@ export interface SendGridTemplateReference {
   id: string;
   name: string;
   compatibleTopics: EmailPublicationTopic[];
-  versions: Array<{ id: string; name: string; active: boolean; updatedAt: string }>;
+  versions: Array<{
+    id: string;
+    name: string;
+    active: boolean;
+    updatedAt: string;
+  }>;
 }
 
 export interface EmailMarketingRepository {
   list(state?: EmailPublicationState): Promise<EmailPublication[]>;
   get(id: string): Promise<EmailPublication>;
-  create(input: EmailPublicationInput, idempotencyKey: string): Promise<EmailPublicationMutationResult>;
-  edit(id: string, input: EmailPublicationInput & { expectedDefinitionVersion: number }): Promise<EmailPublicationMutationResult>;
+  create(
+    input: EmailPublicationInput,
+    idempotencyKey: string
+  ): Promise<EmailPublicationMutationResult>;
+  edit(
+    id: string,
+    input: EmailPublicationInput & { expectedDefinitionVersion: number }
+  ): Promise<EmailPublicationMutationResult>;
   preview(id: string, locale: CampaignLocale): Promise<EmailPreview>;
   approve(id: string): Promise<EmailPublicationMutationResult>;
   sendNow(id: string): Promise<EmailPublicationMutationResult>;
-  schedule(id: string, input: { scheduledAtUtc: string; timezone: string }): Promise<EmailPublicationMutationResult>;
+  schedule(
+    id: string,
+    input: { scheduledAtUtc: string; timezone: string }
+  ): Promise<EmailPublicationMutationResult>;
   pause(id: string): Promise<EmailPublicationMutationResult>;
   resume(id: string): Promise<EmailPublicationMutationResult>;
   cancel(id: string, reason: string): Promise<EmailPublicationMutationResult>;
-  estimateAudience(audience: CampaignAudienceDefinition): Promise<{ reachableUsers: number; warnings: string[] }>;
+  estimateAudience(
+    audience: CampaignAudienceDefinition
+  ): Promise<{ reachableUsers: number; warnings: string[] }>;
   listPredictionReferences(): Promise<PredictionReference[]>;
   listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]>;
   listAudienceSources(): Promise<EmailAudienceSource[]>;
