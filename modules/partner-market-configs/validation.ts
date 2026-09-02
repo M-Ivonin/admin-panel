@@ -28,6 +28,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   requiredWarningText: '',
   responsibleGamblingUrl: '',
   operatorTermsUrl: '',
+  operatorDestinationUrl: '',
   approvedDestinationHosts: '',
   legalReviewedAt: '',
   legalReviewExpiresAt: '',
@@ -71,6 +72,7 @@ export function normalizePartnerMarketConfigForm(
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
     operatorTermsUrl: values.operatorTermsUrl.trim(),
+    operatorDestinationUrl: values.operatorDestinationUrl.trim(),
     approvedDestinationHosts: hosts,
     legalReviewedAt: toIso(values.legalReviewedAt),
     legalReviewExpiresAt: toIso(values.legalReviewExpiresAt),
@@ -142,6 +144,15 @@ export function validatePartnerMarketConfigForm(
   ) {
     errors.operatorTermsUrl = 'Enter a valid HTTPS operator terms URL.';
   }
+  if (
+    !isURL(input.operatorDestinationUrl, {
+      protocols: ['https'],
+      require_protocol: true,
+    }) ||
+    !input.operatorDestinationUrl.startsWith('https://')
+  )
+    errors.operatorDestinationUrl =
+      'Enter the exact approved HTTPS operator destination.';
   if (input.approvedDestinationHosts.length === 0) {
     errors.approvedDestinationHosts = 'Add at least one approved hostname.';
   } else if (hasNormalizedHostDuplicates(values.approvedDestinationHosts)) {
@@ -153,6 +164,15 @@ export function validatePartnerMarketConfigForm(
   ) {
     errors.approvedDestinationHosts =
       'Use hostnames only, without scheme, port, or path.';
+  }
+  if (!errors.operatorDestinationUrl && !errors.approvedDestinationHosts) {
+    const destinationHost = new URL(
+      input.operatorDestinationUrl
+    ).hostname.toLowerCase();
+    if (!input.approvedDestinationHosts.includes(destinationHost)) {
+      errors.operatorDestinationUrl =
+        'The destination hostname must be in approved hostnames.';
+    }
   }
   validateDate(errors, 'legalReviewedAt', input.legalReviewedAt);
   validateDate(errors, 'legalReviewExpiresAt', input.legalReviewExpiresAt);

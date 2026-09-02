@@ -611,6 +611,14 @@ function PartnerMarketFormDialog({
             set={set}
           />
           <FormText
+            label="Exact operator destination URL"
+            field="operatorDestinationUrl"
+            values={values}
+            errors={errors}
+            set={set}
+            helper="Used by the server after the visitor deliberately confirms leaving SirBro."
+          />
+          <FormText
             label="Approved destination hosts"
             field="approvedDestinationHosts"
             values={values}
@@ -828,6 +836,7 @@ function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
       pt: '',
     },
     operatorTermsUrl: config.operatorTermsUrl ?? '',
+    operatorDestinationUrl: config.operatorDestinationUrl ?? '',
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),
     approvedDestinationHosts: config.approvedDestinationHosts.join('\n'),

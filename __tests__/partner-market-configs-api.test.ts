@@ -31,6 +31,7 @@ const input = {
   requiredWarningText: '18+. Play responsibly.',
   responsibleGamblingUrl: 'https://example.bet/responsible',
   operatorTermsUrl: 'https://example.bet/terms',
+  operatorDestinationUrl: 'https://example.bet/offer',
   approvedDestinationHosts: ['example.bet'],
   legalReviewedAt: '2026-08-01T00:00:00.000Z',
   legalReviewExpiresAt: '2027-08-01T00:00:00.000Z',

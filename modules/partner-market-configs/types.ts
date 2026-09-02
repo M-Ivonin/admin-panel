@@ -24,6 +24,7 @@ export interface PartnerMarketConfigInput {
   requiredWarningText: string;
   responsibleGamblingUrl: string;
   operatorTermsUrl: string;
+  operatorDestinationUrl: string;
   approvedDestinationHosts: string[];
   legalReviewedAt: string;
   legalReviewExpiresAt: string;
@@ -42,6 +43,7 @@ export interface PartnerMarketConfig
     | 'operatorLogoUrl'
     | 'affiliateDisclosureByLocale'
     | 'operatorTermsUrl'
+    | 'operatorDestinationUrl'
   > {
   id: string;
   regionCode: string | null;
@@ -49,6 +51,7 @@ export interface PartnerMarketConfig
   operatorLogoUrl: string | null;
   affiliateDisclosureByLocale: { en: string; es: string; pt: string } | null;
   operatorTermsUrl: string | null;
+  operatorDestinationUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

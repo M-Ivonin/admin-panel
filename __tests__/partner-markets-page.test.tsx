@@ -55,6 +55,7 @@ const config = {
   requiredWarningText: '18+. Play responsibly.',
   responsibleGamblingUrl: 'https://example.bet/responsible',
   operatorTermsUrl: 'https://example.bet/terms',
+  operatorDestinationUrl: 'https://example.bet/offer',
   approvedDestinationHosts: ['example.bet'],
   legalReviewedAt: '2026-08-01T10:00:00.000Z',
   legalReviewExpiresAt: '2027-08-01T10:00:00.000Z',
@@ -367,6 +368,7 @@ describe('PartnerMarketsPage', () => {
       operatorLogoUrl: null,
       affiliateDisclosureByLocale: null,
       operatorTermsUrl: null,
+      operatorDestinationUrl: null,
     };
     (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([migratedConfig]);
     render(<PartnerMarketsPage />);
@@ -426,6 +428,7 @@ function fillRequiredForm(container: HTMLElement): void {
     'Required warning text': '18+. Play responsibly.',
     'Responsible gambling URL': 'https://example.bet/responsible',
     'Full operator terms URL': 'https://example.bet/terms',
+    'Exact operator destination URL': 'https://example.bet/offer',
     'Approved destination hosts': 'EXAMPLE.BET',
     'Legal reviewed at': '2026-08-01T10:00',
     'Legal review expires at': '2027-08-01T10:00',

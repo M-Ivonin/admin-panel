@@ -17,6 +17,7 @@ const valid = {
   requiredWarningText: ' 18+ ',
   responsibleGamblingUrl: 'https://example.bet/responsible',
   operatorTermsUrl: 'https://example.bet/terms',
+  operatorDestinationUrl: 'https://example.bet/offer',
   approvedDestinationHosts: ' WWW.EXAMPLE.BET.\nexample.bet',
   legalReviewedAt: '2026-08-01T10:00',
   legalReviewExpiresAt: '2027-08-01T10:00',
@@ -123,5 +124,14 @@ describe('partner market config form validation', () => {
         pt: 'Affiliate PT',
       },
     });
+  });
+
+  it('requires the exact operator destination to use an approved hostname', () => {
+    expect(
+      validatePartnerMarketConfigForm({
+        ...valid,
+        operatorDestinationUrl: 'https://other.example/offer',
+      }).operatorDestinationUrl
+    ).toMatch(/approved hostnames/);
   });
 });
