@@ -25,6 +25,10 @@ provider API key; only stable IDs are frozen in each immutable definition.
   returned values and does not infer replacements for them.
 - Partner compliance data is a read-only backend projection. Missing or
   ineligible configuration remains a backend approval concern.
+- Partner publications do not accept an operator destination in this form.
+  The backend owns the `offers.sirbro.gg` CTA, while the selected Partner
+  Market Configuration owns the operator destination used after eligibility
+  checks.
 - Prediction choices contain only future predictions with Complete Full
   Analysis. Approval freezes the prediction projection, Full Analysis CTA, and
   SendGrid Dynamic Template; the admin does not compose provider template data.

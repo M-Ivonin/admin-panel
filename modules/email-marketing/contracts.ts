@@ -53,7 +53,6 @@ export interface EmailPublicationInput {
     offerBodyByLocale: LocalizedString;
     materialTermsByLocale: LocalizedString;
     offerExpiresAt: string;
-    destinationUrl: string;
     countryCode: string;
     regionCode?: string;
   };
@@ -65,7 +64,6 @@ export interface EmailPublicationInput {
     offerBodyByLocale: LocalizedString;
     materialTermsByLocale: LocalizedString;
     offerExpiresAt: string;
-    destinationUrl: string;
     countryCode: string;
     regionCode?: string;
   };

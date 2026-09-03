@@ -18,6 +18,7 @@ import {
   Divider,
   FormControlLabel,
   MenuItem,
+  Portal,
   Snackbar,
   Stack,
   TextField,
@@ -85,7 +86,6 @@ type EditorDraft = {
   offerBodyByLocale: LocalizedString;
   materialTermsByLocale: LocalizedString;
   offerExpiresAt: string;
-  destinationUrl: string;
 };
 
 type Confirmation = {
@@ -321,8 +321,21 @@ export function EmailMarketingDashboard({
     setError(null);
     setActionNotification(null);
     try {
-      await repository.approve(selected.id);
-      await refreshDetail();
+      const result = await repository.approve(selected.id);
+      if (result.state !== 'approved') {
+        throw new Error(
+          `Backend returned unexpected publication state: ${result.state}`
+        );
+      }
+      const detail = await repository.get(selected.id);
+      if (detail.state !== 'approved') {
+        throw new Error(
+          `Backend did not confirm approval; current state is ${detail.state}.`
+        );
+      }
+      setSelected(detail);
+      setDraft(fromPublication(detail));
+      setEditorDirty(false);
       await loadList();
       setActionNotification({
         severity: 'success',
@@ -463,12 +476,16 @@ export function EmailMarketingDashboard({
                 if (!selected) return;
                 setBusy(true);
                 setError(null);
+                setActionNotification(null);
                 try {
                   setPreview(
                     await repository.preview(selected.id, previewLocale)
                   );
                 } catch (caught) {
-                  setError(messageOf(caught));
+                  setActionNotification({
+                    severity: 'error',
+                    message: messageOf(caught),
+                  });
                 } finally {
                   setBusy(false);
                 }
@@ -521,23 +538,25 @@ export function EmailMarketingDashboard({
           </DialogActions>
         </Dialog>
       ) : null}
-      <Snackbar
-        open={actionNotification !== null}
-        autoHideDuration={6000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        onClose={() => setActionNotification(null)}
-      >
-        {actionNotification ? (
-          <Alert
-            severity={actionNotification.severity}
-            variant="filled"
-            onClose={() => setActionNotification(null)}
-            sx={{ width: '100%' }}
-          >
-            {actionNotification.message}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
+      <Portal>
+        <Snackbar
+          open={actionNotification !== null}
+          autoHideDuration={6000}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          onClose={() => setActionNotification(null)}
+        >
+          {actionNotification ? (
+            <Alert
+              severity={actionNotification.severity}
+              variant="filled"
+              onClose={() => setActionNotification(null)}
+              sx={{ width: '100%' }}
+            >
+              {actionNotification.message}
+            </Alert>
+          ) : undefined}
+        </Snackbar>
+      </Portal>
     </Box>
   );
 }
@@ -750,7 +769,6 @@ function Editor(props: EditorProps) {
       offerBodyByLocale: blankLocalized(),
       materialTermsByLocale: blankLocalized(),
       offerExpiresAt: '',
-      destinationUrl: '',
     });
   const canSend = selected?.state === 'approved' && !editorDirty;
   return (
@@ -1172,12 +1190,6 @@ function Editor(props: EditorProps) {
                 onChange={(event) => set('offerExpiresAt', event.target.value)}
                 required
               />
-              <TextField
-                label="Approved offers.sirbro.gg destination"
-                value={draft.destinationUrl}
-                onChange={(event) => set('destinationUrl', event.target.value)}
-                required
-              />
             </Stack>
           ) : null}
           {editorDirty && selected ? (
@@ -1574,7 +1586,6 @@ function emptyDraft(): EditorDraft {
     offerBodyByLocale: blankLocalized(),
     materialTermsByLocale: blankLocalized(),
     offerExpiresAt: '',
-    destinationUrl: '',
   };
 }
 
@@ -1605,7 +1616,6 @@ function fromPublication(publication: EmailPublication): EditorDraft {
     offerBodyByLocale: localized(record(typeData.offerBodyByLocale)),
     materialTermsByLocale: localized(record(typeData.materialTermsByLocale)),
     offerExpiresAt: toLocalDateTime(stringValue(typeData.offerExpiresAt)),
-    destinationUrl: stringValue(typeData.destinationUrl),
   };
 }
 
@@ -1701,7 +1711,6 @@ function toInput(
       throw new Error('Select an approved partner market configuration.');
     if (
       !draft.offerExpiresAt ||
-      !draft.destinationUrl.trim() ||
       [
         draft.offerHeadlineByLocale,
         draft.offerBodyByLocale,
@@ -1709,7 +1718,7 @@ function toInput(
       ].some((value) => locales.some((locale) => !value[locale].trim()))
     )
       throw new Error(
-        'Complete partner offer copy, material terms, expiry, and destination are required.'
+        'Complete partner offer copy, material terms, and expiry are required.'
       );
     input.partnerOffer = {
       partnerMarketConfigId: partner.id,
@@ -1717,7 +1726,6 @@ function toInput(
       offerBodyByLocale: trimLocalized(draft.offerBodyByLocale),
       materialTermsByLocale: trimLocalized(draft.materialTermsByLocale),
       offerExpiresAt: new Date(draft.offerExpiresAt).toISOString(),
-      destinationUrl: draft.destinationUrl.trim(),
       countryCode: partner.countryCode,
       regionCode: partner.regionCode ?? undefined,
     };
@@ -1733,7 +1741,6 @@ function toInput(
       throw new Error('Select an approved partner market configuration.');
     if (
       !draft.offerExpiresAt ||
-      !draft.destinationUrl.trim() ||
       [
         draft.offerHeadlineByLocale,
         draft.offerBodyByLocale,
@@ -1741,7 +1748,7 @@ function toInput(
       ].some((value) => locales.some((locale) => !value[locale].trim()))
     )
       throw new Error(
-        'Complete partner offer copy, material terms, expiry, and destination are required.'
+        'Complete partner offer copy, material terms, and expiry are required.'
       );
     input.sponsoredPrediction = {
       predictionId,
@@ -1751,7 +1758,6 @@ function toInput(
       offerBodyByLocale: trimLocalized(draft.offerBodyByLocale),
       materialTermsByLocale: trimLocalized(draft.materialTermsByLocale),
       offerExpiresAt: new Date(draft.offerExpiresAt).toISOString(),
-      destinationUrl: draft.destinationUrl.trim(),
       countryCode: partner.countryCode,
       regionCode: partner.regionCode ?? undefined,
     };

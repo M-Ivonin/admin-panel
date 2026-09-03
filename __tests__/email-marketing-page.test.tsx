@@ -557,10 +557,14 @@ describe('EmailMarketingDashboard workflow', () => {
       await screen.findByText('Publication draft saved successfully.')
     ).toBeInTheDocument();
 
+    repo.get.mockResolvedValue({ ...basePublication, state: 'approved' });
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
 
     expect(
       await screen.findByText('Publication approved successfully.')
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('Publication detail · approved')
     ).toBeInTheDocument();
   });
 
@@ -663,10 +667,9 @@ describe('EmailMarketingDashboard workflow', () => {
     fireEvent.change(screen.getByLabelText(/^Offer expires at/), {
       target: { value: '2026-09-30T12:00' },
     });
-    fireEvent.change(
-      screen.getByLabelText(/^Approved offers.sirbro.gg destination/),
-      { target: { value: 'https://offers.sirbro.gg/bet-one' } }
-    );
+    expect(
+      screen.queryByLabelText(/^Approved offers.sirbro.gg destination/)
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
     await waitFor(() => expect(repo.create).toHaveBeenCalled());
     const payload = repo.create.mock.calls[0][0];
@@ -675,14 +678,35 @@ describe('EmailMarketingDashboard workflow', () => {
         partnerMarketConfigId: 'partner-1',
         countryCode: 'FR',
         regionCode: undefined,
-        destinationUrl: 'https://offers.sirbro.gg/bet-one',
       })
     );
+    expect(payload.partnerOffer).not.toHaveProperty('destinationUrl');
     expect(payload).not.toHaveProperty('prediction');
     expect(payload).not.toHaveProperty('productUpdate');
     expect(JSON.stringify(payload)).not.toContain('operatorLogoUrl');
     expect(JSON.stringify(payload)).not.toContain(
       'affiliateDisclosureByLocale'
+    );
+  });
+
+  it('shows preview errors above the open publication dialog', async () => {
+    const repo = repository();
+    repo.preview.mockRejectedValueOnce(new Error('Preview was rejected'));
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('Product launch');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open publication Product launch' })
+    );
+    await screen.findByLabelText('Preview locale');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load preview' }));
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('alert')
+          .some((alert) => alert.textContent?.includes('Preview was rejected'))
+      ).toBe(true)
     );
   });
 
