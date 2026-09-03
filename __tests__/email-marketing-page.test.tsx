@@ -538,6 +538,66 @@ describe('EmailMarketingDashboard workflow', () => {
     await waitFor(() => expect(repo.pause).toHaveBeenCalledWith('pub-1'));
   });
 
+  it('shows visible success feedback after saving and approving a publication', async () => {
+    const repo = repository();
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('Product launch');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open publication Product launch' })
+    );
+    await screen.findByLabelText(/^Publication name/);
+    fireEvent.change(screen.getByLabelText(/^Publication name/), {
+      target: { value: 'Product launch successor' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save successor draft' })
+    );
+
+    expect(
+      await screen.findByText('Publication draft saved successfully.')
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+    expect(
+      await screen.findByText('Publication approved successfully.')
+    ).toBeInTheDocument();
+  });
+
+  it('shows visible error feedback when saving or approving fails', async () => {
+    const repo = repository();
+    repo.edit.mockRejectedValueOnce(new Error('Save was rejected'));
+    repo.approve.mockRejectedValueOnce(new Error('Approval was rejected'));
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('Product launch');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open publication Product launch' })
+    );
+    await screen.findByLabelText(/^Publication name/);
+    fireEvent.change(screen.getByLabelText(/^Publication name/), {
+      target: { value: 'Product launch successor' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save successor draft' })
+    );
+
+    expect(await screen.findByText('Save was rejected')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Publication name/), {
+      target: { value: 'Product launch' },
+    });
+    repo.edit.mockResolvedValueOnce(basePublication);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save successor draft' })
+    );
+    await screen.findByText('Publication draft saved successfully.');
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+    expect(
+      await screen.findByText('Approval was rejected')
+    ).toBeInTheDocument();
+  });
+
   it('submits product updates without partner/prediction fields and permits an optional CTA', async () => {
     const repo = repository();
     repo.list.mockResolvedValue([]);

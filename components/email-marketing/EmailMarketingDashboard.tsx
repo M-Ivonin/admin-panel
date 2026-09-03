@@ -18,6 +18,7 @@ import {
   Divider,
   FormControlLabel,
   MenuItem,
+  Snackbar,
   Stack,
   TextField,
   Typography,
@@ -93,6 +94,11 @@ type Confirmation = {
   confirmLabel: string;
 };
 
+type ActionNotification = {
+  severity: 'success' | 'error';
+  message: string;
+};
+
 export function EmailMarketingDashboard({
   repository = emailMarketingRepository,
 }: {
@@ -105,6 +111,8 @@ export function EmailMarketingDashboard({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionNotification, setActionNotification] =
+    useState<ActionNotification | null>(null);
   const [estimate, setEstimate] = useState<{
     reachableUsers: number;
     warnings: string[];
@@ -224,6 +232,7 @@ export function EmailMarketingDashboard({
     if (!draft) return;
     setBusy(true);
     setError(null);
+    setActionNotification(null);
     try {
       const input = toInput(draft, partners, sendGridTemplates);
       const saved = selected
@@ -239,8 +248,13 @@ export function EmailMarketingDashboard({
       setEditorDirty(false);
       setPreview(null);
       if (!selected) createKey.current = createEmailPublicationIdempotencyKey();
+      setActionNotification({
+        severity: 'success',
+        message: 'Publication draft saved successfully.',
+      });
     } catch (caught) {
-      setError(messageOf(caught));
+      const message = messageOf(caught);
+      setActionNotification({ severity: 'error', message });
     } finally {
       setBusy(false);
     }
@@ -305,12 +319,18 @@ export function EmailMarketingDashboard({
     if (!selected) return;
     setBusy(true);
     setError(null);
+    setActionNotification(null);
     try {
       await repository.approve(selected.id);
       await refreshDetail();
       await loadList();
+      setActionNotification({
+        severity: 'success',
+        message: 'Publication approved successfully.',
+      });
     } catch (caught) {
-      setError(messageOf(caught));
+      const message = messageOf(caught);
+      setActionNotification({ severity: 'error', message });
     } finally {
       setBusy(false);
     }
@@ -501,6 +521,23 @@ export function EmailMarketingDashboard({
           </DialogActions>
         </Dialog>
       ) : null}
+      <Snackbar
+        open={actionNotification !== null}
+        autoHideDuration={6000}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        onClose={() => setActionNotification(null)}
+      >
+        {actionNotification ? (
+          <Alert
+            severity={actionNotification.severity}
+            variant="filled"
+            onClose={() => setActionNotification(null)}
+            sx={{ width: '100%' }}
+          >
+            {actionNotification.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   );
 }
