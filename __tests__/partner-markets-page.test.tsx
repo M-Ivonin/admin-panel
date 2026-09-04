@@ -210,8 +210,12 @@ describe('PartnerMarketsPage', () => {
     const dialog = screen.getByRole('dialog', {
       name: 'Add jurisdiction rule',
     });
+    const countrySelect = within(dialog).getByRole('combobox', {
+      name: 'Country',
+    });
+    fireEvent.change(countrySelect, { target: { value: 'France' } });
+    fireEvent.click(screen.getByRole('option', { name: '🇫🇷 France (FR)' }));
     const fields: Record<string, string> = {
-      'Country code': 'fr',
       'Minimum age': '18',
       'Required warning text': '18+. Play responsibly.',
       'Responsible gambling URL': 'https://example.fr/responsible',
@@ -284,7 +288,12 @@ describe('PartnerMarketsPage', () => {
     const editDialog = screen.getByRole('dialog', {
       name: 'Edit jurisdiction rule',
     });
-    expect(within(editDialog).getByLabelText(/^Region code/)).toBeDisabled();
+    expect(
+      within(editDialog).getByRole('combobox', { name: /Country/ })
+    ).toBeDisabled();
+    expect(
+      within(editDialog).getByRole('combobox', { name: /Region/ })
+    ).toBeDisabled();
     expect(
       within(editDialog).getByText(
         'Location cannot be changed. Create a new rule for another country or region.'
@@ -297,10 +306,24 @@ describe('PartnerMarketsPage', () => {
     const createDialog = screen.getByRole('dialog', {
       name: 'Add jurisdiction rule',
     });
-    fireEvent.change(within(createDialog).getByLabelText('Country code'), {
-      target: { value: 'US' },
+    const countrySelect = within(createDialog).getByRole('combobox', {
+      name: 'Country',
     });
-    expect(within(createDialog).getByLabelText(/^Region code/)).toBeRequired();
+    fireEvent.change(countrySelect, {
+      target: { value: 'United States' },
+    });
+    fireEvent.click(
+      screen.getByRole('option', { name: '🇺🇸 United States (US)' })
+    );
+    const regionSelect = within(createDialog).getByRole('combobox', {
+      name: /Region/,
+    });
+    expect(regionSelect).toBeRequired();
+    fireEvent.mouseDown(regionSelect);
+    expect(
+      screen.getByRole('option', { name: 'California (CA)' })
+    ).toBeInTheDocument();
+    fireEvent.keyDown(regionSelect, { key: 'Escape' });
     fireEvent.click(
       within(createDialog).getByRole('button', { name: 'Save rule' })
     );
