@@ -220,6 +220,68 @@ describe('PartnerMarketsPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('marks region as required for US rules and explains immutable locations', async () => {
+    const usRule = {
+      id: 'rule-us',
+      countryCode: 'US',
+      regionCode: null,
+      status: 'approved' as const,
+      minimumAge: 18,
+      predictionsEmailAllowed: true,
+      productEmailAllowed: true,
+      partnerOfferEmailAllowed: true,
+      combinedPredictionOfferAllowed: true,
+      bonusAdvertisingAllowed: true,
+      matchSpecificPromotionAllowed: true,
+      requiredWarningText: '18+',
+      warningLayoutRules: {},
+      responsibleGamblingUrl: 'https://example.com/responsible',
+      regulatorSourceUrl: 'https://example.com/regulator',
+      legalReviewedAt: '2026-08-01T00:00:00.000Z',
+      legalReviewExpiresAt: '2027-08-01T00:00:00.000Z',
+      effectiveFrom: '2026-08-02T00:00:00.000Z',
+      effectiveUntil: null,
+      rulesVersion: 'us-2026-08',
+      statusReason: null,
+      createdAt: '2026-08-01T00:00:00.000Z',
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([]);
+    (getMarketingJurisdictions as jest.Mock).mockResolvedValue([usRule]);
+    render(<PartnerMarketsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Jurisdiction rules' }));
+    await screen.findByText('US · Version us-2026-08');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const editDialog = screen.getByRole('dialog', {
+      name: 'Edit jurisdiction rule',
+    });
+    expect(within(editDialog).getByLabelText(/^Region code/)).toBeDisabled();
+    expect(
+      within(editDialog).getByText(
+        'Location cannot be changed. Create a new rule for another country or region.'
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(within(editDialog).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add jurisdiction rule' })
+    );
+    const createDialog = screen.getByRole('dialog', {
+      name: 'Add jurisdiction rule',
+    });
+    fireEvent.change(within(createDialog).getByLabelText('Country code'), {
+      target: { value: 'US' },
+    });
+    expect(within(createDialog).getByLabelText(/^Region code/)).toBeRequired();
+    fireEvent.click(
+      within(createDialog).getByRole('button', { name: 'Save rule' })
+    );
+    expect(
+      within(createDialog).getByText('Region is required for this country.')
+    ).toBeInTheDocument();
+    expect(saveMarketingJurisdiction).not.toHaveBeenCalled();
+  });
+
   it('shows loading, then the list with legal facts and send warning', async () => {
     let resolveList: (value: (typeof config)[]) => void = () => undefined;
     (getPartnerMarketConfigs as jest.Mock).mockReturnValue(

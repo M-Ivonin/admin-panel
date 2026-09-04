@@ -37,6 +37,7 @@ import {
   normalizeMarketingJurisdictionForm,
   validateMarketingJurisdictionForm,
 } from '@/modules/marketing-jurisdictions/validation';
+import { requiresMarketingRegion } from '@/modules/marketing-jurisdictions/region-requirement';
 
 const statuses: MarketingJurisdictionStatus[] = [
   'legal_review_required',
@@ -160,6 +161,7 @@ function JurisdictionFormDialog({ rule, onClose, onSaved }: { rule: MarketingJur
   const [errors, setErrors] = useState<MarketingJurisdictionFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const regionRequired = requiresMarketingRegion(values.countryCode);
   const set = <K extends keyof MarketingJurisdictionFormValues>(key: K, value: MarketingJurisdictionFormValues[K]) => setValues((current) => ({ ...current, [key]: value }));
   const submit = async () => {
     const nextErrors = validateMarketingJurisdictionForm(values);
@@ -177,7 +179,7 @@ function JurisdictionFormDialog({ rule, onClose, onSaved }: { rule: MarketingJur
       {submitError ? <Alert severity="error">{submitError}</Alert> : null}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <FormText label="Country code" field="countryCode" values={values} errors={errors} set={set} disabled={Boolean(rule)} />
-        <FormText label="Region code (optional)" field="regionCode" values={values} errors={errors} set={set} disabled={Boolean(rule)} />
+        <FormText label={regionRequired ? "Region code" : "Region code (optional)"} field="regionCode" values={values} errors={errors} set={set} disabled={Boolean(rule)} required={regionRequired} helper={rule ? "Location cannot be changed. Create a new rule for another country or region." : undefined} />
         <TextField select fullWidth label="Status" value={values.status} onChange={(event) => set('status', event.target.value as MarketingJurisdictionStatus)}>
           {rule?.status === 'paused' ? <MenuItem value="paused" disabled>paused (use dedicated pause action)</MenuItem> : null}
           {statuses.map((status) => <MenuItem key={status} value={status}>{status.replace(/_/g, ' ')}</MenuItem>)}
@@ -215,10 +217,11 @@ type FormTextProps = {
   helper?: string;
   type?: string;
   shrink?: boolean;
+  required?: boolean;
 };
 
-function FormText({ label, field, values, errors, set, disabled, multiline, helper, type, shrink }: FormTextProps) {
-  return <TextField fullWidth label={label} value={String(values[field] ?? '')} onChange={(event) => set(field, event.target.value)} error={Boolean(errors[field])} helperText={errors[field] ?? helper} disabled={disabled} multiline={multiline} minRows={multiline ? 2 : undefined} type={type} InputLabelProps={shrink ? { shrink: true } : undefined} />;
+function FormText({ label, field, values, errors, set, disabled, multiline, helper, type, shrink, required }: FormTextProps) {
+  return <TextField fullWidth label={label} value={String(values[field] ?? '')} onChange={(event) => set(field, event.target.value)} error={Boolean(errors[field])} helperText={errors[field] ?? helper} disabled={disabled} multiline={multiline} minRows={multiline ? 2 : undefined} type={type} InputLabelProps={shrink ? { shrink: true } : undefined} required={required} />;
 }
 
 function PauseJurisdictionDialog({ rule, onClose, onPaused }: { rule: MarketingJurisdiction; onClose: () => void; onPaused: () => Promise<void> }) {

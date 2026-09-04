@@ -41,6 +41,7 @@ import {
   normalizePartnerMarketConfigForm,
   validatePartnerMarketConfigForm,
 } from '@/modules/partner-market-configs/validation';
+import { requiresMarketingRegion } from '@/modules/marketing-jurisdictions/region-requirement';
 
 const statuses: PartnerMarketConfigStatus[] = [
   'draft',
@@ -399,6 +400,7 @@ function PartnerMarketFormDialog({
   const [errors, setErrors] = useState<PartnerMarketConfigFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const regionRequired = requiresMarketingRegion(values.countryCode);
   const set = <K extends keyof PartnerMarketConfigFormValues>(
     key: K,
     value: PartnerMarketConfigFormValues[K]
@@ -493,12 +495,18 @@ function PartnerMarketFormDialog({
               disabled={Boolean(config)}
             />
             <FormText
-              label="Region code (optional)"
+              label={regionRequired ? 'Region code' : 'Region code (optional)'}
               field="regionCode"
               values={values}
               errors={errors}
               set={set}
               disabled={Boolean(config)}
+              required={regionRequired}
+              helper={
+                config
+                  ? 'Location cannot be changed. Create a new configuration for another country or region.'
+                  : undefined
+              }
             />
             <TextField
               select
@@ -725,6 +733,7 @@ type FormTextProps = {
   helper?: string;
   type?: string;
   shrink?: boolean;
+  required?: boolean;
 };
 
 function FormText({
@@ -738,6 +747,7 @@ function FormText({
   helper,
   type,
   shrink,
+  required,
 }: FormTextProps) {
   return (
     <TextField
@@ -751,6 +761,7 @@ function FormText({
       multiline={multiline}
       minRows={multiline ? 2 : undefined}
       type={type}
+      required={required}
       InputLabelProps={shrink ? { shrink: true } : undefined}
     />
   );

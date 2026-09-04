@@ -134,4 +134,17 @@ describe('partner market config form validation', () => {
       }).operatorDestinationUrl
     ).toMatch(/approved hostnames/);
   });
+
+  it.each(['US', 'CA', 'AR'])(
+    'requires a region for %s partner configurations',
+    (countryCode) => {
+      expect(
+        validatePartnerMarketConfigForm({
+          ...valid,
+          countryCode,
+          regionCode: '',
+        }).regionCode
+      ).toBe('Region is required for this country.');
+    }
+  );
 });

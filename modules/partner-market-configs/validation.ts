@@ -5,6 +5,7 @@ import {
 } from './types';
 import isFQDN from 'validator/lib/isFQDN';
 import isURL from 'validator/lib/isURL';
+import { requiresMarketingRegion } from '@/modules/marketing-jurisdictions/region-requirement';
 
 const OPERATOR_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
@@ -119,6 +120,9 @@ export function validatePartnerMarketConfigForm(
   }
   if (!COUNTRY_CODE_PATTERN.test(input.countryCode)) {
     errors.countryCode = 'Enter a two-letter country code.';
+  }
+  if (requiresMarketingRegion(input.countryCode) && !input.regionCode) {
+    errors.regionCode = 'Region is required for this country.';
   }
   if (input.regionCode && input.regionCode.length > 8) {
     errors.regionCode = 'Use 1–8 characters.';

@@ -4,6 +4,7 @@ import {
   MarketingJurisdictionFormValues,
   MarketingJurisdictionInput,
 } from './types';
+import { requiresMarketingRegion } from './region-requirement';
 
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
 
@@ -56,6 +57,9 @@ export function validateMarketingJurisdictionForm(
   const errors: MarketingJurisdictionFormErrors = {};
   const input = normalizeMarketingJurisdictionForm(values);
   if (!COUNTRY_CODE_PATTERN.test(input.countryCode)) errors.countryCode = 'Enter a two-letter country code.';
+  if (requiresMarketingRegion(input.countryCode) && !input.regionCode) {
+    errors.regionCode = 'Region is required for this country.';
+  }
   if (input.regionCode && input.regionCode.length > 8) errors.regionCode = 'Use 1–8 characters.';
   if (!Number.isInteger(input.minimumAge) || input.minimumAge < 1 || input.minimumAge > 125) {
     errors.minimumAge = 'Enter a whole number from 1 to 125.';
