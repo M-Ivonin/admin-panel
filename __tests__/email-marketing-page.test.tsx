@@ -133,6 +133,7 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
         analysisVersion: 4,
         predictionStatus: 'published',
         teamsNames: 'A - B',
+        fixtureTime: '2026-09-06T18:30:00.000Z',
       },
     ]),
     listPartnerMarketConfigs: jest.fn().mockResolvedValue([
@@ -491,7 +492,10 @@ describe('EmailMarketingDashboard workflow', () => {
     ).toBeInTheDocument();
     selectOption('Publication type', 'SirBro prediction');
     selectOption('SendGrid template', 'Product updates');
-    selectOption('Eligible prediction and version', 'A - B · analysis v4');
+    selectOption(
+      'Eligible prediction and version',
+      'A - B · 06 Sep 2026, 18:30 UTC · analysis v4'
+    );
     expect(
       screen.queryByLabelText(/^Partner market configuration/)
     ).not.toBeInTheDocument();

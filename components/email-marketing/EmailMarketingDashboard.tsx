@@ -1096,8 +1096,11 @@ function Editor(props: EditorProps) {
                     key={`${prediction.id}:${prediction.analysisVersion}`}
                     value={`${prediction.id}:${prediction.analysisVersion}`}
                   >
-                    {prediction.teamsNames ?? prediction.id} · analysis v
-                    {prediction.analysisVersion}
+                    {prediction.teamsNames ?? prediction.id}
+                    {prediction.fixtureTime
+                      ? ` · ${formatPredictionKickoff(prediction.fixtureTime)}`
+                      : ''}{' '}
+                    · analysis v{prediction.analysisVersion}
                   </MenuItem>
                 ))}
               </TextField>
@@ -1779,6 +1782,29 @@ function toInput(
 
 function blankLocalized(): LocalizedString {
   return { en: '', es: '', pt: '' };
+}
+
+function formatPredictionKickoff(value: string): string {
+  const kickoff = new Date(value);
+  if (Number.isNaN(kickoff.getTime())) return value;
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  const day = String(kickoff.getUTCDate()).padStart(2, '0');
+  const hour = String(kickoff.getUTCHours()).padStart(2, '0');
+  const minute = String(kickoff.getUTCMinutes()).padStart(2, '0');
+  return `${day} ${months[kickoff.getUTCMonth()]} ${kickoff.getUTCFullYear()}, ${hour}:${minute} UTC`;
 }
 function blankContent(): EmailContentByLocale {
   return {
