@@ -68,12 +68,40 @@ const config = {
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
 
+const frJurisdiction = {
+  id: 'rule-fr',
+  countryCode: 'FR',
+  regionCode: null,
+  status: 'approved' as const,
+  minimumAge: 18,
+  predictionsEmailAllowed: true,
+  productEmailAllowed: true,
+  partnerOfferEmailAllowed: true,
+  combinedPredictionOfferAllowed: false,
+  bonusAdvertisingAllowed: false,
+  matchSpecificPromotionAllowed: false,
+  requiredWarningText: '18+. Play responsibly.',
+  warningLayoutRules: {},
+  responsibleGamblingUrl: 'https://example.fr/responsible',
+  regulatorSourceUrl: 'https://regulator.example/fr',
+  legalReviewedAt: '2026-08-01T00:00:00.000Z',
+  legalReviewExpiresAt: '2027-08-01T00:00:00.000Z',
+  effectiveFrom: '2026-08-02T00:00:00.000Z',
+  effectiveUntil: null,
+  rulesVersion: 'fr-2026-08',
+  statusReason: null,
+  createdAt: '2026-08-01T00:00:00.000Z',
+  updatedAt: '2026-08-01T00:00:00.000Z',
+};
+
 describe('PartnerMarketsPage', () => {
   beforeEach(() => {
     (getPartnerMarketConfigs as jest.Mock).mockReset();
     (savePartnerMarketConfig as jest.Mock).mockReset();
     (pausePartnerMarketConfig as jest.Mock).mockReset();
-    (getMarketingJurisdictions as jest.Mock).mockReset().mockResolvedValue([]);
+    (getMarketingJurisdictions as jest.Mock)
+      .mockReset()
+      .mockResolvedValue([frJurisdiction]);
     (saveMarketingJurisdiction as jest.Mock).mockReset();
     (pauseMarketingJurisdiction as jest.Mock).mockReset();
   });
@@ -343,6 +371,21 @@ describe('PartnerMarketsPage', () => {
     const createDialog = screen.getByRole('dialog', {
       name: 'Add partner market',
     });
+    expect(
+      within(createDialog).queryByLabelText('Country code')
+    ).not.toBeInTheDocument();
+    expect(
+      within(createDialog).queryByLabelText(/^Region code/)
+    ).not.toBeInTheDocument();
+    const jurisdictionSelect = await within(createDialog).findByRole(
+      'combobox',
+      { name: /Jurisdiction rule/ }
+    );
+    await waitFor(() => expect(jurisdictionSelect).toBeEnabled());
+    fireEvent.mouseDown(jurisdictionSelect);
+    fireEvent.click(
+      screen.getByRole('option', { name: 'FR · Country-wide · approved' })
+    );
     fillRequiredForm(createDialog);
     fireEvent.click(
       within(createDialog).getByRole('button', { name: 'Save configuration' })
@@ -359,7 +402,7 @@ describe('PartnerMarketsPage', () => {
     expect(
       await screen.findByText('Example Bet configuration saved.')
     ).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('edits an existing row and uses the dedicated confirmed pause request', async () => {
     (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([config]);
@@ -484,7 +527,6 @@ function fillRequiredForm(container: HTMLElement): void {
     'Operator legal name': 'Example Bet Ltd',
     'Operator display name': 'Example Bet',
     'Operator logo URL': 'https://cdn.example/logo.png',
-    'Country code': 'fr',
     'Licence reference': 'LIC-1',
     'Evidence URL': 'https://regulator.example/evidence',
     'Required warning text': '18+. Play responsibly.',

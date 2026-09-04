@@ -30,6 +30,8 @@ import {
   pausePartnerMarketConfig,
   savePartnerMarketConfig,
 } from '@/lib/api/partner-market-configs';
+import { getMarketingJurisdictions } from '@/lib/api/marketing-jurisdictions';
+import { MarketingJurisdiction } from '@/modules/marketing-jurisdictions/types';
 import {
   PartnerMarketConfig,
   PartnerMarketConfigFormErrors,
@@ -41,7 +43,6 @@ import {
   normalizePartnerMarketConfigForm,
   validatePartnerMarketConfigForm,
 } from '@/modules/partner-market-configs/validation';
-import { requiresMarketingRegion } from '@/modules/marketing-jurisdictions/region-requirement';
 
 const statuses: PartnerMarketConfigStatus[] = [
   'draft',
@@ -385,6 +386,17 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+function formatJurisdictionLocation(location: {
+  countryCode: string;
+  regionCode: string | null;
+}): string {
+  return `${location.countryCode} · ${location.regionCode ?? 'Country-wide'}`;
+}
+
+function formatJurisdictionOption(item: MarketingJurisdiction): string {
+  return `${formatJurisdictionLocation(item)} · ${item.status}`;
+}
+
 function PartnerMarketFormDialog({
   config,
   onClose,
@@ -400,7 +412,34 @@ function PartnerMarketFormDialog({
   const [errors, setErrors] = useState<PartnerMarketConfigFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const regionRequired = requiresMarketingRegion(values.countryCode);
+  const [jurisdictions, setJurisdictions] = useState<MarketingJurisdiction[]>(
+    []
+  );
+  const [jurisdictionsLoading, setJurisdictionsLoading] = useState(!config);
+  const [jurisdictionsError, setJurisdictionsError] = useState<string | null>(
+    null
+  );
+  const [jurisdictionId, setJurisdictionId] = useState('');
+
+  useEffect(() => {
+    if (config) return;
+    let active = true;
+    setJurisdictionsLoading(true);
+    setJurisdictionsError(null);
+    void getMarketingJurisdictions()
+      .then((loaded) => {
+        if (active) setJurisdictions(loaded);
+      })
+      .catch((caught) => {
+        if (active) setJurisdictionsError(messageOf(caught));
+      })
+      .finally(() => {
+        if (active) setJurisdictionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [config]);
   const set = <K extends keyof PartnerMarketConfigFormValues>(
     key: K,
     value: PartnerMarketConfigFormValues[K]
@@ -485,29 +524,60 @@ function PartnerMarketFormDialog({
               }
             />
           ))}
+          {jurisdictionsError ? (
+            <Alert severity="error">
+              Could not load jurisdiction rules: {jurisdictionsError}
+            </Alert>
+          ) : null}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormText
-              label="Country code"
-              field="countryCode"
-              values={values}
-              errors={errors}
-              set={set}
-              disabled={Boolean(config)}
-            />
-            <FormText
-              label={regionRequired ? 'Region code' : 'Region code (optional)'}
-              field="regionCode"
-              values={values}
-              errors={errors}
-              set={set}
-              disabled={Boolean(config)}
-              required={regionRequired}
-              helper={
-                config
-                  ? 'Location cannot be changed. Create a new configuration for another country or region.'
-                  : undefined
-              }
-            />
+            {config ? (
+              <TextField
+                fullWidth
+                label="Jurisdiction rule"
+                value={formatJurisdictionLocation(config)}
+                disabled
+                helperText="Location cannot be changed. Create a new configuration for another jurisdiction rule."
+              />
+            ) : (
+              <TextField
+                select
+                fullWidth
+                required
+                label="Jurisdiction rule"
+                value={jurisdictionId}
+                disabled={jurisdictionsLoading || Boolean(jurisdictionsError)}
+                error={Boolean(errors.countryCode || errors.regionCode)}
+                helperText={
+                  errors.countryCode ??
+                  errors.regionCode ??
+                  (jurisdictionsLoading
+                    ? 'Loading jurisdiction rules…'
+                    : jurisdictions.length === 0
+                      ? 'Create a jurisdiction rule before adding a partner configuration.'
+                      : 'Country and region are taken from the selected rule.')
+                }
+                onChange={(event) => {
+                  const selected = jurisdictions.find(
+                    (item) => item.id === event.target.value
+                  );
+                  setJurisdictionId(event.target.value);
+                  if (!selected) return;
+                  set('countryCode', selected.countryCode);
+                  set('regionCode', selected.regionCode ?? '');
+                  setErrors((current) => ({
+                    ...current,
+                    countryCode: undefined,
+                    regionCode: undefined,
+                  }));
+                }}
+              >
+                {jurisdictions.map((item) => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {formatJurisdictionOption(item)}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               select
               fullWidth
@@ -733,7 +803,6 @@ type FormTextProps = {
   helper?: string;
   type?: string;
   shrink?: boolean;
-  required?: boolean;
 };
 
 function FormText({
@@ -747,7 +816,6 @@ function FormText({
   helper,
   type,
   shrink,
-  required,
 }: FormTextProps) {
   return (
     <TextField
@@ -761,7 +829,6 @@ function FormText({
       multiline={multiline}
       minRows={multiline ? 2 : undefined}
       type={type}
-      required={required}
       InputLabelProps={shrink ? { shrink: true } : undefined}
     />
   );
