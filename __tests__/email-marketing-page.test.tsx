@@ -402,11 +402,22 @@ describe('EmailMarketingDashboard workflow', () => {
     await screen.findByLabelText('Preview locale');
     selectOption('Preview locale', 'es');
     fireEvent.click(screen.getByRole('button', { name: 'Load preview' }));
-    expect(await screen.findByText('Exact ES')).toBeInTheDocument();
-    expect(screen.getByTitle('Canonical email preview')).toHaveAttribute(
-      'sandbox',
-      ''
+    const previewDialog = await screen.findByRole('dialog', {
+      name: 'Email preview',
+    });
+    expect(within(previewDialog).getByText('Exact ES')).toBeInTheDocument();
+    expect(
+      within(previewDialog).getByTitle('Canonical email preview')
+    ).toHaveAttribute('sandbox', '');
+    fireEvent.click(
+      within(previewDialog).getByRole('button', { name: 'Close preview' })
     );
+    expect(
+      screen.queryByRole('dialog', { name: 'Email preview' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: 'Publication details' })
+    ).toBeInTheDocument();
     expect(repo.approve).not.toHaveBeenCalled();
     expect(repo.sendNow).not.toHaveBeenCalled();
   });

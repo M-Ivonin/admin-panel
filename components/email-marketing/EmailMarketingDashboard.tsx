@@ -469,7 +469,6 @@ export function EmailMarketingDashboard({
               busy={busy}
               previewLocale={previewLocale}
               setPreviewLocale={setPreviewLocale}
-              preview={preview}
               onSave={() => void saveDraft()}
               onEstimate={() => void estimateAudience()}
               onPreview={async () => {
@@ -506,6 +505,12 @@ export function EmailMarketingDashboard({
             </Button>
           </DialogActions>
         </Dialog>
+      ) : null}
+      {preview ? (
+        <EmailPreviewDialog
+          preview={preview}
+          onClose={() => setPreview(null)}
+        />
       ) : null}
       {confirmation ? (
         <Dialog open onClose={busy ? undefined : () => setConfirmation(null)}>
@@ -670,7 +675,6 @@ type EditorProps = {
   busy: boolean;
   previewLocale: CampaignLocale;
   setPreviewLocale: (locale: CampaignLocale) => void;
-  preview: Awaited<ReturnType<EmailMarketingRepository['preview']>> | null;
   onSave: () => void;
   onEstimate: () => void;
   onPreview: () => void;
@@ -1245,40 +1249,6 @@ function Editor(props: EditorProps) {
                   Load preview
                 </Button>
               </Stack>
-              {props.preview ? (
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="overline">
-                      {props.preview.locale}
-                    </Typography>
-                    <Typography variant="h6">
-                      {props.preview.subject}
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {props.preview.preheader}
-                    </Typography>
-                    <Box
-                      component="iframe"
-                      title="Canonical email preview"
-                      sandbox=""
-                      srcDoc={props.preview.html}
-                      sx={{
-                        width: '100%',
-                        minHeight: 280,
-                        border: 1,
-                        borderColor: 'divider',
-                        mt: 2,
-                      }}
-                    />
-                    <Typography
-                      component="pre"
-                      sx={{ whiteSpace: 'pre-wrap', mt: 2 }}
-                    >
-                      {props.preview.text}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ) : null}
             </>
           ) : null}
           {selected && !historical ? (
@@ -1301,6 +1271,60 @@ function Editor(props: EditorProps) {
         </Stack>
       </CardContent>
     </Card>
+  );
+}
+
+function EmailPreviewDialog({
+  preview,
+  onClose,
+}: {
+  preview: Awaited<ReturnType<EmailMarketingRepository['preview']>>;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog
+      open
+      fullWidth
+      maxWidth="lg"
+      aria-labelledby="email-preview-title"
+      onClose={onClose}
+      PaperProps={{ sx: { height: 'calc(100vh - 48px)' } }}
+    >
+      <DialogTitle id="email-preview-title">Email preview</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={2} sx={{ height: '100%' }}>
+          <Box>
+            <Typography variant="overline">{preview.locale}</Typography>
+            <Typography variant="h6">{preview.subject}</Typography>
+            {preview.preheader ? (
+              <Typography color="text.secondary">
+                {preview.preheader}
+              </Typography>
+            ) : null}
+          </Box>
+          <Box
+            component="iframe"
+            title="Canonical email preview"
+            sandbox=""
+            srcDoc={preview.html}
+            sx={{
+              width: '100%',
+              flex: 1,
+              minHeight: 480,
+              bgcolor: 'common.white',
+              border: 1,
+              borderColor: 'divider',
+            }}
+          />
+          <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', m: 0 }}>
+            {preview.text}
+          </Typography>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close preview</Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
