@@ -1288,38 +1288,26 @@ function EmailPreviewDialog({
       maxWidth="lg"
       aria-labelledby="email-preview-title"
       onClose={onClose}
-      PaperProps={{ sx: { height: 'calc(100vh - 48px)' } }}
+      PaperProps={{ sx: { height: 'calc(100vh - 48px)', overflow: 'hidden' } }}
     >
       <DialogTitle id="email-preview-title">Email preview</DialogTitle>
-      <DialogContent dividers>
-        <Stack spacing={2} sx={{ height: '100%' }}>
-          <Box>
-            <Typography variant="overline">{preview.locale}</Typography>
-            <Typography variant="h6">{preview.subject}</Typography>
-            {preview.preheader ? (
-              <Typography color="text.secondary">
-                {preview.preheader}
-              </Typography>
-            ) : null}
-          </Box>
-          <Box
-            component="iframe"
-            title="Canonical email preview"
-            sandbox=""
-            srcDoc={preview.html}
-            sx={{
-              width: '100%',
-              flex: 1,
-              minHeight: 480,
-              bgcolor: 'common.white',
-              border: 1,
-              borderColor: 'divider',
-            }}
-          />
-          <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', m: 0 }}>
-            {preview.text}
-          </Typography>
-        </Stack>
+      <DialogContent
+        dividers
+        sx={{ p: 0, display: 'flex', overflow: 'hidden' }}
+      >
+        <Box
+          component="iframe"
+          title="Canonical email preview"
+          sandbox=""
+          srcDoc={preview.html}
+          sx={{
+            width: '100%',
+            height: '100%',
+            flex: 1,
+            bgcolor: 'common.white',
+            border: 0,
+          }}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close preview</Button>

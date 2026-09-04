@@ -405,10 +405,17 @@ describe('EmailMarketingDashboard workflow', () => {
     const previewDialog = await screen.findByRole('dialog', {
       name: 'Email preview',
     });
-    expect(within(previewDialog).getByText('Exact ES')).toBeInTheDocument();
+    const emailPreview = within(previewDialog).getByTitle(
+      'Canonical email preview'
+    );
+    expect(emailPreview).toHaveAttribute('sandbox', '');
+    expect(emailPreview).toHaveAttribute('srcdoc', '<p>Canonical HTML</p>');
     expect(
-      within(previewDialog).getByTitle('Canonical email preview')
-    ).toHaveAttribute('sandbox', '');
+      within(previewDialog).queryByText('Exact ES')
+    ).not.toBeInTheDocument();
+    expect(
+      within(previewDialog).queryByText('Canonical text')
+    ).not.toBeInTheDocument();
     fireEvent.click(
       within(previewDialog).getByRole('button', { name: 'Close preview' })
     );
