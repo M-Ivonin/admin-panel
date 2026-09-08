@@ -8,6 +8,7 @@ import {
 import MatchRankingPage from '@/app/(admin)/dashboard/match-ranking/page';
 import {
   activateMatchRankingConfiguration,
+  bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
   createMatchRankingOverride,
   deleteMatchRankingOverride,
@@ -26,6 +27,7 @@ jest.mock('@/components/auth/ProtectedRoute', () => ({
 }));
 jest.mock('@/lib/api/match-ranking', () => ({
   activateMatchRankingConfiguration: jest.fn(),
+  bulkReviewMatchRankingCompetitions: jest.fn(),
   createMatchRankingConfiguration: jest.fn(),
   createMatchRankingOverride: jest.fn(),
   deleteMatchRankingOverride: jest.fn(),
@@ -55,6 +57,8 @@ const competition = {
   metadataFreshAt: '2026-09-08T08:00:00.000Z',
   metadataLastSuccessAt: '2026-09-08T08:00:00.000Z',
   metadataLastError: null,
+  suggestedClassification: 'senior' as const,
+  needsAttention: false,
 };
 
 describe('MatchRankingPage', () => {
@@ -85,6 +89,7 @@ describe('MatchRankingPage', () => {
       expect(getMatchRankingCompetitions).toHaveBeenLastCalledWith({
         query: 'Libertadores',
         reviewState: '',
+        queue: '',
       })
     );
 
@@ -115,6 +120,45 @@ describe('MatchRankingPage', () => {
           reviewState: 'reviewed',
           reason: 'Verified against provider metadata',
         })
+      )
+    );
+  });
+
+  it('filters review queues and bulk-approves selected ready competitions', async () => {
+    (bulkReviewMatchRankingCompetitions as jest.Mock).mockResolvedValue([]);
+    render(<MatchRankingPage />);
+
+    expect(await screen.findByText('Copa Libertadores')).toBeInTheDocument();
+    expect(screen.getByText('Suggested: senior')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ready for review' }));
+    await waitFor(() =>
+      expect(getMatchRankingCompetitions).toHaveBeenLastCalledWith({
+        query: '',
+        reviewState: '',
+        queue: 'ready',
+      })
+    );
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Select Copa Libertadores' })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Approve selected (1)' })
+    );
+    const dialog = screen.getByRole('dialog', {
+      name: 'Approve selected competitions',
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Bulk review reason/), {
+      target: { value: 'Provider metadata verified' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Approve 1 competition' })
+    );
+
+    await waitFor(() =>
+      expect(bulkReviewMatchRankingCompetitions).toHaveBeenCalledWith(
+        ['league-1'],
+        'Provider metadata verified'
       )
     );
   });

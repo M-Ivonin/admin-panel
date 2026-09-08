@@ -1,6 +1,7 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 import {
   activateMatchRankingConfiguration,
+  bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
   createMatchRankingOverride,
   deleteMatchRankingOverride,
@@ -32,9 +33,10 @@ describe('match ranking API', () => {
     await getMatchRankingCompetitions({
       query: '  Copa Libertadores ',
       reviewState: ' pending_review ',
+      queue: 'ready',
     });
     expect(adminAuthFetch).toHaveBeenLastCalledWith({
-      path: '/admin/match-ranking/competitions?query=Copa+Libertadores&reviewState=pending_review',
+      path: '/admin/match-ranking/competitions?query=Copa+Libertadores&reviewState=pending_review&queue=ready',
       method: 'GET',
     });
 
@@ -53,6 +55,19 @@ describe('match ranking API', () => {
       path: '/admin/match-ranking/competitions/league%2F9',
       method: 'PATCH',
       body: JSON.stringify(input),
+    });
+
+    await bulkReviewMatchRankingCompetitions(
+      ['league-1', 'league-2'],
+      'Provider metadata verified'
+    );
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/competitions/bulk-review',
+      method: 'POST',
+      body: JSON.stringify({
+        ids: ['league-1', 'league-2'],
+        reason: 'Provider metadata verified',
+      }),
     });
   });
 

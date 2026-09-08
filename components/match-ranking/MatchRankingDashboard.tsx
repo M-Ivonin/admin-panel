@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -25,6 +26,7 @@ import { Add, Edit, SportsSoccer } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   activateMatchRankingConfiguration,
+  bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
   createMatchRankingOverride,
   deleteMatchRankingOverride,
@@ -43,6 +45,7 @@ import type {
   CompetitionScope,
   MatchRankingAuditEvent,
   MatchRankingCompetition,
+  MatchRankingCatalogQueue,
   MatchRankingConfiguration,
   MatchRankingOverride,
   MatchRankingOverrideAction,
@@ -91,6 +94,12 @@ export function MatchRankingDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [reviewState, setReviewState] = useState('');
+  const [catalogQueue, setCatalogQueue] =
+    useState<MatchRankingCatalogQueue>('');
+  const [selectedCompetitionIds, setSelectedCompetitionIds] = useState<
+    string[]
+  >([]);
+  const [bulkReviewOpen, setBulkReviewOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] =
     useState<MatchRankingCompetition | null>(null);
   const [editingProminence, setEditingProminence] = useState<
@@ -138,12 +147,17 @@ export function MatchRankingDashboard() {
     void loadAll();
   }, [loadAll]);
 
-  async function searchCatalog() {
+  async function searchCatalog(queue = catalogQueue) {
     setLoading(true);
     setError(null);
+    setSelectedCompetitionIds([]);
     try {
       setCompetitions(
-        await getMatchRankingCompetitions({ query: search, reviewState })
+        await getMatchRankingCompetitions({
+          query: search,
+          reviewState,
+          queue,
+        })
       );
     } catch (caught) {
       setError(messageOf(caught));
@@ -199,9 +213,18 @@ export function MatchRankingDashboard() {
               items={competitions}
               search={search}
               reviewState={reviewState}
+              queue={catalogQueue}
+              selectedIds={selectedCompetitionIds}
               onSearchChange={setSearch}
               onReviewStateChange={setReviewState}
               onSearch={() => void searchCatalog()}
+              onQueueChange={(value) => {
+                setCatalogQueue(value);
+                setSelectedCompetitionIds([]);
+                void searchCatalog(value);
+              }}
+              onSelectionChange={setSelectedCompetitionIds}
+              onBulkReview={() => setBulkReviewOpen(true)}
               onEdit={setEditingCompetition}
             />
           ) : null}
@@ -234,6 +257,22 @@ export function MatchRankingDashboard() {
           onSaved={async () => {
             setEditingCompetition(null);
             setSuccess(`${editingCompetition.name} review saved.`);
+            await searchCatalog();
+          }}
+        />
+      ) : null}
+      {bulkReviewOpen ? (
+        <BulkReviewDialog
+          count={selectedCompetitionIds.length}
+          onClose={() => setBulkReviewOpen(false)}
+          onApproved={async (reason) => {
+            await bulkReviewMatchRankingCompetitions(
+              selectedCompetitionIds,
+              reason
+            );
+            setBulkReviewOpen(false);
+            setSelectedCompetitionIds([]);
+            setSuccess('Selected competitions approved.');
             await searchCatalog();
           }}
         />
@@ -302,17 +341,27 @@ function CatalogPanel({
   items,
   search,
   reviewState,
+  queue,
+  selectedIds,
   onSearchChange,
   onReviewStateChange,
   onSearch,
+  onQueueChange,
+  onSelectionChange,
+  onBulkReview,
   onEdit,
 }: {
   items: MatchRankingCompetition[];
   search: string;
   reviewState: string;
+  queue: MatchRankingCatalogQueue;
+  selectedIds: string[];
   onSearchChange: (value: string) => void;
   onReviewStateChange: (value: string) => void;
   onSearch: () => void;
+  onQueueChange: (value: MatchRankingCatalogQueue) => void;
+  onSelectionChange: (ids: string[]) => void;
+  onBulkReview: () => void;
   onEdit: (item: MatchRankingCompetition) => void;
 }) {
   return (
@@ -346,6 +395,43 @@ function CatalogPanel({
           </Stack>
         </CardContent>
       </Card>
+      <Card>
+        <CardContent>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ sm: 'center' }}
+          >
+            <Button
+              variant={queue === 'ready' ? 'contained' : 'outlined'}
+              onClick={() => onQueueChange('ready')}
+            >
+              Ready for review
+            </Button>
+            <Button
+              color="warning"
+              variant={queue === 'attention' ? 'contained' : 'outlined'}
+              onClick={() => onQueueChange('attention')}
+            >
+              Needs attention
+            </Button>
+            <Button
+              variant={queue === '' ? 'contained' : 'outlined'}
+              onClick={() => onQueueChange('')}
+            >
+              All competitions
+            </Button>
+            <Box sx={{ flex: 1 }} />
+            <Button
+              variant="contained"
+              disabled={selectedIds.length === 0}
+              onClick={onBulkReview}
+            >
+              Approve selected ({selectedIds.length})
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
       {items.length === 0 ? (
         <EmptyCard text="No competitions found" />
       ) : (
@@ -373,6 +459,20 @@ function CatalogPanel({
                         item.reviewState === 'reviewed' ? 'success' : 'warning'
                       }
                     />
+                    {item.needsAttention ? (
+                      <Chip
+                        size="small"
+                        color="error"
+                        label="Needs attention"
+                      />
+                    ) : null}
+                    {item.classification === 'unknown' ? (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`Suggested: ${item.suggestedClassification}`}
+                      />
+                    ) : null}
                     <Chip
                       size="small"
                       variant="outlined"
@@ -402,19 +502,95 @@ function CatalogPanel({
                     </Alert>
                   ) : null}
                 </Box>
-                <Button
-                  startIcon={<Edit />}
-                  onClick={() => onEdit(item)}
-                  aria-label={`Review ${item.name}`}
-                >
-                  Review
-                </Button>
+                <Stack direction="row" alignItems="center">
+                  {item.reviewState === 'pending_review' &&
+                  !item.needsAttention ? (
+                    <Checkbox
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(event) =>
+                        onSelectionChange(
+                          event.target.checked
+                            ? [...selectedIds, item.id]
+                            : selectedIds.filter((id) => id !== item.id)
+                        )
+                      }
+                      inputProps={{ 'aria-label': `Select ${item.name}` }}
+                    />
+                  ) : null}
+                  <Button
+                    startIcon={<Edit />}
+                    onClick={() => onEdit(item)}
+                    aria-label={`Review ${item.name}`}
+                  >
+                    Review
+                  </Button>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>
         ))
       )}
     </Stack>
+  );
+}
+
+function BulkReviewDialog({
+  count,
+  onClose,
+  onApproved,
+}: {
+  count: number;
+  onClose: () => void;
+  onApproved: (reason: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function approve() {
+    if (!reason.trim()) return setError('Reason is required.');
+    setSaving(true);
+    setError(null);
+    try {
+      await onApproved(reason.trim());
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Approve selected competitions</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Alert severity="info">
+            Provider category and the suggested classification will be accepted
+            for {count} selected {count === 1 ? 'competition' : 'competitions'}.
+          </Alert>
+          <TextField
+            label="Bulk review reason"
+            required
+            multiline
+            minRows={2}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          disabled={saving}
+          onClick={() => void approve()}
+        >
+          Approve {count} {count === 1 ? 'competition' : 'competitions'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

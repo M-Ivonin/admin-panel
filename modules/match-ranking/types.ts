@@ -27,7 +27,11 @@ export interface MatchRankingCompetition {
   metadataFreshAt: string | null;
   metadataLastSuccessAt: string | null;
   metadataLastError: string | null;
+  suggestedClassification: Exclude<CompetitionClassification, 'unknown'>;
+  needsAttention: boolean;
 }
+
+export type MatchRankingCatalogQueue = '' | 'ready' | 'attention';
 
 export interface MatchRankingCompetitionUpdate {
   effectiveCategory: number | null;

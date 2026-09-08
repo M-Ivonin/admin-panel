@@ -3,6 +3,7 @@ import type {
   MatchRankingAuditEvent,
   MatchRankingCompetition,
   MatchRankingCompetitionUpdate,
+  MatchRankingCatalogQueue,
   MatchRankingConfiguration,
   MatchRankingConfigurationInput,
   MatchRankingOverride,
@@ -19,6 +20,7 @@ export async function getMatchRankingCompetitions(
   filters: {
     query?: string;
     reviewState?: string;
+    queue?: MatchRankingCatalogQueue;
   } = {}
 ): Promise<MatchRankingCompetition[]> {
   const params = new URLSearchParams();
@@ -26,11 +28,25 @@ export async function getMatchRankingCompetitions(
   if (filters.reviewState?.trim()) {
     params.set('reviewState', filters.reviewState.trim());
   }
+  if (filters.queue) params.set('queue', filters.queue);
   const query = params.toString();
   return readList(
     await adminAuthFetch({
       path: `${BASE_PATH}/competitions${query ? `?${query}` : ''}`,
       method: 'GET',
+    })
+  );
+}
+
+export async function bulkReviewMatchRankingCompetitions(
+  ids: string[],
+  reason: string
+): Promise<MatchRankingCompetition[]> {
+  return readList(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/competitions/bulk-review`,
+      method: 'POST',
+      body: JSON.stringify({ ids, reason: reason.trim() }),
     })
   );
 }
