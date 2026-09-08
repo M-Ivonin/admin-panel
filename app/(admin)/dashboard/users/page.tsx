@@ -129,7 +129,11 @@ function resolveTipsterBroPlanTier(plan: string | null | undefined) {
   return null;
 }
 
-function getEffectivePlanLabel(user: User): string {
+function getEffectivePlanLabel(user: PaginatedUser): string {
+  if (user.commerceAccess.authorization === 'FULL_ACCESS') {
+    return user.commerceAccess.productKey ?? 'FULL_ACCESS';
+  }
+
   const subscription = user.subscription;
 
   if (!subscription) {

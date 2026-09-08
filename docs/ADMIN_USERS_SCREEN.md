@@ -12,6 +12,17 @@ Each user may include `latestAppProfile` from the backend. Accepted values are:
 
 The screen renders this backend field directly in the Users table. It must not infer app identity from plan, email, Telegram name, or display name.
 
+Each user in the paginated response also includes required `commerceAccess`:
+
+- `authorization`: `FREE` or `FULL_ACCESS`
+- `productKey`: `PASS_24H`, `PASS_3D`, `PRO_MONTHLY`, `PRO_ANNUAL`, or `null`
+
+The Plan column uses `commerceAccess.productKey` whenever authorization is
+`FULL_ACCESS`. Legacy `subscription.activePlan` is used only when direct
+commerce access is `FREE`; it remains a compatibility display source and does
+not override a granting commerce entitlement. The non-paginated user detail
+contract is unchanged.
+
 ## Table Behavior
 
 The Users table shows the App column between Status and Plan:

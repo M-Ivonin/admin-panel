@@ -54,6 +54,10 @@ function createUser(overrides: Partial<PaginatedUser>): PaginatedUser {
     level: 1,
     levelName: 'Rookie',
     subscription: null,
+    commerceAccess: {
+      authorization: 'FREE',
+      productKey: null,
+    },
     partnerId: null,
     latestAppProfile: null,
     ...overrides,
@@ -248,5 +252,51 @@ describe('UsersPage', () => {
     expect(within(sirbroRow!).getByText('free')).toBeTruthy();
     expect(within(sirbroRow!).queryByText('tipsterbro_annual')).toBeNull();
     expect(within(sirbroProbroRow!).getByText('probro')).toBeTruthy();
+  });
+
+  it('renders backend-authoritative Full Access instead of a legacy free plan', async () => {
+    mockedGetUsers.mockResolvedValue({
+      users: [
+        createUser({
+          id: 'sirbro_full_access_user',
+          name_app: 'Full Access User',
+          latestAppProfile: 'SirBro',
+          subscription: {
+            id: 'legacy_free_subscription',
+            provider: null,
+            activePlan: 'free',
+            subscriptionStatus: 'active',
+            subscriptionStartDate: null,
+            subscriptionEndDate: null,
+            autoRenewing: false,
+          },
+          commerceAccess: {
+            authorization: 'FULL_ACCESS',
+            productKey: 'PRO_ANNUAL',
+          },
+        }),
+      ],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      retentionCounts: {
+        [RetentionStage.NEW]: 0,
+        [RetentionStage.CURRENT]: 1,
+        [RetentionStage.AT_RISK_WAU]: 0,
+        [RetentionStage.AT_RISK_MAU]: 0,
+        [RetentionStage.DEAD]: 0,
+        [RetentionStage.REACTIVATED]: 0,
+        [RetentionStage.RESURRECTED]: 0,
+        [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 0,
+      },
+    });
+
+    render(<UsersPage />);
+
+    const row = (await screen.findByText('Full Access User')).closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row!).getByText('PRO_ANNUAL')).toBeTruthy();
+    expect(within(row!).queryByText('free')).toBeNull();
   });
 });

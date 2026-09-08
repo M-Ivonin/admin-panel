@@ -14,6 +14,11 @@ export interface UserSubscription {
   autoRenewing: boolean;
 }
 
+export interface UserCommerceAccess {
+  authorization: 'FREE' | 'FULL_ACCESS';
+  productKey: 'PASS_24H' | 'PASS_3D' | 'PRO_MONTHLY' | 'PRO_ANNUAL' | null;
+}
+
 export type UserLatestAppProfile = 'SirBro' | 'TipsterBro' | null;
 
 export interface User {
@@ -45,6 +50,7 @@ export interface User {
 
 export interface PaginatedUser extends User {
   registered_at: string | null;
+  commerceAccess: UserCommerceAccess;
 }
 
 export enum RetentionStage {
