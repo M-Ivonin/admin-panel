@@ -14,6 +14,10 @@ accepts operator commands independently.
 The screen lists and filters exact operator/country configurations, creates or replaces one
 operator-country-region record through `PUT /partner-market-configs/admin`, and performs an
 immediate confirmed pause through `POST /partner-market-configs/admin/:id/pause`.
+Partner configuration editing also exposes the backend conversion-type
+allowlist. The five core values (`registration`, `ftd`, `deposit`,
+`commission`, and `reversal`) are always preserved; operators may add only
+normalized, backend-valid extra values through the same configuration command.
 
 The jurisdiction tab lists and filters exact country/region rules, creates or
 replaces one record through `PUT /marketing-jurisdictions/admin`, and performs

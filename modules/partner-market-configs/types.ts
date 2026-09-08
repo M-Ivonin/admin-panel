@@ -26,6 +26,7 @@ export interface PartnerMarketConfigInput {
   operatorTermsUrl: string;
   operatorDestinationUrl: string;
   approvedDestinationHosts: string[];
+  affiliateConversionTypes: string[];
   legalReviewedAt: string;
   legalReviewExpiresAt: string;
   effectiveFrom: string;
@@ -64,10 +65,11 @@ export interface PartnerMarketConfigFilters {
 export interface PartnerMarketConfigFormValues
   extends Omit<
     PartnerMarketConfigInput,
-    'minimumAge' | 'approvedDestinationHosts'
+    'minimumAge' | 'approvedDestinationHosts' | 'affiliateConversionTypes'
   > {
   minimumAge: string;
   approvedDestinationHosts: string;
+  affiliateConversionTypes: string;
 }
 
 export type PartnerMarketConfigFormErrors = Partial<

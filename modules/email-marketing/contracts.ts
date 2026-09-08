@@ -103,9 +103,177 @@ export interface EmailPublication {
   counters: EmailPublicationCounters;
   terminalReason: string | null;
   terminalAt: string | null;
+  cohortAnchorAt: string | null;
+  cohortHistoryComplete: boolean;
+  autoPause: { at: string; reason: string | null } | null;
+  lateIncident: {
+    at: string;
+    reason: string | null;
+    acknowledgedAt: string | null;
+    acknowledgementNote: string | null;
+  } | null;
   approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type EmailAnalyticsCompleteness = 'complete' | 'incomplete' | 'N/A';
+export type EmailAnalyticsMaturity = 'mature' | 'immature' | 'N/A';
+
+export interface EmailAnalyticsCohort {
+  size: number;
+  denominator: number;
+  active: number;
+  rate: number | null;
+}
+
+export interface EmailAnalyticsRetentionWindow {
+  maturity: EmailAnalyticsMaturity;
+  completeness: EmailAnalyticsCompleteness;
+  exposed: EmailAnalyticsCohort;
+  control: EmailAnalyticsCohort;
+}
+
+export interface EmailPublicationAnalytics {
+  dimensions: {
+    campaign: string | null;
+    publicationVersion: number;
+    type: EmailPublicationTopic | null;
+    operator: string;
+    geo: string;
+    league: string;
+    market: string;
+  };
+  counts: {
+    exposedSize: number;
+    controlSize: number;
+    accepted: number;
+    delivered: number;
+    delayed: number;
+    hardBounce: number;
+    blockReject: number;
+    complaint: number;
+    topicUnsubscribe: number;
+    globalUnsubscribe: number;
+    unsubscribe: number;
+    fullAnalysisClicks: number;
+    productClicks: number;
+    appOpens: number;
+    initialSubscriptions: number;
+    partnerLandingViews: number;
+    partnerContinues: number;
+    affiliateConversions: number;
+  };
+  slices: Array<{
+    campaign: string | null;
+    publicationVersion: number;
+    type: EmailPublicationTopic | null;
+    operator: string;
+    geo: string;
+    locale: string;
+    cohort: 'exposed' | 'control' | null;
+    league: string;
+    market: string;
+    counts: {
+      accepted: number;
+      delivered: number;
+      complaints: number;
+      unsubscribes: number;
+    };
+    rates: {
+      delivery: number | null;
+      complaint: number | null;
+      unsubscribe: number | null;
+    };
+  }>;
+  rates: {
+    delivery: number | null;
+    revenuePerDeliveredEmail: number | null;
+    revenuePerEligibleConfirmedPartnerSubscriber: number | null;
+  };
+  denominators: {
+    delivered: number;
+    providerAccepted: number;
+    eligibleConfirmedAudience: number;
+  };
+  attributionCompleteness: {
+    numerator: number;
+    denominator: number;
+    status: EmailAnalyticsCompleteness;
+  };
+  affiliateRevenue: {
+    usd: number | null;
+    completeness: EmailAnalyticsCompleteness;
+  };
+  tracedAttribution: {
+    completeness: EmailAnalyticsCompleteness;
+    available: boolean;
+    eligibleDeliveries: number;
+    tracedDeliveries: number;
+    metrics: {
+      fullAnalysisClicks: number;
+      productClicks: number;
+      appOpens: number;
+      initialSubscriptions: number;
+    } | null;
+  };
+  retention: {
+    anchorAt: string | null;
+    d7: EmailAnalyticsRetentionWindow;
+    d30: EmailAnalyticsRetentionWindow;
+    byLocale: Array<{
+      locale: string;
+      cohort: 'exposed' | 'control';
+      size: number;
+      d7: { denominator: number; active: number };
+      d30: { denominator: number; active: number };
+    }>;
+  };
+  sponsoredComparator:
+    | { status: 'N/A'; label: 'observational' }
+    | {
+        status: 'available';
+        label: 'observational';
+        publicationId: string;
+        publicationVersion: number;
+        matching: {
+          league: string | null;
+          market: string | null;
+          locale: 'same_locale_slice';
+          lookbackDays: number;
+        };
+        slices: Array<{
+          locale: string;
+          sponsored: {
+            delivered: number;
+            complaintRate: number | null;
+            unsubscribeRate: number | null;
+          };
+          comparator: {
+            delivered: number;
+            complaintRate: number | null;
+            unsubscribeRate: number | null;
+          };
+        }>;
+      };
+  health: {
+    status: 'healthy' | 'warning' | 'critical';
+    reasons: string[];
+    rates: {
+      complaint: number | null;
+      hardBounce: number | null;
+      unsubscribe: number | null;
+      delivery: number | null;
+      maturedDelivery: number | null;
+    };
+    denominators: {
+      complaint: number;
+      hardBounce: number;
+      unsubscribe: number;
+      delivery: number;
+      maturedDelivery: number;
+    };
+  };
 }
 
 export interface EmailPreview {
@@ -168,6 +336,8 @@ export interface SendGridTemplateReference {
 export interface EmailMarketingRepository {
   list(state?: EmailPublicationState): Promise<EmailPublication[]>;
   get(id: string): Promise<EmailPublication>;
+  getAnalytics(id: string): Promise<EmailPublicationAnalytics>;
+  getAnalyticsExport(id: string): Promise<EmailPublicationAnalytics>;
   create(
     input: EmailPublicationInput,
     idempotencyKey: string
@@ -186,6 +356,7 @@ export interface EmailMarketingRepository {
   pause(id: string): Promise<EmailPublicationMutationResult>;
   resume(id: string): Promise<EmailPublicationMutationResult>;
   cancel(id: string, reason: string): Promise<EmailPublicationMutationResult>;
+  acknowledgeIncident(id: string, note: string): Promise<{ acknowledged: true }>;
   estimateAudience(
     audience: CampaignAudienceDefinition
   ): Promise<{ reachableUsers: number; warnings: string[] }>;

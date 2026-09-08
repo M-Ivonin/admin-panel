@@ -52,6 +52,10 @@ export const emailMarketingRepository: EmailMarketingRepository = {
     return (await request<{ items: EmailPublication[] }>(`${ROOT}${query}`)).items;
   },
   get: (id) => request(`${ROOT}/${encodeURIComponent(id)}`),
+  getAnalytics: (id) =>
+    request(`${ROOT}/${encodeURIComponent(id)}/analytics`),
+  getAnalyticsExport: (id) =>
+    request(`${ROOT}/${encodeURIComponent(id)}/analytics/export`),
   create: (input, idempotencyKey) => request(ROOT, 'POST', input, { 'Idempotency-Key': idempotencyKey }),
   edit: (id, input) => request(`${ROOT}/${encodeURIComponent(id)}`, 'PUT', input),
   preview: (id, locale) => request<EmailPreview>(`${ROOT}/${encodeURIComponent(id)}/preview?locale=${locale}`),
@@ -61,6 +65,10 @@ export const emailMarketingRepository: EmailMarketingRepository = {
   pause: (id) => command(id, 'pause'),
   resume: (id) => command(id, 'resume'),
   cancel: (id, reason) => command(id, 'cancel', { reason: reason.trim() }),
+  acknowledgeIncident: (id, note) =>
+    request(`${ROOT}/${encodeURIComponent(id)}/incidents/acknowledge`, 'POST', {
+      note: note.trim(),
+    }),
   estimateAudience: (audience: CampaignAudienceDefinition) => request(`${ROOT}/estimate-audience`, 'POST', { audience }),
   async listPredictionReferences(): Promise<PredictionReference[]> {
     return (await request<{ items: PredictionReference[] }>(`${ROOT}/references/predictions`)).items;

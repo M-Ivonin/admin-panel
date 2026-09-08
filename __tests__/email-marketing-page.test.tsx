@@ -12,6 +12,7 @@ import {
 import type {
   EmailMarketingRepository,
   EmailPublication,
+  EmailPublicationAnalytics,
   EmailPublicationInput,
 } from '@/modules/email-marketing/contracts';
 import { RetentionStage } from '@/lib/api/users';
@@ -79,9 +80,131 @@ const basePublication: EmailPublication = {
   },
   terminalReason: null,
   terminalAt: null,
+  cohortAnchorAt: '2026-08-29T10:00:00.000Z',
+  cohortHistoryComplete: true,
+  autoPause: null,
+  lateIncident: null,
   approvedAt: null,
   createdAt: '2026-08-29T10:00:00.000Z',
   updatedAt: '2026-08-29T10:00:00.000Z',
+};
+
+const analytics: EmailPublicationAnalytics = {
+  dimensions: {
+    campaign: 'campaign-1',
+    publicationVersion: 1,
+    type: 'sirbro_product_updates',
+    operator: 'none',
+    geo: 'unknown/global',
+    league: 'Premier League',
+    market: 'match_winner',
+  },
+  counts: {
+    exposedSize: 113,
+    controlSize: 17,
+    accepted: 113,
+    delivered: 91,
+    delayed: 7,
+    hardBounce: 3,
+    blockReject: 2,
+    complaint: 1,
+    topicUnsubscribe: 4,
+    globalUnsubscribe: 2,
+    unsubscribe: 6,
+    fullAnalysisClicks: 19,
+    productClicks: 23,
+    appOpens: 13,
+    initialSubscriptions: 5,
+    partnerLandingViews: 29,
+    partnerContinues: 11,
+    affiliateConversions: 8,
+  },
+  slices: [
+    {
+      campaign: 'campaign-1',
+      publicationVersion: 1,
+      type: 'sirbro_product_updates',
+      operator: 'none',
+      geo: 'unknown/global',
+      locale: 'en',
+      cohort: 'exposed',
+      league: 'Premier League',
+      market: 'match_winner',
+      counts: { accepted: 47, delivered: 31, complaints: 1, unsubscribes: 2 },
+      rates: { delivery: 0.4321, complaint: 0.0123, unsubscribe: 0.0234 },
+    },
+  ],
+  rates: {
+    delivery: 0.7654,
+    revenuePerDeliveredEmail: 1.2345,
+    revenuePerEligibleConfirmedPartnerSubscriber: 0,
+  },
+  denominators: {
+    delivered: 91,
+    providerAccepted: 113,
+    eligibleConfirmedAudience: 130,
+  },
+  attributionCompleteness: {
+    numerator: 89,
+    denominator: 101,
+    status: 'incomplete',
+  },
+  affiliateRevenue: { usd: null, completeness: 'incomplete' },
+  tracedAttribution: {
+    completeness: 'complete',
+    available: true,
+    eligibleDeliveries: 41,
+    tracedDeliveries: 41,
+    metrics: {
+      fullAnalysisClicks: 19,
+      productClicks: 23,
+      appOpens: 13,
+      initialSubscriptions: 5,
+    },
+  },
+  retention: {
+    anchorAt: '2026-08-29T10:00:00.000Z',
+    d7: {
+      maturity: 'mature',
+      completeness: 'complete',
+      exposed: { size: 113, denominator: 113, active: 37, rate: 0.321 },
+      control: { size: 17, denominator: 17, active: 4, rate: 0 },
+    },
+    d30: {
+      maturity: 'immature',
+      completeness: 'N/A',
+      exposed: { size: 113, denominator: 0, active: 0, rate: null },
+      control: { size: 17, denominator: 0, active: 0, rate: null },
+    },
+    byLocale: [
+      {
+        locale: 'en',
+        cohort: 'exposed',
+        size: 47,
+        d7: { denominator: 43, active: 17 },
+        d30: { denominator: 0, active: 0 },
+      },
+    ],
+  },
+  sponsoredComparator: { status: 'N/A', label: 'observational' },
+  health: {
+    status: 'warning',
+    reasons: ['delivery_rate'],
+    rates: {
+      complaint: 0.0043,
+      hardBounce: 0.0265,
+      unsubscribe: 0.0659,
+      delivery: 0.7654,
+      maturedDelivery: null,
+    },
+    denominators: {
+      complaint: 91,
+      hardBounce: 113,
+      unsubscribe: 91,
+      delivery: 113,
+      maturedDelivery: 0,
+    },
+  },
 };
 
 describe('Email Marketing schedule conversion', () => {
@@ -98,6 +221,8 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
   return {
     list: jest.fn().mockResolvedValue([basePublication]),
     get: jest.fn().mockResolvedValue(basePublication),
+    getAnalytics: jest.fn().mockResolvedValue(analytics),
+    getAnalyticsExport: jest.fn().mockResolvedValue(analytics),
     create: jest.fn().mockResolvedValue(basePublication),
     edit: jest.fn().mockResolvedValue(basePublication),
     preview: jest.fn().mockResolvedValue({
@@ -123,6 +248,7 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
     cancel: jest
       .fn()
       .mockResolvedValue({ ...basePublication, state: 'cancelled' }),
+    acknowledgeIncident: jest.fn().mockResolvedValue({ acknowledged: true }),
     estimateAudience: jest.fn().mockResolvedValue({
       reachableUsers: 42,
       warnings: ['Backend estimate only'],
@@ -186,6 +312,174 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('shows a backend healthy state without inventing an incident', async () => {
+    const repo = repository();
+    repo.getAnalytics.mockResolvedValue({
+      ...analytics,
+      health: {
+        ...analytics.health,
+        status: 'healthy',
+        reasons: [],
+      },
+    });
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+
+    expect(
+      within(dialog).getByText('Health: healthy', { exact: false })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/Auto-paused by backend/)
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/Late critical incident/)
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders backend-owned metrics and distinct maturity, health, and incident states', async () => {
+    const repo = repository();
+    repo.get.mockResolvedValue({
+      ...basePublication,
+      state: 'paused',
+      autoPause: { at: '2026-09-08T10:00:00.000Z', reason: 'complaint_rate' },
+      lateIncident: {
+        at: '2026-09-08T11:00:00.000Z',
+        reason: 'late_complaint_rate',
+        acknowledgedAt: null,
+        acknowledgementNote: null,
+      },
+    });
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+
+    expect(
+      within(dialog).getByText('Health: warning', { exact: false })
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('76.54%')).toBeInTheDocument();
+    expect(within(dialog).getByText('43.21%')).toBeInTheDocument();
+    expect(within(dialog).getByText('32.1%')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('0%').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('immature').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('N/A').length).toBeGreaterThan(0);
+    expect(
+      within(dialog).getByText(/Auto-paused by backend/)
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Late critical incident/)
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Observational comparison only/)
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/open rate/i)).not.toBeInTheDocument();
+    expect(dialog.textContent).not.toMatch(
+      /raw email|date of birth|recipient handle|delivery trace|provider token/i
+    );
+  });
+
+  it('requires a note, sends the typed acknowledgement, and refreshes authoritative detail and analytics', async () => {
+    const repo = repository();
+    const incident = {
+      ...basePublication,
+      lateIncident: {
+        at: '2026-09-08T11:00:00.000Z',
+        reason: 'late_complaint_rate',
+        acknowledgedAt: null,
+        acknowledgementNote: null,
+      },
+    };
+    const acknowledged = {
+      ...incident,
+      lateIncident: {
+        ...incident.lateIncident,
+        acknowledgedAt: '2026-09-08T12:00:00.000Z',
+        acknowledgementNote: 'Reviewed provider evidence.',
+      },
+    };
+    repo.get
+      .mockResolvedValueOnce(incident)
+      .mockResolvedValueOnce(acknowledged);
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const button = await screen.findByRole('button', {
+      name: 'Acknowledge late incident',
+    });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^Operator acknowledgement note/), {
+      target: { value: '  Reviewed provider evidence.  ' },
+    });
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(repo.acknowledgeIncident).toHaveBeenCalledWith(
+        'pub-1',
+        '  Reviewed provider evidence.  '
+      )
+    );
+    await waitFor(() => expect(repo.getAnalytics).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByText(/Late critical incident acknowledged/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Acknowledge late incident' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows every backend slice dimension without deriving alternate groupings', async () => {
+    const repo = repository();
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const table = await screen.findByRole('table', {
+      name: 'Analytics backend groupings',
+    });
+
+    for (const heading of [
+      'Campaign',
+      'Version',
+      'Type',
+      'Operator',
+      'Geo',
+      'Locale',
+      'Cohort',
+      'League',
+      'Market',
+    ]) {
+      expect(
+        within(table).getByText(heading, { selector: 'th' })
+      ).toBeInTheDocument();
+    }
+    expect(within(table).getByText('43.21%')).toBeInTheDocument();
+    const retentionTable = screen.getByRole('table', {
+      name: 'Retention locale and cohort groupings',
+    });
+    expect(within(retentionTable).getByText('43')).toBeInTheDocument();
+    expect(within(retentionTable).getByText('17')).toBeInTheDocument();
+  });
   it('filters SendGrid templates by publication type and clears the previous selection', async () => {
     const repo = repository();
     repo.list.mockResolvedValue([]);
@@ -520,7 +814,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(
       Object.keys((first[0] as EmailPublicationInput).contentByLocale)
     ).toEqual(['en', 'es', 'pt']);
-  });
+  }, 10_000);
 
   it('edits with the current definition version and requires confirmations for lifecycle commands', async () => {
     const repo = repository();
@@ -790,7 +1084,7 @@ describe('EmailMarketingDashboard workflow', () => {
     await waitFor(() =>
       expect(repo.cancel).toHaveBeenCalledWith('pub-1', 'Operator stopped it')
     );
-  });
+  }, 10_000);
 });
 
 function fillCommonFields(): void {

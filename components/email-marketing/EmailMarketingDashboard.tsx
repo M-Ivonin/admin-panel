@@ -26,6 +26,8 @@ import {
 } from '@mui/material';
 import { Add, Email, Refresh } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmailPublicationAnalyticsPanel } from '@/components/email-marketing/EmailPublicationAnalyticsPanel';
+import { downloadEmailAnalyticsJson } from '@/components/email-marketing/analytics-export';
 import { RetentionStage } from '@/lib/api/users';
 import type {
   CampaignAudienceDefinition,
@@ -36,6 +38,7 @@ import type {
   EmailContentByLocale,
   EmailMarketingRepository,
   EmailPublication,
+  EmailPublicationAnalytics,
   EmailPublicationInput,
   EmailPublicationState,
   EmailPublicationTopic,
@@ -106,6 +109,9 @@ export function EmailMarketingDashboard({
 }) {
   const [items, setItems] = useState<EmailPublication[]>([]);
   const [selected, setSelected] = useState<EmailPublication | null>(null);
+  const [analytics, setAnalytics] =
+    useState<EmailPublicationAnalytics | null>(null);
+  const [acknowledgementNote, setAcknowledgementNote] = useState('');
   const [draft, setDraft] = useState<EditorDraft | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -161,12 +167,14 @@ export function EmailMarketingDashboard({
     try {
       const [
         detail,
+        publicationAnalytics,
         predictionItems,
         partnerItems,
         sourceItems,
         templateItems,
       ] = await Promise.all([
         repository.get(item.id),
+        repository.getAnalytics(item.id),
         repository.listPredictionReferences().catch(() => []),
         repository.listPartnerMarketConfigs().catch(() => []),
         repository.listAudienceSources().catch(() => []),
@@ -176,6 +184,8 @@ export function EmailMarketingDashboard({
         }),
       ]);
       setSelected(detail);
+      setAnalytics(publicationAnalytics);
+      setAcknowledgementNote('');
       setDraft(fromPublication(detail));
       setEditorDirty(false);
       setPredictions(predictionItems);
@@ -192,6 +202,7 @@ export function EmailMarketingDashboard({
 
   async function startCreate() {
     setSelected(null);
+    setAnalytics(null);
     setDraft(emptyDraft());
     setEditorDirty(false);
     setPreview(null);
@@ -222,6 +233,7 @@ export function EmailMarketingDashboard({
     if (busy) return;
     setDraft(null);
     setSelected(null);
+    setAnalytics(null);
     setPreview(null);
     setEstimate(null);
     setEditorDirty(false);
@@ -278,9 +290,46 @@ export function EmailMarketingDashboard({
     setBusy(true);
     try {
       const detail = await repository.get(selected.id);
+      const publicationAnalytics = await repository.getAnalytics(selected.id);
       setSelected(detail);
+      setAnalytics(publicationAnalytics);
       setDraft(fromPublication(detail));
       setEditorDirty(false);
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function acknowledgeIncident() {
+    if (!selected || !acknowledgementNote.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await repository.acknowledgeIncident(selected.id, acknowledgementNote);
+      const [detail, publicationAnalytics] = await Promise.all([
+        repository.get(selected.id),
+        repository.getAnalytics(selected.id),
+      ]);
+      setSelected(detail);
+      setAnalytics(publicationAnalytics);
+      setAcknowledgementNote('');
+      await loadList();
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function exportAnalytics() {
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const exported = await repository.getAnalyticsExport(selected.id);
+      downloadEmailAnalyticsJson(selected.id, exported);
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
@@ -448,6 +497,11 @@ export function EmailMarketingDashboard({
                 setEditorDirty(true);
               }}
               selected={selected}
+              analytics={analytics}
+              acknowledgementNote={acknowledgementNote}
+              setAcknowledgementNote={setAcknowledgementNote}
+              onAcknowledge={() => void acknowledgeIncident()}
+              onExportAnalytics={() => void exportAnalytics()}
               editorDirty={editorDirty}
               predictions={predictions}
               partners={partners}
@@ -663,6 +717,11 @@ type EditorProps = {
   draft: EditorDraft;
   setDraft: (draft: EditorDraft) => void;
   selected: EmailPublication | null;
+  analytics: EmailPublicationAnalytics | null;
+  acknowledgementNote: string;
+  setAcknowledgementNote: (value: string) => void;
+  onAcknowledge: () => void;
+  onExportAnalytics: () => void;
   editorDirty: boolean;
   predictions: PredictionReference[];
   partners: PartnerMarketProjection[];
@@ -836,6 +895,17 @@ function Editor(props: EditorProps) {
             </Alert>
           ) : null}
           {selected ? <CounterGrid counters={selected.counters} /> : null}
+          {selected ? (
+            <EmailPublicationAnalyticsPanel
+              publication={selected}
+              analytics={props.analytics}
+              loading={busy}
+              acknowledgementNote={props.acknowledgementNote}
+              onAcknowledgementNoteChange={props.setAcknowledgementNote}
+              onAcknowledge={props.onAcknowledge}
+              onExport={props.onExportAnalytics}
+            />
+          ) : null}
           <Divider />
           <TextField
             label="Publication name"

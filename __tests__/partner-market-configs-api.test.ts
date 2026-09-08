@@ -33,6 +33,14 @@ const input = {
   operatorTermsUrl: 'https://example.bet/terms',
   operatorDestinationUrl: 'https://example.bet/offer',
   approvedDestinationHosts: ['example.bet'],
+  affiliateConversionTypes: [
+    'registration',
+    'ftd',
+    'deposit',
+    'commission',
+    'reversal',
+    'qualified_lead',
+  ],
   legalReviewedAt: '2026-08-01T00:00:00.000Z',
   legalReviewExpiresAt: '2027-08-01T00:00:00.000Z',
   effectiveFrom: '2026-08-02T00:00:00.000Z',
@@ -57,6 +65,21 @@ describe('partner market config API', () => {
     expect(adminAuthFetch).toHaveBeenCalledWith({
       path: '/partner-market-configs/admin?operatorKey=example-bet&countryCode=FR',
       method: 'GET',
+    });
+  });
+
+  it('sends the backend-owned affiliate conversion allowlist unchanged', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...input, id: 'partner-1' }),
+    });
+
+    await savePartnerMarketConfig(input);
+
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/partner-market-configs/admin',
+      method: 'PUT',
+      body: JSON.stringify(input),
     });
   });
 
