@@ -94,9 +94,13 @@ describe('MatchRankingPage', () => {
     );
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Review Copa Libertadores' })
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
     );
     const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    expect(within(dialog).getByLabelText('Effective category')).toHaveValue(1);
+    expect(
+      within(dialog).getByText('Provider category: 1')
+    ).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText('Effective category'), {
       target: { value: '1' },
     });
@@ -129,7 +133,9 @@ describe('MatchRankingPage', () => {
     render(<MatchRankingPage />);
 
     expect(await screen.findByText('Copa Libertadores')).toBeInTheDocument();
-    expect(screen.getByText('Suggested: senior')).toBeInTheDocument();
+    expect(
+      screen.getByText('Uses provider category + suggested senior')
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ready for review' }));
     await waitFor(() =>
       expect(getMatchRankingCompetitions).toHaveBeenLastCalledWith({
@@ -161,6 +167,28 @@ describe('MatchRankingPage', () => {
         'Provider metadata verified'
       )
     );
+  });
+
+  it('explains provider data and the values that approval will save', async () => {
+    render(<MatchRankingPage />);
+
+    const row = await screen.findByRole('row', {
+      name: 'Copa Libertadores competition',
+    });
+    expect(
+      screen.getByRole('columnheader', { name: 'Provider data' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Approval result' })
+    ).toBeInTheDocument();
+    expect(within(row).getByText(/Category/)).toHaveTextContent('Category 1');
+    expect(within(row).getByText(/Rank/)).toHaveTextContent('Rank 1 · senior');
+    expect(
+      within(row).getByText('Uses provider category + suggested senior')
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByRole('button', { name: 'Edit Copa Libertadores' })
+    ).toBeInTheDocument();
   });
 
   it('creates expiring overrides and validates their time window', async () => {

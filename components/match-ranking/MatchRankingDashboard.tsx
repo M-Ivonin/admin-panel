@@ -18,6 +18,12 @@ import {
   MenuItem,
   Stack,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Tabs,
   TextField,
   Typography,
@@ -435,103 +441,173 @@ function CatalogPanel({
       {items.length === 0 ? (
         <EmptyCard text="No competitions found" />
       ) : (
-        items.map((item) => (
-          <Card key={item.id}>
-            <CardContent>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                justifyContent="space-between"
-                spacing={2}
-              >
-                <Box>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    flexWrap="wrap"
-                    useFlexGap
-                  >
-                    <Typography variant="h6">{item.name}</Typography>
-                    <Chip
-                      size="small"
-                      label={item.reviewState}
-                      color={
-                        item.reviewState === 'reviewed' ? 'success' : 'warning'
-                      }
-                    />
-                    {item.needsAttention ? (
-                      <Chip
-                        size="small"
-                        color="error"
-                        label="Needs attention"
-                      />
-                    ) : null}
-                    {item.classification === 'unknown' ? (
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={`Suggested: ${item.suggestedClassification}`}
-                      />
-                    ) : null}
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={item.classification}
-                    />
-                  </Stack>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    Provider league {item.providerLeagueId} · category{' '}
-                    {item.effectiveCategory ??
-                      item.providerCategory ??
-                      'unknown'}{' '}
-                    · {item.countryCode ?? 'global'} ·{' '}
-                    {item.confederation ?? 'no confederation'} · {item.scope}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Fresh: {formatDate(item.metadataFreshAt)} · last sync:{' '}
-                    {formatDate(item.metadataLastSuccessAt)} · source:{' '}
-                    {item.metadataSource}
-                  </Typography>
-                  {item.metadataLastError ? (
-                    <Alert severity="warning" sx={{ mt: 1 }}>
-                      {item.metadataLastError}
-                    </Alert>
-                  ) : null}
-                </Box>
-                <Stack direction="row" alignItems="center">
-                  {item.reviewState === 'pending_review' &&
-                  !item.needsAttention ? (
-                    <Checkbox
-                      checked={selectedIds.includes(item.id)}
-                      onChange={(event) =>
-                        onSelectionChange(
-                          event.target.checked
-                            ? [...selectedIds, item.id]
-                            : selectedIds.filter((id) => id !== item.id)
-                        )
-                      }
-                      inputProps={{ 'aria-label': `Select ${item.name}` }}
-                    />
-                  ) : null}
-                  <Button
-                    startIcon={<Edit />}
-                    onClick={() => onEdit(item)}
-                    aria-label={`Review ${item.name}`}
-                  >
-                    Review
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))
+        <CompetitionTable
+          items={items}
+          selectedIds={selectedIds}
+          onSelectionChange={onSelectionChange}
+          onEdit={onEdit}
+        />
       )}
     </Stack>
   );
+}
+
+function CompetitionTable({
+  items,
+  selectedIds,
+  onSelectionChange,
+  onEdit,
+}: {
+  items: MatchRankingCompetition[];
+  selectedIds: string[];
+  onSelectionChange: (ids: string[]) => void;
+  onEdit: (item: MatchRankingCompetition) => void;
+}) {
+  return (
+    <Card variant="outlined">
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table size="small" sx={{ minWidth: 1050 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 44 }} aria-label="Select" />
+              <TableCell>Competition</TableCell>
+              <TableCell>Provider data</TableCell>
+              <TableCell>Approval result</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Last sync</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((item) => {
+              const canBulkApprove =
+                item.reviewState === 'pending_review' && !item.needsAttention;
+              const rankingCategory =
+                item.effectiveCategory ?? item.providerCategory;
+              const approvalClassification =
+                item.classification === 'unknown'
+                  ? item.suggestedClassification
+                  : item.classification;
+              const selected = selectedIds.includes(item.id);
+              return (
+                <TableRow
+                  key={item.id}
+                  selected={selected}
+                  aria-label={`${item.name} competition`}
+                  sx={{ '&:last-child td': { borderBottom: 0 } }}
+                >
+                  <TableCell padding="checkbox">
+                    {canBulkApprove ? (
+                      <Checkbox
+                        size="small"
+                        checked={selected}
+                        onChange={(event) =>
+                          onSelectionChange(
+                            event.target.checked
+                              ? [...selectedIds, item.id]
+                              : selectedIds.filter((id) => id !== item.id)
+                          )
+                        }
+                        inputProps={{ 'aria-label': `Select ${item.name}` }}
+                      />
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={700}>
+                      {item.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      #{item.providerLeagueId} · {item.metadataSource}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      Category <strong>{item.providerCategory ?? '—'}</strong> ·{' '}
+                      {item.countryCode ?? 'Global'}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ textTransform: 'capitalize' }}
+                    >
+                      {item.scope} · {item.confederation ?? 'No confederation'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      Rank <strong>{rankingCategory ?? '—'}</strong> ·{' '}
+                      <Box
+                        component="span"
+                        sx={{ textTransform: 'capitalize' }}
+                      >
+                        {approvalClassification}
+                      </Box>
+                    </Typography>
+                    <Typography variant="caption" color="primary.main">
+                      {approvalHint(item)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Stack spacing={0.5} alignItems="flex-start">
+                      <Chip
+                        size="small"
+                        label={reviewStateLabel(item.reviewState)}
+                        color={
+                          item.reviewState === 'reviewed'
+                            ? 'success'
+                            : 'warning'
+                        }
+                      />
+                      {item.needsAttention ? (
+                        <Typography variant="caption" color="error.main">
+                          {attentionReason(item)}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption">
+                      {formatDate(item.metadataLastSuccessAt)}
+                    </Typography>
+                    {item.metadataLastError ? (
+                      <Typography
+                        variant="caption"
+                        color="error.main"
+                        display="block"
+                      >
+                        Enrichment error
+                      </Typography>
+                    ) : null}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      startIcon={<Edit />}
+                      onClick={() => onEdit(item)}
+                      aria-label={`Edit ${item.name}`}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Card>
+  );
+}
+
+function approvalHint(item: MatchRankingCompetition): string {
+  const parts: string[] = [];
+  if (item.effectiveCategory == null && item.providerCategory != null)
+    parts.push('provider category');
+  if (item.classification === 'unknown')
+    parts.push(`suggested ${item.suggestedClassification}`);
+  if (item.reviewState === 'reviewed') return 'Reviewed values';
+  if (parts.length === 0) return 'Enriched values';
+  return `Uses ${parts.join(' + ')}`;
 }
 
 function BulkReviewDialog({
@@ -604,7 +680,7 @@ function CompetitionDialog({
   onSaved: () => Promise<void>;
 }) {
   const [category, setCategory] = useState(
-    item.effectiveCategory?.toString() ?? ''
+    (item.effectiveCategory ?? item.providerCategory)?.toString() ?? ''
   );
   const [countryCode, setCountryCode] = useState(item.countryCode ?? '');
   const [confederation, setConfederation] = useState(item.confederation ?? '');
@@ -653,11 +729,16 @@ function CompetitionDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           <Typography fontWeight={600}>{item.name}</Typography>
+          <Alert severity="info">
+            These values are used by match ranking. Saving also records your
+            reason in the audit log.
+          </Alert>
           <TextField
             label="Effective category"
             type="number"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
           />
           <TextField
             label="Country code"
@@ -1642,6 +1723,19 @@ function EmptyCard({ text }: { text: string }) {
 function normalizedCountry(value: string): string | null {
   const normalized = value.trim().toUpperCase();
   return normalized || null;
+}
+function reviewStateLabel(value: string): string {
+  if (value === 'pending_enrichment') return 'Waiting for enrichment';
+  if (value === 'pending_review') return 'Ready for review';
+  if (value === 'reviewed') return 'Reviewed';
+  return value;
+}
+function attentionReason(item: MatchRankingCompetition): string {
+  const missing: string[] = [];
+  if (!item.metadataLastSuccessAt) missing.push('successful enrichment');
+  if (item.providerCategory == null) missing.push('provider category');
+  if (item.scope === 'unknown') missing.push('competition scope');
+  return `Missing: ${missing.join(', ') || 'required metadata'}.`;
 }
 function formatDate(value?: string | null): string {
   if (!value) return 'never';
