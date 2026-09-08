@@ -378,7 +378,8 @@ export default function DashboardPage() {
                     Email Marketing
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Create, approve, schedule, and monitor manual email publications
+                    Create, approve, schedule, and monitor manual email
+                    publications
                   </Typography>
                 </CardActionArea>
               </Card>
@@ -484,7 +485,12 @@ export default function DashboardPage() {
               >
                 <CardActionArea sx={{ p: 3, height: '100%' }}>
                   <Avatar
-                    sx={{ bgcolor: 'secondary.dark', width: 48, height: 48, mb: 2 }}
+                    sx={{
+                      bgcolor: 'secondary.dark',
+                      width: 48,
+                      height: 48,
+                      mb: 2,
+                    }}
                   >
                     <Gavel />
                   </Avatar>
@@ -493,6 +499,34 @@ export default function DashboardPage() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Register legal approvals, restrictions, and emergency pauses
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
+            <Link
+              href="/dashboard/match-ranking"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}
+                  >
+                    <SportsSoccer />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    Match ranking
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Review ranking inputs, Top Matches previews, and rollout
+                    versions
                   </Typography>
                 </CardActionArea>
               </Card>
