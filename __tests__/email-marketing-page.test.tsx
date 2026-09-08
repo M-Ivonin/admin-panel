@@ -482,6 +482,63 @@ describe('EmailMarketingDashboard workflow', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps acknowledged detail and list authoritative when analytics refresh fails', async () => {
+    const repo = repository();
+    const incident = {
+      ...basePublication,
+      lateIncident: {
+        at: '2026-09-08T11:00:00.000Z',
+        reason: 'late_complaint_rate',
+        acknowledgedAt: null,
+        acknowledgementNote: null,
+      },
+    };
+    const acknowledged = {
+      ...incident,
+      lateIncident: {
+        ...incident.lateIncident,
+        acknowledgedAt: '2026-09-08T12:00:00.000Z',
+        acknowledgementNote: 'Reviewed provider evidence.',
+      },
+    };
+    repo.list
+      .mockResolvedValueOnce([incident])
+      .mockResolvedValueOnce([acknowledged]);
+    repo.get
+      .mockResolvedValueOnce(incident)
+      .mockResolvedValueOnce(acknowledged);
+    repo.getAnalytics
+      .mockResolvedValueOnce(analytics)
+      .mockRejectedValueOnce(new Error('Analytics service unavailable'));
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const acknowledgeButton = await screen.findByRole('button', {
+      name: 'Acknowledge late incident',
+    });
+    fireEvent.change(screen.getByLabelText(/^Operator acknowledgement note/), {
+      target: { value: 'Reviewed provider evidence.' },
+    });
+    fireEvent.click(acknowledgeButton);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+    expect(
+      await within(dialog).findByText(/Late critical incident acknowledged/)
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        'Analytics unavailable: Analytics service unavailable'
+      )
+    ).toBeInTheDocument();
+    expect(repo.list).toHaveBeenCalledTimes(2);
+  });
+
   it('shows every backend slice dimension without deriving alternate groupings', async () => {
     const repo = repository();
 

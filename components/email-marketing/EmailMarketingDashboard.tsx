@@ -317,12 +317,16 @@ export function EmailMarketingDashboard({
     setError(null);
     try {
       await repository.acknowledgeIncident(selected.id, acknowledgementNote);
-      const [detail, publicationAnalytics] = await Promise.all([
+      const [detail, analyticsResult] = await Promise.all([
         repository.get(selected.id),
-        repository.getAnalytics(selected.id),
+        repository.getAnalytics(selected.id).then(
+          (value) => ({ value, error: null }),
+          (caught) => ({ value: null, error: messageOf(caught) })
+        ),
       ]);
       setSelected(detail);
-      setAnalytics(publicationAnalytics);
+      setAnalytics(analyticsResult.value);
+      setAnalyticsError(analyticsResult.error);
       setAcknowledgementNote('');
       await loadList();
     } catch (caught) {
