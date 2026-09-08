@@ -111,6 +111,7 @@ export function EmailMarketingDashboard({
   const [selected, setSelected] = useState<EmailPublication | null>(null);
   const [analytics, setAnalytics] =
     useState<EmailPublicationAnalytics | null>(null);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [acknowledgementNote, setAcknowledgementNote] = useState('');
   const [draft, setDraft] = useState<EditorDraft | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
@@ -163,18 +164,23 @@ export function EmailMarketingDashboard({
   async function openPublication(item: EmailPublication) {
     setBusy(true);
     setError(null);
+    setAnalytics(null);
+    setAnalyticsError(null);
     setPreview(null);
     try {
       const [
         detail,
-        publicationAnalytics,
+        analyticsResult,
         predictionItems,
         partnerItems,
         sourceItems,
         templateItems,
       ] = await Promise.all([
         repository.get(item.id),
-        repository.getAnalytics(item.id),
+        repository.getAnalytics(item.id).then(
+          (value) => ({ value, error: null }),
+          (caught) => ({ value: null, error: messageOf(caught) })
+        ),
         repository.listPredictionReferences().catch(() => []),
         repository.listPartnerMarketConfigs().catch(() => []),
         repository.listAudienceSources().catch(() => []),
@@ -184,7 +190,8 @@ export function EmailMarketingDashboard({
         }),
       ]);
       setSelected(detail);
-      setAnalytics(publicationAnalytics);
+      setAnalytics(analyticsResult.value);
+      setAnalyticsError(analyticsResult.error);
       setAcknowledgementNote('');
       setDraft(fromPublication(detail));
       setEditorDirty(false);
@@ -203,6 +210,7 @@ export function EmailMarketingDashboard({
   async function startCreate() {
     setSelected(null);
     setAnalytics(null);
+    setAnalyticsError(null);
     setDraft(emptyDraft());
     setEditorDirty(false);
     setPreview(null);
@@ -234,6 +242,7 @@ export function EmailMarketingDashboard({
     setDraft(null);
     setSelected(null);
     setAnalytics(null);
+    setAnalyticsError(null);
     setPreview(null);
     setEstimate(null);
     setEditorDirty(false);
@@ -498,6 +507,7 @@ export function EmailMarketingDashboard({
               }}
               selected={selected}
               analytics={analytics}
+              analyticsError={analyticsError}
               acknowledgementNote={acknowledgementNote}
               setAcknowledgementNote={setAcknowledgementNote}
               onAcknowledge={() => void acknowledgeIncident()}
@@ -718,6 +728,7 @@ type EditorProps = {
   setDraft: (draft: EditorDraft) => void;
   selected: EmailPublication | null;
   analytics: EmailPublicationAnalytics | null;
+  analyticsError: string | null;
   acknowledgementNote: string;
   setAcknowledgementNote: (value: string) => void;
   onAcknowledge: () => void;
@@ -899,6 +910,7 @@ function Editor(props: EditorProps) {
             <EmailPublicationAnalyticsPanel
               publication={selected}
               analytics={props.analytics}
+              error={props.analyticsError}
               loading={busy}
               acknowledgementNote={props.acknowledgementNote}
               onAcknowledgementNoteChange={props.setAcknowledgementNote}

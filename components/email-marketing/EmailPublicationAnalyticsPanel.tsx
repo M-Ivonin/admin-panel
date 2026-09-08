@@ -26,6 +26,7 @@ import type {
 export function EmailPublicationAnalyticsPanel({
   publication,
   analytics,
+  error,
   loading,
   acknowledgementNote,
   onAcknowledgementNoteChange,
@@ -34,6 +35,7 @@ export function EmailPublicationAnalyticsPanel({
 }: {
   publication: EmailPublication;
   analytics: EmailPublicationAnalytics | null;
+  error: string | null;
   loading: boolean;
   acknowledgementNote: string;
   onAcknowledgementNoteChange: (value: string) => void;
@@ -114,6 +116,9 @@ export function EmailPublicationAnalyticsPanel({
 
       {loading && !analytics ? (
         <Alert severity="info">Loading analytics…</Alert>
+      ) : null}
+      {error ? (
+        <Alert severity="error">Analytics unavailable: {error}</Alert>
       ) : null}
       {analytics ? <AnalyticsReadModel analytics={analytics} /> : null}
     </Stack>

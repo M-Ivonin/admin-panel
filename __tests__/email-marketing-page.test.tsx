@@ -312,6 +312,43 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('keeps publication edit and create usable when analytics are unavailable', async () => {
+    const repo = repository();
+    repo.getAnalytics.mockRejectedValue(
+      new Error('Analytics service unavailable')
+    );
+
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+    expect(
+      within(dialog).getByText(
+        'Analytics unavailable: Analytics service unavailable'
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText(/^Publication name/), {
+      target: { value: 'Updated product launch' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save successor draft' })
+    );
+    await waitFor(() => expect(repo.edit).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Create publication' })
+    ).toBeInTheDocument();
+  });
+
   it('shows a backend healthy state without inventing an incident', async () => {
     const repo = repository();
     repo.getAnalytics.mockResolvedValue({
