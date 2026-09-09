@@ -934,31 +934,51 @@ function CompetitionDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           <Typography fontWeight={600}>{item.name}</Typography>
-          <Alert severity="info">
-            These values are used by match ranking. Saving also records your
-            reason in the audit log.
-          </Alert>
           <TextField
-            label="Effective category"
+            label={
+              <HelpLabel
+                text="Effective category"
+                label="Effective category help"
+                title="Controls the competition importance used by match ranking. This admin value overrides the provider category; leave it blank to use the provider value."
+              />
+            }
             type="number"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
           />
           <TextField
-            label="Country code"
+            label={
+              <HelpLabel
+                text="Country code"
+                label="Competition country help"
+                title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
+              />
+            }
             value={countryCode}
             inputProps={{ maxLength: 2 }}
             onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
           />
           <TextField
-            label="Confederation"
+            label={
+              <HelpLabel
+                text="Confederation"
+                label="Competition confederation help"
+                title="Identifies the governing football confederation, such as UEFA, CONMEBOL, or AFC. Use it for continental competitions and leave it blank when it is not applicable."
+              />
+            }
             value={confederation}
             onChange={(e) => setConfederation(e.target.value)}
           />
           <TextField
             select
-            label="Scope"
+            label={
+              <HelpLabel
+                text="Scope"
+                label="Competition scope help"
+                title="Describes the competition's geographic level: domestic, continental, or international. It helps ranking interpret country and confederation relevance correctly."
+              />
+            }
             value={scope}
             onChange={(e) => setScope(e.target.value as CompetitionScope)}
           >
@@ -970,7 +990,13 @@ function CompetitionDialog({
           </TextField>
           <TextField
             select
-            label="Classification"
+            label={
+              <HelpLabel
+                text="Classification"
+                label="Competition classification help"
+                title="Describes the competition type, such as senior, women, youth, reserve, or friendly. Classification affects whether fixtures are eligible for Top Matches."
+              />
+            }
             value={classification}
             onChange={(e) =>
               setClassification(e.target.value as CompetitionClassification)
@@ -984,7 +1010,13 @@ function CompetitionDialog({
           </TextField>
           <TextField
             select
-            label="Review state"
+            label={
+              <HelpLabel
+                text="Review state"
+                label="Competition review state help"
+                title="Use Reviewed only after confirming the competition metadata. Pending states keep the record in the appropriate admin review queue; they do not by themselves disable ranking."
+              />
+            }
             value={reviewState}
             onChange={(e) => setReviewState(e.target.value)}
           >
@@ -993,13 +1025,18 @@ function CompetitionDialog({
             <MenuItem value="reviewed">reviewed</MenuItem>
           </TextField>
           <TextField
-            label="Reason"
-            required
+            label={
+              <HelpLabel
+                text="Reason *"
+                label="Competition review reason help"
+                title="Required explanation for this review or correction. It is saved in the audit log so other admins can understand why the values changed."
+              />
+            }
             multiline
             minRows={2}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            inputProps={{ 'aria-label': 'Reason' }}
+            inputProps={{ 'aria-label': 'Reason', required: true }}
           />
         </Stack>
       </DialogContent>
@@ -1172,23 +1209,7 @@ function ProminenceDialog({
       aria-labelledby="prominence-dialog-title"
     >
       <DialogTitle id="prominence-dialog-title">
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          {item ? 'Edit team prominence' : 'Add team prominence'}
-          <Stack direction="row">
-            <HelpButton
-              label="Team prominence scope help"
-              title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global prominence. When Global and country-specific rules both apply, the higher prominence value wins. Prominence values are 0, 10, or 20."
-            />
-            <HelpButton
-              label="Team prominence review help"
-              title="Review due is an operational reminder only. It does not disable prominence or change ranking automatically."
-            />
-          </Stack>
-        </Stack>
+        {item ? 'Edit team prominence' : 'Add team prominence'}
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1247,7 +1268,13 @@ function ProminenceDialog({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Countries / regions"
+                label={
+                  <HelpLabel
+                    text="Countries / regions"
+                    label="Team prominence scope help"
+                    title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global prominence. When Global and country-specific rules both apply, the higher prominence value wins. Prominence values are 0, 10, or 20."
+                  />
+                }
                 helperText="Select multiple scopes or leave blank for Global prominence."
               />
             )}
@@ -1265,7 +1292,13 @@ function ProminenceDialog({
             ))}
           </TextField>
           <TextField
-            label="Review due"
+            label={
+              <HelpLabel
+                text="Review due"
+                label="Team prominence review help"
+                title="Review due is an operational reminder only. It does not disable prominence or change ranking automatically."
+              />
+            }
             type="date"
             value={due}
             onChange={(e) => setDue(e.target.value)}
@@ -1299,13 +1332,37 @@ function formatFixtureOption(fixture: MatchFixtureOption): string {
   return `${fixture.homeTeamName} — ${fixture.awayTeamName} · ${fixture.leagueName} · ${date} (#${fixture.id})`;
 }
 
-function HelpButton({ label, title }: { label: string; title: string }) {
+function HelpLabel({
+  text,
+  label,
+  title,
+}: {
+  text: string;
+  label: string;
+  title: string;
+}) {
   return (
-    <Tooltip title={title} arrow>
-      <IconButton size="small" aria-label={label}>
-        <HelpOutline fontSize="small" />
-      </IconButton>
-    </Tooltip>
+    <Stack component="span" direction="row" alignItems="center" spacing={0.4}>
+      <span>{text}</span>
+      <Tooltip title={title} arrow>
+        <Box
+          component="span"
+          role="button"
+          tabIndex={0}
+          aria-label={label}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={(event) => event.stopPropagation()}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            color: 'text.secondary',
+            cursor: 'help',
+          }}
+        >
+          <HelpOutline sx={{ fontSize: 15 }} />
+        </Box>
+      </Tooltip>
+    </Stack>
   );
 }
 
@@ -1563,27 +1620,7 @@ function OverrideDialog({
       aria-labelledby="override-dialog-title"
     >
       <DialogTitle id="override-dialog-title">
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          {item ? 'Edit fixture override' : 'Add fixture override'}
-          <Stack direction="row">
-            <HelpButton
-              label="Fixture override scope help"
-              title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global. Scope uses the user's ranking country, not match location; a country-specific override takes precedence over Global."
-            />
-            <HelpButton
-              label="Fixture override action help"
-              title="Pin ranks ahead of non-pinned fixtures; lower non-negative Pin priority numbers rank first (blank becomes 0). Pin may bypass importance or classification, but not an invalid match status. Competition caps apply first, then over-cap fixtures may fill remaining empty slots. Exclude top removes the fixture from Top Matches. Adjust changes an eligible fixture by -20 to +20 points; it does not make an ineligible fixture eligible."
-            />
-            <HelpButton
-              label="Fixture override time help"
-              title="Active from Starts at (inclusive) until Ends at (exclusive), in UTC. Windows for the same fixture and country cannot overlap. Reason is required and recorded in the audit log."
-            />
-          </Stack>
-        </Stack>
+        {item ? 'Edit fixture override' : 'Add fixture override'}
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1642,14 +1679,26 @@ function OverrideDialog({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Countries / regions"
+                label={
+                  <HelpLabel
+                    text="Countries / regions"
+                    label="Fixture override scope help"
+                    title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global. Scope uses the user's ranking country, not match location; a country-specific override takes precedence over Global."
+                  />
+                }
                 helperText="Select multiple scopes or leave blank for Global."
               />
             )}
           />
           <TextField
             select
-            label="Action"
+            label={
+              <HelpLabel
+                text="Action"
+                label="Fixture override action help"
+                title="Pin ranks ahead of non-pinned fixtures; lower non-negative Pin priority numbers rank first (blank becomes 0). Pin may bypass importance or classification, but not an invalid match status. Competition caps apply first, then over-cap fixtures may fill remaining empty slots. Exclude top removes the fixture from Top Matches. Adjust changes an eligible fixture by -20 to +20 points; it does not make an ineligible fixture eligible."
+              />
+            }
             value={action}
             onChange={(e) =>
               setAction(e.target.value as MatchRankingOverrideAction)
@@ -1676,7 +1725,13 @@ function OverrideDialog({
             />
           ) : null}
           <TextField
-            label="Starts at"
+            label={
+              <HelpLabel
+                text="Starts at"
+                label="Fixture override start time help"
+                title="Active from Starts at (inclusive) until Ends at (exclusive), in UTC. Windows for the same fixture and country cannot overlap. Reason is required and recorded in the audit log."
+              />
+            }
             type="datetime-local"
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
@@ -1684,7 +1739,13 @@ function OverrideDialog({
             helperText="UTC"
           />
           <TextField
-            label="Ends at"
+            label={
+              <HelpLabel
+                text="Ends at"
+                label="Fixture override end time help"
+                title="Active from Starts at (inclusive) until Ends at (exclusive), in UTC. Windows for the same fixture and country cannot overlap. Reason is required and recorded in the audit log."
+              />
+            }
             type="datetime-local"
             value={endsAt}
             onChange={(e) => setEndsAt(e.target.value)}
