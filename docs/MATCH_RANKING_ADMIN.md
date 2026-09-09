@@ -23,13 +23,11 @@ operator contracts below.
 
 ## Operator contracts
 
-- The working Competition Catalog contains only current provider-confirmed
-  rows. `Ready for review` means provider metadata was fetched; `Reviewed`
-  means an operator accepted it.
-- `Waiting for enrichment`, legacy rows without a SportMonks ID, and `Not in
-  current provider access` are technical provider lifecycle states. They stay
-  out of ordinary admin work and are available through the backend's read-only
-  technical audit. Manual review never restores provider access.
+- The Competition Catalog defaults to SportMonks. Use Catalog source to include
+  Legacy rows. `Ready for review` means provider metadata was fetched;
+  `Reviewed` means an operator accepted it.
+- `Waiting for enrichment` and `Unavailable in SportMonks` remain visible as
+  provider states. Manual ranking review never restores provider access.
 - Team prominence is restricted to the backend-accepted values `0`, `10`, and
   `20`. The form presents only those choices.
 - Team prominence selection searches the complete SportMonks team catalog by
@@ -57,3 +55,19 @@ operator contracts below.
   operators may replace it when checking another calendar-day boundary.
 - Preview output is read-only. Configuration changes affect ranking only after
   an explicit activation request succeeds.
+
+## Legacy competitions
+
+Use **Catalog source** to switch between **SportMonks** (default), **Legacy**,
+and **All sources**. Legacy rows carry a Legacy badge, old ID and link status.
+Provider access loss is shown as **Unavailable in SportMonks**, never Legacy.
+
+**Manage link** opens the old identity and its favorite/channel/team reference
+counts. Search the imported catalog first; **Search SportMonks** explicitly
+queries the provider by name or numeric ID. Verify both names, countries and
+IDs, enter a reason and select **Confirm link**. The existing SportMonks row
+keeps its ranking settings. No duplicate provider league or copied ranking
+configuration is created. Linked Legacy records expose **Open SportMonks league**
+for editing the canonical record. Reassignment is deliberately rejected;
+repeating the same link is safe. Legacy records cannot be bulk-approved or
+edited as independent ranking inputs.

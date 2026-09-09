@@ -4,6 +4,8 @@ import type {
   MatchRankingCompetition,
   MatchRankingCompetitionUpdate,
   MatchRankingCatalogQueue,
+  MatchRankingCatalogSource,
+  CompetitionLinkTarget,
   MatchRankingConfiguration,
   MatchRankingConfigurationInput,
   MatchRankingOverride,
@@ -23,6 +25,7 @@ export async function getMatchRankingCompetitions(
     query?: string;
     reviewState?: string;
     queue?: MatchRankingCatalogQueue;
+    source?: MatchRankingCatalogSource;
   } = {}
 ): Promise<MatchRankingCompetition[]> {
   const params = new URLSearchParams();
@@ -31,6 +34,7 @@ export async function getMatchRankingCompetitions(
     params.set('reviewState', filters.reviewState.trim());
   }
   if (filters.queue) params.set('queue', filters.queue);
+  if (filters.source) params.set('source', filters.source);
   const query = params.toString();
   return readList(
     await adminAuthFetch({
@@ -237,4 +241,40 @@ async function requireOk(response: Response): Promise<void> {
     }
     throw new Error(message);
   }
+}
+
+export async function getCompetitionDetails(
+  id: string
+): Promise<MatchRankingCompetition> {
+  return readJson(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/competitions/${encodeURIComponent(id)}`,
+      method: 'GET',
+    })
+  );
+}
+export async function searchCompetitionLinkTargets(
+  query: string,
+  provider = false
+): Promise<CompetitionLinkTarget[]> {
+  const params = new URLSearchParams({ query, provider: String(provider) });
+  return readList(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/leagues?${params}`,
+      method: 'GET',
+    })
+  );
+}
+export async function linkLegacyCompetition(
+  id: string,
+  providerLeagueId: number,
+  reason: string
+): Promise<MatchRankingCompetition> {
+  return readJson(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/competitions/${encodeURIComponent(id)}/link`,
+      method: 'POST',
+      body: JSON.stringify({ providerLeagueId, reason: reason.trim() }),
+    })
+  );
 }

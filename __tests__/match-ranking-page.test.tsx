@@ -18,6 +18,9 @@ import {
   getMatchRankingOverrides,
   getMatchFixtures,
   getSportmonksTeams,
+  getCompetitionDetails,
+  searchCompetitionLinkTargets,
+  linkLegacyCompetition,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -39,6 +42,9 @@ jest.mock('@/lib/api/match-ranking', () => ({
   getMatchRankingOverrides: jest.fn(),
   getMatchFixtures: jest.fn(),
   getSportmonksTeams: jest.fn(),
+  getCompetitionDetails: jest.fn(),
+  searchCompetitionLinkTargets: jest.fn(),
+  linkLegacyCompetition: jest.fn(),
   getTeamProminence: jest.fn(),
   previewMatchRanking: jest.fn(),
   updateMatchRankingCompetition: jest.fn(),
@@ -86,6 +92,113 @@ describe('MatchRankingPage', () => {
       { id: 7, name: 'Arsenal', country: 'England' },
       { id: 42, name: 'Palmeiras', country: 'Brazil' },
     ]);
+  });
+
+  it('lets an operator include Legacy competitions in the catalogue', async () => {
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Catalog source' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Legacy' }));
+    await waitFor(() =>
+      expect(getMatchRankingCompetitions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ source: 'legacy' })
+      )
+    );
+  });
+
+  it('shows Legacy references, requires a verified selection and reason, and links an imported league', async () => {
+    const legacy = {
+      ...competition,
+      providerLeagueId: null,
+      source: 'legacy',
+      legacyApiId: '999',
+      country: 'World',
+      canonicalCompetition: null,
+      references: { favorites: 3, channels: 2, teams: 4 },
+    };
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([legacy]);
+    (getCompetitionDetails as jest.Mock).mockResolvedValue(legacy);
+    (searchCompetitionLinkTargets as jest.Mock).mockResolvedValue([
+      { id: 501, name: 'Gold Cup', country: 'World', local: true },
+    ]);
+    (linkLegacyCompetition as jest.Mock).mockResolvedValue({
+      ...legacy,
+      canonicalCompetition: {
+        id: 'canonical',
+        name: 'Gold Cup',
+        providerLeagueId: 501,
+      },
+    });
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Legacy league' });
+    expect(
+      await within(dialog).findByText(
+        'Existing references: 3 favorites · 2 channels · 4 teams'
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText('Effective category')
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Confirm link' })
+    ).toBeDisabled();
+    fireEvent.change(
+      within(dialog).getByLabelText('League name or SportMonks ID'),
+      { target: { value: 'Gold' } }
+    );
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Search catalog' })
+    );
+    await waitFor(() =>
+      expect(searchCompetitionLinkTargets).toHaveBeenCalledWith('Gold', false)
+    );
+    fireEvent.mouseDown(
+      within(dialog).getByRole('combobox', {
+        name: 'Matching SportMonks league',
+      })
+    );
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Gold Cup · World · #501' })
+    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Confirm link' })
+    ).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Verified identity' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm link' })
+    );
+    await waitFor(() =>
+      expect(linkLegacyCompetition).toHaveBeenCalledWith(
+        'league-1',
+        501,
+        'Verified identity'
+      )
+    );
+    expect(updateMatchRankingCompetition).not.toHaveBeenCalled();
+    await screen.findByText(
+      'Legacy league linked. SportMonks ranking settings preserved.'
+    );
+  });
+
+  it('does not report an empty catalogue when the backend request fails', async () => {
+    (getMatchRankingCompetitions as jest.Mock).mockRejectedValue(
+      new Error('Internal server error')
+    );
+    render(<MatchRankingPage />);
+    await screen.findByText('Internal server error');
+    expect(screen.queryByText('No competitions found')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Catalog could not be loaded. Retry the search after the error is resolved.'
+      )
+    ).toBeInTheDocument();
   });
 
   it('shows general and tab-specific operator manuals', async () => {
@@ -143,6 +256,7 @@ describe('MatchRankingPage', () => {
         query: 'Libertadores',
         reviewState: '',
         queue: '',
+        source: 'sportmonks',
       })
     );
 
@@ -200,6 +314,7 @@ describe('MatchRankingPage', () => {
         query: '',
         reviewState: '',
         queue: 'ready',
+        source: 'sportmonks',
       })
     );
 

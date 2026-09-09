@@ -12,7 +12,23 @@ export type CompetitionClassification =
   | 'friendly'
   | 'unknown';
 
+export type MatchRankingCatalogSource = 'sportmonks' | 'legacy' | 'all';
+export interface CompetitionLinkTarget {
+  id: number;
+  name: string;
+  country: string | null;
+  local: boolean;
+}
 export interface MatchRankingCompetition {
+  legacyApiId: string;
+  country: string;
+  source: 'sportmonks' | 'legacy';
+  canonicalCompetition: {
+    id: string;
+    name: string;
+    providerLeagueId: number;
+  } | null;
+  references?: { favorites: number; channels: number; teams: number };
   id: string;
   providerLeagueId: number | null;
   name: string;

@@ -11,6 +11,9 @@ import {
   getMatchRankingOverrides,
   getMatchFixtures,
   getSportmonksTeams,
+  getCompetitionDetails,
+  searchCompetitionLinkTargets,
+  linkLegacyCompetition,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -29,6 +32,31 @@ const ok = (payload: unknown = {}) => ({
 
 describe('match ranking API', () => {
   beforeEach(() => (adminAuthFetch as jest.Mock).mockReset());
+
+  it('uses the authenticated Legacy discovery, details and link endpoints', async () => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue(ok([]));
+    await getMatchRankingCompetitions({ source: 'legacy' });
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/competitions?source=legacy',
+      method: 'GET',
+    });
+    await searchCompetitionLinkTargets('Gold Cup', true);
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/leagues?query=Gold+Cup&provider=true',
+      method: 'GET',
+    });
+    await getCompetitionDetails('legacy');
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/competitions/legacy',
+      method: 'GET',
+    });
+    await linkLegacyCompetition('legacy', 501, ' Verified ');
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/competitions/legacy/link',
+      method: 'POST',
+      body: JSON.stringify({ providerLeagueId: 501, reason: 'Verified' }),
+    });
+  });
 
   it('uses normalized catalog filters and the complete review mutation', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValue(ok({ items: [] }));

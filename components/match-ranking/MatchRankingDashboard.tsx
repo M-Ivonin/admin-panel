@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from 'react';
 import {
   Alert,
@@ -52,6 +53,9 @@ import {
   getMatchFixtures,
   getTeamProminence,
   getSportmonksTeams,
+  getCompetitionDetails,
+  searchCompetitionLinkTargets,
+  linkLegacyCompetition,
   previewMatchRanking,
   updateMatchRankingCompetition,
   updateMatchRankingOverride,
@@ -70,6 +74,8 @@ import type {
   MatchRankingPreview,
   TeamProminence,
   SportmonksTeamOption,
+  MatchRankingCatalogSource,
+  CompetitionLinkTarget,
 } from '@/modules/match-ranking/types';
 import {
   CountryScopeOption,
@@ -212,6 +218,8 @@ export function MatchRankingDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [reviewState, setReviewState] = useState('');
+  const [catalogSource, setCatalogSource] =
+    useState<MatchRankingCatalogSource>('sportmonks');
   const [catalogQueue, setCatalogQueue] =
     useState<MatchRankingCatalogQueue>('');
   const [selectedCompetitionIds, setSelectedCompetitionIds] = useState<
@@ -265,7 +273,11 @@ export function MatchRankingDashboard() {
     void loadAll();
   }, [loadAll]);
 
-  async function searchCatalog(queue = catalogQueue) {
+  async function searchCatalog(
+    queue = catalogQueue,
+    source = catalogSource,
+    state = reviewState
+  ) {
     setLoading(true);
     setError(null);
     setSelectedCompetitionIds([]);
@@ -273,8 +285,9 @@ export function MatchRankingDashboard() {
       setCompetitions(
         await getMatchRankingCompetitions({
           query: search,
-          reviewState,
+          reviewState: state,
           queue,
+          source,
         })
       );
     } catch (caught) {
@@ -347,9 +360,17 @@ export function MatchRankingDashboard() {
           {!loading && tab === 0 ? (
             <CatalogPanel
               items={competitions}
+              loadFailed={Boolean(error)}
               search={search}
               reviewState={reviewState}
               queue={catalogQueue}
+              source={catalogSource}
+              onSourceChange={(source) => {
+                setCatalogSource(source);
+                setCatalogQueue('');
+                setReviewState('');
+                void searchCatalog('', source, '');
+              }}
               selectedIds={selectedCompetitionIds}
               onSearchChange={setSearch}
               onReviewStateChange={setReviewState}
@@ -386,7 +407,27 @@ export function MatchRankingDashboard() {
         </Stack>
       </Box>
 
-      {editingCompetition ? (
+      {editingCompetition && editingCompetition.providerLeagueId == null ? (
+        <LegacyCompetitionDialog
+          key={editingCompetition.id}
+          item={editingCompetition}
+          onClose={() => setEditingCompetition(null)}
+          onOpenCanonical={async (id) => {
+            try {
+              setEditingCompetition(await getCompetitionDetails(id));
+            } catch (caught) {
+              setError(messageOf(caught));
+            }
+          }}
+          onSaved={async () => {
+            setEditingCompetition(null);
+            setSuccess(
+              'Legacy league linked. SportMonks ranking settings preserved.'
+            );
+            await searchCatalog();
+          }}
+        />
+      ) : editingCompetition ? (
         <CompetitionDialog
           item={editingCompetition}
           onClose={() => setEditingCompetition(null)}
@@ -603,9 +644,12 @@ function MatchRankingHelpDialog({
 
 function CatalogPanel({
   items,
+  loadFailed,
   search,
   reviewState,
   queue,
+  source,
+  onSourceChange,
   selectedIds,
   onSearchChange,
   onReviewStateChange,
@@ -616,9 +660,12 @@ function CatalogPanel({
   onEdit,
 }: {
   items: MatchRankingCompetition[];
+  loadFailed: boolean;
   search: string;
   reviewState: string;
   queue: MatchRankingCatalogQueue;
+  source: MatchRankingCatalogSource;
+  onSourceChange: (source: MatchRankingCatalogSource) => void;
   selectedIds: string[];
   onSearchChange: (value: string) => void;
   onReviewStateChange: (value: string) => void;
@@ -638,6 +685,20 @@ function CatalogPanel({
             alignItems={{ md: 'flex-start' }}
           >
             <TextField
+              select
+              label="Catalog source"
+              value={source}
+              size="small"
+              sx={{ minWidth: 150 }}
+              onChange={(event) =>
+                onSourceChange(event.target.value as MatchRankingCatalogSource)
+              }
+            >
+              <MenuItem value="sportmonks">SportMonks</MenuItem>
+              <MenuItem value="legacy">Legacy</MenuItem>
+              <MenuItem value="all">All sources</MenuItem>
+            </TextField>
+            <TextField
               label="Competition search"
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -653,6 +714,13 @@ function CatalogPanel({
               sx={{ minWidth: 220 }}
             >
               <MenuItem value="">All review states</MenuItem>
+              <MenuItem value="pending_enrichment">
+                Waiting for enrichment
+              </MenuItem>
+              <MenuItem value="out_of_entitlement">
+                Unavailable in SportMonks
+              </MenuItem>
+              <MenuItem value="missing_provider_mapping">Legacy</MenuItem>
               <MenuItem value="pending_review">Ready for review</MenuItem>
               <MenuItem value="reviewed">Reviewed</MenuItem>
             </TextField>
@@ -709,7 +777,13 @@ function CatalogPanel({
         </CardContent>
       </Card>
       {items.length === 0 ? (
-        <EmptyCard text="No competitions found" />
+        <EmptyCard
+          text={
+            loadFailed
+              ? 'Catalog could not be loaded. Retry the search after the error is resolved.'
+              : 'No competitions found'
+          }
+        />
       ) : (
         <CompetitionTable
           items={items}
@@ -751,7 +825,9 @@ function CompetitionTable({
           <TableBody>
             {items.map((item) => {
               const canBulkApprove =
-                item.reviewState === 'pending_review' && !item.needsAttention;
+                item.providerLeagueId != null &&
+                item.reviewState === 'pending_review' &&
+                !item.needsAttention;
               const rankingCategory =
                 item.effectiveCategory ?? item.providerCategory;
               const approvalClassification =
@@ -788,9 +864,9 @@ function CompetitionTable({
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {item.providerLeagueId == null
-                        ? 'Provider ID unavailable'
+                        ? `Legacy ID: ${item.legacyApiId}`
                         : `#${item.providerLeagueId}`}{' '}
-                      · {item.metadataSource}
+                      · {item.country || item.countryCode || 'Global'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -816,7 +892,8 @@ function CompetitionTable({
                         {approvalClassification}
                       </Box>
                     </Typography>
-                    {item.reviewState !== 'pending_enrichment' ? (
+                    {item.providerLeagueId != null &&
+                    item.reviewState !== 'pending_enrichment' ? (
                       <Typography variant="caption" color="primary.main">
                         {approvalHint(item)}
                       </Typography>
@@ -826,14 +903,25 @@ function CompetitionTable({
                     <Stack spacing={0.5} alignItems="flex-start">
                       <Chip
                         size="small"
-                        label={reviewStateLabel(item.reviewState)}
+                        label={
+                          item.providerLeagueId == null
+                            ? 'Legacy'
+                            : reviewStateLabel(item.reviewState)
+                        }
                         color={
                           item.reviewState === 'reviewed'
                             ? 'success'
                             : 'warning'
                         }
                       />
-                      {item.needsAttention ? (
+                      {item.providerLeagueId == null ? (
+                        <Typography variant="caption">
+                          {item.canonicalCompetition
+                            ? `Linked to ${item.canonicalCompetition.name}`
+                            : 'Not linked'}
+                        </Typography>
+                      ) : null}
+                      {item.providerLeagueId != null && item.needsAttention ? (
                         <Typography variant="caption" color="error.main">
                           {attentionReason(item)}
                         </Typography>
@@ -861,7 +949,7 @@ function CompetitionTable({
                       onClick={() => onEdit(item)}
                       aria-label={`Edit ${item.name}`}
                     >
-                      Edit
+                      {item.providerLeagueId == null ? 'Manage link' : 'Edit'}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -945,6 +1033,196 @@ function BulkReviewDialog({
   );
 }
 
+function LegacyCompetitionDialog({
+  item,
+  onClose,
+  onSaved,
+  onOpenCanonical,
+}: {
+  item: MatchRankingCompetition;
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+  onOpenCanonical: (id: string) => Promise<void>;
+}) {
+  const [details, setDetails] = useState<MatchRankingCompetition | null>(null);
+  const [query, setQuery] = useState('');
+  const [options, setOptions] = useState<CompetitionLinkTarget[]>([]);
+  const [selected, setSelected] = useState<CompetitionLinkTarget | null>(null);
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  useEffect(() => {
+    let active = true;
+    getCompetitionDetails(item.id)
+      .then((value) => {
+        if (active) setDetails(value);
+      })
+      .catch((caught) => {
+        if (active) setError(messageOf(caught));
+      });
+    return () => {
+      active = false;
+      requestVersion.current += 1;
+    };
+  }, [item.id]);
+  async function search(provider = false) {
+    const version = ++requestVersion.current;
+    setLoading(true);
+    setError(null);
+    setSelected(null);
+    setOptions([]);
+    try {
+      const result = await searchCompetitionLinkTargets(query.trim(), provider);
+      if (version === requestVersion.current) setOptions(result);
+    } catch (caught) {
+      if (version === requestVersion.current) setError(messageOf(caught));
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }
+  async function save() {
+    if (!selected || !reason.trim() || !details?.references) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await linkLegacyCompetition(item.id, selected.id, reason);
+      await onSaved();
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      setSaving(false);
+    }
+  }
+  const canonical = details?.canonicalCompetition ?? item.canonicalCompetition;
+  return (
+    <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Legacy league</DialogTitle>
+      <DialogContent dividers>
+        <Stack spacing={2}>
+          {error ? <Alert severity="error">{error}</Alert> : null}
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label="Legacy" size="small" />
+            <Typography fontWeight={700}>{item.name}</Typography>
+          </Stack>
+          <Typography>
+            {item.country || 'Unknown country'} · Legacy ID: {item.legacyApiId}
+          </Typography>
+          {details?.references ? (
+            <Typography>
+              Existing references: {details.references.favorites} favorites ·{' '}
+              {details.references.channels} channels ·{' '}
+              {details.references.teams} teams
+            </Typography>
+          ) : (
+            <Typography>Loading existing references…</Typography>
+          )}
+          {canonical ? (
+            <>
+              <Alert severity="success">
+                Linked to {canonical.name} · SportMonks #
+                {canonical.providerLeagueId}
+              </Alert>
+              <Button onClick={() => void onOpenCanonical(canonical.id)}>
+                Open SportMonks league
+              </Button>
+            </>
+          ) : (
+            <>
+              <Alert severity="info">
+                Link this old record to one SportMonks league. Existing
+                references will use that league. Its ranking settings will stay
+                unchanged.
+              </Alert>
+              <TextField
+                label="League name or SportMonks ID"
+                value={query}
+                disabled={saving}
+                onChange={(event) => {
+                  requestVersion.current += 1;
+                  setQuery(event.target.value);
+                  setSelected(null);
+                  setOptions([]);
+                  setLoading(false);
+                }}
+              />
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button
+                  variant="outlined"
+                  disabled={saving || loading || !query.trim()}
+                  onClick={() => void search()}
+                >
+                  Search catalog
+                </Button>
+                <Button
+                  disabled={saving || loading || !query.trim()}
+                  onClick={() => void search(true)}
+                >
+                  Search SportMonks
+                </Button>
+              </Stack>
+              <Autocomplete
+                options={options}
+                value={selected}
+                loading={loading}
+                disabled={saving}
+                filterOptions={(values) => values}
+                getOptionLabel={(option) =>
+                  `${option.name} · ${option.country ?? 'Global'} · #${option.id}`
+                }
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                onChange={(_, value) => setSelected(value)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Matching SportMonks league" />
+                )}
+              />
+              {selected ? (
+                <Alert severity="warning">
+                  Confirm: {item.name} ({item.country || 'Unknown country'},
+                  Legacy {item.legacyApiId}) → {selected.name} (
+                  {selected.country ?? 'Global'}, SportMonks #{selected.id}).
+                  {!selected.local
+                    ? ' The provider league will be verified and added to the catalog if needed.'
+                    : ''}
+                </Alert>
+              ) : null}
+              <TextField
+                label="Reason"
+                value={reason}
+                disabled={saving}
+                onChange={(event) => setReason(event.target.value)}
+                multiline
+                minRows={2}
+              />
+            </>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        {!canonical ? (
+          <Button
+            variant="contained"
+            disabled={
+              saving ||
+              loading ||
+              !details?.references ||
+              !selected ||
+              !reason.trim()
+            }
+            onClick={() => void save()}
+          >
+            Confirm link
+          </Button>
+        ) : null}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 function CompetitionDialog({
   item,
   onClose,
@@ -979,7 +1257,10 @@ function CompetitionDialog({
     setSaving(true);
     setError(null);
     try {
-      const persistedReviewState = reviewState.trim();
+      const persistedReviewState =
+        item.reviewState === 'out_of_entitlement'
+          ? undefined
+          : reviewState.trim();
       await updateMatchRankingCompetition(item.id, {
         effectiveCategory: category === '' ? null : Number(category),
         countryCode: normalizedCountry(countryCode),
@@ -1108,9 +1389,15 @@ function CompetitionDialog({
                   title="Use Reviewed only after confirming the competition metadata. Pending states keep the record in the appropriate admin review queue; they do not by themselves disable ranking."
                 />
               }
+              disabled={item.reviewState === 'out_of_entitlement'}
               value={reviewState}
               onChange={(e) => setReviewState(e.target.value)}
             >
+              {item.reviewState === 'out_of_entitlement' ? (
+                <MenuItem value="out_of_entitlement">
+                  Unavailable in SportMonks
+                </MenuItem>
+              ) : null}
               <MenuItem value="pending_enrichment">pending_enrichment</MenuItem>
               <MenuItem value="pending_review">pending_review</MenuItem>
               <MenuItem value="reviewed">reviewed</MenuItem>
@@ -2366,11 +2653,15 @@ function normalizedCountry(value: string): string | null {
 }
 function reviewStateLabel(value: string): string {
   if (value === 'pending_enrichment') return 'Waiting for enrichment';
+  if (value === 'out_of_entitlement') return 'Unavailable in SportMonks';
+  if (value === 'missing_provider_mapping') return 'Legacy';
   if (value === 'pending_review') return 'Ready for review';
   if (value === 'reviewed') return 'Reviewed';
   return value;
 }
 function attentionReason(item: MatchRankingCompetition): string {
+  if (item.reviewState === 'out_of_entitlement')
+    return 'This league is outside current SportMonks access.';
   const missing: string[] = [];
   if (!item.metadataLastSuccessAt) missing.push('successful enrichment');
   if (item.providerCategory == null) missing.push('provider category');
