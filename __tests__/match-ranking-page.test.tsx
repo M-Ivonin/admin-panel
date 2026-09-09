@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -147,21 +148,24 @@ describe('MatchRankingPage', () => {
     expect(
       within(dialog).getByRole('button', { name: 'Confirm link' })
     ).toBeDisabled();
-    fireEvent.change(
-      within(dialog).getByLabelText('League name or SportMonks ID'),
-      { target: { value: 'Gold' } }
+    const search = within(dialog).getByRole('combobox', {
+      name: 'Find SportMonks league',
+    });
+    expect(search).toHaveValue('Copa Libertadores');
+    await waitFor(() =>
+      expect(searchCompetitionLinkTargets).toHaveBeenCalledWith(
+        'Copa Libertadores',
+        false
+      )
     );
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Search catalog' })
-    );
+    expect(
+      within(dialog).queryByRole('button', { name: 'Search catalog' })
+    ).not.toBeInTheDocument();
+    fireEvent.change(search, { target: { value: 'Gold' } });
     await waitFor(() =>
       expect(searchCompetitionLinkTargets).toHaveBeenCalledWith('Gold', false)
     );
-    fireEvent.mouseDown(
-      within(dialog).getByRole('combobox', {
-        name: 'Matching SportMonks league',
-      })
-    );
+    fireEvent.mouseDown(search);
     fireEvent.click(
       await screen.findByRole('option', { name: 'Gold Cup · World · #501' })
     );
@@ -185,6 +189,139 @@ describe('MatchRankingPage', () => {
     await screen.findByText(
       'Legacy league linked. SportMonks ranking settings preserved.'
     );
+  });
+
+  async function openLegacySearch() {
+    const legacy = {
+      ...competition,
+      providerLeagueId: null,
+      source: 'legacy',
+      legacyApiId: '999',
+      country: 'Brazil',
+      canonicalCompetition: null,
+      references: { favorites: 1, channels: 1, teams: 0 },
+    };
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([legacy]);
+    (getCompetitionDetails as jest.Mock).mockResolvedValue(legacy);
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    await screen.findByText(
+      'Existing references: 1 favorites · 1 channels · 0 teams'
+    );
+    return screen.getByRole('combobox', { name: 'Find SportMonks league' });
+  }
+
+  it('automatically falls back to SportMonks and explains empty Legacy search results', async () => {
+    (searchCompetitionLinkTargets as jest.Mock).mockResolvedValue([]);
+    const search = await openLegacySearch();
+    await screen.findByText(
+      'No matching leagues found. Try a shorter name or a SportMonks ID.'
+    );
+    expect(searchCompetitionLinkTargets).toHaveBeenCalledWith(
+      'Copa Libertadores',
+      true
+    );
+    (searchCompetitionLinkTargets as jest.Mock).mockImplementation(
+      async (_query, provider) =>
+        provider
+          ? [{ id: 501, name: 'Supercopa', country: 'Brazil', local: false }]
+          : []
+    );
+    fireEvent.change(search, { target: { value: 'Sup' } });
+    expect(
+      await screen.findByRole('option', { name: 'Supercopa · Brazil · #501' })
+    ).toBeInTheDocument();
+    expect(searchCompetitionLinkTargets).toHaveBeenCalledWith('Sup', true);
+  });
+
+  it('ignores an older Legacy search response and clears selection when the operator edits the query', async () => {
+    let finishOld: (value: unknown) => void = () => undefined;
+    (searchCompetitionLinkTargets as jest.Mock).mockImplementation((query) =>
+      query === 'Copa Libertadores'
+        ? new Promise((resolve) => {
+            finishOld = resolve;
+          })
+        : Promise.resolve([
+            { id: 501, name: 'New league', country: 'Brazil', local: true },
+          ])
+    );
+    const search = await openLegacySearch();
+    await waitFor(() =>
+      expect(searchCompetitionLinkTargets).toHaveBeenCalledWith(
+        'Copa Libertadores',
+        false
+      )
+    );
+    fireEvent.change(search, { target: { value: 'New' } });
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'New league · Brazil · #501' })
+    );
+    await act(async () => {
+      finishOld([
+        { id: 99, name: 'Old league', country: 'France', local: true },
+      ]);
+    });
+    expect(screen.queryByText(/Old league/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Reason'), {
+      target: { value: 'Same competition' },
+    });
+    expect(screen.getByRole('button', { name: 'Confirm link' })).toBeEnabled();
+    fireEvent.change(search, { target: { value: 'Other' } });
+    expect(screen.getByRole('button', { name: 'Confirm link' })).toBeDisabled();
+    expect(linkLegacyCompetition).not.toHaveBeenCalled();
+  });
+
+  it('shows a recoverable Legacy search error instead of an empty list', async () => {
+    (searchCompetitionLinkTargets as jest.Mock).mockRejectedValue(
+      new Error('Provider unavailable')
+    );
+    await openLegacySearch();
+    await screen.findByText('Provider unavailable');
+    expect(
+      screen.queryByText(/^No matching leagues found/)
+    ).not.toBeInTheDocument();
+    (searchCompetitionLinkTargets as jest.Mock).mockResolvedValue([
+      { id: 501, name: 'Copa Libertadores', country: 'Brazil', local: true },
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry search' }));
+    await screen.findByText(
+      '1 matching leagues. Select one and check its country.'
+    );
+    expect(screen.queryByText('Provider unavailable')).not.toBeInTheDocument();
+  });
+
+  it('opens the single shared ranking for a linked Legacy league without another link', async () => {
+    const legacy = {
+      ...competition,
+      providerLeagueId: null,
+      source: 'legacy',
+      canonicalCompetition: {
+        id: 'canonical',
+        name: 'Copa Libertadores',
+        providerLeagueId: 501,
+      },
+      references: { favorites: 1, channels: 1, teams: 0 },
+    };
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([legacy]);
+    (getCompetitionDetails as jest.Mock).mockImplementation(async (id) =>
+      id === 'canonical'
+        ? { ...competition, id: 'canonical', effectiveCategory: 2 }
+        : legacy
+    );
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Edit shared ranking' })
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('Effective category')).toHaveValue(2)
+    );
+    expect(searchCompetitionLinkTargets).not.toHaveBeenCalled();
+    expect(linkLegacyCompetition).not.toHaveBeenCalled();
   });
 
   it('does not report an empty catalogue when the backend request fails', async () => {

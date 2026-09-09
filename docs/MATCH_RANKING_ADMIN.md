@@ -63,11 +63,16 @@ and **All sources**. Legacy rows carry a Legacy badge, old ID and link status.
 Provider access loss is shown as **Unavailable in SportMonks**, never Legacy.
 
 **Manage link** opens the old identity and its favorite/channel/team reference
-counts. Search the imported catalog first; **Search SportMonks** explicitly
-queries the provider by name or numeric ID. Verify both names, countries and
-IDs, enter a reason and select **Confirm link**. The existing SportMonks row
-keeps its ranking settings. No duplicate provider league or copied ranking
-configuration is created. Linked Legacy records expose **Open SportMonks league**
-for editing the canonical record. Reassignment is deliberately rejected;
+counts. **Find SportMonks league** is prefilled with the Legacy name and searches
+automatically after a short typing pause. The imported catalog is searched first;
+when it has no matches, the provider is searched automatically. Name and numeric
+ID searches share this field. Loading, no-match and retryable error states are
+explicit; older responses cannot replace a newer query or selection.
+
+Verify both names, countries and IDs, enter a reason and select **Confirm link**.
+An existing SportMonks row is reused and keeps its ranking settings. No duplicate
+provider league or copied ranking configuration is created. The Legacy row remains
+an alias for old references, not an independent ranking input. Linked Legacy records
+expose **Edit shared ranking** for editing the canonical record. Reassignment is deliberately rejected;
 repeating the same link is safe. Legacy records cannot be bulk-approved or
 edited as independent ranking inputs.

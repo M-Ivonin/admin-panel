@@ -6,7 +6,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useRef,
 } from 'react';
 import {
   Alert,
@@ -413,11 +412,7 @@ export function MatchRankingDashboard() {
           item={editingCompetition}
           onClose={() => setEditingCompetition(null)}
           onOpenCanonical={async (id) => {
-            try {
-              setEditingCompetition(await getCompetitionDetails(id));
-            } catch (caught) {
-              setError(messageOf(caught));
-            }
+            setEditingCompetition(await getCompetitionDetails(id));
           }}
           onSaved={async () => {
             setEditingCompetition(null);
@@ -705,25 +700,27 @@ function CatalogPanel({
               size="small"
               fullWidth
             />
-            <TextField
-              select
-              label="Review state filter"
-              value={reviewState}
-              onChange={(event) => onReviewStateChange(event.target.value)}
-              size="small"
-              sx={{ minWidth: 220 }}
-            >
-              <MenuItem value="">All review states</MenuItem>
-              <MenuItem value="pending_enrichment">
-                Waiting for enrichment
-              </MenuItem>
-              <MenuItem value="out_of_entitlement">
-                Unavailable in SportMonks
-              </MenuItem>
-              <MenuItem value="missing_provider_mapping">Legacy</MenuItem>
-              <MenuItem value="pending_review">Ready for review</MenuItem>
-              <MenuItem value="reviewed">Reviewed</MenuItem>
-            </TextField>
+            {source !== 'legacy' ? (
+              <TextField
+                select
+                label="Review state filter"
+                value={reviewState}
+                onChange={(event) => onReviewStateChange(event.target.value)}
+                size="small"
+                sx={{ minWidth: 220 }}
+              >
+                <MenuItem value="">All review states</MenuItem>
+                <MenuItem value="pending_enrichment">
+                  Waiting for enrichment
+                </MenuItem>
+                <MenuItem value="out_of_entitlement">
+                  Unavailable in SportMonks
+                </MenuItem>
+                <MenuItem value="missing_provider_mapping">Legacy</MenuItem>
+                <MenuItem value="pending_review">Ready for review</MenuItem>
+                <MenuItem value="reviewed">Reviewed</MenuItem>
+              </TextField>
+            ) : null}
             <Button
               variant="outlined"
               onClick={onSearch}
@@ -739,43 +736,50 @@ function CatalogPanel({
           </Stack>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={1}
-            alignItems={{ sm: 'center' }}
-          >
-            <Button
-              variant={queue === 'ready' ? 'contained' : 'outlined'}
-              onClick={() => onQueueChange('ready')}
+      {source !== 'legacy' ? (
+        <Card>
+          <CardContent>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ sm: 'center' }}
             >
-              Ready for review
-            </Button>
-            <Button
-              color="warning"
-              variant={queue === 'attention' ? 'contained' : 'outlined'}
-              onClick={() => onQueueChange('attention')}
-            >
-              Needs attention
-            </Button>
-            <Button
-              variant={queue === '' ? 'contained' : 'outlined'}
-              onClick={() => onQueueChange('')}
-            >
-              All competitions
-            </Button>
-            <Box sx={{ flex: 1 }} />
-            <Button
-              variant="contained"
-              disabled={selectedIds.length === 0}
-              onClick={onBulkReview}
-            >
-              Approve selected ({selectedIds.length})
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+              <Button
+                variant={queue === 'ready' ? 'contained' : 'outlined'}
+                onClick={() => onQueueChange('ready')}
+              >
+                Ready for review
+              </Button>
+              <Button
+                color="warning"
+                variant={queue === 'attention' ? 'contained' : 'outlined'}
+                onClick={() => onQueueChange('attention')}
+              >
+                Needs attention
+              </Button>
+              <Button
+                variant={queue === '' ? 'contained' : 'outlined'}
+                onClick={() => onQueueChange('')}
+              >
+                All competitions
+              </Button>
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="contained"
+                disabled={selectedIds.length === 0}
+                onClick={onBulkReview}
+              >
+                Approve selected ({selectedIds.length})
+              </Button>
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : (
+        <Alert severity="info">
+          Legacy records preserve old favorites and channel links. Link each to
+          its SportMonks league to use one shared ranking.
+        </Alert>
+      )}
       {items.length === 0 ? (
         <EmptyCard
           text={
@@ -870,34 +874,54 @@ function CompetitionTable({
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      Category <strong>{item.providerCategory ?? '—'}</strong> ·{' '}
-                      {item.countryCode ?? 'Global'}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ textTransform: 'capitalize' }}
-                    >
-                      {item.scope} · {item.confederation ?? 'No confederation'}
-                    </Typography>
+                    {item.providerLeagueId == null ? (
+                      <Typography variant="body2" color="text.secondary">
+                        Old provider record
+                      </Typography>
+                    ) : (
+                      <>
+                        <Typography variant="body2">
+                          Category{' '}
+                          <strong>{item.providerCategory ?? '—'}</strong> ·{' '}
+                          {item.countryCode ?? 'Global'}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ textTransform: 'capitalize' }}
+                        >
+                          {item.scope} ·{' '}
+                          {item.confederation ?? 'No confederation'}
+                        </Typography>
+                      </>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      Rank <strong>{rankingCategory ?? '—'}</strong> ·{' '}
-                      <Box
-                        component="span"
-                        sx={{ textTransform: 'capitalize' }}
-                      >
-                        {approvalClassification}
-                      </Box>
-                    </Typography>
-                    {item.providerLeagueId != null &&
-                    item.reviewState !== 'pending_enrichment' ? (
-                      <Typography variant="caption" color="primary.main">
-                        {approvalHint(item)}
+                    {item.providerLeagueId == null ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {item.canonicalCompetition
+                          ? 'Uses linked SportMonks ranking'
+                          : 'Link a SportMonks league to set ranking'}
                       </Typography>
-                    ) : null}
+                    ) : (
+                      <>
+                        <Typography variant="body2">
+                          Rank <strong>{rankingCategory ?? '—'}</strong> ·{' '}
+                          <Box
+                            component="span"
+                            sx={{ textTransform: 'capitalize' }}
+                          >
+                            {approvalClassification}
+                          </Box>
+                        </Typography>
+                        {item.providerLeagueId != null &&
+                        item.reviewState !== 'pending_enrichment' ? (
+                          <Typography variant="caption" color="primary.main">
+                            {approvalHint(item)}
+                          </Typography>
+                        ) : null}
+                      </>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Stack spacing={0.5} alignItems="flex-start">
@@ -1045,49 +1069,66 @@ function LegacyCompetitionDialog({
   onOpenCanonical: (id: string) => Promise<void>;
 }) {
   const [details, setDetails] = useState<MatchRankingCompetition | null>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(item.name);
   const [options, setOptions] = useState<CompetitionLinkTarget[]>([]);
   const [selected, setSelected] = useState<CompetitionLinkTarget | null>(null);
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestVersion = useRef(0);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  const canonical = details?.canonicalCompetition ?? item.canonicalCompetition;
+  const term = query.trim();
+  const canSearch = term.length >= 2 || /^\d+$/.test(term);
   useEffect(() => {
     let active = true;
+    setDetailsError(null);
     getCompetitionDetails(item.id)
       .then((value) => {
         if (active) setDetails(value);
       })
       .catch((caught) => {
-        if (active) setError(messageOf(caught));
+        if (active) setDetailsError(messageOf(caught));
       });
     return () => {
       active = false;
-      requestVersion.current += 1;
     };
-  }, [item.id]);
-  async function search(provider = false) {
-    const version = ++requestVersion.current;
-    setLoading(true);
-    setError(null);
-    setSelected(null);
+  }, [item.id, retry]);
+  useEffect(() => {
+    if (canonical || selected) return;
+    let active = true;
     setOptions([]);
-    try {
-      const result = await searchCompetitionLinkTargets(query.trim(), provider);
-      if (version === requestVersion.current) setOptions(result);
-    } catch (caught) {
-      if (version === requestVersion.current) setError(messageOf(caught));
-    } finally {
-      if (version === requestVersion.current) setLoading(false);
-    }
-  }
+    setSearchError(null);
+    setLoading(canSearch);
+    if (!canSearch) return;
+    const timer = setTimeout(async () => {
+      try {
+        let results = await searchCompetitionLinkTargets(term, false);
+        if (!active) return;
+        if (results.length === 0) {
+          results = await searchCompetitionLinkTargets(term, true);
+        }
+        if (active) setOptions(results);
+      } catch (caught) {
+        if (active) setSearchError(messageOf(caught));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 350);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [term, canSearch, canonical, selected, retry]);
   async function save() {
     if (!selected || !reason.trim() || !details?.references) return;
     setSaving(true);
     setError(null);
     try {
-      await linkLegacyCompetition(item.id, selected.id, reason);
+      const saved = await linkLegacyCompetition(item.id, selected.id, reason);
+      setDetails(saved);
       await onSaved();
     } catch (caught) {
       setError(messageOf(caught));
@@ -1095,7 +1136,15 @@ function LegacyCompetitionDialog({
       setSaving(false);
     }
   }
-  const canonical = details?.canonicalCompetition ?? item.canonicalCompetition;
+  const searchStatus = !canSearch
+    ? 'Enter at least 2 letters or a SportMonks ID.'
+    : loading
+      ? 'Searching for matching leagues…'
+      : searchError
+        ? 'Search failed. Retry or change the name.'
+        : options.length === 0
+          ? 'No matching leagues found. Try a shorter name or a SportMonks ID.'
+          : `${options.length} matching leagues. Select one and check its country.`;
   return (
     <Dialog open onClose={saving ? undefined : onClose} fullWidth maxWidth="sm">
       <DialogTitle>Legacy league</DialogTitle>
@@ -1109,7 +1158,21 @@ function LegacyCompetitionDialog({
           <Typography>
             {item.country || 'Unknown country'} · Legacy ID: {item.legacyApiId}
           </Typography>
-          {details?.references ? (
+          {detailsError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  onClick={() => setRetry((value) => value + 1)}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              Could not load existing references: {detailsError}
+            </Alert>
+          ) : details?.references ? (
             <Typography>
               Existing references: {details.references.favorites} favorites ·{' '}
               {details.references.channels} channels ·{' '}
@@ -1121,70 +1184,97 @@ function LegacyCompetitionDialog({
           {canonical ? (
             <>
               <Alert severity="success">
-                Linked to {canonical.name} · SportMonks #
-                {canonical.providerLeagueId}
+                Uses {canonical.name} · SportMonks #{canonical.providerLeagueId}
               </Alert>
-              <Button onClick={() => void onOpenCanonical(canonical.id)}>
-                Open SportMonks league
+              <Typography>
+                Favorites and channels use this SportMonks league. Both records
+                share one ranking; the Legacy record preserves old links.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setError(null);
+                  void onOpenCanonical(canonical.id).catch((caught) =>
+                    setError(messageOf(caught))
+                  );
+                }}
+              >
+                Edit shared ranking
               </Button>
             </>
           ) : (
             <>
               <Alert severity="info">
-                Link this old record to one SportMonks league. Existing
-                references will use that league. Its ranking settings will stay
-                unchanged.
+                Choose the same competition in SportMonks to use one league and
+                one ranking. Existing favorites and channels are preserved.
+                Until linked, this Legacy record cannot affect Top Matches
+                ranking.
               </Alert>
-              <TextField
-                label="League name or SportMonks ID"
-                value={query}
-                disabled={saving}
-                onChange={(event) => {
-                  requestVersion.current += 1;
-                  setQuery(event.target.value);
-                  setSelected(null);
-                  setOptions([]);
-                  setLoading(false);
-                }}
-              />
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant="outlined"
-                  disabled={saving || loading || !query.trim()}
-                  onClick={() => void search()}
-                >
-                  Search catalog
-                </Button>
-                <Button
-                  disabled={saving || loading || !query.trim()}
-                  onClick={() => void search(true)}
-                >
-                  Search SportMonks
-                </Button>
-              </Stack>
               <Autocomplete
                 options={options}
                 value={selected}
+                inputValue={query}
                 loading={loading}
                 disabled={saving}
+                openOnFocus
                 filterOptions={(values) => values}
                 getOptionLabel={(option) =>
                   `${option.name} · ${option.country ?? 'Global'} · #${option.id}`
                 }
                 isOptionEqualToValue={(a, b) => a.id === b.id}
-                onChange={(_, value) => setSelected(value)}
+                onInputChange={(_, value, inputReason) => {
+                  if (inputReason === 'input' || inputReason === 'clear') {
+                    setQuery(value);
+                    setSelected(null);
+                    setOptions([]);
+                    setSearchError(null);
+                  }
+                }}
+                onChange={(_, value) => {
+                  setSelected(value);
+                  if (value)
+                    setQuery(
+                      `${value.name} · ${value.country ?? 'Global'} · #${value.id}`
+                    );
+                }}
+                loadingText="Searching for matching leagues…"
+                noOptionsText={searchStatus}
                 renderInput={(params) => (
-                  <TextField {...params} label="Matching SportMonks league" />
+                  <TextField
+                    {...params}
+                    label="Find SportMonks league"
+                    helperText="Search by name or ID. Check the country before linking."
+                  />
                 )}
               />
+              {!selected ? (
+                <Typography variant="body2" role="status">
+                  {searchStatus}
+                </Typography>
+              ) : null}
+              {searchError ? (
+                <Alert
+                  severity="error"
+                  action={
+                    <Button
+                      color="inherit"
+                      onClick={() => setRetry((value) => value + 1)}
+                    >
+                      Retry search
+                    </Button>
+                  }
+                >
+                  {searchError}
+                </Alert>
+              ) : null}
               {selected ? (
                 <Alert severity="warning">
-                  Confirm: {item.name} ({item.country || 'Unknown country'},
-                  Legacy {item.legacyApiId}) → {selected.name} (
-                  {selected.country ?? 'Global'}, SportMonks #{selected.id}).
-                  {!selected.local
-                    ? ' The provider league will be verified and added to the catalog if needed.'
-                    : ''}
+                  {item.name} ({item.country || 'Unknown country'}, Legacy{' '}
+                  {item.legacyApiId}){' → '}
+                  {selected.name} ({selected.country ?? 'Global'}, SportMonks #
+                  {selected.id}). If this SportMonks league already exists, it
+                  will be reused with its current ranking. No duplicate league
+                  will be created. This link cannot be reassigned here.
                 </Alert>
               ) : null}
               <TextField
