@@ -15,6 +15,12 @@ The tabs expose these operations:
 - preview Top Matches and league groups with score-component explanations;
 - inspect the ranking audit trail.
 
+The page header includes a plain-language overview of the complete ranking
+flow. A separate help control beside the tabs follows the active tab and opens
+its operator guide for purpose, expected workflow, fields, and cautions. These
+guides are intentionally non-technical and do not replace the detailed
+operator contracts below.
+
 ## Operator contracts
 
 - Team prominence is restricted to the backend-accepted values `0`, `10`, and

@@ -164,8 +164,7 @@ const tabHelp: Record<
     ],
   },
   Audit: {
-    intro:
-      'Audit is the read-only history of admin changes to match ranking.',
+    intro: 'Audit is the read-only history of admin changes to match ranking.',
     sections: [
       {
         title: 'How to use it',
@@ -513,7 +512,7 @@ function MatchRankingHelpDialog({
               intended.
             </Alert>
           </Stack>
-        ) : (
+        ) : guide ? (
           <Stack spacing={2.5}>
             <Typography>{guide.intro}</Typography>
             {guide.sections.map((section) => (
@@ -525,7 +524,7 @@ function MatchRankingHelpDialog({
               </Box>
             ))}
           </Stack>
-        )}
+        ) : null}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} variant="contained">
