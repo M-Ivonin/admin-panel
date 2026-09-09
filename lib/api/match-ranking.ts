@@ -12,6 +12,8 @@ import type {
   MatchRankingPreviewInput,
   TeamProminence,
   TeamProminenceInput,
+  SportmonksTeamOption,
+  MatchFixtureOption,
 } from '@/modules/match-ranking/types';
 
 const BASE_PATH = '/admin/match-ranking';
@@ -73,6 +75,18 @@ export async function getTeamProminence(): Promise<TeamProminence[]> {
   );
 }
 
+export async function getSportmonksTeams(
+  query: string
+): Promise<SportmonksTeamOption[]> {
+  const params = new URLSearchParams({ query: query.trim() });
+  return readList(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/teams?${params.toString()}`,
+      method: 'GET',
+    })
+  );
+}
+
 export async function upsertTeamProminence(
   input: TeamProminenceInput
 ): Promise<TeamProminence> {
@@ -90,6 +104,18 @@ export async function getMatchRankingOverrides(): Promise<
 > {
   return readList(
     await adminAuthFetch({ path: `${BASE_PATH}/overrides`, method: 'GET' })
+  );
+}
+
+export async function getMatchFixtures(
+  query: string
+): Promise<MatchFixtureOption[]> {
+  const params = new URLSearchParams({ query: query.trim() });
+  return readList(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/fixtures?${params.toString()}`,
+      method: 'GET',
+    })
   );
 }
 

@@ -1,8 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+  SyntheticEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -28,6 +35,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { allCountries, CountryData } from 'country-region-data';
 import { Add, Edit, SportsSoccer } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
@@ -40,7 +48,9 @@ import {
   getMatchRankingCompetitions,
   getMatchRankingConfigurations,
   getMatchRankingOverrides,
+  getMatchFixtures,
   getTeamProminence,
+  getSportmonksTeams,
   previewMatchRanking,
   updateMatchRankingCompetition,
   updateMatchRankingOverride,
@@ -55,8 +65,10 @@ import type {
   MatchRankingConfiguration,
   MatchRankingOverride,
   MatchRankingOverrideAction,
+  MatchFixtureOption,
   MatchRankingPreview,
   TeamProminence,
+  SportmonksTeamOption,
 } from '@/modules/match-ranking/types';
 
 const tabs = [
@@ -181,11 +193,6 @@ export function MatchRankingDashboard() {
       />
       <Box sx={{ maxWidth: 1280, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}>
         <Stack spacing={3}>
-          <Alert severity="info">
-            This dashboard edits backend-owned ranking inputs. Preview
-            explanations are admin-only and do not change mobile ranking by
-            themselves.
-          </Alert>
           {error ? <Alert severity="error">{error}</Alert> : null}
           {success ? (
             <Alert severity="success" onClose={() => setSuccess(null)}>
@@ -374,7 +381,11 @@ function CatalogPanel({
     <Stack spacing={2}>
       <Card>
         <CardContent>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ md: 'flex-start' }}
+          >
             <TextField
               label="Competition search"
               value={search}
@@ -395,7 +406,16 @@ function CatalogPanel({
               <MenuItem value="pending_review">pending_review</MenuItem>
               <MenuItem value="reviewed">reviewed</MenuItem>
             </TextField>
-            <Button variant="outlined" onClick={onSearch}>
+            <Button
+              variant="outlined"
+              onClick={onSearch}
+              sx={{
+                minWidth: 140,
+                minHeight: 40,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+              }}
+            >
               Search catalog
             </Button>
           </Stack>
@@ -833,31 +853,49 @@ function ProminencePanel({
       {items.length === 0 ? (
         <EmptyCard text="No team prominence records" />
       ) : (
-        items.map((item) => (
-          <Card key={item.id}>
-            <CardContent>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                justifyContent="space-between"
-                spacing={2}
-              >
-                <Box>
-                  <Typography variant="h6">
-                    {item.teamName || `Team ${item.providerTeamId}`}
-                  </Typography>
-                  <Typography color="text.secondary">
-                    {item.countryCode ?? 'Global'} · prominence {item.value} ·
-                    review due {formatDate(item.reviewDueAt)}
-                  </Typography>
-                  <Typography variant="body2">{item.reason}</Typography>
-                </Box>
-                <Button startIcon={<Edit />} onClick={() => onEdit(item)}>
-                  Edit
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))
+        <TableContainer component={Card}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Team</TableCell>
+                <TableCell>Scope</TableCell>
+                <TableCell>Prominence</TableCell>
+                <TableCell>Review due</TableCell>
+                <TableCell>Reason</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id} hover>
+                  <TableCell>
+                    <Typography fontWeight={600}>
+                      {item.teamName || 'Unknown team'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      #{item.providerTeamId}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={item.countryCode ?? 'Global'}
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>{item.value}</TableCell>
+                  <TableCell>{formatDate(item.reviewDueAt)}</TableCell>
+                  <TableCell>{item.reason}</TableCell>
+                  <TableCell align="right">
+                    <Button startIcon={<Edit />} onClick={() => onEdit(item)}>
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Stack>
   );
@@ -874,10 +912,52 @@ function ProminenceDialog({
 }) {
   const [teamId, setTeamId] = useState(item?.providerTeamId.toString() ?? '');
   const [country, setCountry] = useState(item?.countryCode ?? '');
+  const [teams, setTeams] = useState<SportmonksTeamOption[]>([]);
+  const [teamQuery, setTeamQuery] = useState('');
+  const [teamsLoading, setTeamsLoading] = useState(false);
   const [value, setValue] = useState(item?.value.toString() ?? '0');
   const [reason, setReason] = useState(item?.reason ?? '');
   const [due, setDue] = useState(toDateInput(item?.reviewDueAt));
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const normalizedQuery = teamQuery.trim();
+    if (normalizedQuery.length < 2) {
+      setTeams([]);
+      setTeamsLoading(false);
+      return;
+    }
+    let active = true;
+    setTeamsLoading(true);
+    getSportmonksTeams(normalizedQuery)
+      .then((options) => {
+        if (active) setTeams(options);
+      })
+      .catch((caught) => {
+        if (active) setError(messageOf(caught));
+      })
+      .finally(() => {
+        if (active) setTeamsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [teamQuery]);
+  const selectedTeam = useMemo(
+    () =>
+      teams.find((team) => team.id.toString() === teamId) ??
+      (item
+        ? {
+            id: item.providerTeamId,
+            name: item.teamName || `Team ${item.providerTeamId}`,
+            country: null,
+          }
+        : null),
+    [item, teamId, teams]
+  );
+  const selectedCountry = useMemo(
+    () => allCountries.find((option) => option[1] === country) ?? null,
+    [country]
+  );
   async function save() {
     if (
       !Number.isSafeInteger(Number(teamId)) ||
@@ -912,19 +992,61 @@ function ProminenceDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <TextField
-            label="Provider team ID"
-            type="number"
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
+          <Autocomplete
+            options={teams}
+            value={selectedTeam}
+            loading={teamsLoading}
             disabled={Boolean(item)}
+            autoHighlight
+            getOptionLabel={(team) => formatTeamOption(team)}
+            isOptionEqualToValue={(option, selected) =>
+              option.id === selected.id
+            }
+            filterOptions={(options) => options}
+            onInputChange={(_event, value, reason) => {
+              if (reason === 'input') {
+                setTeamId('');
+                setTeams([]);
+                setError(null);
+                setTeamQuery(value);
+              }
+            }}
+            onChange={(
+              _event: SyntheticEvent,
+              team: SportmonksTeamOption | null
+            ) => setTeamId(team?.id.toString() ?? '')}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Team"
+                helperText={
+                  teamsLoading
+                    ? 'Searching SportMonks…'
+                    : teamQuery.trim().length < 2
+                      ? 'Type at least 2 characters to search SportMonks.'
+                      : undefined
+                }
+              />
+            )}
           />
-          <TextField
-            label="Country code"
-            value={country}
-            onChange={(e) => setCountry(e.target.value.toUpperCase())}
-            inputProps={{ maxLength: 2 }}
-            helperText="Leave blank for global prominence."
+          <Autocomplete
+            options={allCountries}
+            value={selectedCountry}
+            autoHighlight
+            getOptionLabel={formatCountryOption}
+            isOptionEqualToValue={(option, selected) =>
+              option[1] === selected[1]
+            }
+            onChange={(_event: SyntheticEvent, option: CountryData | null) =>
+              setCountry(option?.[1] ?? '')
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Country"
+                helperText="Leave blank for global prominence."
+              />
+            )}
           />
           <TextField
             select
@@ -964,6 +1086,19 @@ function ProminenceDialog({
   );
 }
 
+function formatTeamOption(team: SportmonksTeamOption): string {
+  return `${team.name}${team.country ? ` · ${team.country}` : ''} (#${team.id})`;
+}
+
+function formatCountryOption(country: CountryData): string {
+  return `${country[0]} (${country[1]})`;
+}
+
+function formatFixtureOption(fixture: MatchFixtureOption): string {
+  const date = new Date(fixture.date).toLocaleString();
+  return `${fixture.homeTeamName} — ${fixture.awayTeamName} · ${fixture.leagueName} · ${date} (#${fixture.id})`;
+}
+
 function OverridesPanel({
   items,
   onEdit,
@@ -987,45 +1122,60 @@ function OverridesPanel({
       {items.length === 0 ? (
         <EmptyCard text="No fixture overrides" />
       ) : (
-        items.map((item) => (
-          <Card key={item.id}>
-            <CardContent>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                justifyContent="space-between"
-                spacing={2}
-              >
-                <Box>
-                  <Stack direction="row" spacing={1}>
-                    <Typography variant="h6">
-                      Fixture {item.fixtureId}
+        <TableContainer component={Card}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Fixture</TableCell>
+                <TableCell>Scope</TableCell>
+                <TableCell>Action</TableCell>
+                <TableCell>Window</TableCell>
+                <TableCell>Reason</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {items.map((item) => (
+                <TableRow key={item.id} hover>
+                  <TableCell>
+                    <Typography fontWeight={600}>
+                      {item.homeTeamName && item.awayTeamName
+                        ? `${item.homeTeamName} — ${item.awayTeamName}`
+                        : 'Unknown fixture'}
                     </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      #{item.fixtureId}
+                      {item.leagueName ? ` · ${item.leagueName}` : ''}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip size="small" label={item.countryCode ?? 'Global'} variant="outlined" />
+                  </TableCell>
+                  <TableCell>
                     <Chip
                       size="small"
                       label={item.action}
-                      color={
-                        new Date(item.endsAt) <= new Date()
-                          ? 'default'
-                          : 'primary'
-                      }
+                      color={new Date(item.endsAt) <= new Date() ? 'default' : 'primary'}
                     />
-                  </Stack>
-                  <Typography color="text.secondary">
-                    {item.countryCode ?? 'Global'} · {formatDate(item.startsAt)}{' '}
-                    → {formatDate(item.endsAt)}
-                  </Typography>
-                  <Typography variant="body2">{item.reason}</Typography>
-                </Box>
-                <Stack direction="row">
-                  <Button onClick={() => onEdit(item)}>Edit</Button>
-                  <Button color="error" onClick={() => void onDelete(item)}>
-                    Delete
-                  </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{formatDate(item.startsAt)}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      → {formatDate(item.endsAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{item.reason}</TableCell>
+                  <TableCell align="right">
+                    <Button onClick={() => onEdit(item)}>Edit</Button>
+                    <Button color="error" onClick={() => void onDelete(item)}>
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </Stack>
   );
@@ -1100,6 +1250,9 @@ function OverrideDialog({
 }) {
   const [fixtureId, setFixtureId] = useState(item?.fixtureId.toString() ?? '');
   const [country, setCountry] = useState(item?.countryCode ?? '');
+  const [fixtures, setFixtures] = useState<MatchFixtureOption[]>([]);
+  const [fixtureQuery, setFixtureQuery] = useState('');
+  const [fixturesLoading, setFixturesLoading] = useState(false);
   const [action, setAction] = useState<MatchRankingOverrideAction>(
     item?.action ?? 'pin'
   );
@@ -1109,6 +1262,47 @@ function OverrideDialog({
   const [endsAt, setEndsAt] = useState(toDateTimeInput(item?.endsAt));
   const [reason, setReason] = useState(item?.reason ?? '');
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const normalizedQuery = fixtureQuery.trim();
+    if (normalizedQuery.length < 2) {
+      setFixtures([]);
+      setFixturesLoading(false);
+      return;
+    }
+    let active = true;
+    setFixturesLoading(true);
+    getMatchFixtures(normalizedQuery)
+      .then((options) => {
+        if (active) setFixtures(options);
+      })
+      .catch((caught) => {
+        if (active) setError(messageOf(caught));
+      })
+      .finally(() => {
+        if (active) setFixturesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [fixtureQuery]);
+  const selectedFixture = useMemo(
+    () =>
+      fixtures.find((fixture) => fixture.id.toString() === fixtureId) ??
+      (item
+        ? {
+            id: item.fixtureId,
+            homeTeamName: item.homeTeamName || 'Unknown home team',
+            awayTeamName: item.awayTeamName || 'Unknown away team',
+            leagueName: item.leagueName || 'Unknown league',
+            date: item.fixtureDate || item.startsAt,
+          }
+        : null),
+    [fixtureId, fixtures, item]
+  );
+  const selectedCountry = useMemo(
+    () => allCountries.find((option) => option[1] === country) ?? null,
+    [country]
+  );
   async function save() {
     if (
       !Number.isSafeInteger(Number(fixtureId)) ||
@@ -1152,18 +1346,52 @@ function OverrideDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <TextField
-            label="Fixture ID"
-            type="number"
-            value={fixtureId}
-            onChange={(e) => setFixtureId(e.target.value)}
+          <Autocomplete
+            options={fixtures}
+            value={selectedFixture}
+            loading={fixturesLoading}
             disabled={Boolean(item)}
+            autoHighlight
+            filterOptions={(options) => options}
+            getOptionLabel={formatFixtureOption}
+            isOptionEqualToValue={(option, selected) => option.id === selected.id}
+            onInputChange={(_event, value, reason) => {
+              if (reason === 'input') {
+                setFixtureId('');
+                setFixtures([]);
+                setError(null);
+                setFixtureQuery(value);
+              }
+            }}
+            onChange={(_event: SyntheticEvent, fixture: MatchFixtureOption | null) =>
+              setFixtureId(fixture?.id.toString() ?? '')
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Fixture"
+                helperText={
+                  fixturesLoading
+                    ? 'Searching matches…'
+                    : fixtureQuery.trim().length < 2
+                      ? 'Type a team or league name to find a match.'
+                      : undefined
+                }
+              />
+            )}
           />
-          <TextField
-            label="Country code"
-            value={country}
-            onChange={(e) => setCountry(e.target.value.toUpperCase())}
-            inputProps={{ maxLength: 2 }}
+          <Autocomplete
+            options={allCountries}
+            value={selectedCountry}
+            autoHighlight
+            getOptionLabel={formatCountryOption}
+            isOptionEqualToValue={(option, selected) => option[1] === selected[1]}
+            onChange={(_event, option: CountryData | null) =>
+              setCountry(option?.[1] ?? '')
+            }
+            renderInput={(params) => (
+              <TextField {...params} label="Country" helperText="Leave blank for global scope." />
+            )}
           />
           <TextField
             select
@@ -1507,7 +1735,11 @@ function PreviewPanel({
     <Stack spacing={2}>
       <Card>
         <CardContent>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ md: 'flex-start' }}
+          >
             <TextField
               label="Preview date"
               type="date"
@@ -1531,6 +1763,7 @@ function PreviewPanel({
               variant="contained"
               disabled={loading || !date || !timezone.trim()}
               onClick={() => void run()}
+              sx={{ minHeight: 56, whiteSpace: 'nowrap' }}
             >
               Run preview
             </Button>

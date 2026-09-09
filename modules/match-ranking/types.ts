@@ -65,11 +65,29 @@ export interface TeamProminenceInput {
   reviewDueAt: string | null;
 }
 
+export interface SportmonksTeamOption {
+  id: number;
+  name: string;
+  country: string | null;
+}
+
+export interface MatchFixtureOption {
+  id: number;
+  homeTeamName: string;
+  awayTeamName: string;
+  leagueName: string;
+  date: string;
+}
+
 export type MatchRankingOverrideAction = 'pin' | 'exclude_top' | 'adjust';
 
 export interface MatchRankingOverride {
   id: string;
   fixtureId: number;
+  homeTeamName?: string | null;
+  awayTeamName?: string | null;
+  leagueName?: string | null;
+  fixtureDate?: string | null;
   countryCode: string | null;
   action: MatchRankingOverrideAction;
   value: number | null;

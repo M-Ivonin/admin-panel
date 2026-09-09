@@ -9,6 +9,8 @@ import {
   getMatchRankingCompetitions,
   getMatchRankingConfigurations,
   getMatchRankingOverrides,
+  getMatchFixtures,
+  getSportmonksTeams,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -79,6 +81,12 @@ describe('match ranking API', () => {
       method: 'GET',
     });
 
+    await getSportmonksTeams('  Palm  ');
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/teams?query=Palm',
+      method: 'GET',
+    });
+
     const prominence = {
       providerTeamId: 42,
       countryCode: 'BR',
@@ -96,6 +104,12 @@ describe('match ranking API', () => {
     await getMatchRankingOverrides();
     expect(adminAuthFetch).toHaveBeenLastCalledWith({
       path: '/admin/match-ranking/overrides',
+      method: 'GET',
+    });
+
+    await getMatchFixtures(' Arsenal ');
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/fixtures?query=Arsenal',
       method: 'GET',
     });
 

@@ -16,6 +16,8 @@ import {
   getMatchRankingCompetitions,
   getMatchRankingConfigurations,
   getMatchRankingOverrides,
+  getMatchFixtures,
+  getSportmonksTeams,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -35,6 +37,8 @@ jest.mock('@/lib/api/match-ranking', () => ({
   getMatchRankingCompetitions: jest.fn(),
   getMatchRankingConfigurations: jest.fn(),
   getMatchRankingOverrides: jest.fn(),
+  getMatchFixtures: jest.fn(),
+  getSportmonksTeams: jest.fn(),
   getTeamProminence: jest.fn(),
   previewMatchRanking: jest.fn(),
   updateMatchRankingCompetition: jest.fn(),
@@ -69,6 +73,19 @@ describe('MatchRankingPage', () => {
     (getMatchRankingOverrides as jest.Mock).mockResolvedValue([]);
     (getMatchRankingConfigurations as jest.Mock).mockResolvedValue([]);
     (getMatchRankingAudit as jest.Mock).mockResolvedValue([]);
+    (getMatchFixtures as jest.Mock).mockResolvedValue([
+      {
+        id: 9001,
+        homeTeamName: 'Arsenal',
+        awayTeamName: 'Chelsea',
+        leagueName: 'Premier League',
+        date: '2026-09-10T18:00:00.000Z',
+      },
+    ]);
+    (getSportmonksTeams as jest.Mock).mockResolvedValue([
+      { id: 7, name: 'Arsenal', country: 'England' },
+      { id: 42, name: 'Palmeiras', country: 'Brazil' },
+    ]);
   });
 
   it('searches and reviews competition metadata', async () => {
@@ -200,9 +217,15 @@ describe('MatchRankingPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Fixture overrides' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add override' }));
     const dialog = screen.getByRole('dialog', { name: 'Add fixture override' });
-    fireEvent.change(within(dialog).getByLabelText('Fixture ID'), {
-      target: { value: '9001' },
+    fireEvent.change(within(dialog).getByLabelText('Fixture'), {
+      target: { value: 'Arsenal' },
     });
+    expect(await screen.findByText(/Arsenal — Chelsea/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Arsenal — Chelsea/));
+    fireEvent.change(within(dialog).getByLabelText('Country'), {
+      target: { value: 'Brazil' },
+    });
+    fireEvent.click(await screen.findByText('Brazil (BR)'));
     fireEvent.change(within(dialog).getByLabelText('Starts at'), {
       target: { value: '2026-09-09T10:00' },
     });
@@ -230,6 +253,7 @@ describe('MatchRankingPage', () => {
       expect(createMatchRankingOverride).toHaveBeenCalledWith(
         expect.objectContaining({
           fixtureId: 9001,
+          countryCode: 'BR',
           action: 'pin',
           startsAt: '2026-09-09T10:00:00.000Z',
           endsAt: '2026-09-10T10:00:00.000Z',
@@ -244,6 +268,9 @@ describe('MatchRankingPage', () => {
       {
         id: 'override-1',
         fixtureId: 9001,
+        homeTeamName: 'Arsenal',
+        awayTeamName: 'Chelsea',
+        leagueName: 'Premier League',
         countryCode: null,
         action: 'pin',
         value: null,
@@ -260,6 +287,16 @@ describe('MatchRankingPage', () => {
     render(<MatchRankingPage />);
     await screen.findByText('Copa Libertadores');
     fireEvent.click(screen.getByRole('tab', { name: 'Fixture overrides' }));
+    expect(screen.getByRole('columnheader', { name: 'Fixture' })).toBeInTheDocument();
+    expect(screen.getByText('Arsenal — Chelsea')).toBeInTheDocument();
+    expect(screen.getByText('#9001 · Premier League')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const editDialog = screen.getByRole('dialog', { name: 'Edit fixture override' });
+    expect(
+      (within(editDialog).getByRole('combobox', { name: 'Fixture' }) as HTMLInputElement)
+        .value
+    ).toContain('Arsenal — Chelsea');
+    fireEvent.click(within(editDialog).getByRole('button', { name: 'Cancel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = screen.getByRole('dialog', {
       name: 'Delete fixture 9001 override',
@@ -294,12 +331,33 @@ describe('MatchRankingPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Team prominence' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add prominence' }));
     const dialog = screen.getByRole('dialog', { name: 'Add team prominence' });
-    fireEvent.change(within(dialog).getByLabelText('Provider team ID'), {
-      target: { value: '42' },
+    fireEvent.change(within(dialog).getByLabelText('Team'), {
+      target: { value: 'Palm' },
     });
-    fireEvent.change(within(dialog).getByLabelText('Country code'), {
-      target: { value: 'br' },
+    fireEvent.click(await screen.findByRole('option', { name: /Palmeiras/ }));
+    fireEvent.change(within(dialog).getByLabelText('Team'), {
+      target: { value: 'Chelsea' },
     });
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), {
+      target: { value: 'National audience prominence' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save prominence' })
+    );
+    expect(
+      await within(dialog).findByText(
+        'A valid team ID and reason are required.'
+      )
+    ).toBeInTheDocument();
+    expect(upsertTeamProminence).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByLabelText('Team'), {
+      target: { value: 'Palm' },
+    });
+    fireEvent.click(await screen.findByRole('option', { name: /Palmeiras/ }));
+    fireEvent.change(within(dialog).getByLabelText('Country'), {
+      target: { value: 'Brazil' },
+    });
+    fireEvent.click(await screen.findByRole('option', { name: /Brazil.*BR/ }));
     fireEvent.mouseDown(within(dialog).getByLabelText('Prominence value'));
     expect(
       screen.getAllByRole('option').map((option) => option.textContent)
@@ -321,6 +379,34 @@ describe('MatchRankingPage', () => {
         reviewDueAt: null,
       })
     );
+  });
+
+  it('shows team prominence names in a catalog-style table', async () => {
+    (getTeamProminence as jest.Mock).mockResolvedValue([
+      {
+        id: 'prominence-1',
+        providerTeamId: 19,
+        teamName: 'Arsenal',
+        countryCode: null,
+        value: 20,
+        reason: 'Global editorial prominence',
+        reviewedBy: 'admin@example.com',
+        reviewedAt: '2026-09-09T09:00:00.000Z',
+        reviewDueAt: null,
+        createdAt: '2026-09-09T09:00:00.000Z',
+        updatedAt: '2026-09-09T09:00:00.000Z',
+      },
+    ]);
+
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Team prominence' }));
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Team' })
+    ).toBeInTheDocument();
+    expect(screen.getByText('Arsenal')).toBeInTheDocument();
+    expect(screen.getByText('#19')).toBeInTheDocument();
   });
 
   it('creates and activates versioned ranking configurations', async () => {
