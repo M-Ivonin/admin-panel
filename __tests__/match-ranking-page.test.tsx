@@ -561,6 +561,35 @@ describe('MatchRankingPage', () => {
     );
   });
 
+  it('shows fixture search loading, empty, and retryable error states', async () => {
+    (getMatchFixtures as jest.Mock)
+      .mockRejectedValueOnce(new Error('SportMonks unavailable'))
+      .mockResolvedValueOnce([]);
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Fixture overrides' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add override' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add fixture override' });
+    fireEvent.change(within(dialog).getByLabelText('Fixture'), {
+      target: { value: 'FC Barcelona' },
+    });
+    expect(
+      within(dialog).getByText('Searching the local catalog and SportMonks…')
+    ).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(
+        'Could not search matches: SportMonks unavailable'
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Retry search' })
+    );
+    expect(
+      await screen.findByText('No current or upcoming matches found.')
+    ).toBeInTheDocument();
+    expect(getMatchFixtures).toHaveBeenCalledTimes(2);
+  });
+
   it('requires an audited reason before deleting an override', async () => {
     (getMatchRankingOverrides as jest.Mock).mockResolvedValue([
       {

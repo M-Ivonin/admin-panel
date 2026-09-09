@@ -43,7 +43,11 @@ operator contracts below.
 - Fixture override timestamps are entered and sent as UTC instants, and the end
   must be later than the start.
 - Fixture overrides search the synchronized match catalog by home team, away
-  team, or league name; the selected result supplies the provider fixture ID.
+  team, away team, league name, or fixture ID. When the local catalog has no
+  match, the backend searches current and upcoming SportMonks fixtures and
+  stores matching results. The selected result supplies the provider fixture
+  ID. Search is delayed briefly while typing and distinguishes loading, empty,
+  and retryable provider-error states.
   Country scope uses the same searchable country and region multi-select as
   team prominence and saves all expanded countries atomically.
 - Compact English help controls in both dialogs explain scope behavior, review

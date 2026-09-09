@@ -2001,6 +2001,8 @@ function OverrideDialog({
   const [fixtures, setFixtures] = useState<MatchFixtureOption[]>([]);
   const [fixtureQuery, setFixtureQuery] = useState('');
   const [fixturesLoading, setFixturesLoading] = useState(false);
+  const [fixturesError, setFixturesError] = useState<string | null>(null);
+  const [fixtureRetry, setFixtureRetry] = useState(0);
   const [action, setAction] = useState<MatchRankingOverrideAction>(
     item?.action ?? 'pin'
   );
@@ -2019,20 +2021,24 @@ function OverrideDialog({
     }
     let active = true;
     setFixturesLoading(true);
-    getMatchFixtures(normalizedQuery)
-      .then((options) => {
-        if (active) setFixtures(options);
-      })
-      .catch((caught) => {
-        if (active) setError(messageOf(caught));
-      })
-      .finally(() => {
-        if (active) setFixturesLoading(false);
-      });
+    setFixturesError(null);
+    const timer = setTimeout(() => {
+      getMatchFixtures(normalizedQuery)
+        .then((options) => {
+          if (active) setFixtures(options);
+        })
+        .catch((caught) => {
+          if (active) setFixturesError(messageOf(caught));
+        })
+        .finally(() => {
+          if (active) setFixturesLoading(false);
+        });
+    }, 350);
     return () => {
       active = false;
+      clearTimeout(timer);
     };
-  }, [fixtureQuery]);
+  }, [fixtureQuery, fixtureRetry]);
   const selectedFixture = useMemo(
     () =>
       fixtures.find((fixture) => fixture.id.toString() === fixtureId) ??
@@ -2098,6 +2104,12 @@ function OverrideDialog({
             options={fixtures}
             value={selectedFixture}
             loading={fixturesLoading}
+            loadingText="Searching current matches…"
+            noOptionsText={
+              fixturesError
+                ? 'Match search failed.'
+                : 'No current or upcoming matches found.'
+            }
             disabled={Boolean(item)}
             autoHighlight
             filterOptions={(options) => options}
@@ -2110,6 +2122,7 @@ function OverrideDialog({
                 setFixtureId('');
                 setFixtures([]);
                 setError(null);
+                setFixturesError(null);
                 setFixtureQuery(value);
               }
             }}
@@ -2123,14 +2136,29 @@ function OverrideDialog({
                 label="Fixture"
                 helperText={
                   fixturesLoading
-                    ? 'Searching matches…'
+                    ? 'Searching the local catalog and SportMonks…'
                     : fixtureQuery.trim().length < 2
                       ? 'Type a team or league name to find a match.'
-                      : undefined
+                      : 'Search includes current and upcoming SportMonks matches.'
                 }
               />
             )}
           />
+          {fixturesError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  onClick={() => setFixtureRetry((value) => value + 1)}
+                >
+                  Retry search
+                </Button>
+              }
+            >
+              Could not search matches: {fixturesError}
+            </Alert>
+          ) : null}
           <Autocomplete
             multiple
             disableCloseOnSelect
