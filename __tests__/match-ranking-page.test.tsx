@@ -219,6 +219,69 @@ describe('MatchRankingPage', () => {
     );
   });
 
+  it('shows terminal enrichment states without inventing provider ID zero', async () => {
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+      {
+        ...competition,
+        id: 'league-unmapped',
+        name: 'Friendlies',
+        providerLeagueId: null,
+        reviewState: 'missing_provider_mapping',
+        needsAttention: false,
+      },
+      {
+        ...competition,
+        id: 'league-unavailable',
+        name: 'World Cup',
+        providerLeagueId: 732,
+        reviewState: 'out_of_entitlement',
+        needsAttention: false,
+      },
+    ]);
+
+    render(<MatchRankingPage />);
+
+    const friendlies = await screen.findByRole('row', {
+      name: 'Friendlies competition',
+    });
+    expect(
+      within(friendlies).getByText(/Provider ID unavailable/)
+    ).toBeVisible();
+    expect(within(friendlies).queryByText(/#0/)).not.toBeInTheDocument();
+    expect(
+      within(friendlies).getByText('Provider mapping required')
+    ).toBeVisible();
+    expect(
+      within(friendlies).getByText(/Automatic enrichment cannot run/)
+    ).toBeVisible();
+
+    const worldCup = screen.getByRole('row', { name: 'World Cup competition' });
+    expect(
+      within(worldCup).getByText('Not in current provider access')
+    ).toBeVisible();
+    expect(
+      within(worldCup).getByText(/complete Sportmonks catalog scan/)
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(friendlies).getByRole('button', { name: 'Edit Friendlies' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Corrected classification while mapping is pending' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenCalledWith(
+        'league-unmapped',
+        expect.not.objectContaining({ reviewState: expect.anything() })
+      )
+    );
+  });
+
   it('explains provider data and the values that approval will save', async () => {
     render(<MatchRankingPage />);
 

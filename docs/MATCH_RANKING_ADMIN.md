@@ -23,6 +23,16 @@ operator contracts below.
 
 ## Operator contracts
 
+- Competition catalog states describe the real provider lifecycle:
+  `Waiting for enrichment` is reserved for a newly observed SportMonks league;
+  `Ready for review` means provider metadata was fetched;
+  `Provider mapping required` means the legacy row has no SportMonks league ID;
+  and `Not in current provider access` means a successful complete catalog scan
+  did not return the stored ID. Terminal operational states remain visible in
+  Needs attention but are not presented as work that another enrichment retry
+  can complete.
+- An absent SportMonks league ID is displayed as unavailable. It is never
+  converted to provider ID `0`.
 - Team prominence is restricted to the backend-accepted values `0`, `10`, and
   `20`. The form presents only those choices.
 - Team prominence selection searches the complete SportMonks team catalog by

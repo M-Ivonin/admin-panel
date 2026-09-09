@@ -14,7 +14,7 @@ export type CompetitionClassification =
 
 export interface MatchRankingCompetition {
   id: string;
-  providerLeagueId: number;
+  providerLeagueId: number | null;
   name: string;
   providerCategory: number | null;
   effectiveCategory: number | null;
@@ -39,7 +39,7 @@ export interface MatchRankingCompetitionUpdate {
   confederation: string | null;
   scope: CompetitionScope;
   classification: CompetitionClassification;
-  reviewState: string;
+  reviewState?: string;
   reason: string;
 }
 

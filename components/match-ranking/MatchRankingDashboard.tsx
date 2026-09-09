@@ -587,9 +587,17 @@ function CatalogPanel({
               sx={{ minWidth: 220 }}
             >
               <MenuItem value="">All review states</MenuItem>
-              <MenuItem value="pending_enrichment">pending_enrichment</MenuItem>
-              <MenuItem value="pending_review">pending_review</MenuItem>
-              <MenuItem value="reviewed">reviewed</MenuItem>
+              <MenuItem value="pending_enrichment">
+                Waiting for enrichment
+              </MenuItem>
+              <MenuItem value="pending_review">Ready for review</MenuItem>
+              <MenuItem value="missing_provider_mapping">
+                Provider mapping required
+              </MenuItem>
+              <MenuItem value="out_of_entitlement">
+                Not in current provider access
+              </MenuItem>
+              <MenuItem value="reviewed">Reviewed</MenuItem>
             </TextField>
             <Button
               variant="outlined"
@@ -722,7 +730,10 @@ function CompetitionTable({
                       {item.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      #{item.providerLeagueId} · {item.metadataSource}
+                      {item.providerLeagueId == null
+                        ? 'Provider ID unavailable'
+                        : `#${item.providerLeagueId}`}{' '}
+                      · {item.metadataSource}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -763,7 +774,7 @@ function CompetitionTable({
                             : 'warning'
                         }
                       />
-                      {item.needsAttention ? (
+                      {item.needsAttention || isTerminalReviewState(item.reviewState) ? (
                         <Typography variant="caption" color="error.main">
                           {attentionReason(item)}
                         </Typography>
@@ -902,13 +913,17 @@ function CompetitionDialog({
     setSaving(true);
     setError(null);
     try {
+      const persistedReviewState = isTerminalReviewState(item.reviewState)
+        && reviewState === item.reviewState
+        ? undefined
+        : reviewState.trim();
       await updateMatchRankingCompetition(item.id, {
         effectiveCategory: category === '' ? null : Number(category),
         countryCode: normalizedCountry(countryCode),
         confederation: confederation.trim() || null,
         scope,
         classification,
-        reviewState: reviewState.trim(),
+        ...(persistedReviewState ? { reviewState: persistedReviewState } : {}),
         reason: reason.trim(),
       });
       await onSaved();
@@ -1022,6 +1037,16 @@ function CompetitionDialog({
           >
             <MenuItem value="pending_enrichment">pending_enrichment</MenuItem>
             <MenuItem value="pending_review">pending_review</MenuItem>
+            {reviewState === 'missing_provider_mapping' ? (
+              <MenuItem value="missing_provider_mapping" disabled>
+                Provider mapping required
+              </MenuItem>
+            ) : null}
+            {reviewState === 'out_of_entitlement' ? (
+              <MenuItem value="out_of_entitlement" disabled>
+                Not in current provider access
+              </MenuItem>
+            ) : null}
             <MenuItem value="reviewed">reviewed</MenuItem>
           </TextField>
           <TextField
@@ -2275,10 +2300,19 @@ function normalizedCountry(value: string): string | null {
 function reviewStateLabel(value: string): string {
   if (value === 'pending_enrichment') return 'Waiting for enrichment';
   if (value === 'pending_review') return 'Ready for review';
+  if (value === 'missing_provider_mapping') return 'Provider mapping required';
+  if (value === 'out_of_entitlement') return 'Not in current provider access';
   if (value === 'reviewed') return 'Reviewed';
   return value;
 }
+function isTerminalReviewState(value: string): boolean {
+  return value === 'missing_provider_mapping' || value === 'out_of_entitlement';
+}
 function attentionReason(item: MatchRankingCompetition): string {
+  if (item.reviewState === 'missing_provider_mapping')
+    return 'No Sportmonks league ID is mapped. Automatic enrichment cannot run.';
+  if (item.reviewState === 'out_of_entitlement')
+    return 'A complete Sportmonks catalog scan did not return this league.';
   const missing: string[] = [];
   if (!item.metadataLastSuccessAt) missing.push('successful enrichment');
   if (item.providerCategory == null) missing.push('provider category');
