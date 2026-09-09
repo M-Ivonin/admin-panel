@@ -89,7 +89,7 @@ export async function getSportmonksTeams(
 
 export async function upsertTeamProminence(
   input: TeamProminenceInput
-): Promise<TeamProminence> {
+): Promise<TeamProminence | TeamProminence[]> {
   return readJson(
     await adminAuthFetch({
       path: `${BASE_PATH}/team-prominence`,
@@ -121,7 +121,7 @@ export async function getMatchFixtures(
 
 export async function createMatchRankingOverride(
   input: MatchRankingOverrideInput
-): Promise<MatchRankingOverride> {
+): Promise<MatchRankingOverride | MatchRankingOverride[]> {
   return readJson(
     await adminAuthFetch({
       path: `${BASE_PATH}/overrides`,
@@ -134,7 +134,7 @@ export async function createMatchRankingOverride(
 export async function updateMatchRankingOverride(
   id: string,
   input: MatchRankingOverrideInput
-): Promise<MatchRankingOverride> {
+): Promise<MatchRankingOverride | MatchRankingOverride[]> {
   return readJson(
     await adminAuthFetch({
       path: `${BASE_PATH}/overrides/${encodeURIComponent(id)}`,

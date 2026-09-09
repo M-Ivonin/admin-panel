@@ -58,8 +58,10 @@ export interface TeamProminence {
 }
 
 export interface TeamProminenceInput {
+  id?: string;
   providerTeamId: number;
-  countryCode: string | null;
+  countryCode?: string | null;
+  countryCodes?: string[];
   value: number;
   reason: string;
   reviewDueAt: string | null;
@@ -102,7 +104,8 @@ export interface MatchRankingOverride {
 
 export interface MatchRankingOverrideInput {
   fixtureId: number;
-  countryCode: string | null;
+  countryCode?: string | null;
+  countryCodes?: string[];
   action: MatchRankingOverrideAction;
   value: number | null;
   priority: number | null;

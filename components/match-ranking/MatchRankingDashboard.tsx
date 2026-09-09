@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
   MenuItem,
   Stack,
   Tab,
@@ -33,10 +34,10 @@ import {
   TableRow,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import { allCountries, CountryData } from 'country-region-data';
-import { Add, Edit, SportsSoccer } from '@mui/icons-material';
+import { Add, Edit, HelpOutline, SportsSoccer } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   activateMatchRankingConfiguration,
@@ -70,6 +71,12 @@ import type {
   TeamProminence,
   SportmonksTeamOption,
 } from '@/modules/match-ranking/types';
+import {
+  CountryScopeOption,
+  countryScopeOptions,
+  countryScopeSelection,
+  expandCountryScopes,
+} from '@/modules/match-ranking/country-scopes';
 
 const tabs = [
   'Competition catalog',
@@ -79,6 +86,98 @@ const tabs = [
   'Preview',
   'Audit',
 ] as const;
+
+type HelpTopic = 'general' | (typeof tabs)[number];
+
+const tabHelp: Record<
+  (typeof tabs)[number],
+  { intro: string; sections: { title: string; body: string }[] }
+> = {
+  'Competition catalog': {
+    intro:
+      'This is the list of competitions known to the ranking system. Review records here when the provider data is incomplete, ambiguous, or needs an admin decision.',
+    sections: [
+      {
+        title: 'Review queues',
+        body: 'Ready for review means the record has enough information to check. Review is not required for every ranking run, but it confirms that the values are suitable. Needs attention cannot be approved in bulk: open the competition, check the warning, and complete or correct the missing information first.',
+      },
+      {
+        title: 'What to fill in',
+        body: 'Effective category controls the competition importance used by ranking. Country, confederation, and scope describe where the competition belongs. Classification identifies senior, women, youth, reserve, or friendly competitions. Set the review state to reviewed only after checking these values, and always write a short reason for the decision.',
+      },
+    ],
+  },
+  'Team prominence': {
+    intro:
+      'Use team prominence when certain teams should carry more or less weight for a particular audience than their competition alone suggests.',
+    sections: [
+      {
+        title: 'How to use it',
+        body: 'Find the team by name, choose Global or the countries and regions where the rule applies, then select the prominence value. Use 0 for no extra prominence, 10 for notable teams, and 20 for the strongest prominence.',
+      },
+      {
+        title: 'Review and reason',
+        body: 'The reason explains the editorial decision. Review due is an optional reminder to revisit it later; reaching that date does not switch the rule off.',
+      },
+    ],
+  },
+  'Fixture overrides': {
+    intro:
+      'Fixture overrides are temporary exceptions for a specific match. Use them only when the normal ranking needs a deliberate short-term correction.',
+    sections: [
+      {
+        title: 'Choose the action',
+        body: 'Pin pushes a match ahead of ordinary matches. Exclude top removes it from Top Matches. Adjust adds or removes ranking points without making an otherwise ineligible match eligible.',
+      },
+      {
+        title: 'Scope and timing',
+        body: 'Choose Global or the user countries and regions affected. Set the UTC start and end of the exception, add a priority for Pin when needed, and record a clear reason. Remove or let the override expire when the editorial need ends.',
+      },
+    ],
+  },
+  Configurations: {
+    intro:
+      'Configurations are versioned sets of ranking rules and rollout settings. Creating a version does not change the live ranking.',
+    sections: [
+      {
+        title: 'Before activation',
+        body: 'Give the version and experiment clear names, define the countries and audience percentage, and enter the approved rules. Use Preview to check representative countries and dates before activation.',
+      },
+      {
+        title: 'Activation',
+        body: 'Activate only a reviewed and approved version. Activation replaces the current version for future ranking results, so include a reason that identifies the decision or approval.',
+      },
+    ],
+  },
+  Preview: {
+    intro:
+      'Preview is a safe, read-only view of how matches would be ordered for a chosen date, timezone, and country.',
+    sections: [
+      {
+        title: 'How to check a result',
+        body: 'Choose the local date, the matching IANA timezone, and an optional two-letter country code. Compare Top Matches and league groups, then inspect the score parts and any exclusion explanation for unexpected results.',
+      },
+      {
+        title: 'What Preview does not do',
+        body: 'Running a preview does not publish, activate, or change anything. Use it after catalog, prominence, override, or configuration changes and before activating a new configuration.',
+      },
+    ],
+  },
+  Audit: {
+    intro:
+      'Audit is the read-only history of admin changes to match ranking.',
+    sections: [
+      {
+        title: 'How to use it',
+        body: 'Use the actor, time, reason, and before/after values to understand who changed a rule and why. Check it when investigating an unexpected ranking result or confirming an approved change.',
+      },
+      {
+        title: 'If something looks wrong',
+        body: 'Do not edit the history. Return to the tab that owns the value, make the necessary correction with a new reason, and use Preview to verify the result.',
+      },
+    ],
+  },
+};
 
 const scopes: CompetitionScope[] = [
   'domestic',
@@ -98,6 +197,7 @@ const prominenceValues = [0, 10, 20] as const;
 
 export function MatchRankingDashboard() {
   const [tab, setTab] = useState(0);
+  const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   const [competitions, setCompetitions] = useState<MatchRankingCompetition[]>(
     []
   );
@@ -190,6 +290,16 @@ export function MatchRankingDashboard() {
         title="Match ranking"
         subtitle="Review ranking inputs, activate versioned rules, and inspect deterministic Top Matches previews."
         icon={<SportsSoccer color="primary" />}
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<HelpOutline />}
+            onClick={() => setHelpTopic('general')}
+            aria-label="About match ranking"
+          >
+            Help
+          </Button>
+        }
       />
       <Box sx={{ maxWidth: 1280, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}>
         <Stack spacing={3}>
@@ -199,18 +309,31 @@ export function MatchRankingDashboard() {
               {success}
             </Alert>
           ) : null}
-          <Tabs
-            value={tab}
-            onChange={(_, value: number) => setTab(value)}
-            aria-label="Match ranking administration"
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-          >
-            {tabs.map((label) => (
-              <Tab key={label} label={label} />
-            ))}
-          </Tabs>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Tabs
+              value={tab}
+              onChange={(_, value: number) => setTab(value)}
+              aria-label="Match ranking administration"
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{ minWidth: 0, flex: 1 }}
+            >
+              {tabs.map((label) => (
+                <Tab key={label} label={label} />
+              ))}
+            </Tabs>
+            <Tooltip title={`Help for ${tabs[tab]}`} arrow>
+              <IconButton
+                color="primary"
+                onClick={() => setHelpTopic(tabs[tab])}
+                aria-label={`Help for ${tabs[tab]}`}
+                sx={{ flexShrink: 0 }}
+              >
+                <HelpOutline />
+              </IconButton>
+            </Tooltip>
+          </Stack>
 
           {loading ? (
             <Stack role="status" alignItems="center" py={8} spacing={2}>
@@ -346,7 +469,70 @@ export function MatchRankingDashboard() {
           }}
         />
       ) : null}
+      {helpTopic ? (
+        <MatchRankingHelpDialog
+          topic={helpTopic}
+          onClose={() => setHelpTopic(null)}
+        />
+      ) : null}
     </Box>
+  );
+}
+
+function MatchRankingHelpDialog({
+  topic,
+  onClose,
+}: {
+  topic: HelpTopic;
+  onClose: () => void;
+}) {
+  const isGeneral = topic === 'general';
+  const guide = isGeneral ? null : tabHelp[topic];
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>
+        {isGeneral ? 'How match ranking works' : `${topic} guide`}
+      </DialogTitle>
+      <DialogContent dividers>
+        {isGeneral ? (
+          <Stack spacing={2}>
+            <Typography>
+              Match ranking decides which fixtures appear first for each user.
+              It combines competition importance, team prominence, match timing
+              and eligibility, plus any temporary admin overrides.
+            </Typography>
+            <Typography>
+              The result can differ by country and active configuration. This
+              page lets admins maintain the inputs, test the outcome in Preview,
+              and trace every change in Audit.
+            </Typography>
+            <Alert severity="info">
+              Normal work should flow from reviewing inputs, to Preview, and
+              only then to activating a configuration when a rules change is
+              intended.
+            </Alert>
+          </Stack>
+        ) : (
+          <Stack spacing={2.5}>
+            <Typography>{guide.intro}</Typography>
+            {guide.sections.map((section) => (
+              <Box key={section.title}>
+                <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                  {section.title}
+                </Typography>
+                <Typography color="text.secondary">{section.body}</Typography>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} variant="contained">
+          Close help
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
@@ -911,7 +1097,9 @@ function ProminenceDialog({
   onSaved: () => Promise<void>;
 }) {
   const [teamId, setTeamId] = useState(item?.providerTeamId.toString() ?? '');
-  const [country, setCountry] = useState(item?.countryCode ?? '');
+  const [countryScopes, setCountryScopes] = useState<CountryScopeOption[]>(() =>
+    countryScopeSelection(item?.countryCode)
+  );
   const [teams, setTeams] = useState<SportmonksTeamOption[]>([]);
   const [teamQuery, setTeamQuery] = useState('');
   const [teamsLoading, setTeamsLoading] = useState(false);
@@ -954,10 +1142,6 @@ function ProminenceDialog({
         : null),
     [item, teamId, teams]
   );
-  const selectedCountry = useMemo(
-    () => allCountries.find((option) => option[1] === country) ?? null,
-    [country]
-  );
   async function save() {
     if (
       !Number.isSafeInteger(Number(teamId)) ||
@@ -966,9 +1150,11 @@ function ProminenceDialog({
     )
       return setError('A valid team ID and reason are required.');
     try {
+      const countryCodes = expandCountryScopes(countryScopes);
       await upsertTeamProminence({
+        ...(item ? { id: item.id } : {}),
         providerTeamId: Number(teamId),
-        countryCode: normalizedCountry(country),
+        ...(countryCodes.length > 0 ? { countryCodes } : { countryCode: null }),
         value: Number(value),
         reason: reason.trim(),
         reviewDueAt: due ? `${due}T00:00:00.000Z` : null,
@@ -987,7 +1173,23 @@ function ProminenceDialog({
       aria-labelledby="prominence-dialog-title"
     >
       <DialogTitle id="prominence-dialog-title">
-        {item ? 'Edit team prominence' : 'Add team prominence'}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          {item ? 'Edit team prominence' : 'Add team prominence'}
+          <Stack direction="row">
+            <HelpButton
+              label="Team prominence scope help"
+              title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global prominence. When Global and country-specific rules both apply, the higher prominence value wins. Prominence values are 0, 10, or 20."
+            />
+            <HelpButton
+              label="Team prominence review help"
+              title="Review due is an operational reminder only. It does not disable prominence or change ranking automatically."
+            />
+          </Stack>
+        </Stack>
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1030,21 +1232,24 @@ function ProminenceDialog({
             )}
           />
           <Autocomplete
-            options={allCountries}
-            value={selectedCountry}
+            multiple
+            disableCloseOnSelect
+            options={countryScopeOptions}
+            value={countryScopes}
             autoHighlight
-            getOptionLabel={formatCountryOption}
+            groupBy={(option) =>
+              option.kind === 'region' ? 'Regions' : 'Countries'
+            }
+            getOptionLabel={(option) => option.label}
             isOptionEqualToValue={(option, selected) =>
-              option[1] === selected[1]
+              option.id === selected.id
             }
-            onChange={(_event: SyntheticEvent, option: CountryData | null) =>
-              setCountry(option?.[1] ?? '')
-            }
+            onChange={(_event, options) => setCountryScopes(options)}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="Country"
-                helperText="Leave blank for global prominence."
+                label="Countries / regions"
+                helperText="Select multiple scopes or leave blank for Global prominence."
               />
             )}
           />
@@ -1090,13 +1295,19 @@ function formatTeamOption(team: SportmonksTeamOption): string {
   return `${team.name}${team.country ? ` · ${team.country}` : ''} (#${team.id})`;
 }
 
-function formatCountryOption(country: CountryData): string {
-  return `${country[0]} (${country[1]})`;
-}
-
 function formatFixtureOption(fixture: MatchFixtureOption): string {
   const date = new Date(fixture.date).toLocaleString();
   return `${fixture.homeTeamName} — ${fixture.awayTeamName} · ${fixture.leagueName} · ${date} (#${fixture.id})`;
+}
+
+function HelpButton({ label, title }: { label: string; title: string }) {
+  return (
+    <Tooltip title={title} arrow>
+      <IconButton size="small" aria-label={label}>
+        <HelpOutline fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
 }
 
 function OverridesPanel({
@@ -1149,17 +1360,27 @@ function OverridesPanel({
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip size="small" label={item.countryCode ?? 'Global'} variant="outlined" />
+                    <Chip
+                      size="small"
+                      label={item.countryCode ?? 'Global'}
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell>
                     <Chip
                       size="small"
                       label={item.action}
-                      color={new Date(item.endsAt) <= new Date() ? 'default' : 'primary'}
+                      color={
+                        new Date(item.endsAt) <= new Date()
+                          ? 'default'
+                          : 'primary'
+                      }
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">{formatDate(item.startsAt)}</Typography>
+                    <Typography variant="body2">
+                      {formatDate(item.startsAt)}
+                    </Typography>
                     <Typography variant="body2" color="text.secondary">
                       → {formatDate(item.endsAt)}
                     </Typography>
@@ -1249,7 +1470,9 @@ function OverrideDialog({
   onSaved: () => Promise<void>;
 }) {
   const [fixtureId, setFixtureId] = useState(item?.fixtureId.toString() ?? '');
-  const [country, setCountry] = useState(item?.countryCode ?? '');
+  const [countryScopes, setCountryScopes] = useState<CountryScopeOption[]>(() =>
+    countryScopeSelection(item?.countryCode)
+  );
   const [fixtures, setFixtures] = useState<MatchFixtureOption[]>([]);
   const [fixtureQuery, setFixtureQuery] = useState('');
   const [fixturesLoading, setFixturesLoading] = useState(false);
@@ -1299,10 +1522,6 @@ function OverrideDialog({
         : null),
     [fixtureId, fixtures, item]
   );
-  const selectedCountry = useMemo(
-    () => allCountries.find((option) => option[1] === country) ?? null,
-    [country]
-  );
   async function save() {
     if (
       !Number.isSafeInteger(Number(fixtureId)) ||
@@ -1316,7 +1535,6 @@ function OverrideDialog({
       return setError('End must be after start.');
     const input = {
       fixtureId: Number(fixtureId),
-      countryCode: normalizedCountry(country),
       action,
       value: value === '' ? null : Number(value),
       priority: priority === '' ? null : Number(priority),
@@ -1325,8 +1543,13 @@ function OverrideDialog({
       reason: reason.trim(),
     };
     try {
-      if (item) await updateMatchRankingOverride(item.id, input);
-      else await createMatchRankingOverride(input);
+      const countryCodes = expandCountryScopes(countryScopes);
+      const scopedInput = {
+        ...input,
+        ...(countryCodes.length > 0 ? { countryCodes } : { countryCode: null }),
+      };
+      if (item) await updateMatchRankingOverride(item.id, scopedInput);
+      else await createMatchRankingOverride(scopedInput);
       await onSaved();
     } catch (caught) {
       setError(messageOf(caught));
@@ -1341,7 +1564,27 @@ function OverrideDialog({
       aria-labelledby="override-dialog-title"
     >
       <DialogTitle id="override-dialog-title">
-        {item ? 'Edit fixture override' : 'Add fixture override'}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          {item ? 'Edit fixture override' : 'Add fixture override'}
+          <Stack direction="row">
+            <HelpButton
+              label="Fixture override scope help"
+              title="Select one or more countries or regions. Regions expand to their countries and overlapping selections are deduplicated. Leave empty for Global. Scope uses the user's ranking country, not match location; a country-specific override takes precedence over Global."
+            />
+            <HelpButton
+              label="Fixture override action help"
+              title="Pin ranks ahead of non-pinned fixtures; lower non-negative Pin priority numbers rank first (blank becomes 0). Pin may bypass importance or classification, but not an invalid match status. Competition caps apply first, then over-cap fixtures may fill remaining empty slots. Exclude top removes the fixture from Top Matches. Adjust changes an eligible fixture by -20 to +20 points; it does not make an ineligible fixture eligible."
+            />
+            <HelpButton
+              label="Fixture override time help"
+              title="Active from Starts at (inclusive) until Ends at (exclusive), in UTC. Windows for the same fixture and country cannot overlap. Reason is required and recorded in the audit log."
+            />
+          </Stack>
+        </Stack>
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1354,7 +1597,9 @@ function OverrideDialog({
             autoHighlight
             filterOptions={(options) => options}
             getOptionLabel={formatFixtureOption}
-            isOptionEqualToValue={(option, selected) => option.id === selected.id}
+            isOptionEqualToValue={(option, selected) =>
+              option.id === selected.id
+            }
             onInputChange={(_event, value, reason) => {
               if (reason === 'input') {
                 setFixtureId('');
@@ -1363,9 +1608,10 @@ function OverrideDialog({
                 setFixtureQuery(value);
               }
             }}
-            onChange={(_event: SyntheticEvent, fixture: MatchFixtureOption | null) =>
-              setFixtureId(fixture?.id.toString() ?? '')
-            }
+            onChange={(
+              _event: SyntheticEvent,
+              fixture: MatchFixtureOption | null
+            ) => setFixtureId(fixture?.id.toString() ?? '')}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -1381,16 +1627,25 @@ function OverrideDialog({
             )}
           />
           <Autocomplete
-            options={allCountries}
-            value={selectedCountry}
+            multiple
+            disableCloseOnSelect
+            options={countryScopeOptions}
+            value={countryScopes}
             autoHighlight
-            getOptionLabel={formatCountryOption}
-            isOptionEqualToValue={(option, selected) => option[1] === selected[1]}
-            onChange={(_event, option: CountryData | null) =>
-              setCountry(option?.[1] ?? '')
+            groupBy={(option) =>
+              option.kind === 'region' ? 'Regions' : 'Countries'
             }
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(option, selected) =>
+              option.id === selected.id
+            }
+            onChange={(_event, options) => setCountryScopes(options)}
             renderInput={(params) => (
-              <TextField {...params} label="Country" helperText="Leave blank for global scope." />
+              <TextField
+                {...params}
+                label="Countries / regions"
+                helperText="Select multiple scopes or leave blank for Global."
+              />
             )}
           />
           <TextField

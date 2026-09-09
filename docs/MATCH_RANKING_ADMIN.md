@@ -20,8 +20,11 @@ The tabs expose these operations:
 - Team prominence is restricted to the backend-accepted values `0`, `10`, and
   `20`. The form presents only those choices.
 - Team prominence selection searches the complete SportMonks team catalog by
-  team name instead of requiring provider IDs. Country scope uses the searchable
-  ISO country list; an empty country remains global.
+  team name instead of requiring provider IDs. Scope is a searchable
+  multi-select of ISO countries and the Europe, North America, and South
+  America regions; regions expand to their member country codes and duplicate
+  countries are saved only once in one transactional backend request. An empty
+  selection remains global.
 - Existing prominence records use the same table-style presentation as the
   competition catalog, with the SportMonks team name as the primary label and
   the provider ID retained as secondary reference data.
@@ -30,7 +33,10 @@ The tabs expose these operations:
   must be later than the start.
 - Fixture overrides search the synchronized match catalog by home team, away
   team, or league name; the selected result supplies the provider fixture ID.
-  Country scope uses the same searchable ISO country list as team prominence.
+  Country scope uses the same searchable country and region multi-select as
+  team prominence and saves all expanded countries atomically.
+- Compact English help controls in both dialogs explain scope behavior, review
+  reminders, fixture actions, pin priority, and UTC activation windows.
 - Existing fixture overrides use the same table-style presentation, with the
   home-versus-away match title as the primary label and fixture ID as secondary
   reference data.
