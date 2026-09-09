@@ -11,8 +11,6 @@ import {
   getMatchRankingOverrides,
   getMatchFixtures,
   getSportmonksTeams,
-  getSportmonksLeagues,
-  mapMatchRankingCompetitionLeague,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -142,26 +140,6 @@ describe('match ranking API', () => {
       path: '/admin/match-ranking/overrides/override%2F1',
       method: 'DELETE',
       body: JSON.stringify({ reason: 'Expired editorial need' }),
-    });
-  });
-
-  it('searches and maps a Sportmonks league', async () => {
-    (adminAuthFetch as jest.Mock).mockResolvedValue(ok([]));
-    await getSportmonksLeagues(' Gold Cup ');
-    expect(adminAuthFetch).toHaveBeenLastCalledWith({
-      path: '/admin/match-ranking/leagues?query=Gold+Cup',
-      method: 'GET',
-    });
-
-    const input = {
-      providerLeagueId: 1112,
-      reason: 'Matched by name and country',
-    };
-    await mapMatchRankingCompetitionLeague('league/1', input);
-    expect(adminAuthFetch).toHaveBeenLastCalledWith({
-      path: '/admin/match-ranking/competitions/league%2F1/provider-mapping',
-      method: 'PUT',
-      body: JSON.stringify(input),
     });
   });
 

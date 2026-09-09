@@ -52,8 +52,6 @@ import {
   getMatchFixtures,
   getTeamProminence,
   getSportmonksTeams,
-  getSportmonksLeagues,
-  mapMatchRankingCompetitionLeague,
   previewMatchRanking,
   updateMatchRankingCompetition,
   updateMatchRankingOverride,
@@ -72,7 +70,6 @@ import type {
   MatchRankingPreview,
   TeamProminence,
   SportmonksTeamOption,
-  SportmonksLeagueOption,
 } from '@/modules/match-ranking/types';
 import {
   CountryScopeOption,
@@ -656,16 +653,7 @@ function CatalogPanel({
               sx={{ minWidth: 220 }}
             >
               <MenuItem value="">All review states</MenuItem>
-              <MenuItem value="pending_enrichment">
-                Waiting for enrichment
-              </MenuItem>
               <MenuItem value="pending_review">Ready for review</MenuItem>
-              <MenuItem value="missing_provider_mapping">
-                Provider mapping required
-              </MenuItem>
-              <MenuItem value="out_of_entitlement">
-                Not in current provider access
-              </MenuItem>
               <MenuItem value="reviewed">Reviewed</MenuItem>
             </TextField>
             <Button
@@ -845,7 +833,7 @@ function CompetitionTable({
                             : 'warning'
                         }
                       />
-                      {shouldShowAttentionReason(item) ? (
+                      {item.needsAttention ? (
                         <Typography variant="caption" color="error.main">
                           {attentionReason(item)}
                         </Typography>
@@ -982,71 +970,16 @@ function CompetitionDialog({
   const [classification, setClassification] =
     useState<CompetitionClassification>(item.classification);
   const [reviewState, setReviewState] = useState(item.reviewState);
-  const [leagueQuery, setLeagueQuery] = useState('');
-  const [leagueOptions, setLeagueOptions] = useState<SportmonksLeagueOption[]>(
-    []
-  );
-  const [selectedLeague, setSelectedLeague] =
-    useState<SportmonksLeagueOption | null>(null);
-  const [leaguesLoading, setLeaguesLoading] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (item.reviewState !== 'missing_provider_mapping') return;
-    const query = leagueQuery.trim();
-    if (query.length < 2) {
-      setLeagueOptions([]);
-      setLeaguesLoading(false);
-      return;
-    }
-    let active = true;
-    setLeaguesLoading(true);
-    getSportmonksLeagues(query)
-      .then((options) => {
-        if (active) setLeagueOptions(options);
-      })
-      .catch((caught) => {
-        if (active) setError(messageOf(caught));
-      })
-      .finally(() => {
-        if (active) setLeaguesLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [item.reviewState, leagueQuery]);
-
-  async function mapAndEnrich() {
-    if (!selectedLeague || !reason.trim()) {
-      return setError('Select a SportMonks league and enter a reason.');
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await mapMatchRankingCompetitionLeague(item.id, {
-        providerLeagueId: selectedLeague.id,
-        reason: reason.trim(),
-      });
-      await onSaved();
-    } catch (caught) {
-      setError(messageOf(caught));
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function save() {
     if (!reason.trim()) return setError('Reason is required.');
     setSaving(true);
     setError(null);
     try {
-      const persistedReviewState =
-        isTerminalReviewState(item.reviewState) &&
-        reviewState === item.reviewState
-          ? undefined
-          : reviewState.trim();
+      const persistedReviewState = reviewState.trim();
       await updateMatchRankingCompetition(item.id, {
         effectiveCategory: category === '' ? null : Number(category),
         countryCode: normalizedCountry(countryCode),
@@ -1079,168 +1012,110 @@ function CompetitionDialog({
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
           <Typography fontWeight={600}>{item.name}</Typography>
-          {item.reviewState === 'missing_provider_mapping' ? (
-            <>
-              <Alert severity="warning">
-                Select the matching SportMonks league to load provider metadata
-                immediately. The competition will then move to Ready for review.
-              </Alert>
-              <Autocomplete
-                options={leagueOptions}
-                value={selectedLeague}
-                loading={leaguesLoading}
-                filterOptions={(options) => options}
-                getOptionLabel={(option) =>
-                  `${option.name} · ${option.country ?? 'Global'} · #${option.id}`
-                }
-                isOptionEqualToValue={(option, selected) =>
-                  option.id === selected.id
-                }
-                onInputChange={(_event, value, changeReason) => {
-                  if (changeReason === 'input') {
-                    setLeagueQuery(value);
-                    setSelectedLeague(null);
-                    setLeagueOptions([]);
-                  }
-                }}
-                onChange={(_event, option) => setSelectedLeague(option)}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="SportMonks league mapping"
-                    helperText="Search by provider league name, then verify its country and ID."
-                  />
-                )}
-              />
-            </>
-          ) : null}
-          {item.reviewState === 'out_of_entitlement' ? (
-            <Alert severity="warning">
-              This provider ID is not returned by the current SportMonks access.
-              Check the provider subscription or ID. Manual ranking edits do not
-              restore provider access.
-            </Alert>
-          ) : null}
-          {item.reviewState !== 'missing_provider_mapping' ? (
-            <>
-              <TextField
-                label={
-                  <HelpLabel
-                    text="Effective category"
-                    label="Effective category help"
-                    title="Controls the competition importance used by match ranking. This admin value overrides the provider category; leave it blank to use the provider value."
-                  />
-                }
-                type="number"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
-              />
-              <Autocomplete
-                options={countryCodeOptions}
-                value={selectedCountry}
-                autoHighlight
-                getOptionLabel={(option) => option.label}
-                isOptionEqualToValue={(option, selected) =>
-                  option.id === selected.id
-                }
-                onChange={(_event, option) =>
-                  setCountryCode(option?.countryCodes[0] ?? '')
-                }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label={
-                      <HelpLabel
-                        text="Country code"
-                        label="Competition country help"
-                        title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
-                      />
-                    }
-                  />
-                )}
-              />
-              <TextField
-                label={
-                  <HelpLabel
-                    text="Confederation"
-                    label="Competition confederation help"
-                    title="Identifies the governing football confederation, such as UEFA, CONMEBOL, or AFC. Use it for continental competitions and leave it blank when it is not applicable."
-                  />
-                }
-                value={confederation}
-                onChange={(e) => setConfederation(e.target.value)}
-              />
-              <TextField
-                select
-                label={
-                  <HelpLabel
-                    text="Scope"
-                    label="Competition scope help"
-                    title="Describes the competition's geographic level: domestic, continental, or international. It helps ranking interpret country and confederation relevance correctly."
-                  />
-                }
-                value={scope}
-                onChange={(e) => setScope(e.target.value as CompetitionScope)}
-              >
-                {scopes.map((value) => (
-                  <MenuItem key={value} value={value}>
-                    {value}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label={
-                  <HelpLabel
-                    text="Classification"
-                    label="Competition classification help"
-                    title="Describes the competition type, such as senior, women, youth, reserve, or friendly. Classification affects whether fixtures are eligible for Top Matches."
-                  />
-                }
-                value={classification}
-                onChange={(e) =>
-                  setClassification(e.target.value as CompetitionClassification)
-                }
-              >
-                {classifications.map((value) => (
-                  <MenuItem key={value} value={value}>
-                    {value}
-                  </MenuItem>
-                ))}
-              </TextField>
-              {item.reviewState !== 'out_of_entitlement' ? (
+          <>
+            <TextField
+              label={
+                <HelpLabel
+                  text="Effective category"
+                  label="Effective category help"
+                  title="Controls the competition importance used by match ranking. This admin value overrides the provider category; leave it blank to use the provider value."
+                />
+              }
+              type="number"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
+            />
+            <Autocomplete
+              options={countryCodeOptions}
+              value={selectedCountry}
+              autoHighlight
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, selected) =>
+                option.id === selected.id
+              }
+              onChange={(_event, option) =>
+                setCountryCode(option?.countryCodes[0] ?? '')
+              }
+              renderInput={(params) => (
                 <TextField
-                  select
+                  {...params}
                   label={
                     <HelpLabel
-                      text="Review state"
-                      label="Competition review state help"
-                      title="Use Reviewed only after confirming the competition metadata. Pending states keep the record in the appropriate admin review queue; they do not by themselves disable ranking."
+                      text="Country code"
+                      label="Competition country help"
+                      title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
                     />
                   }
-                  value={reviewState}
-                  onChange={(e) => setReviewState(e.target.value)}
-                >
-                  <MenuItem value="pending_enrichment">
-                    pending_enrichment
-                  </MenuItem>
-                  <MenuItem value="pending_review">pending_review</MenuItem>
-                  {reviewState === 'missing_provider_mapping' ? (
-                    <MenuItem value="missing_provider_mapping" disabled>
-                      Provider mapping required
-                    </MenuItem>
-                  ) : null}
-                  {reviewState === 'out_of_entitlement' ? (
-                    <MenuItem value="out_of_entitlement" disabled>
-                      Not in current provider access
-                    </MenuItem>
-                  ) : null}
-                  <MenuItem value="reviewed">reviewed</MenuItem>
-                </TextField>
-              ) : null}
-            </>
-          ) : null}
+                />
+              )}
+            />
+            <TextField
+              label={
+                <HelpLabel
+                  text="Confederation"
+                  label="Competition confederation help"
+                  title="Identifies the governing football confederation, such as UEFA, CONMEBOL, or AFC. Use it for continental competitions and leave it blank when it is not applicable."
+                />
+              }
+              value={confederation}
+              onChange={(e) => setConfederation(e.target.value)}
+            />
+            <TextField
+              select
+              label={
+                <HelpLabel
+                  text="Scope"
+                  label="Competition scope help"
+                  title="Describes the competition's geographic level: domestic, continental, or international. It helps ranking interpret country and confederation relevance correctly."
+                />
+              }
+              value={scope}
+              onChange={(e) => setScope(e.target.value as CompetitionScope)}
+            >
+              {scopes.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {value}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label={
+                <HelpLabel
+                  text="Classification"
+                  label="Competition classification help"
+                  title="Describes the competition type, such as senior, women, youth, reserve, or friendly. Classification affects whether fixtures are eligible for Top Matches."
+                />
+              }
+              value={classification}
+              onChange={(e) =>
+                setClassification(e.target.value as CompetitionClassification)
+              }
+            >
+              {classifications.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {value}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label={
+                <HelpLabel
+                  text="Review state"
+                  label="Competition review state help"
+                  title="Use Reviewed only after confirming the competition metadata. Pending states keep the record in the appropriate admin review queue; they do not by themselves disable ranking."
+                />
+              }
+              value={reviewState}
+              onChange={(e) => setReviewState(e.target.value)}
+            >
+              <MenuItem value="pending_enrichment">pending_enrichment</MenuItem>
+              <MenuItem value="pending_review">pending_review</MenuItem>
+              <MenuItem value="reviewed">reviewed</MenuItem>
+            </TextField>
+          </>
           <TextField
             label={
               <HelpLabel
@@ -1261,20 +1136,10 @@ function CompetitionDialog({
         <Button onClick={onClose}>Cancel</Button>
         <Button
           variant="contained"
-          disabled={
-            saving ||
-            (item.reviewState === 'missing_provider_mapping' &&
-              (leaguesLoading || !selectedLeague || !reason.trim()))
-          }
-          onClick={() =>
-            void (item.reviewState === 'missing_provider_mapping'
-              ? mapAndEnrich()
-              : save())
-          }
+          disabled={saving}
+          onClick={() => void save()}
         >
-          {item.reviewState === 'missing_provider_mapping'
-            ? 'Map and enrich'
-            : 'Save review'}
+          Save review
         </Button>
       </DialogActions>
     </Dialog>
@@ -2502,23 +2367,10 @@ function normalizedCountry(value: string): string | null {
 function reviewStateLabel(value: string): string {
   if (value === 'pending_enrichment') return 'Waiting for enrichment';
   if (value === 'pending_review') return 'Ready for review';
-  if (value === 'missing_provider_mapping') return 'Provider mapping required';
-  if (value === 'out_of_entitlement') return 'Not in current provider access';
   if (value === 'reviewed') return 'Reviewed';
   return value;
 }
-function isTerminalReviewState(value: string): boolean {
-  return value === 'missing_provider_mapping' || value === 'out_of_entitlement';
-}
-function shouldShowAttentionReason(item: MatchRankingCompetition): boolean {
-  if (item.reviewState === 'pending_enrichment') return false;
-  return item.needsAttention || isTerminalReviewState(item.reviewState);
-}
 function attentionReason(item: MatchRankingCompetition): string {
-  if (item.reviewState === 'missing_provider_mapping')
-    return 'No Sportmonks league ID is mapped. Automatic enrichment cannot run.';
-  if (item.reviewState === 'out_of_entitlement')
-    return 'Current SportMonks access does not return this league. Check the subscription or provider ID.';
   const missing: string[] = [];
   if (!item.metadataLastSuccessAt) missing.push('successful enrichment');
   if (item.providerCategory == null) missing.push('provider category');

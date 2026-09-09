@@ -18,8 +18,6 @@ import {
   getMatchRankingOverrides,
   getMatchFixtures,
   getSportmonksTeams,
-  getSportmonksLeagues,
-  mapMatchRankingCompetitionLeague,
   getTeamProminence,
   previewMatchRanking,
   updateMatchRankingCompetition,
@@ -41,8 +39,6 @@ jest.mock('@/lib/api/match-ranking', () => ({
   getMatchRankingOverrides: jest.fn(),
   getMatchFixtures: jest.fn(),
   getSportmonksTeams: jest.fn(),
-  getSportmonksLeagues: jest.fn(),
-  mapMatchRankingCompetitionLeague: jest.fn(),
   getTeamProminence: jest.fn(),
   previewMatchRanking: jest.fn(),
   updateMatchRankingCompetition: jest.fn(),
@@ -89,9 +85,6 @@ describe('MatchRankingPage', () => {
     (getSportmonksTeams as jest.Mock).mockResolvedValue([
       { id: 7, name: 'Arsenal', country: 'England' },
       { id: 42, name: 'Palmeiras', country: 'Brazil' },
-    ]);
-    (getSportmonksLeagues as jest.Mock).mockResolvedValue([
-      { id: 1112, name: 'CONCACAF Gold Cup', country: 'World' },
     ]);
   });
 
@@ -230,150 +223,6 @@ describe('MatchRankingPage', () => {
       expect(bulkReviewMatchRankingCompetitions).toHaveBeenCalledWith(
         ['league-1'],
         'Provider metadata verified'
-      )
-    );
-  });
-
-  it('shows terminal enrichment states without inventing provider ID zero', async () => {
-    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
-      {
-        ...competition,
-        id: 'league-unmapped',
-        name: 'Friendlies',
-        providerLeagueId: null,
-        reviewState: 'missing_provider_mapping',
-        needsAttention: false,
-      },
-      {
-        ...competition,
-        id: 'league-unavailable',
-        name: 'World Cup',
-        providerLeagueId: 732,
-        reviewState: 'out_of_entitlement',
-        needsAttention: false,
-      },
-    ]);
-
-    render(<MatchRankingPage />);
-
-    const friendlies = await screen.findByRole('row', {
-      name: 'Friendlies competition',
-    });
-    expect(
-      within(friendlies).getByText(/Provider ID unavailable/)
-    ).toBeVisible();
-    expect(within(friendlies).queryByText(/#0/)).not.toBeInTheDocument();
-    expect(
-      within(friendlies).getByText('Provider mapping required')
-    ).toBeVisible();
-    expect(
-      within(friendlies).getByText(/Automatic enrichment cannot run/)
-    ).toBeVisible();
-    expect(within(friendlies).queryByText(/^Missing:/)).not.toBeInTheDocument();
-
-    const worldCup = screen.getByRole('row', { name: 'World Cup competition' });
-    expect(
-      within(worldCup).getByText('Not in current provider access')
-    ).toBeVisible();
-    expect(
-      within(worldCup).getByText(/Check the subscription or provider ID/)
-    ).toBeVisible();
-
-    fireEvent.click(
-      within(worldCup).getByRole('button', { name: 'Edit World Cup' })
-    );
-    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    expect(dialog).toHaveTextContent(
-      'Manual ranking edits do not restore provider access.'
-    );
-    expect(
-      within(dialog).queryByLabelText('Review state')
-    ).not.toBeInTheDocument();
-  });
-
-  it('maps an unmapped competition and does not explain automatic waiting', async () => {
-    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
-      {
-        ...competition,
-        id: 'league-waiting',
-        name: 'Copa MX',
-        reviewState: 'pending_enrichment',
-        needsAttention: true,
-      },
-      {
-        ...competition,
-        id: 'league-unmapped',
-        name: 'Gold Cup',
-        providerLeagueId: null,
-        reviewState: 'missing_provider_mapping',
-        needsAttention: true,
-      },
-    ]);
-    render(<MatchRankingPage />);
-
-    const waiting = await screen.findByRole('row', {
-      name: 'Copa MX competition',
-    });
-    expect(within(waiting).queryByText(/^Missing:/)).not.toBeInTheDocument();
-    expect(
-      within(waiting).queryByText(/Uses provider|Enriched values/)
-    ).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Gold Cup' }));
-    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    expect(dialog).toHaveTextContent(
-      'Select the matching SportMonks league to load provider metadata'
-    );
-    expect(
-      within(dialog).queryByLabelText('Effective category')
-    ).not.toBeInTheDocument();
-    fireEvent.change(
-      within(dialog).getByLabelText('SportMonks league mapping'),
-      { target: { value: 'Gold' } }
-    );
-    await waitFor(() =>
-      expect(getSportmonksLeagues).toHaveBeenCalledWith('Gold')
-    );
-    fireEvent.click(
-      await screen.findByRole('option', {
-        name: 'CONCACAF Gold Cup · World · #1112',
-      })
-    );
-    fireEvent.change(
-      within(dialog).getByLabelText('SportMonks league mapping'),
-      { target: { value: 'Different league' } }
-    );
-    expect(
-      within(dialog).getByRole('button', { name: 'Map and enrich' })
-    ).toBeDisabled();
-    expect(
-      screen.queryByRole('option', {
-        name: 'CONCACAF Gold Cup · World · #1112',
-      })
-    ).not.toBeInTheDocument();
-    fireEvent.change(
-      within(dialog).getByLabelText('SportMonks league mapping'),
-      { target: { value: 'Gold' } }
-    );
-    fireEvent.click(
-      await screen.findByRole('option', {
-        name: 'CONCACAF Gold Cup · World · #1112',
-      })
-    );
-    fireEvent.change(within(dialog).getByLabelText('Reason'), {
-      target: { value: 'Matched by name and country' },
-    });
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Map and enrich' })
-    );
-
-    await waitFor(() =>
-      expect(mapMatchRankingCompetitionLeague).toHaveBeenCalledWith(
-        'league-unmapped',
-        {
-          providerLeagueId: 1112,
-          reason: 'Matched by name and country',
-        }
       )
     );
   });
