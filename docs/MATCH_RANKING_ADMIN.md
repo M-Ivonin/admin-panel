@@ -33,6 +33,14 @@ operator contracts below.
   can complete.
 - An absent SportMonks league ID is displayed as unavailable. It is never
   converted to provider ID `0`.
+- `Waiting for enrichment` requires no admin action and therefore shows no
+  missing-field instruction. For `Provider mapping required`, Edit provides a
+  searchable SportMonks league picker; saving verifies the selected league,
+  loads its provider metadata immediately, records an audit event, and moves
+  the row to `Ready for review`.
+- `Not in current provider access` directs the operator to verify the
+  SportMonks subscription or stored provider ID. Manual ranking edits do not
+  restore provider access.
 - Team prominence is restricted to the backend-accepted values `0`, `10`, and
   `20`. The form presents only those choices.
 - Team prominence selection searches the complete SportMonks team catalog by

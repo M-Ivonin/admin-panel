@@ -73,6 +73,12 @@ export interface SportmonksTeamOption {
   country: string | null;
 }
 
+export interface SportmonksLeagueOption {
+  id: number;
+  name: string;
+  country: string | null;
+}
+
 export interface MatchFixtureOption {
   id: number;
   homeTeamName: string;

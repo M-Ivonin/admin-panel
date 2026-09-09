@@ -13,6 +13,7 @@ import type {
   TeamProminence,
   TeamProminenceInput,
   SportmonksTeamOption,
+  SportmonksLeagueOption,
   MatchFixtureOption,
 } from '@/modules/match-ranking/types';
 
@@ -83,6 +84,31 @@ export async function getSportmonksTeams(
     await adminAuthFetch({
       path: `${BASE_PATH}/teams?${params.toString()}`,
       method: 'GET',
+    })
+  );
+}
+
+export async function getSportmonksLeagues(
+  query: string
+): Promise<SportmonksLeagueOption[]> {
+  const params = new URLSearchParams({ query: query.trim() });
+  return readList(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/leagues?${params.toString()}`,
+      method: 'GET',
+    })
+  );
+}
+
+export async function mapMatchRankingCompetitionLeague(
+  id: string,
+  input: { providerLeagueId: number; reason: string }
+): Promise<MatchRankingCompetition> {
+  return readJson(
+    await adminAuthFetch({
+      path: `${BASE_PATH}/competitions/${encodeURIComponent(id)}/provider-mapping`,
+      method: 'PUT',
+      body: JSON.stringify(input),
     })
   );
 }
