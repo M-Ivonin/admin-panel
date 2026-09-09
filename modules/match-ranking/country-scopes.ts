@@ -135,6 +135,10 @@ export const countryScopeOptions: CountryScopeOption[] = [
   })),
 ];
 
+export const countryCodeOptions = countryScopeOptions.filter(
+  (option) => option.kind === 'country'
+);
+
 export function countryScopeSelection(
   countryCode?: string | null
 ): CountryScopeOption[] {

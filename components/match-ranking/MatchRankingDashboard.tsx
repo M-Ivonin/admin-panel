@@ -73,6 +73,7 @@ import type {
 } from '@/modules/match-ranking/types';
 import {
   CountryScopeOption,
+  countryCodeOptions,
   countryScopeOptions,
   countryScopeSelection,
   expandCountryScopes,
@@ -495,21 +496,86 @@ function MatchRankingHelpDialog({
       </DialogTitle>
       <DialogContent dividers>
         {isGeneral ? (
-          <Stack spacing={2}>
+          <Stack spacing={2.5}>
             <Typography>
-              Match ranking decides which fixtures appear first for each user.
-              It combines competition importance, team prominence, match timing
-              and eligibility, plus any temporary admin overrides.
+              Match ranking automatically decides which football matches deserve
+              the most attention for a particular user and selected day. It does
+              not predict who will win; it only controls how matches are ordered
+              and which of them are highlighted as Top Matches.
             </Typography>
-            <Typography>
-              The result can differ by country and active configuration. This
-              page lets admins maintain the inputs, test the outcome in Preview,
-              and trace every change in Audit.
-            </Typography>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                The two results admins are managing
+              </Typography>
+              <Typography color="text.secondary">
+                The screen first organizes all available matches into league
+                groups. Followed leagues and teams are kept easy to find. From
+                the same matches, the system selects a small Top Matches list
+                for the strongest highlights. A match can remain available in
+                its league group even when it is not selected for Top Matches.
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                How a match earns its position
+              </Typography>
+              <Typography color="text.secondary">
+                The system starts with the importance of the competition, then
+                considers how relevant it is to the user&apos;s country, whether
+                one or both teams are prominent, how important the stage is, and
+                whether the match is live or starting soon. These signals are
+                combined consistently, so the same inputs and active
+                configuration produce the same order.
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                Why results differ between users or dates
+              </Typography>
+              <Typography color="text.secondary">
+                Country relevance can move local competitions, national teams,
+                and locally relevant clubs higher. If the user&apos;s country is
+                unavailable, the global ranking is used. The selected date also
+                matters because live, upcoming, and completed matches are
+                treated differently. The currently active configuration defines
+                the final policy used for everyone in its rollout audience.
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                What can keep a match out of Top Matches
+              </Typography>
+              <Typography color="text.secondary">
+                A match is normally excluded when its status is not suitable for
+                the selected day, it is classified as friendly, youth, or
+                reserve, or its importance is below the Top Matches threshold.
+                The list also has a size limit and avoids being filled entirely
+                by one competition when other strong matches are available.
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                What admins control on this page
+              </Typography>
+              <Typography color="text.secondary">
+                Competition Catalog confirms what each competition is. Team
+                Prominence adds audience-specific importance to selected teams.
+                Fixture Overrides provide temporary Pin, Exclude, or Adjust
+                decisions for exceptional cases. Configurations hold versioned
+                ranking policy. Preview shows the expected result without making
+                changes, and Audit records who changed what and why.
+              </Typography>
+            </Box>
             <Alert severity="info">
-              Normal work should flow from reviewing inputs, to Preview, and
-              only then to activating a configuration when a rules change is
-              intended.
+              <Typography fontWeight={700} gutterBottom>
+                Recommended admin workflow
+              </Typography>
+              Review Needs attention records first, correct only information you
+              can confirm, and add a clear reason for every change. Review is a
+              quality confirmation, not a requirement for every ranking run.
+              After any meaningful change, check representative countries and
+              dates in Preview. Activate a new configuration only after its
+              preview has been reviewed and approved.
             </Alert>
           </Stack>
         ) : guide ? (
@@ -899,6 +965,13 @@ function CompetitionDialog({
     (item.effectiveCategory ?? item.providerCategory)?.toString() ?? ''
   );
   const [countryCode, setCountryCode] = useState(item.countryCode ?? '');
+  const selectedCountry = useMemo(
+    () =>
+      countryCodeOptions.find(
+        (option) => option.countryCodes[0] === countryCode
+      ) ?? null,
+    [countryCode]
+  );
   const [confederation, setConfederation] = useState(item.confederation ?? '');
   const [scope, setScope] = useState<CompetitionScope>(item.scope);
   const [classification, setClassification] =
@@ -962,17 +1035,29 @@ function CompetitionDialog({
             onChange={(e) => setCategory(e.target.value)}
             helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
           />
-          <TextField
-            label={
-              <HelpLabel
-                text="Country code"
-                label="Competition country help"
-                title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
-              />
+          <Autocomplete
+            options={countryCodeOptions}
+            value={selectedCountry}
+            autoHighlight
+            getOptionLabel={(option) => option.label}
+            isOptionEqualToValue={(option, selected) =>
+              option.id === selected.id
             }
-            value={countryCode}
-            inputProps={{ maxLength: 2 }}
-            onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+            onChange={(_event, option) =>
+              setCountryCode(option?.countryCodes[0] ?? '')
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={
+                  <HelpLabel
+                    text="Country code"
+                    label="Competition country help"
+                    title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
+                  />
+                }
+              />
+            )}
           />
           <TextField
             label={

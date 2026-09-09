@@ -97,9 +97,12 @@ describe('MatchRankingPage', () => {
     );
     expect(
       screen.getByRole('dialog', { name: 'How match ranking works' })
-    ).toHaveTextContent(
-      'Match ranking decides which fixtures appear first for each user'
-    );
+    ).toHaveTextContent('The two results admins are managing');
+    expect(screen.getByText('How a match earns its position')).toBeVisible();
+    expect(
+      screen.getByText('What can keep a match out of Top Matches')
+    ).toBeVisible();
+    expect(screen.getByText('Recommended admin workflow')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Close help' }));
 
     const manuals = [
@@ -151,6 +154,10 @@ describe('MatchRankingPage', () => {
     expect(
       within(dialog).getByText('Provider category: 1')
     ).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Country code'), {
+      target: { value: 'Brazil' },
+    });
+    fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
     fireEvent.change(within(dialog).getByLabelText('Effective category'), {
       target: { value: '1' },
     });
@@ -170,6 +177,7 @@ describe('MatchRankingPage', () => {
         'league-1',
         expect.objectContaining({
           effectiveCategory: 1,
+          countryCode: 'BR',
           classification: 'senior',
           reviewState: 'reviewed',
           reason: 'Verified against provider metadata',
