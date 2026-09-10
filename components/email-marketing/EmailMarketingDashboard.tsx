@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Card,
-  CardActionArea,
   CardContent,
   Checkbox,
   Chip,
@@ -23,6 +22,12 @@ import {
   Stack,
   Tab,
   Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
@@ -494,16 +499,37 @@ export function EmailMarketingDashboard({
               </CardContent>
             </Card>
           ) : (
-            <Stack spacing={2}>
-              {groupedItems.map(({ latest, versions }) => (
-                <PublicationCard
-                  key={latest.campaignId}
-                  item={latest}
-                  versionCount={versions.length}
-                  onOpen={() => void openPublication(latest)}
-                />
-              ))}
-            </Stack>
+            <TableContainer component={Card} variant="outlined">
+              <Table
+                size="small"
+                aria-label="Email publications"
+                sx={{ minWidth: 1100 }}
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Publication</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Status</TableCell>
+                    {publicationCounters.map(([label]) => (
+                      <TableCell key={label} align="right">
+                        {label}
+                      </TableCell>
+                    ))}
+                    <TableCell align="right">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {groupedItems.map(({ latest, versions }) => (
+                    <PublicationRow
+                      key={latest.campaignId}
+                      item={latest}
+                      versionCount={versions.length}
+                      onOpen={() => void openPublication(latest)}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
         </Stack>
       </Box>
@@ -717,7 +743,18 @@ export function EmailMarketingDashboard({
   );
 }
 
-function PublicationCard({
+const publicationCounters = [
+  ['Provider accepted', 'accepted'],
+  ['Delivered', 'delivered'],
+  ['Bounced', 'bounced'],
+  ['Dropped', 'dropped'],
+  ['Skipped', 'skipped'],
+  ['Failed', 'failed'],
+  ['Ambiguous', 'ambiguous'],
+  ['Pending', 'pending'],
+] as const;
+
+function PublicationRow({
   item,
   versionCount,
   onOpen,
@@ -727,87 +764,60 @@ function PublicationCard({
   onOpen: () => void;
 }) {
   return (
-    <Card>
-      <CardActionArea
-        onClick={onOpen}
-        aria-label={`Open publication ${item.definition?.name || 'Untitled publication'}`}
-      >
-        <CardContent>
-          <Stack spacing={2}>
-            <Stack
-              direction={{ xs: 'column', md: 'row' }}
-              justifyContent="space-between"
-              spacing={2}
-            >
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="h6">
-                    {item.definition?.name || 'Untitled publication'}
-                  </Typography>
-                  <Chip
-                    label={publicationStateLabel(item.state)}
-                    size="small"
-                  />
-                </Stack>
-                <Typography color="text.secondary">
-                  {topicLabel(item.topic)} · version {item.definitionVersion} ·{' '}
-                  {versionCount} {versionCount === 1 ? 'version' : 'versions'} ·
-                  cap{' '}
-                  {typeof item.definition?.frequencyCapHours === 'number'
-                    ? `${item.definition.frequencyCapHours}h`
-                    : 'N/A'}
-                </Typography>
-                {item.schedule ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Scheduled: {item.schedule.scheduledAtUtc} ·{' '}
-                    {item.schedule.timezone}
-                  </Typography>
-                ) : null}
-              </Box>
-            </Stack>
-            <CounterGrid counters={item.counters} />
-          </Stack>
-        </CardContent>
-      </CardActionArea>
-    </Card>
-  );
-}
-
-function CounterGrid({ counters }: { counters: EmailPublication['counters'] }) {
-  const values: Array<[string, number]> = [
-    ['Provider accepted', counters.accepted],
-    ['Delivered', counters.delivered],
-    ['Bounced', counters.bounced],
-    ['Dropped', counters.dropped],
-    ['Skipped', counters.skipped],
-    ['Failed', counters.failed],
-    ['Ambiguous', counters.ambiguous],
-    ['Pending', counters.pending],
-  ];
-  return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: {
-          xs: 'repeat(2, 1fr)',
-          sm: 'repeat(4, 1fr)',
-          lg: 'repeat(8, 1fr)',
-        },
-        gap: 1,
-      }}
+    <TableRow
+      hover
+      onClick={onOpen}
+      sx={{ cursor: 'pointer', '& > th, & > td': { py: 1.5 } }}
     >
-      {values.map(([label, value]) => (
-        <Box
-          key={label}
-          sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            {label}
+      <TableCell
+        component="th"
+        scope="row"
+        sx={{ minWidth: 220, maxWidth: 320, overflowWrap: 'anywhere' }}
+      >
+        <Typography variant="body2" fontWeight={600}>
+          {item.definition?.name || 'Untitled publication'}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          version {item.definitionVersion} · {versionCount}{' '}
+          {versionCount === 1 ? 'version' : 'versions'} · cap{' '}
+          {typeof item.definition?.frequencyCapHours === 'number'
+            ? `${item.definition.frequencyCapHours}h`
+            : 'N/A'}
+        </Typography>
+        {item.schedule ? (
+          <Typography variant="caption" color="text.secondary" display="block">
+            Scheduled: {item.schedule.scheduledAtUtc} · {item.schedule.timezone}
           </Typography>
-          <Typography variant="h6">{value}</Typography>
-        </Box>
+        ) : null}
+      </TableCell>
+      <TableCell sx={{ minWidth: 150, maxWidth: 200 }}>
+        {topicLabel(item.topic)}
+      </TableCell>
+      <TableCell>
+        <Chip label={publicationStateLabel(item.state)} size="small" />
+      </TableCell>
+      {publicationCounters.map(([, key]) => (
+        <TableCell
+          key={key}
+          align="right"
+          sx={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {item.counters[key]}
+        </TableCell>
       ))}
-    </Box>
+      <TableCell align="right">
+        <Button
+          size="small"
+          aria-label={`Open publication ${item.definition?.name || 'Untitled publication'}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          Details
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 }
 
