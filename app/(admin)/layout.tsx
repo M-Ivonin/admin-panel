@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AppDocumentShell } from '@/components/providers/AppDocumentShell';
 import { sirbroSiteIcons } from '@/modules/seo/site-icons';
 import '../globals.css';
+import './scrollbars.css';
 
 export const metadata: Metadata = {
   icons: sirbroSiteIcons,
