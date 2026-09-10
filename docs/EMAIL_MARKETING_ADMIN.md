@@ -131,3 +131,13 @@ backend and are included in the aggregate JSON export. Missing breakdowns or
 exact tracing display unavailable measurements rather than inferred zeroes.
 
 When legacy conversion history is incomplete, `affiliateConversionsByType` is `null` and the type breakdown is unavailable; unknown historical counts are never displayed as measured zeroes.
+
+### Minimum health sample
+
+The content/audience editor saves `requireMinimumHealthSample` per publication
+version. The switch defaults to on, including older publications without the
+field. On requires 1,000 emails in each applicable denominator before warnings
+or automatic pauses apply. Off applies the same percentage thresholds to any
+non-empty denominator; the 60-minute delivery maturity rule is unchanged.
+Editing uses the existing new-version workflow and does not alter a running
+predecessor. Saved content displays the selected mode.

@@ -19,6 +19,7 @@ import {
   MenuItem,
   Portal,
   Snackbar,
+  Switch,
   Stack,
   Tab,
   Tabs,
@@ -85,6 +86,7 @@ type EditorDraft = {
   sendGridTemplateId: string;
   sendGridTemplateVersion: string;
   frequencyCapHours: string;
+  requireMinimumHealthSample: boolean;
   audience: CampaignAudienceDefinition;
   contentByLocale: EmailContentByLocale;
   predictionKey: string;
@@ -1118,6 +1120,12 @@ function Editor(props: EditorProps) {
                 hours
               </Typography>
               <Typography>
+                Health thresholds:{' '}
+                {selected.definition.requireMinimumHealthSample !== false
+                  ? 'require at least 1,000 emails'
+                  : 'apply even to small sends'}
+              </Typography>
+              <Typography>
                 Audience:{' '}
                 {selected.definition.audience.criteria.retentionStages.join(
                   ', '
@@ -1455,6 +1463,26 @@ function Editor(props: EditorProps) {
                 inputProps={{ min: 1, max: 8760 }}
                 required
               />
+              <Box>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={draft.requireMinimumHealthSample}
+                      onChange={(event) =>
+                        set('requireMinimumHealthSample', event.target.checked)
+                      }
+                    />
+                  }
+                  label="Require at least 1,000 emails before health thresholds apply"
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {draft.requireMinimumHealthSample
+                    ? 'Warnings and automatic pauses wait for at least 1,000 emails in the relevant delivery group.'
+                    : 'Warnings and automatic pauses apply even to small sends. A single complaint can pause the publication.'}{' '}
+                  Percentage thresholds and the 60-minute delivery check stay
+                  unchanged. Saved per publication version.
+                </Typography>
+              </Box>
               <Button
                 variant="outlined"
                 onClick={props.onEstimate}
@@ -1988,6 +2016,7 @@ function emptyDraft(): EditorDraft {
     sendGridTemplateId: '',
     sendGridTemplateVersion: '',
     frequencyCapHours: '24',
+    requireMinimumHealthSample: true,
     audience: {
       segmentSource: 'manual_rules',
       sourceSegmentId: null,
@@ -2053,6 +2082,8 @@ function fromPublication(publication: EmailPublication): EditorDraft {
     sendGridTemplateVersion:
       publication.definition.sendGridTemplateVersion ?? '',
     frequencyCapHours: String(publication.definition.frequencyCapHours),
+    requireMinimumHealthSample:
+      publication.definition.requireMinimumHealthSample !== false,
     audience: publication.definition.audience,
     contentByLocale: publication.definition.contentByLocale,
     predictionKey: predictionId ? `${predictionId}:${analysisVersion}` : '',
@@ -2123,6 +2154,7 @@ function toInput(
     sendGridTemplateVersion: draft.sendGridTemplateVersion.trim(),
     audience: draft.audience,
     frequencyCapHours: Number(draft.frequencyCapHours),
+    requireMinimumHealthSample: draft.requireMinimumHealthSample,
     contentByLocale: draft.contentByLocale,
   };
   if (draft.topic === 'sirbro_predictions') {

@@ -44,6 +44,7 @@ export interface EmailPublicationInput {
   sendGridTemplateVersion: string;
   audience: CampaignAudienceDefinition;
   frequencyCapHours: number;
+  requireMinimumHealthSample?: boolean;
   contentByLocale: EmailContentByLocale;
   prediction?: { predictionId: string; analysisVersion: number };
   productUpdate?: { cta?: ProductUpdateCta };
@@ -76,6 +77,7 @@ export interface EmailPublicationDefinition {
   sendGridTemplateVersion: string;
   audience: CampaignAudienceDefinition;
   frequencyCapHours: number;
+  requireMinimumHealthSample?: boolean;
   contentByLocale: EmailContentByLocale;
 }
 

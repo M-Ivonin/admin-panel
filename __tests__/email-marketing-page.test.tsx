@@ -1237,6 +1237,31 @@ describe('EmailMarketingDashboard workflow', () => {
     ).toEqual(['en', 'es', 'pt']);
   }, 10_000);
 
+  it('lets an operator disable the 1000-email minimum for an individual publication', async () => {
+    const repo = repository();
+    render(<EmailMarketingDashboard repository={repo} />);
+    await screen.findByText('Product launch');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Open publication Product launch' })
+    );
+    await waitFor(() => expect(repo.get).toHaveBeenCalled());
+    await editSavedContent();
+    const toggle = await screen.findByRole('switch', {
+      name: 'Require at least 1,000 emails before health thresholds apply',
+    });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
+    await waitFor(() =>
+      expect(repo.edit).toHaveBeenCalledWith(
+        'pub-1',
+        expect.objectContaining({
+          requireMinimumHealthSample: false,
+        })
+      )
+    );
+  });
+
   it('edits with the current definition version and requires confirmations for lifecycle commands', async () => {
     const repo = repository();
     render(<EmailMarketingDashboard repository={repo} />);
