@@ -23,6 +23,7 @@ const valid = {
   legalReviewExpiresAt: '2027-08-01T10:00',
   effectiveFrom: '2026-08-02T10:00',
   configVersion: ' legal-1 ',
+  affiliateConversionTypes: ' Qualified_Lead, deposit ',
   operatorLogoUrl: ' https://cdn.example/logo.png ',
   affiliateDisclosureByLocale: {
     en: ' Affiliate EN ',
@@ -41,7 +42,37 @@ describe('partner market config form validation', () => {
       minimumAge: 18,
       approvedDestinationHosts: ['example.bet', 'www.example.bet'],
       configVersion: 'legal-1',
+      affiliateConversionTypes: [
+        'commission',
+        'deposit',
+        'ftd',
+        'qualified_lead',
+        'registration',
+        'reversal',
+      ],
     });
+  });
+
+  it('preserves every core conversion type while accepting approved extras', () => {
+    expect(
+      normalizePartnerMarketConfigForm({
+        ...valid,
+        affiliateConversionTypes: 'vip_signup, registration',
+      }).affiliateConversionTypes
+    ).toEqual([
+      'commission',
+      'deposit',
+      'ftd',
+      'registration',
+      'reversal',
+      'vip_signup',
+    ]);
+    expect(
+      validatePartnerMarketConfigForm({
+        ...valid,
+        affiliateConversionTypes: 'not valid',
+      }).affiliateConversionTypes
+    ).toMatch(/lowercase letters/);
   });
 
   it('requires a kill-switch reason only while enabled', () => {

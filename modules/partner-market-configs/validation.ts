@@ -9,6 +9,14 @@ import { requiresMarketingRegion } from '@/modules/marketing-jurisdictions/regio
 
 const OPERATOR_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const COUNTRY_CODE_PATTERN = /^[A-Z]{2}$/;
+const CONVERSION_TYPE_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
+export const CORE_AFFILIATE_CONVERSION_TYPES = [
+  'registration',
+  'ftd',
+  'deposit',
+  'commission',
+  'reversal',
+] as const;
 
 export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   operatorKey: '',
@@ -31,6 +39,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   operatorTermsUrl: '',
   operatorDestinationUrl: '',
   approvedDestinationHosts: '',
+  affiliateConversionTypes: CORE_AFFILIATE_CONVERSION_TYPES.join('\n'),
   legalReviewedAt: '',
   legalReviewExpiresAt: '',
   effectiveFrom: '',
@@ -53,6 +62,15 @@ export function normalizePartnerMarketConfigForm(
   ).sort();
   const effectiveUntil = values.effectiveUntil?.trim() ?? '';
   const killSwitchReason = values.killSwitchReason?.trim();
+  const affiliateConversionTypes = Array.from(
+    new Set([
+      ...CORE_AFFILIATE_CONVERSION_TYPES,
+      ...values.affiliateConversionTypes
+        .split(/[\n,]/)
+        .map((type) => type.trim().toLowerCase())
+        .filter(Boolean),
+    ])
+  ).sort();
 
   return {
     ...values,
@@ -75,6 +93,7 @@ export function normalizePartnerMarketConfigForm(
     operatorTermsUrl: values.operatorTermsUrl.trim(),
     operatorDestinationUrl: values.operatorDestinationUrl.trim(),
     approvedDestinationHosts: hosts,
+    affiliateConversionTypes,
     legalReviewedAt: toIso(values.legalReviewedAt),
     legalReviewExpiresAt: toIso(values.legalReviewExpiresAt),
     effectiveFrom: toIso(values.effectiveFrom),
@@ -177,6 +196,14 @@ export function validatePartnerMarketConfigForm(
       errors.operatorDestinationUrl =
         'The destination hostname must be in approved hostnames.';
     }
+  }
+  const suppliedConversionTypes = values.affiliateConversionTypes
+    .split(/[\n,]/)
+    .map((type) => type.trim().toLowerCase())
+    .filter(Boolean);
+  if (suppliedConversionTypes.some((type) => !CONVERSION_TYPE_PATTERN.test(type))) {
+    errors.affiliateConversionTypes =
+      'Use lowercase letters, numbers, underscores, or hyphens (up to 64 characters).';
   }
   validateDate(errors, 'legalReviewedAt', input.legalReviewedAt);
   validateDate(errors, 'legalReviewExpiresAt', input.legalReviewExpiresAt);

@@ -38,6 +38,17 @@ provider API key; only stable IDs are frozen in each immutable definition.
   picker shows only templates compatible with the selected type and clears the
   current template/version when that type changes; backend validation remains
   authoritative on create, edit, approval, and send.
+- Publication detail renders the backend analytics read model directly:
+  delivery/reputation, traced product engagement, verified initial
+  subscriptions, affiliate funnel/revenue, D7/D30 exposed/control retention,
+  health, and backend grouping slices. The client only formats returned values;
+  it does not derive rates, denominators, maturity, completeness, cohorts, or
+  health.
+- Sponsored comparison is labeled observational. Provider open rate is not a
+  primary KPI.
+- Aggregate analytics export strips recipient identity and trace fields as a
+  defense-in-depth measure. Analytics UI and exports do not expose recipient
+  drill-down data.
 
 ## Operator flow
 
@@ -54,6 +65,13 @@ instant and the unchanged time-zone identifier to the repository. It rejects
 invalid zone identifiers and local times that do not exist in that zone, such
 as a clock time skipped by a daylight-saving transition. The schedule shown to
 the operator is the exact schedule returned by the backend.
+
+When the backend reports an automatic pause, the detail identifies it as a
+backend action. A terminal publication with an unacknowledged late critical
+incident exposes one required operator-note acknowledgement command. After the
+command succeeds, the page reloads both publication detail and analytics from
+the backend; acknowledgement never changes any other lifecycle guard in the
+client.
 
 Implementation entry points are the protected
 [route](<../app/(admin)/dashboard/email-marketing/page.tsx>), the

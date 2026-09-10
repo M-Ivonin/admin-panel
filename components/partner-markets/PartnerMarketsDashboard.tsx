@@ -353,6 +353,10 @@ function PartnerMarketCard({
               value={item.approvedDestinationHosts.join(', ')}
             />
             <Detail
+              label="Affiliate conversion types"
+              value={item.affiliateConversionTypes.join(', ')}
+            />
+            <Detail
               label="Operator logo"
               value={item.operatorLogoUrl ?? 'Missing'}
             />
@@ -705,6 +709,15 @@ function PartnerMarketFormDialog({
             multiline
             helper="One hostname per line or comma-separated. No scheme, port, or path."
           />
+          <FormText
+            label="Affiliate conversion types"
+            field="affiliateConversionTypes"
+            values={values}
+            errors={errors}
+            set={set}
+            multiline
+            helper="Core types are always preserved: registration, ftd, deposit, commission, reversal. Add approved extras one per line or comma-separated."
+          />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <FormText
               label="Legal reviewed at"
@@ -918,6 +931,7 @@ function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),
     approvedDestinationHosts: config.approvedDestinationHosts.join('\n'),
+    affiliateConversionTypes: config.affiliateConversionTypes.join('\n'),
     legalReviewedAt: toLocalDateTime(config.legalReviewedAt),
     legalReviewExpiresAt: toLocalDateTime(config.legalReviewExpiresAt),
     effectiveFrom: toLocalDateTime(config.effectiveFrom),

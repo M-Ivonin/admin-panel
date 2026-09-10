@@ -68,6 +68,35 @@ describe('EmailMarketingRepository HTTP contract', () => {
     ]);
   });
 
+  it('loads backend analytics and sends a trimmed incident acknowledgement note', async () => {
+    jest.mocked(adminAuthFetch).mockResolvedValue(ok({ acknowledged: true }));
+
+    await emailMarketingRepository.getAnalytics('publication/1');
+    await emailMarketingRepository.acknowledgeIncident(
+      'publication/1',
+      '  Reviewed provider evidence.  '
+    );
+
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(1, {
+      path: '/campaigns/admin/email-publications/publication%2F1/analytics',
+      method: 'GET',
+    });
+    expect(adminAuthFetch).toHaveBeenNthCalledWith(2, {
+      path: '/campaigns/admin/email-publications/publication%2F1/incidents/acknowledge',
+      method: 'POST',
+      body: JSON.stringify({ note: 'Reviewed provider evidence.' }),
+    });
+  });
+
+  it('uses the aggregate analytics export endpoint', async () => {
+    jest.mocked(adminAuthFetch).mockResolvedValue(ok({ dimensions: {}, counts: {} }));
+    await emailMarketingRepository.getAnalyticsExport('publication/1');
+    expect(adminAuthFetch).toHaveBeenCalledWith({
+      path: '/campaigns/admin/email-publications/publication%2F1/analytics/export',
+      method: 'GET',
+    });
+  });
+
   it('loads list/detail/preview/reference/estimate projections and preserves backend errors', async () => {
     jest.mocked(adminAuthFetch)
       .mockResolvedValueOnce(ok({ items: [] }))
