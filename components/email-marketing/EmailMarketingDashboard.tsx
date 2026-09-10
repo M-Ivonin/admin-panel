@@ -21,6 +21,8 @@ import {
   Portal,
   Snackbar,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from '@mui/material';
@@ -107,6 +109,8 @@ export function EmailMarketingDashboard({
 }: {
   repository?: EmailMarketingRepository;
 }) {
+  const [detailTab, setDetailTab] = useState('Overview');
+  const [editing, setEditing] = useState(false);
   const [items, setItems] = useState<EmailPublication[]>([]);
   const [selected, setSelected] = useState<EmailPublication | null>(null);
   const [analytics, setAnalytics] = useState<EmailPublicationAnalytics | null>(
@@ -190,6 +194,8 @@ export function EmailMarketingDashboard({
           return [];
         }),
       ]);
+      setDetailTab('Overview');
+      setEditing(false);
       setSelected(detail);
       setAnalytics(analyticsResult.value);
       setAnalyticsError(analyticsResult.error);
@@ -266,7 +272,17 @@ export function EmailMarketingDashboard({
       await loadList();
       const detail = await repository.get(saved.id);
       setSelected(detail);
+      setAnalytics(null);
+      setAnalyticsError(null);
+      const nextAnalytics = await repository
+        .getAnalytics(detail.id)
+        .catch((caught) => {
+          setAnalyticsError(messageOf(caught));
+          return null;
+        });
+      setAnalytics(nextAnalytics);
       setDraft(fromPublication(detail));
+      setDetailTab('Content & audience');
       setEditorDirty(false);
       setPreview(null);
       if (!selected) createKey.current = createEmailPublicationIdempotencyKey();
@@ -496,15 +512,74 @@ export function EmailMarketingDashboard({
           open
           fullWidth
           maxWidth="xl"
-          aria-labelledby="publication-details-title"
+          aria-labelledby=""
+          aria-label={selected ? 'Publication details' : 'Create publication'}
           onClose={closeEditor}
-          PaperProps={{ sx: { maxHeight: 'calc(100vh - 32px)' } }}
+          PaperProps={{
+            'aria-label': selected
+              ? 'Publication details'
+              : 'Create publication',
+            sx: {
+              height: 'calc(100dvh - 32px)',
+              maxHeight: 'calc(100dvh - 32px)',
+              '& .MuiButton-outlinedPrimary, & .MuiButton-textPrimary': {
+                color: '#BDA6FF',
+              },
+              '& .MuiTab-root.Mui-selected': { color: '#C7B7FF' },
+            },
+          }}
         >
           <DialogTitle id="publication-details-title">
-            {selected ? 'Publication details' : 'Create publication'}
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              spacing={2}
+            >
+              <Box>
+                <Typography component="span" variant="h6">
+                  {selected
+                    ? selected.definition?.name || 'Untitled publication'
+                    : 'Create publication'}
+                </Typography>
+                {selected ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Campaign: {selected.campaignName || 'Name unavailable'} ·{' '}
+                    {topicLabel(selected.topic)}
+                  </Typography>
+                ) : null}
+              </Box>
+              {selected ? (
+                <Chip label={publicationStateLabel(selected.state)} />
+              ) : null}
+            </Stack>
+            {selected ? (
+              <Tabs
+                value={detailTab}
+                onChange={(_, value: string) => setDetailTab(value)}
+                variant="scrollable"
+                scrollButtons="auto"
+                aria-label="Publication sections"
+              >
+                {['Overview', 'Analytics', 'Content & audience', 'History'].map(
+                  (label) => (
+                    <Tab key={label} label={label} value={label} />
+                  )
+                )}
+              </Tabs>
+            ) : null}
           </DialogTitle>
           <DialogContent dividers>
+            {error ? (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            ) : null}
             <Editor
+              key={selected?.id ?? 'new'}
+              detailTab={detailTab}
+              editing={editing}
+              onEdit={() => setEditing(true)}
               draft={draft}
               setDraft={(next) => {
                 setDraft(next);
@@ -565,7 +640,10 @@ export function EmailMarketingDashboard({
               timezone={timezone}
               setTimezone={setTimezone}
               onSchedule={() => void schedule()}
-              onConfirm={setConfirmation}
+              onConfirm={(value) => {
+                setError(null);
+                setConfirmation(value);
+              }}
             />
           </DialogContent>
           <DialogActions>
@@ -586,9 +664,10 @@ export function EmailMarketingDashboard({
           <DialogTitle>{confirmation.title}</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <Alert severity="warning">
-                The backend decides and returns the resulting publication state.
-              </Alert>
+              {error ? <Alert severity="error">{error}</Alert> : null}
+              <Typography>
+                Confirm this action for the selected publication version.
+              </Typography>
               {confirmation.action === 'cancel' ? (
                 <TextField
                   label="Cancellation reason"
@@ -601,10 +680,13 @@ export function EmailMarketingDashboard({
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setConfirmation(null)}>Back</Button>
+            <Button disabled={busy} onClick={() => setConfirmation(null)}>
+              Back
+            </Button>
             <Button
               variant="contained"
               color={confirmation.action === 'cancel' ? 'error' : 'primary'}
+              disabled={busy}
               onClick={() => void runCommand(confirmation.action)}
             >
               {confirmation.confirmLabel}
@@ -734,6 +816,9 @@ function publicationStateLabel(state: EmailPublicationState): string {
 }
 
 type EditorProps = {
+  detailTab: string;
+  editing: boolean;
+  onEdit: () => void;
   draft: EditorDraft;
   setDraft: (draft: EditorDraft) => void;
   selected: EmailPublication | null;
@@ -857,6 +942,8 @@ function Editor(props: EditorProps) {
       materialTermsByLocale: blankLocalized(),
       offerExpiresAt: '',
     });
+  const contentVisible = !selected || props.detailTab === 'Content & audience';
+  const overview = props.detailTab === 'Overview';
   const canSend = selected?.state === 'approved' && !editorDirty;
   return (
     <Card>
@@ -870,12 +957,12 @@ function Editor(props: EditorProps) {
             <Box>
               <Typography variant="h5">
                 {selected
-                  ? `Publication detail · ${publicationStateLabel(selected.state)}`
+                  ? `Version ${selected.definitionVersion}`
                   : 'New publication'}
               </Typography>
               {selected ? (
                 <Typography color="text.secondary">
-                  Definition version {selected.definitionVersion}
+                  Updated {new Date(selected.updatedAt).toLocaleString()}
                 </Typography>
               ) : null}
               {selected?.schedule ? (
@@ -886,7 +973,11 @@ function Editor(props: EditorProps) {
               ) : null}
             </Box>
             {selected ? (
-              <Button startIcon={<Refresh />} onClick={props.onRefresh}>
+              <Button
+                startIcon={<Refresh />}
+                disabled={busy || editorDirty}
+                onClick={props.onRefresh}
+              >
                 Refresh detail
               </Button>
             ) : null}
@@ -918,9 +1009,21 @@ function Editor(props: EditorProps) {
               edit or run lifecycle commands.
             </Alert>
           ) : null}
-          {selected ? <CounterGrid counters={selected.counters} /> : null}
-          {selected ? (
+          {selected && overview && !historical && !incompleteDefinition ? (
+            <LifecycleActions
+              selected={selected}
+              canSend={canSend}
+              scheduleLocal={props.scheduleLocal}
+              setScheduleLocal={props.setScheduleLocal}
+              timezone={props.timezone}
+              setTimezone={props.setTimezone}
+              onSchedule={props.onSchedule}
+              onConfirm={props.onConfirm}
+            />
+          ) : null}
+          {selected && (overview || props.detailTab === 'Analytics') ? (
             <EmailPublicationAnalyticsPanel
+              view={overview ? 'overview' : 'analytics'}
               publication={selected}
               analytics={props.analytics}
               error={props.analyticsError}
@@ -931,6 +1034,138 @@ function Editor(props: EditorProps) {
               onExport={props.onExportAnalytics}
             />
           ) : null}
+          {selected && props.detailTab === 'History' ? (
+            <Stack spacing={2}>
+              <Typography variant="h6">Version history</Typography>
+              {versions.map((version) => (
+                <Button
+                  key={version.id}
+                  variant="outlined"
+                  disabled={busy || editorDirty || version.id === selected.id}
+                  onClick={() => props.onVersionChange(version)}
+                >
+                  Version {version.definitionVersion} ·{' '}
+                  {publicationStateLabel(version.state)} ·{' '}
+                  {new Date(version.createdAt).toLocaleString()}
+                </Button>
+              ))}
+              <Typography>
+                Created: {new Date(selected.createdAt).toLocaleString()}
+              </Typography>
+              {selected.approvedAt ? (
+                <Typography>
+                  Approved: {new Date(selected.approvedAt).toLocaleString()}
+                </Typography>
+              ) : null}
+              {selected.terminalAt ? (
+                <Typography>
+                  Finished: {new Date(selected.terminalAt).toLocaleString()}
+                </Typography>
+              ) : null}
+              {selected.terminalReason ? (
+                <Typography>Reason: {selected.terminalReason}</Typography>
+              ) : null}
+              {selected.lateIncident?.acknowledgedAt ? (
+                <Typography>
+                  Incident acknowledged:{' '}
+                  {new Date(
+                    selected.lateIncident.acknowledgedAt
+                  ).toLocaleString()}{' '}
+                  · {selected.lateIncident.acknowledgementNote}
+                </Typography>
+              ) : null}
+              <Box component="details">
+                <Typography component="summary">Technical details</Typography>
+                <Typography>Campaign ID: {selected.campaignId}</Typography>
+                <Button
+                  onClick={() =>
+                    void navigator.clipboard.writeText(selected.campaignId)
+                  }
+                >
+                  Copy campaign ID
+                </Button>
+                <Typography>Publication ID: {selected.id}</Typography>
+              </Box>
+            </Stack>
+          ) : null}
+
+          {selected &&
+          contentVisible &&
+          !props.editing &&
+          !incompleteDefinition ? (
+            <Stack spacing={2}>
+              <Typography variant="h6">Saved content and audience</Typography>
+              <Typography>
+                Template: {selectedTemplate?.name || 'Saved template'} ·{' '}
+                {selectedVersion?.name || 'Saved version'}
+              </Typography>
+              <Typography>
+                Languages:{' '}
+                {selected.definition.audience.criteria.locales
+                  .join(', ')
+                  .toUpperCase()}{' '}
+                · Minimum interval: {selected.definition.frequencyCapHours}{' '}
+                hours
+              </Typography>
+              <Typography>
+                Audience:{' '}
+                {selected.definition.audience.criteria.retentionStages.join(
+                  ', '
+                ) || 'No retention-stage filter'}{' '}
+                · {selected.definition.audience.criteria.userIds.length} exact
+                user IDs
+              </Typography>
+              <Tabs
+                value={props.previewLocale}
+                onChange={(_, locale: CampaignLocale) =>
+                  props.setPreviewLocale(locale)
+                }
+                aria-label="Saved content language"
+              >
+                {locales.map((locale) => (
+                  <Tab
+                    key={locale}
+                    value={locale}
+                    label={locale.toUpperCase()}
+                  />
+                ))}
+              </Tabs>
+              <Typography variant="h6">
+                {
+                  selected.definition.contentByLocale[props.previewLocale]
+                    .subject
+                }
+              </Typography>
+              <Typography color="text.secondary">
+                {
+                  selected.definition.contentByLocale[props.previewLocale]
+                    .preheader
+                }
+              </Typography>
+              <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                {
+                  selected.definition.contentByLocale[props.previewLocale]
+                    .textBody
+                }
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="outlined"
+                  disabled={busy || editorDirty}
+                  onClick={props.onPreview}
+                >
+                  Load preview
+                </Button>
+                {!historical ? (
+                  <Button variant="contained" onClick={props.onEdit}>
+                    {selected.state === 'draft'
+                      ? 'Edit draft'
+                      : 'Create new version'}
+                  </Button>
+                ) : null}
+              </Stack>
+            </Stack>
+          ) : null}
           {incompleteDefinition ? (
             <>
               <Alert severity="warning">
@@ -938,8 +1173,27 @@ function Editor(props: EditorProps) {
                 available, but editing, preview, and delivery commands are
                 unavailable until the saved definition is recovered.
               </Alert>
-              <Typography variant="h6">Saved content</Typography>
-              {locales.map((locale) => {
+              {contentVisible ? (
+                <Typography variant="h6">Saved content</Typography>
+              ) : null}
+              {contentVisible ? (
+                <Tabs
+                  value={props.previewLocale}
+                  onChange={(_, locale: CampaignLocale) =>
+                    props.setPreviewLocale(locale)
+                  }
+                  aria-label="Saved content language"
+                >
+                  {locales.map((locale) => (
+                    <Tab
+                      key={locale}
+                      value={locale}
+                      label={locale.toUpperCase()}
+                    />
+                  ))}
+                </Tabs>
+              ) : null}
+              {(contentVisible ? [props.previewLocale] : []).map((locale) => {
                 const content = selected?.definition?.contentByLocale?.[locale];
                 return (
                   <Box key={locale}>
@@ -956,7 +1210,7 @@ function Editor(props: EditorProps) {
                 );
               })}
             </>
-          ) : (
+          ) : contentVisible && (!selected || props.editing) ? (
             <>
               <Divider />
               <TextField
@@ -1349,7 +1603,7 @@ function Editor(props: EditorProps) {
                     onClick={props.onSave}
                     disabled={busy}
                   >
-                    {selected ? 'Save successor draft' : 'Save draft'}
+                    {selected ? 'Save new version' : 'Save draft'}
                   </Button>
                   {selected?.state === 'draft' && !editorDirty ? (
                     <Button
@@ -1393,20 +1647,8 @@ function Editor(props: EditorProps) {
                   </Stack>
                 </>
               ) : null}
-              {selected && !historical ? (
-                <LifecycleActions
-                  selected={selected}
-                  canSend={canSend}
-                  scheduleLocal={props.scheduleLocal}
-                  setScheduleLocal={props.setScheduleLocal}
-                  timezone={props.timezone}
-                  setTimezone={props.setTimezone}
-                  onSchedule={props.onSchedule}
-                  onConfirm={props.onConfirm}
-                />
-              ) : null}
             </>
-          )}
+          ) : null}
           {selected?.terminalReason ? (
             <Alert severity="warning">
               Terminal reason: {selected.terminalReason}
@@ -1467,6 +1709,7 @@ function LocalizedContentEditor({
   draft: EditorDraft;
   setDraft: (draft: EditorDraft) => void;
 }) {
+  const [contentLocale, setContentLocale] = useState<CampaignLocale>('en');
   const update = (
     locale: CampaignLocale,
     field: keyof EmailContentByLocale[CampaignLocale],
@@ -1481,9 +1724,18 @@ function LocalizedContentEditor({
     });
   return (
     <Box>
-      <Typography variant="h6">Exact localized content</Typography>
+      <Typography variant="h6">Localized content</Typography>
+      <Tabs
+        value={contentLocale}
+        onChange={(_, locale: CampaignLocale) => setContentLocale(locale)}
+        aria-label="Edit content language"
+      >
+        {locales.map((locale) => (
+          <Tab key={locale} value={locale} label={locale.toUpperCase()} />
+        ))}
+      </Tabs>
       <Stack spacing={3} sx={{ mt: 2 }}>
-        {locales.map((locale) => {
+        {[contentLocale].map((locale) => {
           const content = draft.contentByLocale[locale];
           return (
             <Card variant="outlined" key={locale}>
@@ -1627,9 +1879,13 @@ function LifecycleActions({
   onConfirm: (value: Confirmation) => void;
 }) {
   return (
-    <>
-      <Divider />
-      <Typography variant="h6">Approval and lifecycle</Typography>
+    <Stack
+      direction={{ xs: 'column', sm: 'row' }}
+      spacing={1.5}
+      flexWrap="wrap"
+      useFlexGap
+      aria-label="Publication actions"
+    >
       {!canSend && selected.state === 'draft' ? (
         <Alert severity="info">
           Send now and schedule become available only after backend approval.
@@ -1711,7 +1967,7 @@ function LifecycleActions({
           Cancel
         </Button>
       ) : null}
-    </>
+    </Stack>
   );
 }
 

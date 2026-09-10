@@ -94,3 +94,31 @@ git diff --check
 
 Review this document when the admin/backend ownership boundary, publication
 lifecycle, schedule payload, or validation entry points change.
+
+## Publication details presentation
+
+The fixed dialog header identifies the saved publication, owning campaign name,
+status, and four sections: Overview, Analytics, Content & audience, and History.
+Overview prioritizes delivery health and topic-relevant outcomes. Detailed rates
+include their returned denominator beside the result; diagnostic counters and
+language/cohort breakdowns are expandable. IDs are reserved for technical details.
+
+Content opens read-only with EN/ES/PT tabs and the isolated canonical preview.
+Editing is explicit; saving creates the existing successor draft through the
+unchanged version-checked command. Historical and incomplete snapshots retain
+their existing edit restrictions. Confirmation errors stay inside the command
+dialog. The history section shows persisted version and lifecycle timestamps,
+not an inferred audit log.
+
+Product and partner stages use the Updated Home visual vocabulary, but remain
+independent event totals. No sequential conversion percentages are calculated.
+Repeat affiliate conversions remain events. Missing tracking, incomplete revenue,
+zero activity, and unready retention are labelled separately. Expected retention
+readiness dates follow the current backend observation window (anchor + D7/D30 +
+8 days); only the returned maturity decides whether results are displayed.
+
+Publication Details uses a viewport-relative fixed height (`100dvh - 32px`) on
+all tabs. The title/tab strip and footer remain stationary; only the content
+area scrolls. Incomplete historical retention is unavailable, not a pending
+observation window. Failed analytics refresh after saving preserves the save
+success and shows the analytics error when returning to Overview or Analytics.

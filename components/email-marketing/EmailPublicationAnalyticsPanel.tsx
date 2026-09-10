@@ -25,6 +25,7 @@ import type {
 
 export function EmailPublicationAnalyticsPanel({
   publication,
+  view,
   analytics,
   error,
   loading,
@@ -34,6 +35,7 @@ export function EmailPublicationAnalyticsPanel({
   onExport,
 }: {
   publication: EmailPublication;
+  view: 'overview' | 'analytics';
   analytics: EmailPublicationAnalytics | null;
   error: string | null;
   loading: boolean;
@@ -54,8 +56,7 @@ export function EmailPublicationAnalyticsPanel({
         <Box>
           <Typography variant="h6">Performance and health</Typography>
           <Typography variant="body2" color="text.secondary">
-            Backend-calculated aggregates. Rates, denominators, cohorts,
-            completeness, and health are shown as returned.
+            Delivery results and actions attributed to this publication.
           </Typography>
         </Box>
         <Button
@@ -69,8 +70,7 @@ export function EmailPublicationAnalyticsPanel({
 
       {publication.autoPause ? (
         <Alert severity="error">
-          Auto-paused by backend ·{' '}
-          {publication.autoPause.reason ?? 'Critical health threshold'} ·{' '}
+          Automatically paused · {reasonLabel(publication.autoPause.reason)} ·{' '}
           {formatDate(publication.autoPause.at)}
         </Alert>
       ) : null}
@@ -87,8 +87,7 @@ export function EmailPublicationAnalyticsPanel({
           <Alert severity="error">
             <Stack spacing={1.5}>
               <Typography>
-                Late critical incident ·{' '}
-                {incident.reason ?? 'Critical health threshold'} ·{' '}
+                Late critical incident · {reasonLabel(incident.reason)} ·{' '}
                 {formatDate(incident.at)}
               </Typography>
               <TextField
@@ -120,275 +119,527 @@ export function EmailPublicationAnalyticsPanel({
       {error ? (
         <Alert severity="error">Analytics unavailable: {error}</Alert>
       ) : null}
-      {analytics ? <AnalyticsReadModel analytics={analytics} /> : null}
+      {analytics ? (
+        <AnalyticsReadModel
+          analytics={analytics}
+          publication={publication}
+          view={view}
+        />
+      ) : null}
     </Stack>
   );
 }
 
 function AnalyticsReadModel({
-  analytics,
+  analytics: a,
+  publication,
+  view,
 }: {
   analytics: EmailPublicationAnalytics;
+  publication: EmailPublication;
+  view: 'overview' | 'analytics';
 }) {
-  const { dimensions, counts, rates, denominators, health } = analytics;
-  const healthSeverity =
-    health.status === 'healthy'
-      ? 'success'
-      : health.status === 'warning'
-        ? 'warning'
-        : 'error';
+  const { counts: c, health: h } = a;
+  const partner =
+    publication.topic === 'betting_partner_offers' ||
+    publication.topic === 'sirbro_predictions_with_partner_offer';
+  const product = publication.topic !== 'betting_partner_offers';
+  const metrics = a.tracedAttribution.available
+    ? a.tracedAttribution.metrics
+    : null;
+  const unavailable = 'Tracking unavailable';
+  const delivery = (
+    <Result
+      label="Delivered"
+      value={formatRate(a.rates.delivery)}
+      detail={`${c.delivered.toLocaleString('en-US')} of ${a.denominators.providerAccepted.toLocaleString('en-US')} accepted emails`}
+    />
+  );
   return (
-    <Stack spacing={2}>
-      <Alert severity={healthSeverity}>
-        Health: {health.status}
-        {health.reasons.length
-          ? ` · ${health.reasons.join(', ')}`
-          : ' · No threshold warnings'}
-      </Alert>
-
-      <Section title="Grouping dimensions">
-        <MetricGrid
-          values={[
-            ['Campaign', dimensions.campaign ?? 'N/A'],
-            ['Publication version', dimensions.publicationVersion],
-            ['Type', dimensions.type ?? 'N/A'],
-            ['Operator', dimensions.operator],
-            ['Geo', dimensions.geo],
-            ['League', dimensions.league],
-            ['Market', dimensions.market],
-          ]}
-        />
-      </Section>
-
-      <Section title="Delivery and reputation">
-        <MetricGrid
-          values={[
-            ['Provider accepted', counts.accepted],
-            ['Delivered', counts.delivered],
-            ['Delayed', counts.delayed],
-            ['Hard bounce', counts.hardBounce],
-            ['Block / reject', counts.blockReject],
-            ['Complaint', counts.complaint],
-            ['Topic unsubscribe', counts.topicUnsubscribe],
-            ['Global unsubscribe', counts.globalUnsubscribe],
-            ['Delivery rate', formatRate(rates.delivery)],
-            ['Delivery denominator', denominators.providerAccepted],
-            ['Hard-bounce rate', formatRate(health.rates.hardBounce)],
-            ['Hard-bounce denominator', health.denominators.hardBounce],
-            ['Complaint rate', formatRate(health.rates.complaint)],
-            ['Complaint denominator', health.denominators.complaint],
-            ['Unsubscribe rate', formatRate(health.rates.unsubscribe)],
-            ['Unsubscribe denominator', health.denominators.unsubscribe],
-            ['Matured delivery rate', formatRate(health.rates.maturedDelivery)],
-            [
-              'Matured delivery denominator',
-              health.denominators.maturedDelivery,
-            ],
-          ]}
-        />
-      </Section>
-
-      <Section title="Product engagement and verified initial subscription">
-        <StatusLine
-          label="Attribution completeness"
-          status={analytics.attributionCompleteness.status}
-          detail={`${analytics.attributionCompleteness.numerator} / ${analytics.attributionCompleteness.denominator} correlated provider events`}
-        />
-        <StatusLine
-          label="Traced attribution"
-          status={analytics.tracedAttribution.completeness}
-          detail={`${analytics.tracedAttribution.tracedDeliveries} / ${analytics.tracedAttribution.eligibleDeliveries} eligible deliveries`}
-        />
-        <MetricGrid
-          values={[
-            [
-              'Full Analysis CTA clicks',
-              analytics.tracedAttribution.metrics?.fullAnalysisClicks ?? 'N/A',
-            ],
-            [
-              'Product CTA clicks',
-              analytics.tracedAttribution.metrics?.productClicks ?? 'N/A',
-            ],
-            [
-              'App opens from email',
-              analytics.tracedAttribution.metrics?.appOpens ?? 'N/A',
-            ],
-            [
-              'Verified initial subscriptions',
-              analytics.tracedAttribution.metrics?.initialSubscriptions ??
-                'N/A',
-            ],
-          ]}
-        />
-      </Section>
-
-      <Section title="Affiliate funnel and revenue">
-        <StatusLine
-          label="Revenue completeness"
-          status={analytics.affiliateRevenue.completeness}
-        />
-        <MetricGrid
-          values={[
-            ['Partner landing views', counts.partnerLandingViews],
-            ['Continue-to-operator clicks', counts.partnerContinues],
-            ['Affiliate conversions', counts.affiliateConversions],
-            [
-              'Affiliate revenue (USD)',
-              formatMoney(analytics.affiliateRevenue.usd),
-            ],
-            [
-              'Revenue / delivered email',
-              formatMoney(rates.revenuePerDeliveredEmail),
-            ],
-            ['Delivered denominator', denominators.delivered],
-            [
-              'Revenue / eligible confirmed partner subscriber',
-              formatMoney(rates.revenuePerEligibleConfirmedPartnerSubscriber),
-            ],
-            [
-              'Eligible confirmed audience denominator',
-              denominators.eligibleConfirmedAudience,
-            ],
-          ]}
-        />
-      </Section>
-
-      <Section title="Exposed / control retention">
-        <Typography variant="body2" color="text.secondary">
-          Cohort anchor:{' '}
-          {analytics.retention.anchorAt
-            ? formatDate(analytics.retention.anchorAt)
-            : 'N/A'}
+    <Stack spacing={3}>
+      <Alert
+        severity={
+          h.status === 'healthy'
+            ? 'success'
+            : h.status === 'warning'
+              ? 'warning'
+              : 'error'
+        }
+      >
+        <Typography fontWeight={600}>
+          {h.status === 'healthy'
+            ? 'Delivery health is normal'
+            : h.status === 'warning'
+              ? 'Delivery needs attention'
+              : 'Critical delivery issue'}
         </Typography>
-        <RetentionWindow label="D7 activity" value={analytics.retention.d7} />
-        <RetentionWindow label="D30 activity" value={analytics.retention.d30} />
-        {analytics.retention.byLocale.length ? (
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table
-              size="small"
-              aria-label="Retention locale and cohort groupings"
-            >
-              <TableHead>
-                <TableRow>
-                  <TableCell>Locale</TableCell>
-                  <TableCell>Cohort</TableCell>
-                  <TableCell>Size</TableCell>
-                  <TableCell>D7 active</TableCell>
-                  <TableCell>D7 denominator</TableCell>
-                  <TableCell>D30 active</TableCell>
-                  <TableCell>D30 denominator</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {analytics.retention.byLocale.map((slice) => (
-                  <TableRow key={`${slice.locale}-${slice.cohort}`}>
-                    <TableCell>{slice.locale}</TableCell>
-                    <TableCell>{slice.cohort}</TableCell>
-                    <TableCell>{slice.size}</TableCell>
-                    <TableCell>{slice.d7.active}</TableCell>
-                    <TableCell>{slice.d7.denominator}</TableCell>
-                    <TableCell>{slice.d30.active}</TableCell>
-                    <TableCell>{slice.d30.denominator}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : null}
-      </Section>
-
-      <Section title="Backend groupings">
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table size="small" aria-label="Analytics backend groupings">
-            <TableHead>
-              <TableRow>
-                <TableCell>Campaign</TableCell>
-                <TableCell>Version</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Operator</TableCell>
-                <TableCell>Geo</TableCell>
-                <TableCell>Locale</TableCell>
-                <TableCell>Cohort</TableCell>
-                <TableCell>League</TableCell>
-                <TableCell>Market</TableCell>
-                <TableCell>Accepted</TableCell>
-                <TableCell>Delivered</TableCell>
-                <TableCell>Delivery rate</TableCell>
-                <TableCell>Complaint rate</TableCell>
-                <TableCell>Unsubscribe rate</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {analytics.slices.map((slice, index) => (
-                <TableRow key={`${slice.locale}-${slice.cohort}-${index}`}>
-                  <TableCell>{slice.campaign ?? 'N/A'}</TableCell>
-                  <TableCell>{slice.publicationVersion}</TableCell>
-                  <TableCell>{slice.type ?? 'N/A'}</TableCell>
-                  <TableCell>{slice.operator}</TableCell>
-                  <TableCell>{slice.geo}</TableCell>
-                  <TableCell>{slice.locale}</TableCell>
-                  <TableCell>{slice.cohort ?? 'N/A'}</TableCell>
-                  <TableCell>{slice.league}</TableCell>
-                  <TableCell>{slice.market}</TableCell>
-                  <TableCell>{slice.counts.accepted}</TableCell>
-                  <TableCell>{slice.counts.delivered}</TableCell>
-                  <TableCell>{formatRate(slice.rates.delivery)}</TableCell>
-                  <TableCell>{formatRate(slice.rates.complaint)}</TableCell>
-                  <TableCell>{formatRate(slice.rates.unsubscribe)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Section>
-
-      <Section title="Sponsored / non-sponsored comparison">
-        <Alert severity="info">
-          Observational comparison only — differences are not causal A/B uplift.
-        </Alert>
-        {analytics.sponsoredComparator.status === 'N/A' ? (
-          <Typography>N/A — no matching non-sponsored publication.</Typography>
-        ) : (
-          <Stack spacing={1}>
-            <Typography variant="body2" color="text.secondary">
-              Comparator publication version{' '}
-              {analytics.sponsoredComparator.publicationVersion}; same league,
-              market, and locale within{' '}
-              {analytics.sponsoredComparator.matching.lookbackDays} days.
+        {h.reasons.map((reason) => (
+          <Typography key={reason} variant="body2">
+            {reasonLabel(reason)}
+            {reason.includes('bounce')
+              ? `: ${formatRate(h.rates.hardBounce)} (${c.hardBounce} of ${h.denominators.hardBounce} accepted emails)`
+              : reason.includes('complaint')
+                ? `: ${formatRate(h.rates.complaint)} (${c.complaint} of ${h.denominators.complaint} delivered emails)`
+                : ''}
+          </Typography>
+        ))}
+      </Alert>
+      {view === 'overview' ? (
+        <>
+          <Grid>
+            {delivery}
+            {product ? (
+              <Result
+                label="App opens from email"
+                value={metrics?.appOpens ?? unavailable}
+              />
+            ) : null}
+            {product ? (
+              <Result
+                label="Verified initial subscriptions"
+                value={metrics?.initialSubscriptions ?? unavailable}
+              />
+            ) : null}
+            {partner ? (
+              <Result
+                label="Affiliate conversions"
+                value={c.affiliateConversions}
+                detail="Conversion events; may include repeat conversions"
+              />
+            ) : null}
+            {partner ? (
+              <Result
+                label="Affiliate revenue (USD)"
+                value={formatMoney(a.affiliateRevenue.usd)}
+                detail={completenessLabel(a.affiliateRevenue.completeness)}
+              />
+            ) : null}
+          </Grid>
+          <StatusLine
+            label="Delivery event coverage"
+            status={a.attributionCompleteness.status}
+            detail={`${a.attributionCompleteness.numerator} of ${a.attributionCompleteness.denominator} provider events correlated`}
+          />
+          {product ? (
+            <StatusLine
+              label="Post-click tracking"
+              status={a.tracedAttribution.completeness}
+              detail={
+                a.tracedAttribution.available
+                  ? `${a.tracedAttribution.tracedDeliveries} of ${a.tracedAttribution.eligibleDeliveries} eligible deliveries tracked`
+                  : 'No attributable action metrics are available for this publication.'
+              }
+            />
+          ) : null}
+          <Box component="details">
+            <Typography component="summary">
+              Delivery processing details
             </Typography>
-            {analytics.sponsoredComparator.slices.map((slice) => (
+            <MetricGrid
+              values={[
+                ['Provider accepted', publication.counters.accepted],
+                ['Pending', publication.counters.pending],
+                ['Skipped', publication.counters.skipped],
+                ['Failed', publication.counters.failed],
+                ['Submission outcome unknown', publication.counters.ambiguous],
+                ['Bounced', publication.counters.bounced],
+                ['Dropped', publication.counters.dropped],
+              ]}
+            />
+          </Box>
+        </>
+      ) : (
+        <>
+          <Section title="Delivery and reputation">
+            <Grid>
+              {delivery}
+              <Result
+                label="Hard bounce"
+                value={formatRate(h.rates.hardBounce)}
+                detail={`${c.hardBounce} of ${h.denominators.hardBounce} accepted emails`}
+              />
+              <Result
+                label="Complaints"
+                value={formatRate(h.rates.complaint)}
+                detail={`${c.complaint} of ${h.denominators.complaint} delivered emails`}
+              />
+              <Result
+                label="Unsubscribes"
+                value={formatRate(h.rates.unsubscribe)}
+                detail={`${c.unsubscribe} of ${h.denominators.unsubscribe} delivered emails`}
+              />
+            </Grid>
+            <Box component="details">
+              <Typography component="summary">More delivery metrics</Typography>
               <MetricGrid
-                key={slice.locale}
                 values={[
-                  ['Locale', slice.locale],
-                  ['Sponsored delivered', slice.sponsored.delivered],
+                  ['Delayed', c.delayed],
+                  ['Blocked or rejected', c.blockReject],
+                  ['Topic unsubscribes', c.topicUnsubscribe],
+                  ['Global unsubscribes', c.globalUnsubscribe],
                   [
-                    'Sponsored complaint rate',
-                    formatRate(slice.sponsored.complaintRate),
+                    'Matured delivery rate',
+                    formatRate(h.rates.maturedDelivery),
                   ],
+                  ['Matured accepted emails', h.denominators.maturedDelivery],
+                ]}
+              />
+            </Box>
+          </Section>
+          {product ? (
+            <Section title="Product engagement">
+              <StatusLine
+                label="Post-click tracking"
+                status={a.tracedAttribution.completeness}
+                detail={
+                  a.tracedAttribution.available
+                    ? `${a.tracedAttribution.tracedDeliveries} of ${a.tracedAttribution.eligibleDeliveries} eligible deliveries tracked`
+                    : 'Tracking unavailable. Missing measurements are not zero activity.'
+                }
+              />
+              <Stages
+                values={[
                   [
-                    'Sponsored unsubscribe rate',
-                    formatRate(slice.sponsored.unsubscribeRate),
+                    publication.topic === 'sirbro_product_updates'
+                      ? 'Product CTA clicks'
+                      : 'Full Analysis CTA clicks',
+                    publication.topic === 'sirbro_product_updates'
+                      ? metrics?.productClicks
+                      : metrics?.fullAnalysisClicks,
                   ],
-                  ['Non-sponsored delivered', slice.comparator.delivered],
+                  ['App opens from email', metrics?.appOpens],
                   [
-                    'Non-sponsored complaint rate',
-                    formatRate(slice.comparator.complaintRate),
-                  ],
-                  [
-                    'Non-sponsored unsubscribe rate',
-                    formatRate(slice.comparator.unsubscribeRate),
+                    'Verified initial subscriptions',
+                    metrics?.initialSubscriptions,
                   ],
                 ]}
               />
-            ))}
-          </Stack>
-        )}
-      </Section>
+              <Typography variant="body2" color="text.secondary">
+                Initial subscription attribution uses the last eligible click
+                within 7 days.
+              </Typography>
+            </Section>
+          ) : null}
+          {partner ? (
+            <Section title="Affiliate funnel and revenue">
+              <Stages
+                values={[
+                  ['Partner landing views', c.partnerLandingViews],
+                  ['Continue-to-operator clicks', c.partnerContinues],
+                  ['Affiliate conversions', c.affiliateConversions],
+                ]}
+              />
+              <Typography variant="body2" color="text.secondary">
+                Conversions are events and may include repeat conversions from
+                the same person.
+              </Typography>
+              <StatusLine
+                label="Revenue data"
+                status={a.affiliateRevenue.completeness}
+                detail={
+                  a.affiliateRevenue.completeness === 'incomplete'
+                    ? 'USD revenue is unavailable until all required revenue data is complete.'
+                    : undefined
+                }
+              />
+              <Grid>
+                <Result
+                  label="Affiliate revenue (USD)"
+                  value={formatMoney(a.affiliateRevenue.usd)}
+                />
+                <Result
+                  label="Revenue per delivered email"
+                  value={formatMoney(a.rates.revenuePerDeliveredEmail)}
+                  detail={`Based on ${a.denominators.delivered} delivered emails`}
+                />
+                <Result
+                  label="Revenue per eligible partner subscriber"
+                  value={formatMoney(
+                    a.rates.revenuePerEligibleConfirmedPartnerSubscriber
+                  )}
+                  detail={`Based on ${a.denominators.eligibleConfirmedAudience} eligible confirmed subscribers`}
+                />
+              </Grid>
+            </Section>
+          ) : null}
+          <Section title="Audience retention">
+            <Typography variant="body2">
+              Email group: {a.retention.d7.exposed.size} people · Control group:{' '}
+              {a.retention.d7.control.size} people
+            </Typography>
+            <TableContainer>
+              <Table size="small" aria-label="Audience retention">
+                <TableHead>
+                  <TableRow>
+                    {[
+                      'Period',
+                      'Email group',
+                      'Control group',
+                      'Data readiness',
+                    ].map((label) => (
+                      <TableCell key={label}>{label}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <RetentionRow
+                    label="D7"
+                    days={7}
+                    anchor={a.retention.anchorAt}
+                    value={a.retention.d7}
+                  />
+                  <RetentionRow
+                    label="D30"
+                    days={30}
+                    anchor={a.retention.anchorAt}
+                    value={a.retention.d30}
+                  />
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {a.retention.byLocale.length ? (
+              <Box component="details">
+                <Typography component="summary">
+                  Retention by language
+                </Typography>
+                <TableContainer>
+                  <Table
+                    size="small"
+                    aria-label="Retention locale and cohort groupings"
+                  >
+                    <TableHead>
+                      <TableRow>
+                        {[
+                          'Language',
+                          'Group',
+                          'People',
+                          'D7 active / eligible',
+                          'D30 active / eligible',
+                        ].map((label) => (
+                          <TableCell key={label}>{label}</TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {a.retention.byLocale.map((slice) => (
+                        <TableRow key={`${slice.locale}-${slice.cohort}`}>
+                          <TableCell>{slice.locale.toUpperCase()}</TableCell>
+                          <TableCell>{cohortLabel(slice.cohort)}</TableCell>
+                          <TableCell>{slice.size}</TableCell>
+                          <TableCell>
+                            {a.retention.d7.maturity === 'mature'
+                              ? `${slice.d7.active} / ${slice.d7.denominator}`
+                              : a.retention.d7.maturity === 'immature'
+                                ? 'Not ready'
+                                : 'Unavailable'}
+                          </TableCell>
+                          <TableCell>
+                            {a.retention.d30.maturity === 'mature'
+                              ? `${slice.d30.active} / ${slice.d30.denominator}`
+                              : a.retention.d30.maturity === 'immature'
+                                ? 'Not ready'
+                                : 'Unavailable'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            ) : null}
+          </Section>
+          <Section title="Result breakdown">
+            <Box component="details">
+              <Typography component="summary">
+                Show breakdown by language and audience
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {[
+                  a.dimensions.operator,
+                  a.dimensions.geo,
+                  a.dimensions.league,
+                  a.dimensions.market,
+                ]
+                  .filter(
+                    (value) =>
+                      !['none', 'unknown/global', 'N/A'].includes(value)
+                  )
+                  .join(' · ')}
+              </Typography>
+              <TableContainer>
+                <Table size="small" aria-label="Result breakdown">
+                  <TableHead>
+                    <TableRow>
+                      {[
+                        'Language',
+                        'Group',
+                        'Accepted',
+                        'Delivered',
+                        'Delivery rate',
+                        'Complaint rate',
+                        'Unsubscribe rate',
+                      ].map((label) => (
+                        <TableCell key={label}>{label}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {a.slices.map((slice, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{slice.locale.toUpperCase()}</TableCell>
+                        <TableCell>{cohortLabel(slice.cohort)}</TableCell>
+                        <TableCell>{slice.counts.accepted}</TableCell>
+                        <TableCell>{slice.counts.delivered}</TableCell>
+                        <TableCell>
+                          {formatRate(slice.rates.delivery)}
+                        </TableCell>
+                        <TableCell>
+                          {formatRate(slice.rates.complaint)}
+                        </TableCell>
+                        <TableCell>
+                          {formatRate(slice.rates.unsubscribe)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Section>
+          {publication.topic === 'sirbro_predictions_with_partner_offer' ? (
+            <Section title="Sponsored / non-sponsored comparison">
+              <Typography variant="body2">
+                Observational comparison only — differences are not causal A/B
+                uplift.
+              </Typography>
+              {a.sponsoredComparator.status === 'N/A' ? (
+                <Typography>No matching non-sponsored publication.</Typography>
+              ) : (
+                <>
+                  <Typography>
+                    Compared with version{' '}
+                    {a.sponsoredComparator.publicationVersion}, matched within{' '}
+                    {a.sponsoredComparator.matching.lookbackDays} days.
+                  </Typography>
+                  {a.sponsoredComparator.slices.map((slice) => (
+                    <MetricGrid
+                      key={slice.locale}
+                      values={[
+                        ['Language', slice.locale],
+                        ['Sponsored delivered', slice.sponsored.delivered],
+                        ['Non-sponsored delivered', slice.comparator.delivered],
+                        [
+                          'Sponsored complaint rate',
+                          formatRate(slice.sponsored.complaintRate),
+                        ],
+                        [
+                          'Non-sponsored complaint rate',
+                          formatRate(slice.comparator.complaintRate),
+                        ],
+                        [
+                          'Sponsored unsubscribe rate',
+                          formatRate(slice.sponsored.unsubscribeRate),
+                        ],
+                        [
+                          'Non-sponsored unsubscribe rate',
+                          formatRate(slice.comparator.unsubscribeRate),
+                        ],
+                      ]}
+                    />
+                  ))}
+                </>
+              )}
+            </Section>
+          ) : null}
+        </>
+      )}
     </Stack>
   );
 }
 
+function Stages({ values }: { values: Array<[string, number | undefined]> }) {
+  const colors = ['#6F86FF', '#B88BFF', '#51C88D'];
+  return (
+    <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Independent stage totals · step conversion rates are unavailable
+      </Typography>
+      <Grid>
+        {values.map(([label, value], index) => (
+          <Box key={label} sx={{ minWidth: 0 }}>
+            <Typography variant="h5" fontWeight={700}>
+              {value === undefined
+                ? 'Tracking unavailable'
+                : value.toLocaleString('en-US')}
+            </Typography>
+            <Typography variant="body2" sx={{ my: 1 }}>
+              {label}
+            </Typography>
+            <Box
+              sx={{
+                height: 6,
+                borderRadius: 4,
+                bgcolor:
+                  value === undefined
+                    ? 'action.disabledBackground'
+                    : colors[index],
+              }}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {value === undefined ? 'No measurement' : 'Recorded events'}
+            </Typography>
+          </Box>
+        ))}
+      </Grid>
+    </Box>
+  );
+}
+function RetentionRow({
+  label,
+  value,
+  days,
+  anchor,
+}: {
+  label: string;
+  value: EmailAnalyticsRetentionWindow;
+  days: number;
+  anchor: string | null;
+}) {
+  const ready = value.maturity === 'mature';
+  const expected = anchor
+    ? new Date(new Date(anchor).getTime() + (days + 8) * 86400000)
+    : null;
+  return (
+    <TableRow>
+      <TableCell>{label}</TableCell>
+      {[value.exposed, value.control].map((cohort, index) => (
+        <TableCell key={index}>
+          {ready ? (
+            <>
+              {formatRate(cohort.rate)}
+              <Typography variant="caption" display="block">
+                {cohort.active} active / {cohort.denominator} eligible
+              </Typography>
+            </>
+          ) : value.maturity === 'immature' ? (
+            'Not ready'
+          ) : (
+            'Unavailable'
+          )}
+        </TableCell>
+      ))}
+      <TableCell>
+        {value.maturity === 'immature'
+          ? `Awaiting observation window${expected ? ` · expected ${formatDate(expected.toISOString())}` : ''}`
+          : value.maturity === 'N/A'
+            ? value.completeness === 'incomplete'
+              ? 'Incomplete cohort history'
+              : 'Retention unavailable'
+            : completenessLabel(value.completeness)}
+      </TableCell>
+    </TableRow>
+  );
+}
 function Section({
   title,
   children,
@@ -399,16 +650,15 @@ function Section({
   return (
     <Card variant="outlined">
       <CardContent>
-        <Stack spacing={1.5}>
-          <Typography variant="subtitle1">{title}</Typography>
+        <Stack spacing={2}>
+          <Typography variant="h6">{title}</Typography>
           {children}
         </Stack>
       </CardContent>
     </Card>
   );
 }
-
-function MetricGrid({ values }: { values: Array<[string, string | number]> }) {
+function Grid({ children }: { children: React.ReactNode }) {
   return (
     <Box
       sx={{
@@ -416,31 +666,49 @@ function MetricGrid({ values }: { values: Array<[string, string | number]> }) {
         gridTemplateColumns: {
           xs: '1fr',
           sm: 'repeat(2, minmax(0, 1fr))',
-          lg: 'repeat(4, minmax(0, 1fr))',
+          lg: 'repeat(3, minmax(0, 1fr))',
         },
-        gap: 1,
+        gap: 2,
       }}
     >
-      {values.map(([label, value]) => (
-        <Box
-          key={label}
-          sx={{
-            p: 1.25,
-            bgcolor: 'action.hover',
-            borderRadius: 1,
-            minWidth: 0,
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            {label}
-          </Typography>
-          <Typography sx={{ overflowWrap: 'anywhere' }}>{value}</Typography>
-        </Box>
-      ))}
+      {children}
     </Box>
   );
 }
-
+function Result({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail?: string;
+}) {
+  return (
+    <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, minWidth: 0 }}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="h5" fontWeight={600} sx={{ my: 0.5 }}>
+        {value}
+      </Typography>
+      {detail ? (
+        <Typography variant="caption" color="text.secondary">
+          {detail}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+function MetricGrid({ values }: { values: Array<[string, string | number]> }) {
+  return (
+    <Grid>
+      {values.map(([label, value]) => (
+        <Result key={label} label={label} value={value} />
+      ))}
+    </Grid>
+  );
+}
 function StatusLine({
   label,
   status,
@@ -450,12 +718,6 @@ function StatusLine({
   status: EmailAnalyticsCompleteness;
   detail?: string;
 }) {
-  const color =
-    status === 'complete'
-      ? 'success'
-      : status === 'incomplete'
-        ? 'warning'
-        : 'default';
   return (
     <Stack
       direction="row"
@@ -464,8 +726,18 @@ function StatusLine({
       flexWrap="wrap"
       useFlexGap
     >
-      <Typography>{label}</Typography>
-      <Chip size="small" label={status} color={color} />
+      <Typography variant="body2">{label}</Typography>
+      <Chip
+        size="small"
+        label={completenessLabel(status)}
+        color={
+          status === 'complete'
+            ? 'success'
+            : status === 'incomplete'
+              ? 'warning'
+              : 'default'
+        }
+      />
       {detail ? (
         <Typography variant="body2" color="text.secondary">
           {detail}
@@ -474,76 +746,54 @@ function StatusLine({
     </Stack>
   );
 }
-
-function RetentionWindow({
-  label,
-  value,
-}: {
-  label: string;
-  value: EmailAnalyticsRetentionWindow;
-}) {
-  return (
-    <Box>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="subtitle2">{label}</Typography>
-        <Chip
-          size="small"
-          label={value.maturity}
-          color={
-            value.maturity === 'mature'
-              ? 'success'
-              : value.maturity === 'immature'
-                ? 'info'
-                : 'default'
-          }
-        />
-        <Chip
-          size="small"
-          label={value.completeness}
-          color={
-            value.completeness === 'complete'
-              ? 'success'
-              : value.completeness === 'incomplete'
-                ? 'warning'
-                : 'default'
-          }
-        />
-      </Stack>
-      <MetricGrid
-        values={[
-          ['Exposed cohort size', value.exposed.size],
-          ['Exposed active', value.exposed.active],
-          ['Exposed denominator', value.exposed.denominator],
-          ['Exposed activity rate', formatRate(value.exposed.rate)],
-          ['Control cohort size', value.control.size],
-          ['Control active', value.control.active],
-          ['Control denominator', value.control.denominator],
-          ['Control activity rate', formatRate(value.control.rate)],
-        ]}
-      />
-    </Box>
-  );
+function completenessLabel(status: EmailAnalyticsCompleteness) {
+  return status === 'complete'
+    ? 'Complete'
+    : status === 'incomplete'
+      ? 'Incomplete data'
+      : 'No applicable data';
 }
-
+function cohortLabel(value: string | null) {
+  return value === 'exposed'
+    ? 'Email group'
+    : value === 'control'
+      ? 'Control group'
+      : 'Unassigned';
+}
+function reasonLabel(value: string | null) {
+  const labels: Record<string, string> = {
+    hard_bounce_rate: 'Elevated hard-bounce rate',
+    complaint_rate: 'Elevated complaint rate',
+    unsubscribe_rate: 'Elevated unsubscribe rate',
+    delivery_rate: 'Low delivery rate',
+    matured_delivery_rate: 'Low matured delivery rate',
+    predecessor_late_incident:
+      'A previous version has an unresolved critical incident',
+  };
+  return value
+    ? labels[value] || value.replace(/_/g, ' ')
+    : 'Critical delivery threshold';
+}
 function formatRate(value: number | null): string {
   return value === null
-    ? 'N/A'
+    ? 'No eligible data'
     : `${(value * 100).toLocaleString('en-US', { maximumFractionDigits: 4 })}%`;
 }
-
 function formatMoney(value: number | null): string {
   return value === null
-    ? 'N/A'
+    ? 'Revenue unavailable'
     : value.toLocaleString('en-US', {
         style: 'currency',
         currency: 'USD',
         maximumFractionDigits: 4,
       });
 }
-
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('en', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  return (
+    new Intl.DateTimeFormat('en', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'UTC',
+    }).format(new Date(value)) + ' UTC'
+  );
 }

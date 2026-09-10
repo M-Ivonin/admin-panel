@@ -20,6 +20,7 @@ import { RetentionStage } from '@/lib/api/users';
 const basePublication: EmailPublication = {
   id: 'pub-1',
   campaignId: 'campaign-1',
+  campaignName: 'Weekly product news',
   definitionVersion: 1,
   topic: 'sirbro_product_updates',
   state: 'draft',
@@ -312,6 +313,143 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('opens an overview and requires an explicit action to edit saved content', async () => {
+    const repo = repository();
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+    expect(
+      within(dialog).getByText(/Campaign: Weekly product news/)
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('tab', { name: 'Overview' })
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      within(dialog).queryByLabelText('Publication name')
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('tab', { name: 'Content & audience' })
+    );
+    expect(within(dialog).getByText('EN exact')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Edit draft' }));
+    expect(within(dialog).getByLabelText(/^Publication name/)).toHaveValue(
+      'Product launch'
+    );
+  });
+
+  it('explains unavailable analytics after a successful save', async () => {
+    const repo = repository();
+    repo.getAnalytics
+      .mockResolvedValueOnce(analytics)
+      .mockRejectedValueOnce(new Error('Metrics offline'));
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    await editSavedContent();
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
+    await screen.findByText('Publication draft saved successfully.');
+    fireEvent.click(screen.getByRole('tab', { name: 'Overview' }));
+    expect(
+      screen.getByText('Analytics unavailable: Metrics offline')
+    ).toBeInTheDocument();
+  });
+
+  it('distinguishes incomplete historical retention from a pending observation window', async () => {
+    const repo = repository();
+    repo.getAnalytics.mockResolvedValue({
+      ...analytics,
+      retention: {
+        ...analytics.retention,
+        d7: {
+          ...analytics.retention.d7,
+          maturity: 'N/A',
+          completeness: 'incomplete',
+        },
+      },
+    });
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
+    const table = screen.getByRole('table', { name: 'Audience retention' });
+    expect(
+      within(table).getByText('Incomplete cohort history')
+    ).toBeInTheDocument();
+    expect(within(table).getAllByText('Unavailable')).toHaveLength(2);
+    expect(within(table).getAllByText('Not ready')).toHaveLength(2);
+    fireEvent.click(screen.getByText('Retention by language'));
+    expect(
+      within(
+        screen.getByRole('table', {
+          name: 'Retention locale and cohort groupings',
+        })
+      ).getByText('Unavailable')
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a rejected resume visible inside its confirmation dialog', async () => {
+    const repo = repository();
+    repo.get.mockResolvedValue({ ...basePublication, state: 'paused' });
+    repo.resume.mockRejectedValue(
+      new Error('Publication health remains critical')
+    );
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume' }));
+    const confirmation = screen.getByRole('dialog', {
+      name: 'Resume publication?',
+    });
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'Confirm resume' })
+    );
+    expect(await within(confirmation).findByRole('alert')).toHaveTextContent(
+      'Publication health remains critical'
+    );
+    expect(
+      within(confirmation).getByRole('button', { name: 'Back' })
+    ).toBeEnabled();
+  });
+
+  it('shows partner event stages and explains missing revenue without inventing step conversion rates', async () => {
+    const repo = repository();
+    repo.get.mockResolvedValue({
+      ...basePublication,
+      topic: 'betting_partner_offers',
+    });
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
+    expect(
+      screen.getByText('Affiliate funnel and revenue')
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Independent stage totals/)).toBeInTheDocument();
+    expect(screen.queryByText('Product engagement')).not.toBeInTheDocument();
+    expect(screen.getByText(/USD revenue is unavailable/)).toBeInTheDocument();
+    expect(screen.getAllByText('Revenue unavailable').length).toBeGreaterThan(
+      0
+    );
+  });
+
   it('opens a content-only saved publication without inventing an editable audience', async () => {
     const repo = repository();
     const incomplete = {
@@ -336,12 +474,13 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(
       within(dialog).getByText(/saved publication definition is incomplete/i)
     ).toBeInTheDocument();
+    await openContent();
     expect(within(dialog).getByText('EN exact')).toBeInTheDocument();
     expect(
       within(dialog).queryByLabelText('Audience source')
     ).not.toBeInTheDocument();
     expect(
-      within(dialog).queryByRole('button', { name: 'Save successor draft' })
+      within(dialog).queryByRole('button', { name: 'Save new version' })
     ).not.toBeInTheDocument();
     expect(
       within(dialog).queryByRole('button', { name: 'Approve' })
@@ -351,9 +490,7 @@ describe('EmailMarketingDashboard workflow', () => {
     ).not.toBeInTheDocument();
     expect(repo.edit).not.toHaveBeenCalled();
     expect(repo.approve).not.toHaveBeenCalled();
-    fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Close' })
-    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
     expect(
       screen.getByRole('button', {
         name: 'Open publication Untitled publication',
@@ -384,11 +521,12 @@ describe('EmailMarketingDashboard workflow', () => {
       )
     ).toBeInTheDocument();
 
+    await editSavedContent();
     fireEvent.change(within(dialog).getByLabelText(/^Publication name/), {
       target: { value: 'Updated product launch' },
     });
     fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Save successor draft' })
+      within(dialog).getByRole('button', { name: 'Save new version' })
     );
     await waitFor(() => expect(repo.edit).toHaveBeenCalledTimes(1));
 
@@ -421,10 +559,10 @@ describe('EmailMarketingDashboard workflow', () => {
     });
 
     expect(
-      within(dialog).getByText('Health: healthy', { exact: false })
+      within(dialog).getByText('Delivery health is normal')
     ).toBeInTheDocument();
     expect(
-      within(dialog).queryByText(/Auto-paused by backend/)
+      within(dialog).queryByText(/Automatically paused/)
     ).not.toBeInTheDocument();
     expect(
       within(dialog).queryByText(/Late critical incident/)
@@ -456,23 +594,29 @@ describe('EmailMarketingDashboard workflow', () => {
     });
 
     expect(
-      within(dialog).getByText('Health: warning', { exact: false })
+      within(dialog).getByText('Delivery needs attention')
     ).toBeInTheDocument();
     expect(within(dialog).getByText('76.54%')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Analytics' }));
+    fireEvent.click(
+      within(dialog).getByText('Show breakdown by language and audience')
+    );
     expect(within(dialog).getByText('43.21%')).toBeInTheDocument();
     expect(within(dialog).getByText('32.1%')).toBeInTheDocument();
     expect(within(dialog).getAllByText('0%').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('immature').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('N/A').length).toBeGreaterThan(0);
     expect(
-      within(dialog).getByText(/Auto-paused by backend/)
+      within(dialog).getAllByText(/Awaiting observation window/).length
+    ).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Not ready').length).toBeGreaterThan(0);
+    expect(
+      within(dialog).getByText(/Automatically paused/)
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText(/Late critical incident/)
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/Observational comparison only/)
-    ).toBeInTheDocument();
+      within(dialog).queryByText(/Observational comparison only/)
+    ).not.toBeInTheDocument();
     expect(within(dialog).queryByText(/open rate/i)).not.toBeInTheDocument();
     expect(dialog.textContent).not.toMatch(
       /raw email|date of birth|recipient handle|delivery trace|provider token/i
@@ -589,7 +733,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(repo.list).toHaveBeenCalledTimes(2);
   });
 
-  it('shows every backend slice dimension without deriving alternate groupings', async () => {
+  it('shows concise backend result breakdowns without deriving alternate rates', async () => {
     const repo = repository();
 
     render(<EmailMarketingDashboard repository={repo} />);
@@ -598,31 +742,30 @@ describe('EmailMarketingDashboard workflow', () => {
         name: 'Open publication Product launch',
       })
     );
-    const table = await screen.findByRole('table', {
-      name: 'Analytics backend groupings',
-    });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
+    fireEvent.click(
+      screen.getByText('Show breakdown by language and audience')
+    );
+    const table = screen.getByRole('table', { name: 'Result breakdown' });
 
     for (const heading of [
-      'Campaign',
-      'Version',
-      'Type',
-      'Operator',
-      'Geo',
-      'Locale',
-      'Cohort',
-      'League',
-      'Market',
+      'Language',
+      'Group',
+      'Accepted',
+      'Delivered',
+      'Delivery rate',
     ]) {
       expect(
         within(table).getByText(heading, { selector: 'th' })
       ).toBeInTheDocument();
     }
     expect(within(table).getByText('43.21%')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Retention by language'));
     const retentionTable = screen.getByRole('table', {
       name: 'Retention locale and cohort groupings',
     });
-    expect(within(retentionTable).getByText('43')).toBeInTheDocument();
-    expect(within(retentionTable).getByText('17')).toBeInTheDocument();
+    expect(within(retentionTable).getByText('17 / 43')).toBeInTheDocument();
+    expect(within(retentionTable).getByText('Not ready')).toBeInTheDocument();
   });
   it('filters SendGrid templates by publication type and clears the previous selection', async () => {
     const repo = repository();
@@ -656,6 +799,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     selectOption('Publication type', 'SirBro prediction');
     selectOption('SendGrid template', 'Prediction design');
@@ -723,31 +867,24 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(
       within(detail).getByRole('combobox', { name: 'Publication version' })
     ).toHaveTextContent('Version 2');
-    expect(
-      within(detail).getByRole('combobox', {
-        name: /^SendGrid template version/,
-      })
-    ).toHaveTextContent('Version two');
+    await openContent();
+    expect(within(detail).getByText(/Version two/)).toBeInTheDocument();
     fireEvent.mouseDown(
       within(detail).getByRole('combobox', { name: 'Publication version' })
     );
     fireEvent.click(screen.getByRole('option', { name: /Version 1/ }));
 
     await waitFor(() => expect(repo.get).toHaveBeenLastCalledWith('pub-1'));
-    await waitFor(() =>
-      expect(
-        within(detail).getByRole('combobox', {
-          name: /^SendGrid template version/,
-        })
-      ).toHaveTextContent('Version one')
-    );
+    await screen.findByText(/Historical versions are read-only/);
+    await openContent();
+    expect(within(detail).getByText(/Version one/)).toBeInTheDocument();
     expect(
       within(detail).getByText(
         'Historical versions are read-only. Select the latest version to edit or run lifecycle commands.'
       )
     ).toBeInTheDocument();
     expect(
-      within(detail).queryByRole('button', { name: 'Save successor draft' })
+      within(detail).queryByRole('button', { name: 'Save new version' })
     ).not.toBeInTheDocument();
   });
 
@@ -776,6 +913,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     selectOption('Audience source', 'Template segment');
     expect(
@@ -811,6 +949,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fillCommonFields();
     fireEvent.click(screen.getByRole('checkbox', { name: RetentionStage.NEW }));
@@ -838,8 +977,8 @@ describe('EmailMarketingDashboard workflow', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
-    await screen.findByLabelText('Preview locale');
-    selectOption('Preview locale', 'es');
+    await openContent();
+    fireEvent.click(screen.getByRole('tab', { name: 'ES' }));
     fireEvent.click(screen.getByRole('button', { name: 'Load preview' }));
     const previewDialog = await screen.findByRole('dialog', {
       name: 'Email preview',
@@ -906,7 +1045,9 @@ describe('EmailMarketingDashboard workflow', () => {
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
     expect(
-      await screen.findByText('Publication detail · Provider accepted')
+      within(
+        await screen.findByRole('dialog', { name: 'Publication details' })
+      ).getAllByText('Provider accepted')[0]
     ).toBeInTheDocument();
     expect(
       screen.queryByText('Publication detail · sent')
@@ -922,6 +1063,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fillCommonFields();
     selectOption('Publication type', 'Betting partner offer');
@@ -968,13 +1110,12 @@ describe('EmailMarketingDashboard workflow', () => {
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
     await waitFor(() => expect(repo.get).toHaveBeenCalled());
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fireEvent.change(screen.getByLabelText(/^Publication name/), {
       target: { value: 'Product launch successor' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Save successor draft' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
     await waitFor(() =>
       expect(repo.edit).toHaveBeenCalledWith(
         'pub-1',
@@ -988,7 +1129,8 @@ describe('EmailMarketingDashboard workflow', () => {
     );
     repo.get.mockResolvedValue({ ...basePublication, state: 'sending' });
     fireEvent.click(screen.getByRole('button', { name: 'Refresh detail' }));
-    await screen.findByText('Publication detail · sending');
+    await screen.findByText('sending');
+    fireEvent.click(screen.getByRole('tab', { name: 'Overview' }));
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     const dialog = screen.getByRole('dialog', { name: 'Pause publication?' });
     expect(repo.pause).not.toHaveBeenCalled();
@@ -1005,13 +1147,12 @@ describe('EmailMarketingDashboard workflow', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fireEvent.change(screen.getByLabelText(/^Publication name/), {
       target: { value: 'Product launch successor' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Save successor draft' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
 
     expect(
       await screen.findByText('Publication draft saved successfully.')
@@ -1023,9 +1164,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(
       await screen.findByText('Publication approved successfully.')
     ).toBeInTheDocument();
-    expect(
-      await screen.findByText('Publication detail · approved')
-    ).toBeInTheDocument();
+    expect(await screen.findByText('approved')).toBeInTheDocument();
   });
 
   it('shows visible error feedback when saving or approving fails', async () => {
@@ -1037,13 +1176,12 @@ describe('EmailMarketingDashboard workflow', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fireEvent.change(screen.getByLabelText(/^Publication name/), {
       target: { value: 'Product launch successor' },
     });
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Save successor draft' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
 
     expect(await screen.findByText('Save was rejected')).toBeInTheDocument();
 
@@ -1051,9 +1189,7 @@ describe('EmailMarketingDashboard workflow', () => {
       target: { value: 'Product launch' },
     });
     repo.edit.mockResolvedValueOnce(basePublication);
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Save successor draft' })
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save new version' }));
     await screen.findByText('Publication draft saved successfully.');
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
 
@@ -1068,6 +1204,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fillCommonFields();
     fireEvent.click(
@@ -1099,6 +1236,7 @@ describe('EmailMarketingDashboard workflow', () => {
     render(<EmailMarketingDashboard repository={repo} />);
     await screen.findByText('No email publications found');
     fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+    await editSavedContent();
     await screen.findByLabelText(/^Publication name/);
     fillCommonFields();
     selectOption('Publication type', 'Betting partner offer');
@@ -1157,7 +1295,7 @@ describe('EmailMarketingDashboard workflow', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Open publication Product launch' })
     );
-    await screen.findByLabelText('Preview locale');
+    await openContent();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load preview' }));
 
@@ -1240,6 +1378,7 @@ function fillCommonFields(): void {
     target: { value: '24' },
   });
   for (const locale of ['en', 'es', 'pt']) {
+    fireEvent.click(screen.getByRole('tab', { name: locale.toUpperCase() }));
     fireEvent.change(screen.getByLabelText(new RegExp(`^${locale} subject`)), {
       target: { value: `${locale} subject` },
     });
@@ -1263,4 +1402,17 @@ function selectOption(label: string, option: string): void {
     screen.getByRole('combobox', { name: new RegExp(`^${label}$`) })
   );
   fireEvent.click(screen.getByRole('option', { name: option }));
+}
+
+async function openContent() {
+  fireEvent.click(
+    await screen.findByRole('tab', { name: 'Content & audience' })
+  );
+}
+async function editSavedContent() {
+  if (screen.queryByRole('dialog', { name: 'Create publication' })) return;
+  await openContent();
+  fireEvent.click(
+    screen.getByRole('button', { name: /^(Edit draft|Create new version)$/ })
+  );
 }

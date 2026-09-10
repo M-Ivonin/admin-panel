@@ -93,6 +93,7 @@ export interface EmailPublicationCounters {
 export interface EmailPublication {
   id: string;
   campaignId: string;
+  campaignName?: string | null;
   definitionVersion: number;
   topic: EmailPublicationTopic;
   state: EmailPublicationState;
@@ -356,7 +357,10 @@ export interface EmailMarketingRepository {
   pause(id: string): Promise<EmailPublicationMutationResult>;
   resume(id: string): Promise<EmailPublicationMutationResult>;
   cancel(id: string, reason: string): Promise<EmailPublicationMutationResult>;
-  acknowledgeIncident(id: string, note: string): Promise<{ acknowledged: true }>;
+  acknowledgeIncident(
+    id: string,
+    note: string
+  ): Promise<{ acknowledged: true }>;
   estimateAudience(
     audience: CampaignAudienceDefinition
   ): Promise<{ reachableUsers: number; warnings: string[] }>;
