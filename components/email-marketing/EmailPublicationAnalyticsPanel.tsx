@@ -478,12 +478,14 @@ function AnalyticsReadModel({
           <Section title="Result breakdown">
             <Box component="details">
               <Typography component="summary">
-                Show breakdown by language and audience
+                Show breakdown by country, language and audience
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {[
                   a.dimensions.operator,
-                  a.dimensions.geo,
+                  ...(a.dimensions.geo !== 'unknown/global'
+                    ? [`Offer market: ${a.dimensions.geo}`]
+                    : []),
                   a.dimensions.league,
                   a.dimensions.market,
                 ]
@@ -493,11 +495,17 @@ function AnalyticsReadModel({
                   )
                   .join(' · ')}
               </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Country is the recipient’s last known country when the audience
+                was formed. Unknown includes older emails without a country
+                snapshot.
+              </Typography>
               <TableContainer>
                 <Table size="small" aria-label="Result breakdown">
                   <TableHead>
                     <TableRow>
                       {[
+                        'Country',
                         'Language',
                         'Group',
                         'Accepted',
@@ -521,6 +529,11 @@ function AnalyticsReadModel({
                   <TableBody>
                     {a.slices.map((slice, index) => (
                       <TableRow key={index}>
+                        <TableCell>
+                          {!slice.country || slice.country === 'unknown'
+                            ? 'Unknown'
+                            : slice.country}
+                        </TableCell>
                         <TableCell>{slice.locale.toUpperCase()}</TableCell>
                         <TableCell>{cohortLabel(slice.cohort)}</TableCell>
                         <TableCell>{slice.counts.accepted}</TableCell>

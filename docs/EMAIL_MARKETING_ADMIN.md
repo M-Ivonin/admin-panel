@@ -141,3 +141,11 @@ or automatic pauses apply. Off applies the same percentage thresholds to any
 non-empty denominator; the 60-minute delivery maturity rule is unchanged.
 Editing uses the existing new-version workflow and does not alter a running
 predecessor. Saved content displays the selected mode.
+
+### Recipient country breakdown
+
+Analytics → Result breakdown shows backend-owned country / language / cohort
+rows with delivery, complaint and unsubscribe rates. Country is the last known
+country snapshotted at audience formation, independent of the offer market
+label. Missing country (including older deliveries) displays `Unknown`; the
+admin does not infer or recompute geographic totals.

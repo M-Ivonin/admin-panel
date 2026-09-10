@@ -599,7 +599,7 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(within(dialog).getByText('76.54%')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('tab', { name: 'Analytics' }));
     fireEvent.click(
-      within(dialog).getByText('Show breakdown by language and audience')
+      within(dialog).getByText('Show breakdown by country, language and audience')
     );
     expect(within(dialog).getByText('43.21%')).toBeInTheDocument();
     expect(within(dialog).getByText('32.1%')).toBeInTheDocument();
@@ -822,7 +822,7 @@ describe('EmailMarketingDashboard workflow', () => {
       within(conversions).getByRole('row', { name: 'Qualified lead 5' })
     ).toBeInTheDocument();
     fireEvent.click(
-      screen.getByText('Show breakdown by language and audience')
+      screen.getByText('Show breakdown by country, language and audience')
     );
     const breakdown = screen.getByRole('table', { name: 'Result breakdown' });
     expect(
@@ -870,6 +870,7 @@ describe('EmailMarketingDashboard workflow', () => {
 
   it('shows concise backend result breakdowns without deriving alternate rates', async () => {
     const repo = repository();
+    repo.getAnalytics.mockResolvedValue({ ...analytics, slices: analytics.slices.map(slice => ({ ...slice, country: 'BR' })) });
 
     render(<EmailMarketingDashboard repository={repo} />);
     fireEvent.click(
@@ -879,11 +880,12 @@ describe('EmailMarketingDashboard workflow', () => {
     );
     fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
     fireEvent.click(
-      screen.getByText('Show breakdown by language and audience')
+      screen.getByText('Show breakdown by country, language and audience')
     );
     const table = screen.getByRole('table', { name: 'Result breakdown' });
 
     for (const heading of [
+      'Country',
       'Language',
       'Group',
       'Accepted',
@@ -894,6 +896,7 @@ describe('EmailMarketingDashboard workflow', () => {
         within(table).getByText(heading, { selector: 'th' })
       ).toBeInTheDocument();
     }
+    expect(within(table).getByText('BR')).toBeInTheDocument();
     expect(within(table).getByText('43.21%')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Retention by language'));
     const retentionTable = screen.getByRole('table', {

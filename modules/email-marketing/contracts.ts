@@ -188,6 +188,7 @@ export interface EmailPublicationAnalytics {
   affiliateConversionsByType?: Record<string, number> | null;
   slices: Array<{
     engagement?: EmailAnalyticsEngagement;
+    country?: string;
     campaign: string | null;
     publicationVersion: number;
     type: EmailPublicationTopic | null;
