@@ -329,6 +329,33 @@ function AnalyticsReadModel({
                   ['Affiliate conversions', c.affiliateConversions],
                 ]}
               />
+              {a.affiliateConversionsByType ? (
+                <TableContainer>
+                  <Table
+                    size="small"
+                    aria-label="Affiliate conversions by type"
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Conversion type</TableCell>
+                        <TableCell align="right">Events</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {Object.entries(a.affiliateConversionsByType).map(
+                        ([type, count]) => (
+                          <TableRow key={type}>
+                            <TableCell>{conversionTypeLabel(type)}</TableCell>
+                            <TableCell align="right">{count}</TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography>Conversion type breakdown unavailable.</Typography>
+              )}
               <Typography variant="body2" color="text.secondary">
                 Conversions are events and may include repeat conversions from
                 the same person.
@@ -478,6 +505,14 @@ function AnalyticsReadModel({
                         'Delivery rate',
                         'Complaint rate',
                         'Unsubscribe rate',
+                        ...(product
+                          ? [
+                              'Full Analysis clicks',
+                              'Product CTA clicks',
+                              'App opens',
+                              'Initial subscriptions',
+                            ]
+                          : []),
                       ].map((label) => (
                         <TableCell key={label}>{label}</TableCell>
                       ))}
@@ -499,6 +534,26 @@ function AnalyticsReadModel({
                         <TableCell>
                           {formatRate(slice.rates.unsubscribe)}
                         </TableCell>
+                        {product ? (
+                          <>
+                            <TableCell>
+                              {slice.engagement?.metrics?.fullAnalysisClicks ??
+                                unavailable}
+                            </TableCell>
+                            <TableCell>
+                              {slice.engagement?.metrics?.productClicks ??
+                                unavailable}
+                            </TableCell>
+                            <TableCell>
+                              {slice.engagement?.metrics?.appOpens ??
+                                unavailable}
+                            </TableCell>
+                            <TableCell>
+                              {slice.engagement?.metrics
+                                ?.initialSubscriptions ?? unavailable}
+                            </TableCell>
+                          </>
+                        ) : null}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -528,6 +583,54 @@ function AnalyticsReadModel({
                         ['Language', slice.locale],
                         ['Sponsored delivered', slice.sponsored.delivered],
                         ['Non-sponsored delivered', slice.comparator.delivered],
+                        [
+                          'Sponsored Full Analysis clicks',
+                          slice.sponsored.engagement?.metrics
+                            ?.fullAnalysisClicks ?? unavailable,
+                        ],
+                        [
+                          'Non-sponsored Full Analysis clicks',
+                          slice.comparator.engagement?.metrics
+                            ?.fullAnalysisClicks ?? unavailable,
+                        ],
+                        [
+                          'Sponsored Full Analysis click rate',
+                          slice.sponsored.engagement?.rates
+                            ? formatRate(
+                                slice.sponsored.engagement.rates
+                                  .fullAnalysisClick
+                              )
+                            : unavailable,
+                        ],
+                        [
+                          'Non-sponsored Full Analysis click rate',
+                          slice.comparator.engagement?.rates
+                            ? formatRate(
+                                slice.comparator.engagement.rates
+                                  .fullAnalysisClick
+                              )
+                            : unavailable,
+                        ],
+                        [
+                          'Sponsored app opens',
+                          slice.sponsored.engagement?.metrics?.appOpens ??
+                            unavailable,
+                        ],
+                        [
+                          'Non-sponsored app opens',
+                          slice.comparator.engagement?.metrics?.appOpens ??
+                            unavailable,
+                        ],
+                        [
+                          'Sponsored initial subscriptions',
+                          slice.sponsored.engagement?.metrics
+                            ?.initialSubscriptions ?? unavailable,
+                        ],
+                        [
+                          'Non-sponsored initial subscriptions',
+                          slice.comparator.engagement?.metrics
+                            ?.initialSubscriptions ?? unavailable,
+                        ],
                         [
                           'Sponsored complaint rate',
                           formatRate(slice.sponsored.complaintRate),
@@ -745,6 +848,12 @@ function StatusLine({
       ) : null}
     </Stack>
   );
+}
+/** Keeps contracted conversion types visible without changing backend totals. */
+function conversionTypeLabel(type: string): string {
+  if (type === 'ftd') return 'FTD';
+  const words = type.replace(/_/g, ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 function completenessLabel(status: EmailAnalyticsCompleteness) {
   return status === 'complete'

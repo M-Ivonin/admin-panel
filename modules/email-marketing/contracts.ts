@@ -135,6 +135,24 @@ export interface EmailAnalyticsRetentionWindow {
   control: EmailAnalyticsCohort;
 }
 
+/** Exact delivery engagement with backend-owned rates and completeness. */
+export interface EmailAnalyticsEngagement {
+  completeness: EmailAnalyticsCompleteness;
+  denominator: number;
+  metrics: {
+    fullAnalysisClicks: number;
+    productClicks: number;
+    appOpens: number;
+    initialSubscriptions: number;
+  } | null;
+  rates: {
+    fullAnalysisClick: number | null;
+    productClick: number | null;
+    appOpen: number | null;
+    initialSubscription: number | null;
+  } | null;
+}
+
 export interface EmailPublicationAnalytics {
   dimensions: {
     campaign: string | null;
@@ -165,7 +183,9 @@ export interface EmailPublicationAnalytics {
     partnerContinues: number;
     affiliateConversions: number;
   };
+  affiliateConversionsByType?: Record<string, number> | null;
   slices: Array<{
+    engagement?: EmailAnalyticsEngagement;
     campaign: string | null;
     publicationVersion: number;
     type: EmailPublicationTopic | null;
@@ -246,11 +266,13 @@ export interface EmailPublicationAnalytics {
         slices: Array<{
           locale: string;
           sponsored: {
+            engagement?: EmailAnalyticsEngagement;
             delivered: number;
             complaintRate: number | null;
             unsubscribeRate: number | null;
           };
           comparator: {
+            engagement?: EmailAnalyticsEngagement;
             delivered: number;
             complaintRate: number | null;
             unsubscribeRate: number | null;

@@ -122,3 +122,12 @@ all tabs. The title/tab strip and footer remain stationary; only the content
 area scrolls. Incomplete historical retention is unavailable, not a pending
 observation window. Failed analytics refresh after saving preserves the save
 success and shows the analytics error when returning to Overview or Analytics.
+
+The Analytics view shows affiliate event counts by conversion type (including
+approved extras), product engagement in each language/audience slice, and
+Full Analysis click rates, app opens and initial subscriptions on both sides
+of the observational sponsored comparison. All counts and rates come from the
+backend and are included in the aggregate JSON export. Missing breakdowns or
+exact tracing display unavailable measurements rather than inferred zeroes.
+
+When legacy conversion history is incomplete, `affiliateConversionsByType` is `null` and the type breakdown is unavailable; unknown historical counts are never displayed as measured zeroes.

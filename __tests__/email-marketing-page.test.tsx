@@ -733,6 +733,141 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(repo.list).toHaveBeenCalledTimes(2);
   });
 
+  it('shows affiliate conversion types, locale engagement and sponsored engagement from the backend', async () => {
+    const repo = repository();
+    repo.get.mockResolvedValue({
+      ...basePublication,
+      topic: 'sirbro_predictions_with_partner_offer',
+    });
+    const engagement = {
+      completeness: 'complete' as const,
+      denominator: 31,
+      metrics: {
+        fullAnalysisClicks: 7,
+        productClicks: 0,
+        appOpens: 4,
+        initialSubscriptions: 2,
+      },
+      rates: {
+        fullAnalysisClick: 0.1234,
+        productClick: 0,
+        appOpen: 0.08,
+        initialSubscription: 0.02,
+      },
+    };
+    repo.getAnalytics.mockResolvedValue({
+      ...analytics,
+      affiliateConversionsByType: {
+        registration: 6,
+        ftd: 3,
+        deposit: 8,
+        commission: 2,
+        reversal: 1,
+        qualified_lead: 5,
+      },
+      slices: [{ ...analytics.slices[0], engagement }],
+      sponsoredComparator: {
+        status: 'available',
+        label: 'observational',
+        publicationId: 'prior',
+        publicationVersion: 1,
+        matching: {
+          league: 'League',
+          market: 'Totals',
+          locale: 'same_locale_slice',
+          lookbackDays: 30,
+        },
+        slices: [
+          {
+            locale: 'en',
+            sponsored: {
+              delivered: 31,
+              complaintRate: 0,
+              unsubscribeRate: 0,
+              engagement,
+            },
+            comparator: {
+              delivered: 47,
+              complaintRate: 0,
+              unsubscribeRate: 0,
+              engagement: {
+                ...engagement,
+                rates: { ...engagement.rates, fullAnalysisClick: 0.2345 },
+              },
+            },
+          },
+        ],
+      },
+    });
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
+    const conversions = screen.getByRole('table', {
+      name: 'Affiliate conversions by type',
+    });
+    expect(
+      within(conversions).getByRole('row', { name: 'Registration 6' })
+    ).toBeInTheDocument();
+    expect(
+      within(conversions).getByRole('row', { name: 'FTD 3' })
+    ).toBeInTheDocument();
+    expect(
+      within(conversions).getByRole('row', { name: 'Deposit 8' })
+    ).toBeInTheDocument();
+    expect(
+      within(conversions).getByRole('row', { name: 'Qualified lead 5' })
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByText('Show breakdown by language and audience')
+    );
+    const breakdown = screen.getByRole('table', { name: 'Result breakdown' });
+    expect(
+      within(breakdown).getByRole('columnheader', {
+        name: 'Full Analysis clicks',
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(breakdown).getByRole('cell', { name: '7' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Sponsored Full Analysis click rate')
+    ).toBeInTheDocument();
+    expect(screen.getByText('12.34%')).toBeInTheDocument();
+    expect(
+      screen.getByText('Non-sponsored Full Analysis click rate')
+    ).toBeInTheDocument();
+    expect(screen.getByText('23.45%')).toBeInTheDocument();
+  });
+
+  it('shows an unavailable conversion breakdown when historical types are incomplete', async () => {
+    const repo = repository();
+    repo.get.mockResolvedValue({
+      ...basePublication,
+      topic: 'sirbro_predictions_with_partner_offer',
+    });
+    repo.getAnalytics.mockResolvedValue({
+      ...analytics,
+      affiliateConversionsByType: null,
+    });
+    render(<EmailMarketingDashboard repository={repo} />);
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open publication Product launch',
+      })
+    );
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }));
+    expect(
+      screen.getByText('Conversion type breakdown unavailable.')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('table', { name: 'Affiliate conversions by type' })
+    ).not.toBeInTheDocument();
+  });
+
   it('shows concise backend result breakdowns without deriving alternate rates', async () => {
     const repo = repository();
 
