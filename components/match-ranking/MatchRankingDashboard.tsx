@@ -1316,7 +1316,7 @@ function CompetitionDialog({
   onSaved: () => Promise<void>;
 }) {
   const [category, setCategory] = useState(
-    (item.effectiveCategory ?? item.providerCategory)?.toString() ?? ''
+    item.effectiveCategory?.toString() ?? ''
   );
   const [countryCode, setCountryCode] = useState(item.countryCode ?? '');
   const selectedCountry = useMemo(
@@ -1487,14 +1487,23 @@ function CompetitionDialog({
                 <HelpLabel
                   text="Effective category"
                   label="Effective category help"
-                  title="Controls the competition importance used by match ranking. This admin value overrides the provider category; leave it blank to use the provider value."
+                  title="Controls this league’s importance for users in all countries. Default base points: category 1 = 40, category 2 = 28, category 3 = 16, category 4 = 6. Ranking configurations can override these points. Category also scales the tournament-stage bonus and affects league ordering and Top Matches eligibility; it does not guarantee a position. Choose Automatic to use the provider category, or 1–4 to keep a manual override."
                 />
               }
-              type="number"
+              select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              SelectProps={{ displayEmpty: true }}
+              InputLabelProps={{ shrink: true }}
               helperText={`Provider category: ${item.providerCategory ?? 'not provided'}`}
-            />
+            >
+              <MenuItem value="">Automatic — use provider category</MenuItem>
+              {[1, 2, 3, 4].map((value) => (
+                <MenuItem key={value} value={String(value)}>
+                  {value}
+                </MenuItem>
+              ))}
+            </TextField>
             <Autocomplete
               options={countryCodeOptions}
               value={selectedCountry}

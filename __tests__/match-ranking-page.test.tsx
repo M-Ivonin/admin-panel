@@ -318,7 +318,7 @@ describe('MatchRankingPage', () => {
       await screen.findByRole('button', { name: 'Edit shared ranking' })
     );
     await waitFor(() =>
-      expect(screen.getByLabelText('Effective category')).toHaveValue(2)
+      expect(screen.getByLabelText('Effective category')).toHaveTextContent('2')
     );
     expect(searchCompetitionLinkTargets).not.toHaveBeenCalled();
     expect(linkLegacyCompetition).not.toHaveBeenCalled();
@@ -403,7 +403,7 @@ describe('MatchRankingPage', () => {
       screen.getByRole('button', { name: 'Edit Copa Libertadores' })
     );
     const dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    expect(within(dialog).getByLabelText('Effective category')).toHaveValue(1);
+    expect(within(dialog).getByLabelText('Effective category')).toHaveTextContent('Automatic — use provider category');
     expect(
       within(dialog).getByText('Provider category: 1')
     ).toBeInTheDocument();
@@ -411,9 +411,8 @@ describe('MatchRankingPage', () => {
       target: { value: 'Brazil' },
     });
     fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
-    fireEvent.change(within(dialog).getByLabelText('Effective category'), {
-      target: { value: '1' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Effective category'));
+    fireEvent.click(screen.getByRole('option', { name: '1' }));
     fireEvent.mouseDown(within(dialog).getByLabelText('Classification'));
     fireEvent.click(screen.getByRole('option', { name: 'senior' }));
     fireEvent.mouseDown(within(dialog).getByLabelText('Review state'));
@@ -496,9 +495,8 @@ describe('MatchRankingPage', () => {
       screen.getByRole('button', { name: 'Edit Copa Libertadores' })
     );
     const dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    fireEvent.change(within(dialog).getByLabelText('Effective category'), {
-      target: { value: '2' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Effective category'));
+    fireEvent.click(screen.getByRole('option', { name: '2' }));
     fireEvent.change(within(dialog).getByLabelText('Reason'), {
       target: { value: 'Category correction' },
     });
@@ -536,9 +534,8 @@ describe('MatchRankingPage', () => {
         'Saved country code: EU (not in the country list). Choose a country or use automatic.'
       )
     ).toBeInTheDocument();
-    fireEvent.change(within(dialog).getByLabelText('Effective category'), {
-      target: { value: '2' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Effective category'));
+    fireEvent.click(screen.getByRole('option', { name: '2' }));
     fireEvent.change(within(dialog).getByLabelText('Reason'), {
       target: { value: 'Category only' },
     });
