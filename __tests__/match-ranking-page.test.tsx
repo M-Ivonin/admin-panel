@@ -643,9 +643,8 @@ describe('MatchRankingPage', () => {
       within(dialog).getByLabelText('Priority countries / regions 1'),
       { key: 'Escape' }
     );
-    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
-      target: { value: '10' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 1'));
+    fireEvent.click(screen.getByRole('option', { name: '+10' }));
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Add country adjustment' })
     );
@@ -658,9 +657,8 @@ describe('MatchRankingPage', () => {
       within(dialog).getByLabelText('Priority countries / regions 2'),
       { key: 'Escape' }
     );
-    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 2'), {
-      target: { value: '-5' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 2'));
+    fireEvent.click(screen.getByRole('option', { name: '-5' }));
     fireEvent.change(within(dialog).getByLabelText('Reason'), {
       target: { value: 'Market priority' },
     });
@@ -671,9 +669,8 @@ describe('MatchRankingPage', () => {
       await within(dialog).findByText(/Conflicting adjustments for BR/)
     ).toBeInTheDocument();
     expect(updateMatchRankingCompetition).not.toHaveBeenCalled();
-    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 2'), {
-      target: { value: '10' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 2'));
+    fireEvent.click(screen.getByRole('option', { name: '+10' }));
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Save review' })
     );
@@ -702,9 +699,7 @@ describe('MatchRankingPage', () => {
     );
     dialog = screen.getByRole('dialog', { name: 'Review competition' });
     expect(within(dialog).getByText('Brazil (BR)')).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveValue(
-      10
-    );
+    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveTextContent('+10');
     expect(
       within(dialog).queryByLabelText('Priority adjustment 2')
     ).not.toBeInTheDocument();
@@ -748,9 +743,8 @@ describe('MatchRankingPage', () => {
       screen.getByRole('button', { name: 'Edit Copa Libertadores' })
     );
     let dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
-      target: { value: '11' },
-    });
+    fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 1'));
+    fireEvent.click(screen.getByRole('option', { name: '+11' }));
     fireEvent.change(within(dialog).getByLabelText('Reason'), {
       target: { value: 'Increase both country priorities' },
     });
@@ -776,9 +770,7 @@ describe('MatchRankingPage', () => {
     expect(
       within(dialog).getByText('Svalbard and Jan Mayen (SJ)')
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveValue(
-      11
-    );
+    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveTextContent('+11');
   });
 
   it('requires a nonempty audience and an integer adjustment within the allowed range', async () => {
@@ -811,19 +803,12 @@ describe('MatchRankingPage', () => {
       within(dialog).getByLabelText('Priority countries / regions 1'),
       { key: 'Escape' }
     );
-    for (const value of ['21', '-21', '1.5', '']) {
-      fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
-        target: { value },
-      });
-      fireEvent.click(
-        within(dialog).getByRole('button', { name: 'Save review' })
-      );
-      expect(
-        await within(dialog).findByText(
-          'Priority adjustments must be whole numbers from -20 to 20.'
-        )
-      ).toBeInTheDocument();
-    }
+    fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 1'));
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(
+      Array.from({ length: 41 }, (_, index) => index - 20).map((points) =>
+        points > 0 ? `+${points}` : String(points)
+      )
+    );
     expect(updateMatchRankingCompetition).not.toHaveBeenCalled();
   }, 15000);
 

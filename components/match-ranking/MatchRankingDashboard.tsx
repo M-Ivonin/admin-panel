@@ -17,6 +17,7 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
+  createFilterOptions,
   Dialog,
   DialogActions,
   DialogContent,
@@ -1684,14 +1685,22 @@ function CompetitionDialog({
               </Typography>
               <TextField
                 label={`Priority adjustment ${index + 1}`}
-                type="number"
+                select
                 value={row.value}
-                inputProps={{ min: -20, max: 20, step: 1 }}
                 helperText="Whole number from −20 to +20 points."
                 onChange={(event) =>
                   changePriority(index, { value: event.target.value })
                 }
-              />
+              >
+                {Array.from(
+                  { length: 41 },
+                  (_, optionIndex) => optionIndex - 20
+                ).map((points) => (
+                  <MenuItem key={points} value={String(points)}>
+                    {points > 0 ? `+${points}` : points}
+                  </MenuItem>
+                ))}
+              </TextField>
               <Button
                 aria-label={`Remove country adjustment ${index + 1}`}
                 onClick={() => {
@@ -2209,6 +2218,14 @@ function DeleteOverrideDialog({
   );
 }
 
+const pinPriorityOptions = Array.from({ length: 32768 }, (_, index) =>
+  String(index)
+);
+const filterPinPriorities = createFilterOptions<string>({
+  matchFrom: 'start',
+  limit: 50,
+});
+
 function OverrideDialog({
   item,
   onClose,
@@ -2230,8 +2247,8 @@ function OverrideDialog({
   const [action, setAction] = useState<MatchRankingOverrideAction>(
     item?.action ?? 'pin'
   );
-  const [value, setValue] = useState(item?.value?.toString() ?? '');
-  const [priority, setPriority] = useState(item?.priority?.toString() ?? '');
+  const [value, setValue] = useState(item?.value?.toString() ?? '0');
+  const [priority, setPriority] = useState(item?.priority?.toString() ?? '0');
   const [startsAt, setStartsAt] = useState(toDateTimeInput(item?.startsAt));
   const [endsAt, setEndsAt] = useState(toDateTimeInput(item?.endsAt));
   const [reason, setReason] = useState(item?.reason ?? '');
@@ -2431,18 +2448,46 @@ function OverrideDialog({
           </TextField>
           {action === 'adjust' ? (
             <TextField
-              label="Adjustment value"
-              type="number"
+              label={
+                <HelpLabel
+                  text="Adjustment value"
+                  label="Fixture adjustment value help"
+                  title="Adds or subtracts −20 to +20 points from an eligible fixture’s Top Matches score. Positive values raise its score; negative values lower it; 0 makes no change. This does not bypass eligibility rules or change league ordering."
+                />
+              }
+              select
               value={value}
               onChange={(e) => setValue(e.target.value)}
-            />
+            >
+              {Array.from({ length: 41 }, (_, index) => index - 20).map(
+                (points) => (
+                  <MenuItem key={points} value={String(points)}>
+                    {points > 0 ? `+${points}` : points}
+                  </MenuItem>
+                )
+              )}
+            </TextField>
           ) : null}
           {action === 'pin' ? (
-            <TextField
-              label="Pin priority"
-              type="number"
+            <Autocomplete
+              disableClearable
+              options={pinPriorityOptions}
+              filterOptions={filterPinPriorities}
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(_event, selected) => setPriority(selected)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={
+                    <HelpLabel
+                      text="Pin priority"
+                      label="Fixture pin priority help"
+                      title="Orders pinned fixtures ahead of non-pinned fixtures. Lower numbers rank first: 0 before 1, then 2, and so on. This is an ordering priority, not additional points or a guaranteed slot. Supported values: 0–32767."
+                    />
+                  }
+                  helperText="Select 0–32767. Type to find a value; up to 50 matches are shown."
+                />
+              )}
             />
           ) : null}
           <TextField
