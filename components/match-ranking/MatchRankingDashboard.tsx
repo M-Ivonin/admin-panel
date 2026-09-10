@@ -212,7 +212,6 @@ export function MatchRankingDashboard() {
   const [configurations, setConfigurations] = useState<
     MatchRankingConfiguration[]
   >([]);
-  const [audit, setAudit] = useState<MatchRankingAuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -244,24 +243,17 @@ export function MatchRankingDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [
-        competitionRows,
-        prominenceRows,
-        overrideRows,
-        configRows,
-        auditRows,
-      ] = await Promise.all([
-        getMatchRankingCompetitions(),
-        getTeamProminence(),
-        getMatchRankingOverrides(),
-        getMatchRankingConfigurations(),
-        getMatchRankingAudit(),
-      ]);
+      const [competitionRows, prominenceRows, overrideRows, configRows] =
+        await Promise.all([
+          getMatchRankingCompetitions(),
+          getTeamProminence(),
+          getMatchRankingOverrides(),
+          getMatchRankingConfigurations(),
+        ]);
       setCompetitions(competitionRows);
       setProminence(prominenceRows);
       setOverrides(overrideRows);
       setConfigurations(configRows);
-      setAudit(auditRows);
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
@@ -403,7 +395,7 @@ export function MatchRankingDashboard() {
             />
           ) : null}
           {!loading && tab === 4 ? <PreviewPanel onError={setError} /> : null}
-          {!loading && tab === 5 ? <AuditPanel items={audit} /> : null}
+          {!loading && tab === 5 ? <AuditPanel /> : null}
         </Stack>
       </Box>
 
@@ -2917,7 +2909,34 @@ function PreviewFixtureCard({
   );
 }
 
-function AuditPanel({ items }: { items: MatchRankingAuditEvent[] }) {
+function AuditPanel() {
+  const [items, setItems] = useState<MatchRankingAuditEvent[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getMatchRankingAudit().then(
+      (rows) => {
+        if (active) setItems(rows);
+      },
+      (caught: unknown) => {
+        if (active) setError(messageOf(caught));
+      }
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (items === null)
+    return (
+      <Stack role="status" alignItems="center" py={8} spacing={2}>
+        <CircularProgress />
+        <Typography color="text.secondary">Loading ranking audit…</Typography>
+      </Stack>
+    );
+
   return (
     <Stack spacing={2}>
       {items.length === 0 ? (

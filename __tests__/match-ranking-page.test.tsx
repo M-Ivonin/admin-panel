@@ -365,7 +365,9 @@ describe('MatchRankingPage', () => {
     ] as const;
 
     for (const [tabName, dialogName] of manuals) {
-      fireEvent.click(screen.getByRole('tab', { name: tabName }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('tab', { name: tabName }));
+      });
       fireEvent.click(
         screen.getByRole('button', { name: `Help for ${tabName}` })
       );
@@ -435,6 +437,56 @@ describe('MatchRankingPage', () => {
         })
       )
     );
+  });
+
+  it('shows the latest audit after saving a competition without reloading the page', async () => {
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Audit' }));
+    await screen.findByText('No ranking audit events');
+    fireEvent.click(screen.getByRole('tab', { name: 'Competition catalog' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Fresh competition review' },
+    });
+    (getMatchRankingAudit as jest.Mock).mockResolvedValue([
+      {
+        id: 'fresh-audit',
+        targetType: 'competition',
+        targetId: competition.id,
+        reason: 'Fresh competition review',
+        actorEmail: 'admin@example.test',
+        createdAt: '2026-09-10T12:00:00Z',
+        beforeValue: {},
+        afterValue: {},
+      },
+    ]);
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Audit' }));
+    expect(
+      await screen.findByText('Fresh competition review')
+    ).toBeInTheDocument();
+  });
+
+  it('shows audit fetch errors rather than a stale or empty history', async () => {
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    (getMatchRankingAudit as jest.Mock).mockRejectedValue(
+      new Error('Audit unavailable')
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Audit' }));
+    expect(await screen.findByText('Audit unavailable')).toBeInTheDocument();
+    expect(
+      screen.queryByText('No ranking audit events')
+    ).not.toBeInTheDocument();
   });
 
   it('leaves automatic geography untouched when only the category changes', async () => {
