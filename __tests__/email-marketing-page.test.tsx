@@ -445,9 +445,9 @@ describe('EmailMarketingDashboard workflow', () => {
     expect(screen.getByText(/Independent stage totals/)).toBeInTheDocument();
     expect(screen.queryByText('Product engagement')).not.toBeInTheDocument();
     expect(screen.getByText(/USD revenue is unavailable/)).toBeInTheDocument();
-    expect(screen.getAllByText('Revenue unavailable').length).toBeGreaterThan(
-      0
-    );
+    expect(screen.getAllByText('No complete data')).toHaveLength(3);
+    expect(screen.queryByText('$1.23')).not.toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
   });
 
   it('opens a content-only saved publication without inventing an editable audience', async () => {

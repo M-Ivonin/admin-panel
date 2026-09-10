@@ -140,6 +140,11 @@ function AnalyticsReadModel({
   view: 'overview' | 'analytics';
 }) {
   const { counts: c, health: h } = a;
+  const revenueValue = (value: number | null) =>
+    a.affiliateRevenue.completeness === 'incomplete'
+      ? 'No complete data'
+      : formatMoney(value);
+
   const partner =
     publication.topic === 'betting_partner_offers' ||
     publication.topic === 'sirbro_predictions_with_partner_offer';
@@ -210,7 +215,7 @@ function AnalyticsReadModel({
             {partner ? (
               <Result
                 label="Affiliate revenue (USD)"
-                value={formatMoney(a.affiliateRevenue.usd)}
+                value={revenueValue(a.affiliateRevenue.usd)}
                 detail={completenessLabel(a.affiliateRevenue.completeness)}
               />
             ) : null}
@@ -372,16 +377,16 @@ function AnalyticsReadModel({
               <Grid>
                 <Result
                   label="Affiliate revenue (USD)"
-                  value={formatMoney(a.affiliateRevenue.usd)}
+                  value={revenueValue(a.affiliateRevenue.usd)}
                 />
                 <Result
                   label="Revenue per delivered email"
-                  value={formatMoney(a.rates.revenuePerDeliveredEmail)}
+                  value={revenueValue(a.rates.revenuePerDeliveredEmail)}
                   detail={`Based on ${a.denominators.delivered} delivered emails`}
                 />
                 <Result
                   label="Revenue per eligible partner subscriber"
-                  value={formatMoney(
+                  value={revenueValue(
                     a.rates.revenuePerEligibleConfirmedPartnerSubscriber
                   )}
                   detail={`Based on ${a.denominators.eligibleConfirmedAudience} eligible confirmed subscribers`}

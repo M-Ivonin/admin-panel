@@ -113,7 +113,9 @@ not an inferred audit log.
 Product and partner stages use the Updated Home visual vocabulary, but remain
 independent event totals. No sequential conversion percentages are calculated.
 Repeat affiliate conversions remain events. Missing tracking, incomplete revenue,
-zero activity, and unready retention are labelled separately. Expected retention
+zero activity, and unready retention are labelled separately. Incomplete revenue
+shows “No complete data” for the total and both per-email/subscriber amounts;
+partial monetary values are never displayed. Expected retention
 readiness dates follow the current backend observation window (anchor + D7/D30 +
 8 days); only the returned maturity decides whether results are displayed.
 
