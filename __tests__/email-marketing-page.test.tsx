@@ -312,6 +312,56 @@ function repository(): jest.Mocked<EmailMarketingRepository> {
 }
 
 describe('EmailMarketingDashboard workflow', () => {
+  it('opens a content-only saved publication without inventing an editable audience', async () => {
+    const repo = repository();
+    const incomplete = {
+      ...basePublication,
+      definition: {
+        contentByLocale: basePublication.definition.contentByLocale,
+      },
+    } as EmailPublication;
+    repo.list.mockResolvedValue([incomplete]);
+    repo.get.mockResolvedValue(incomplete);
+    render(<EmailMarketingDashboard repository={repo} />);
+    // The real saved row has no name; click its existing public card seam.
+    fireEvent.click(
+      await screen.findByRole('button', { name: /^Open publication / })
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Publication details',
+    });
+    expect(
+      within(dialog).getByText('Performance and health')
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/saved publication definition is incomplete/i)
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('EN exact')).toBeInTheDocument();
+    expect(
+      within(dialog).queryByLabelText('Audience source')
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Save successor draft' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Approve' })
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole('button', { name: 'Load preview' })
+    ).not.toBeInTheDocument();
+    expect(repo.edit).not.toHaveBeenCalled();
+    expect(repo.approve).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Close' })
+    );
+    expect(
+      screen.getByRole('button', {
+        name: 'Open publication Untitled publication',
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/cap N\/A/)).toBeInTheDocument();
+  });
+
   it('keeps publication edit and create usable when analytics are unavailable', async () => {
     const repo = repository();
     repo.getAnalytics.mockRejectedValue(

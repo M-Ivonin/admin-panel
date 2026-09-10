@@ -109,8 +109,9 @@ export function EmailMarketingDashboard({
 }) {
   const [items, setItems] = useState<EmailPublication[]>([]);
   const [selected, setSelected] = useState<EmailPublication | null>(null);
-  const [analytics, setAnalytics] =
-    useState<EmailPublicationAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<EmailPublicationAnalytics | null>(
+    null
+  );
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [acknowledgementNote, setAcknowledgementNote] = useState('');
   const [draft, setDraft] = useState<EditorDraft | null>(null);
@@ -647,7 +648,7 @@ function PublicationCard({
     <Card>
       <CardActionArea
         onClick={onOpen}
-        aria-label={`Open publication ${item.definition.name}`}
+        aria-label={`Open publication ${item.definition?.name || 'Untitled publication'}`}
       >
         <CardContent>
           <Stack spacing={2}>
@@ -658,7 +659,9 @@ function PublicationCard({
             >
               <Box>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="h6">{item.definition.name}</Typography>
+                  <Typography variant="h6">
+                    {item.definition?.name || 'Untitled publication'}
+                  </Typography>
                   <Chip
                     label={publicationStateLabel(item.state)}
                     size="small"
@@ -667,7 +670,10 @@ function PublicationCard({
                 <Typography color="text.secondary">
                   {topicLabel(item.topic)} · version {item.definitionVersion} ·{' '}
                   {versionCount} {versionCount === 1 ? 'version' : 'versions'} ·
-                  cap {item.definition.frequencyCapHours}h
+                  cap{' '}
+                  {typeof item.definition?.frequencyCapHours === 'number'
+                    ? `${item.definition.frequencyCapHours}h`
+                    : 'N/A'}
                 </Typography>
                 {item.schedule ? (
                   <Typography variant="body2" color="text.secondary">
@@ -777,6 +783,9 @@ function Editor(props: EditorProps) {
     estimate,
     busy,
   } = props;
+  const incompleteDefinition = Boolean(
+    selected && !hasEditableDefinition(selected)
+  );
   const historical = Boolean(
     selected && versions[0] && versions[0].id !== selected.id
   );
@@ -922,436 +931,482 @@ function Editor(props: EditorProps) {
               onExport={props.onExportAnalytics}
             />
           ) : null}
-          <Divider />
-          <TextField
-            label="Publication name"
-            value={draft.name}
-            onChange={(event) => set('name', event.target.value)}
-            required
-          />
-          <TextField
-            select
-            label="Publication type"
-            value={draft.topic}
-            onChange={(event) =>
-              setTopic(event.target.value as EmailPublicationTopic)
-            }
-          >
-            {topics.map((topic) => (
-              <MenuItem key={topic.value} value={topic.value}>
-                {topic.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          {sendGridCatalogUnavailable ? (
-            <Alert severity="warning">
-              The SendGrid template list is temporarily unavailable. Saved
-              publications remain viewable, but a new publication cannot be
-              created until the catalog is available.
-            </Alert>
-          ) : null}
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <TextField
-              fullWidth
-              select
-              label="SendGrid template"
-              value={draft.sendGridTemplateId}
-              onChange={(event) => {
-                const template = compatibleTemplates.find(
-                  (item) => item.id === event.target.value
+          {incompleteDefinition ? (
+            <>
+              <Alert severity="warning">
+                The saved publication definition is incomplete. Analytics remain
+                available, but editing, preview, and delivery commands are
+                unavailable until the saved definition is recovered.
+              </Alert>
+              <Typography variant="h6">Saved content</Typography>
+              {locales.map((locale) => {
+                const content = selected?.definition?.contentByLocale?.[locale];
+                return (
+                  <Box key={locale}>
+                    <Typography variant="subtitle1">
+                      {locale.toUpperCase()}
+                    </Typography>
+                    <Typography>
+                      {content?.subject || 'Subject unavailable'}
+                    </Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      {content?.textBody || 'Text content unavailable'}
+                    </Typography>
+                  </Box>
                 );
-                updateDraft({
-                  ...draft,
-                  sendGridTemplateId: event.target.value,
-                  sendGridTemplateVersion:
-                    template?.versions.find((version) => version.active)?.id ??
-                    '',
-                });
-              }}
-              required
-              helperText={
-                compatibleTemplates.length
-                  ? 'Only templates compatible with this publication type are shown.'
-                  : 'No compatible SendGrid templates are available.'
-              }
-            >
-              {templateOptions.map((template) => (
-                <MenuItem key={template.id} value={template.id}>
-                  {template.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              fullWidth
-              select
-              label="SendGrid template version"
-              value={draft.sendGridTemplateVersion}
-              onChange={(event) =>
-                set('sendGridTemplateVersion', event.target.value)
-              }
-              required
-              disabled={!draft.sendGridTemplateId}
-            >
-              {versionOptions.map((version) => (
-                <MenuItem
-                  key={version.id}
-                  value={version.id}
-                  disabled={!version.active}
-                >
-                  {version.name}
-                  {version.active ? ' · active' : ' · saved inactive'}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-          <Typography variant="subtitle1">Audience</Typography>
-          <TextField
-            select
-            label="Audience source"
-            value={draft.audience.segmentSource}
-            onChange={(event) =>
-              set('audience', {
-                ...draft.audience,
-                segmentSource: event.target
-                  .value as CampaignAudienceDefinition['segmentSource'],
-                sourceSegmentId: null,
-              })
-            }
-          >
-            <MenuItem value="manual_rules">Manual rules</MenuItem>
-            <MenuItem value="template_segment">Template segment</MenuItem>
-          </TextField>
-          {draft.audience.segmentSource === 'template_segment' ? (
-            <TextField
-              select
-              label="Template audience"
-              value={draft.audience.sourceSegmentId ?? ''}
-              onChange={(event) => {
-                const source = audienceSources.find(
-                  (item) =>
-                    item.id === event.target.value &&
-                    item.source === draft.audience.segmentSource
-                );
-                if (source)
-                  set('audience', cloneAudience(source.audience, source));
-              }}
-              required
-            >
-              <MenuItem value="" disabled>
-                Select an audience
-              </MenuItem>
-              {audienceSources
-                .filter(
-                  (source) => source.source === draft.audience.segmentSource
-                )
-                .map((source) => (
-                  <MenuItem
-                    key={`${source.source}:${source.id}`}
-                    value={source.id}
-                  >
-                    {source.name}
+              })}
+            </>
+          ) : (
+            <>
+              <Divider />
+              <TextField
+                label="Publication name"
+                value={draft.name}
+                onChange={(event) => set('name', event.target.value)}
+                required
+              />
+              <TextField
+                select
+                label="Publication type"
+                value={draft.topic}
+                onChange={(event) =>
+                  setTopic(event.target.value as EmailPublicationTopic)
+                }
+              >
+                {topics.map((topic) => (
+                  <MenuItem key={topic.value} value={topic.value}>
+                    {topic.label}
                   </MenuItem>
                 ))}
-            </TextField>
-          ) : null}
-          <Box>
-            <Typography variant="subtitle2">Retention stages</Typography>
-            <Stack direction="row" flexWrap="wrap" useFlexGap>
-              {retentionStages.map((stage) => (
-                <FormControlLabel
-                  key={stage}
-                  control={
-                    <Checkbox
-                      checked={draft.audience.criteria.retentionStages.includes(
-                        stage
-                      )}
-                      onChange={(event) =>
-                        setManualAudience({
-                          ...draft.audience,
-                          criteria: {
-                            ...draft.audience.criteria,
-                            retentionStages: toggle(
-                              draft.audience.criteria.retentionStages,
-                              stage,
-                              event.target.checked
-                            ),
-                          },
-                        })
-                      }
-                    />
+              </TextField>
+              {sendGridCatalogUnavailable ? (
+                <Alert severity="warning">
+                  The SendGrid template list is temporarily unavailable. Saved
+                  publications remain viewable, but a new publication cannot be
+                  created until the catalog is available.
+                </Alert>
+              ) : null}
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <TextField
+                  fullWidth
+                  select
+                  label="SendGrid template"
+                  value={draft.sendGridTemplateId}
+                  onChange={(event) => {
+                    const template = compatibleTemplates.find(
+                      (item) => item.id === event.target.value
+                    );
+                    updateDraft({
+                      ...draft,
+                      sendGridTemplateId: event.target.value,
+                      sendGridTemplateVersion:
+                        template?.versions.find((version) => version.active)
+                          ?.id ?? '',
+                    });
+                  }}
+                  required
+                  helperText={
+                    compatibleTemplates.length
+                      ? 'Only templates compatible with this publication type are shown.'
+                      : 'No compatible SendGrid templates are available.'
                   }
-                  label={stage}
-                />
-              ))}
-            </Stack>
-          </Box>
-          <TextField
-            label="Exact user IDs (comma-separated)"
-            value={draft.audience.criteria.userIds.join(', ')}
-            onChange={(event) =>
-              setManualAudience({
-                ...draft.audience,
-                criteria: {
-                  ...draft.audience.criteria,
-                  userIds: splitValues(event.target.value),
-                },
-              })
-            }
-          />
-          <Box>
-            <Typography variant="subtitle2">Recipient locales</Typography>
-            {locales.map((locale) => (
+                >
+                  {templateOptions.map((template) => (
+                    <MenuItem key={template.id} value={template.id}>
+                      {template.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  select
+                  label="SendGrid template version"
+                  value={draft.sendGridTemplateVersion}
+                  onChange={(event) =>
+                    set('sendGridTemplateVersion', event.target.value)
+                  }
+                  required
+                  disabled={!draft.sendGridTemplateId}
+                >
+                  {versionOptions.map((version) => (
+                    <MenuItem
+                      key={version.id}
+                      value={version.id}
+                      disabled={!version.active}
+                    >
+                      {version.name}
+                      {version.active ? ' · active' : ' · saved inactive'}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+              <Typography variant="subtitle1">Audience</Typography>
+              <TextField
+                select
+                label="Audience source"
+                value={draft.audience.segmentSource}
+                onChange={(event) =>
+                  set('audience', {
+                    ...draft.audience,
+                    segmentSource: event.target
+                      .value as CampaignAudienceDefinition['segmentSource'],
+                    sourceSegmentId: null,
+                  })
+                }
+              >
+                <MenuItem value="manual_rules">Manual rules</MenuItem>
+                <MenuItem value="template_segment">Template segment</MenuItem>
+              </TextField>
+              {draft.audience.segmentSource === 'template_segment' ? (
+                <TextField
+                  select
+                  label="Template audience"
+                  value={draft.audience.sourceSegmentId ?? ''}
+                  onChange={(event) => {
+                    const source = audienceSources.find(
+                      (item) =>
+                        item.id === event.target.value &&
+                        item.source === draft.audience.segmentSource
+                    );
+                    if (source)
+                      set('audience', cloneAudience(source.audience, source));
+                  }}
+                  required
+                >
+                  <MenuItem value="" disabled>
+                    Select an audience
+                  </MenuItem>
+                  {audienceSources
+                    .filter(
+                      (source) => source.source === draft.audience.segmentSource
+                    )
+                    .map((source) => (
+                      <MenuItem
+                        key={`${source.source}:${source.id}`}
+                        value={source.id}
+                      >
+                        {source.name}
+                      </MenuItem>
+                    ))}
+                </TextField>
+              ) : null}
+              <Box>
+                <Typography variant="subtitle2">Retention stages</Typography>
+                <Stack direction="row" flexWrap="wrap" useFlexGap>
+                  {retentionStages.map((stage) => (
+                    <FormControlLabel
+                      key={stage}
+                      control={
+                        <Checkbox
+                          checked={draft.audience.criteria.retentionStages.includes(
+                            stage
+                          )}
+                          onChange={(event) =>
+                            setManualAudience({
+                              ...draft.audience,
+                              criteria: {
+                                ...draft.audience.criteria,
+                                retentionStages: toggle(
+                                  draft.audience.criteria.retentionStages,
+                                  stage,
+                                  event.target.checked
+                                ),
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label={stage}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+              <TextField
+                label="Exact user IDs (comma-separated)"
+                value={draft.audience.criteria.userIds.join(', ')}
+                onChange={(event) =>
+                  setManualAudience({
+                    ...draft.audience,
+                    criteria: {
+                      ...draft.audience.criteria,
+                      userIds: splitValues(event.target.value),
+                    },
+                  })
+                }
+              />
+              <Box>
+                <Typography variant="subtitle2">Recipient locales</Typography>
+                {locales.map((locale) => (
+                  <FormControlLabel
+                    key={locale}
+                    control={
+                      <Checkbox
+                        checked={draft.audience.criteria.locales.includes(
+                          locale
+                        )}
+                        onChange={(event) =>
+                          setManualAudience({
+                            ...draft.audience,
+                            criteria: {
+                              ...draft.audience.criteria,
+                              locales: toggle(
+                                draft.audience.criteria.locales,
+                                locale,
+                                event.target.checked
+                              ),
+                            },
+                          })
+                        }
+                      />
+                    }
+                    label={locale}
+                  />
+                ))}
+              </Box>
               <FormControlLabel
-                key={locale}
                 control={
                   <Checkbox
-                    checked={draft.audience.criteria.locales.includes(locale)}
+                    checked={
+                      draft.audience.suppression.excludeUsersWithoutPushOpens
+                    }
                     onChange={(event) =>
                       setManualAudience({
                         ...draft.audience,
-                        criteria: {
-                          ...draft.audience.criteria,
-                          locales: toggle(
-                            draft.audience.criteria.locales,
-                            locale,
-                            event.target.checked
-                          ),
+                        suppression: {
+                          excludeUsersWithoutPushOpens: event.target.checked,
                         },
                       })
                     }
                   />
                 }
-                label={locale}
+                label="Narrow to users with push opens (explicit audience criterion only)"
               />
-            ))}
-          </Box>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={
-                  draft.audience.suppression.excludeUsersWithoutPushOpens
-                }
+              <TextField
+                label="Frequency cap hours"
+                type="number"
+                value={draft.frequencyCapHours}
                 onChange={(event) =>
-                  setManualAudience({
-                    ...draft.audience,
-                    suppression: {
-                      excludeUsersWithoutPushOpens: event.target.checked,
-                    },
-                  })
+                  set('frequencyCapHours', event.target.value)
                 }
-              />
-            }
-            label="Narrow to users with push opens (explicit audience criterion only)"
-          />
-          <TextField
-            label="Frequency cap hours"
-            type="number"
-            value={draft.frequencyCapHours}
-            onChange={(event) => set('frequencyCapHours', event.target.value)}
-            inputProps={{ min: 1, max: 8760 }}
-            required
-          />
-          <Button variant="outlined" onClick={props.onEstimate} disabled={busy}>
-            Estimate audience
-          </Button>
-          {estimate ? (
-            <Alert severity="info">
-              Backend estimate:{' '}
-              {estimate.reachableUsers.toLocaleString('en-US')} reachable users.
-              {estimate.warnings.map((warning) => ` ${warning}`)}
-            </Alert>
-          ) : null}
-          <LocalizedContentEditor draft={draft} setDraft={updateDraft} />
-          {draft.topic === 'sirbro_predictions' ||
-          draft.topic === 'sirbro_predictions_with_partner_offer' ? (
-            <Stack spacing={2}>
-              <Alert severity="info">
-                Only future predictions with Complete Full Analysis are
-                selectable. Approval freezes the prediction and its Full
-                Analysis CTA before any sponsored module.
-              </Alert>
-              <TextField
-                select
-                label="Eligible prediction and version"
-                value={draft.predictionKey}
-                onChange={(event) => set('predictionKey', event.target.value)}
-                required
-              >
-                {predictions.map((prediction) => (
-                  <MenuItem
-                    key={`${prediction.id}:${prediction.analysisVersion}`}
-                    value={`${prediction.id}:${prediction.analysisVersion}`}
-                  >
-                    {prediction.teamsNames ?? prediction.id}
-                    {prediction.fixtureTime
-                      ? ` · ${formatPredictionKickoff(prediction.fixtureTime)}`
-                      : ''}{' '}
-                    · analysis v{prediction.analysisVersion}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-          ) : null}
-          {draft.topic === 'sirbro_product_updates' ? (
-            <Stack spacing={2}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={draft.productCtaEnabled}
-                    onChange={(event) =>
-                      set('productCtaEnabled', event.target.checked)
-                    }
-                  />
-                }
-                label="Include optional first-party CTA"
-              />
-              {draft.productCtaEnabled ? (
-                <>
-                  <TextField
-                    label="CTA HTTPS URL"
-                    value={draft.productCtaUrl}
-                    onChange={(event) =>
-                      set('productCtaUrl', event.target.value)
-                    }
-                  />
-                  {locales.map((locale) => (
-                    <TextField
-                      key={locale}
-                      label={`${locale} CTA label`}
-                      value={draft.productCtaLabels[locale]}
-                      onChange={(event) =>
-                        set('productCtaLabels', {
-                          ...draft.productCtaLabels,
-                          [locale]: event.target.value,
-                        })
-                      }
-                    />
-                  ))}
-                </>
-              ) : null}
-            </Stack>
-          ) : null}
-          {draft.topic === 'betting_partner_offers' ||
-          draft.topic === 'sirbro_predictions_with_partner_offer' ? (
-            <Stack spacing={2}>
-              <TextField
-                select
-                label="Partner market configuration"
-                value={draft.partnerMarketConfigId}
-                onChange={(event) =>
-                  set('partnerMarketConfigId', event.target.value)
-                }
-                required
-              >
-                {partners.map((partner) => (
-                  <MenuItem key={partner.id} value={partner.id}>
-                    {partner.operatorDisplayName} · {partner.countryCode}
-                    {partner.regionCode ? `/${partner.regionCode}` : ''}
-                  </MenuItem>
-                ))}
-              </TextField>
-              {selectedPartner ? (
-                <PartnerProjection partner={selectedPartner} />
-              ) : (
-                <Alert severity="warning">
-                  Only current approved configurations are selectable. Missing
-                  legal/display data remains fail-closed at backend approval.
-                </Alert>
-              )}
-              <LocalizedSimpleFields
-                label="Offer headline"
-                value={draft.offerHeadlineByLocale}
-                onChange={(value) => set('offerHeadlineByLocale', value)}
-              />
-              <LocalizedSimpleFields
-                label="Offer body"
-                value={draft.offerBodyByLocale}
-                onChange={(value) => set('offerBodyByLocale', value)}
-                multiline
-              />
-              <LocalizedSimpleFields
-                label="Material terms"
-                value={draft.materialTermsByLocale}
-                onChange={(value) => set('materialTermsByLocale', value)}
-                multiline
-              />
-              <TextField
-                label="Offer expires at"
-                type="datetime-local"
-                InputLabelProps={{ shrink: true }}
-                value={draft.offerExpiresAt}
-                onChange={(event) => set('offerExpiresAt', event.target.value)}
+                inputProps={{ min: 1, max: 8760 }}
                 required
               />
-            </Stack>
-          ) : null}
-          {editorDirty && selected ? (
-            <Alert severity="warning">
-              Unsaved changes invalidate approval controls. Save the successor
-              draft before previewing, approving, sending, or scheduling.
-            </Alert>
-          ) : null}
-          {!historical ? (
-            <Stack direction="row" spacing={2}>
               <Button
-                variant="contained"
-                onClick={props.onSave}
+                variant="outlined"
+                onClick={props.onEstimate}
                 disabled={busy}
               >
-                {selected ? 'Save successor draft' : 'Save draft'}
+                Estimate audience
               </Button>
-              {selected?.state === 'draft' && !editorDirty ? (
-                <Button
-                  variant="outlined"
-                  onClick={props.onApprove}
-                  disabled={busy}
-                >
-                  Approve
-                </Button>
+              {estimate ? (
+                <Alert severity="info">
+                  Backend estimate:{' '}
+                  {estimate.reachableUsers.toLocaleString('en-US')} reachable
+                  users.
+                  {estimate.warnings.map((warning) => ` ${warning}`)}
+                </Alert>
               ) : null}
-            </Stack>
-          ) : null}
-          {selected ? (
-            <>
-              <Divider />
-              <Typography variant="h6">Canonical preview</Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <TextField
-                  select
-                  label="Preview locale"
-                  value={props.previewLocale}
-                  onChange={(event) =>
-                    props.setPreviewLocale(event.target.value as CampaignLocale)
-                  }
-                >
-                  {locales.map((locale) => (
-                    <MenuItem key={locale} value={locale}>
-                      {locale}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <Button
-                  variant="outlined"
-                  onClick={props.onPreview}
-                  disabled={editorDirty}
-                >
-                  Load preview
-                </Button>
-              </Stack>
+              <LocalizedContentEditor draft={draft} setDraft={updateDraft} />
+              {draft.topic === 'sirbro_predictions' ||
+              draft.topic === 'sirbro_predictions_with_partner_offer' ? (
+                <Stack spacing={2}>
+                  <Alert severity="info">
+                    Only future predictions with Complete Full Analysis are
+                    selectable. Approval freezes the prediction and its Full
+                    Analysis CTA before any sponsored module.
+                  </Alert>
+                  <TextField
+                    select
+                    label="Eligible prediction and version"
+                    value={draft.predictionKey}
+                    onChange={(event) =>
+                      set('predictionKey', event.target.value)
+                    }
+                    required
+                  >
+                    {predictions.map((prediction) => (
+                      <MenuItem
+                        key={`${prediction.id}:${prediction.analysisVersion}`}
+                        value={`${prediction.id}:${prediction.analysisVersion}`}
+                      >
+                        {prediction.teamsNames ?? prediction.id}
+                        {prediction.fixtureTime
+                          ? ` · ${formatPredictionKickoff(prediction.fixtureTime)}`
+                          : ''}{' '}
+                        · analysis v{prediction.analysisVersion}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Stack>
+              ) : null}
+              {draft.topic === 'sirbro_product_updates' ? (
+                <Stack spacing={2}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={draft.productCtaEnabled}
+                        onChange={(event) =>
+                          set('productCtaEnabled', event.target.checked)
+                        }
+                      />
+                    }
+                    label="Include optional first-party CTA"
+                  />
+                  {draft.productCtaEnabled ? (
+                    <>
+                      <TextField
+                        label="CTA HTTPS URL"
+                        value={draft.productCtaUrl}
+                        onChange={(event) =>
+                          set('productCtaUrl', event.target.value)
+                        }
+                      />
+                      {locales.map((locale) => (
+                        <TextField
+                          key={locale}
+                          label={`${locale} CTA label`}
+                          value={draft.productCtaLabels[locale]}
+                          onChange={(event) =>
+                            set('productCtaLabels', {
+                              ...draft.productCtaLabels,
+                              [locale]: event.target.value,
+                            })
+                          }
+                        />
+                      ))}
+                    </>
+                  ) : null}
+                </Stack>
+              ) : null}
+              {draft.topic === 'betting_partner_offers' ||
+              draft.topic === 'sirbro_predictions_with_partner_offer' ? (
+                <Stack spacing={2}>
+                  <TextField
+                    select
+                    label="Partner market configuration"
+                    value={draft.partnerMarketConfigId}
+                    onChange={(event) =>
+                      set('partnerMarketConfigId', event.target.value)
+                    }
+                    required
+                  >
+                    {partners.map((partner) => (
+                      <MenuItem key={partner.id} value={partner.id}>
+                        {partner.operatorDisplayName} · {partner.countryCode}
+                        {partner.regionCode ? `/${partner.regionCode}` : ''}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  {selectedPartner ? (
+                    <PartnerProjection partner={selectedPartner} />
+                  ) : (
+                    <Alert severity="warning">
+                      Only current approved configurations are selectable.
+                      Missing legal/display data remains fail-closed at backend
+                      approval.
+                    </Alert>
+                  )}
+                  <LocalizedSimpleFields
+                    label="Offer headline"
+                    value={draft.offerHeadlineByLocale}
+                    onChange={(value) => set('offerHeadlineByLocale', value)}
+                  />
+                  <LocalizedSimpleFields
+                    label="Offer body"
+                    value={draft.offerBodyByLocale}
+                    onChange={(value) => set('offerBodyByLocale', value)}
+                    multiline
+                  />
+                  <LocalizedSimpleFields
+                    label="Material terms"
+                    value={draft.materialTermsByLocale}
+                    onChange={(value) => set('materialTermsByLocale', value)}
+                    multiline
+                  />
+                  <TextField
+                    label="Offer expires at"
+                    type="datetime-local"
+                    InputLabelProps={{ shrink: true }}
+                    value={draft.offerExpiresAt}
+                    onChange={(event) =>
+                      set('offerExpiresAt', event.target.value)
+                    }
+                    required
+                  />
+                </Stack>
+              ) : null}
+              {editorDirty && selected ? (
+                <Alert severity="warning">
+                  Unsaved changes invalidate approval controls. Save the
+                  successor draft before previewing, approving, sending, or
+                  scheduling.
+                </Alert>
+              ) : null}
+              {!historical ? (
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    variant="contained"
+                    onClick={props.onSave}
+                    disabled={busy}
+                  >
+                    {selected ? 'Save successor draft' : 'Save draft'}
+                  </Button>
+                  {selected?.state === 'draft' && !editorDirty ? (
+                    <Button
+                      variant="outlined"
+                      onClick={props.onApprove}
+                      disabled={busy}
+                    >
+                      Approve
+                    </Button>
+                  ) : null}
+                </Stack>
+              ) : null}
+              {selected ? (
+                <>
+                  <Divider />
+                  <Typography variant="h6">Canonical preview</Typography>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <TextField
+                      select
+                      label="Preview locale"
+                      value={props.previewLocale}
+                      onChange={(event) =>
+                        props.setPreviewLocale(
+                          event.target.value as CampaignLocale
+                        )
+                      }
+                    >
+                      {locales.map((locale) => (
+                        <MenuItem key={locale} value={locale}>
+                          {locale}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    <Button
+                      variant="outlined"
+                      onClick={props.onPreview}
+                      disabled={editorDirty}
+                    >
+                      Load preview
+                    </Button>
+                  </Stack>
+                </>
+              ) : null}
+              {selected && !historical ? (
+                <LifecycleActions
+                  selected={selected}
+                  canSend={canSend}
+                  scheduleLocal={props.scheduleLocal}
+                  setScheduleLocal={props.setScheduleLocal}
+                  timezone={props.timezone}
+                  setTimezone={props.setTimezone}
+                  onSchedule={props.onSchedule}
+                  onConfirm={props.onConfirm}
+                />
+              ) : null}
             </>
-          ) : null}
-          {selected && !historical ? (
-            <LifecycleActions
-              selected={selected}
-              canSend={canSend}
-              scheduleLocal={props.scheduleLocal}
-              setScheduleLocal={props.setScheduleLocal}
-              timezone={props.timezone}
-              setTimezone={props.setTimezone}
-              onSchedule={props.onSchedule}
-              onConfirm={props.onConfirm}
-            />
-          ) : null}
+          )}
           {selected?.terminalReason ? (
             <Alert severity="warning">
               Terminal reason: {selected.terminalReason}
@@ -1690,8 +1745,34 @@ function emptyDraft(): EditorDraft {
   };
 }
 
+function hasEditableDefinition(publication: EmailPublication): boolean {
+  const definition = publication.definition;
+  const audience = definition?.audience;
+  return Boolean(
+    typeof definition?.name === 'string' &&
+      Number.isFinite(definition?.frequencyCapHours) &&
+      audience?.segmentSource &&
+      Array.isArray(audience.criteria?.retentionStages) &&
+      Array.isArray(audience.criteria?.userIds) &&
+      Array.isArray(audience.criteria?.locales) &&
+      typeof audience.suppression?.excludeUsersWithoutPushOpens === 'boolean' &&
+      locales.every((locale) => {
+        const content = definition?.contentByLocale?.[locale];
+        return (
+          content &&
+          ['subject', 'preheader', 'htmlBody', 'textBody'].every(
+            (field) =>
+              typeof content[field as keyof typeof content] === 'string'
+          )
+        );
+      })
+  );
+}
+
 function fromPublication(publication: EmailPublication): EditorDraft {
   const base = emptyDraft();
+  // Incomplete saved records are displayed read-only; never infer their audience.
+  if (!hasEditableDefinition(publication)) return base;
   const typeData = publication.typeData;
   const predictionId =
     typeof typeData.predictionId === 'string' ? typeData.predictionId : '';
