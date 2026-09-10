@@ -80,3 +80,24 @@ an alias for old references, not an independent ranking input. Linked Legacy rec
 expose **Edit shared ranking** for editing the canonical record. Reassignment is deliberately rejected;
 repeating the same link is safe. Legacy records cannot be bulk-approved or
 edited as independent ranking inputs.
+
+## Competition geography and market priority
+
+Country code remains the competition's own country, never its audience. Country,
+confederation and scope show Automatic or Manual provenance. Editing a field
+sets its manual value; **Use automatic** restores the latest synchronized value.
+Saving another field leaves geography untouched. Confederation offers the six
+football confederations or an empty value for unknown/not applicable.
+
+**Priority by user country** accepts multiple countries and the same region
+shortcuts as Team prominence. Regions expand to an explicitly displayed country
+list; only country codes are saved. Each row has an integer adjustment from
+−20 to +20. A country may have only one value: equal overlaps are deduplicated,
+conflicting overlaps must be corrected, and empty audiences are rejected.
+Removing all rows restores automatic priority. Reopening groups saved countries
+with the same adjustment, independently of how they were originally selected.
+
+The adjustment applies to users' ranking country in All Matches and Top Matches,
+on top of the automatic geographic bonus. No configured/known country means zero
+adjustment. Preview exposes the separate `R` component and the backend's final
+scores. The existing review reason covers these changes in the ranking audit.

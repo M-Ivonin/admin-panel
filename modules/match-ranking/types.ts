@@ -19,6 +19,11 @@ export interface CompetitionLinkTarget {
   country: string | null;
   local: boolean;
 }
+export type CompetitionGeographyField =
+  | 'countryCode'
+  | 'confederation'
+  | 'scope';
+
 export interface MatchRankingCompetition {
   legacyApiId: string;
   country: string;
@@ -37,6 +42,13 @@ export interface MatchRankingCompetition {
   countryCode: string | null;
   confederation: string | null;
   scope: CompetitionScope;
+  providerGeography?: {
+    countryCode?: string | null;
+    confederation?: string | null;
+    scope?: CompetitionScope;
+  };
+  manualGeographyFields?: CompetitionGeographyField[];
+  countryPriorityAdjustments?: Record<string, number>;
   classification: CompetitionClassification;
   reviewState: string;
   metadataSource: string;
@@ -51,11 +63,13 @@ export type MatchRankingCatalogQueue = '' | 'ready' | 'attention';
 
 export interface MatchRankingCompetitionUpdate {
   effectiveCategory: number | null;
-  countryCode: string | null;
-  confederation: string | null;
-  scope: CompetitionScope;
+  countryCode?: string | null;
+  confederation?: string | null;
+  scope?: CompetitionScope;
   classification: CompetitionClassification;
   reviewState?: string;
+  resetGeographyFields?: CompetitionGeographyField[];
+  countryPriorityAdjustments?: Record<string, number>;
   reason: string;
 }
 
@@ -163,6 +177,7 @@ export interface MatchRankingPreviewInput {
 
 export interface MatchRankingComponents {
   B: number;
+  R: number;
   L: number;
   T: number;
   S: number;

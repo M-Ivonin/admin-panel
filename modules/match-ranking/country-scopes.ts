@@ -133,6 +133,17 @@ export const countryScopeOptions: CountryScopeOption[] = [
     label: `${country[0]} (${country[1]})`,
     countryCodes: [country[1]],
   })),
+  // ISO SJ is accepted by the backend but omitted by country-region-data.
+  ...(!availableCountryCodes.has('SJ')
+    ? [
+        {
+          id: 'country:SJ',
+          kind: 'country' as const,
+          label: 'Svalbard and Jan Mayen (SJ)',
+          countryCodes: ['SJ'],
+        },
+      ]
+    : []),
 ];
 
 export const countryCodeOptions = countryScopeOptions.filter(

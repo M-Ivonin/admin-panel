@@ -437,6 +437,347 @@ describe('MatchRankingPage', () => {
     );
   });
 
+  it('leaves automatic geography untouched when only the category changes', async () => {
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.change(within(dialog).getByLabelText('Effective category'), {
+      target: { value: '2' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Category correction' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenCalled()
+    );
+    const payload = (updateMatchRankingCompetition as jest.Mock).mock
+      .calls[0][1];
+    expect(payload.effectiveCategory).toBe(2);
+    expect(payload).not.toHaveProperty('countryCode');
+    expect(payload).not.toHaveProperty('confederation');
+    expect(payload).not.toHaveProperty('scope');
+  });
+
+  it('shows a preserved non-country code until the operator restores automatic geography', async () => {
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+      {
+        ...competition,
+        countryCode: 'EU',
+        manualGeographyFields: ['countryCode'],
+        providerGeography: { countryCode: null },
+      },
+    ]);
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    let dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    expect(
+      within(dialog).getByText(
+        'Saved country code: EU (not in the country list). Choose a country or use automatic.'
+      )
+    ).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Effective category'), {
+      target: { value: '2' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Category only' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      (updateMatchRankingCompetition as jest.Mock).mock.calls[0][1]
+    ).not.toHaveProperty('countryCode');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.click(
+      within(dialog).getByRole('button', {
+        name: 'Reset Country code to automatic',
+      })
+    );
+    expect(within(dialog).getByLabelText('Country code')).toHaveValue('');
+    expect(
+      within(dialog).queryByText(/Saved country code: EU/)
+    ).not.toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Restore empty automatic country' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenCalledTimes(2)
+    );
+    const payload = (updateMatchRankingCompetition as jest.Mock).mock
+      .calls[1][1];
+    expect(payload.resetGeographyFields).toEqual(['countryCode']);
+    expect(payload).not.toHaveProperty('countryCode');
+  });
+
+  it('resets manual geography without resending a manual value', async () => {
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+      {
+        ...competition,
+        confederation: 'UEFA',
+        manualGeographyFields: ['confederation'],
+        providerGeography: { confederation: 'CONMEBOL' },
+      },
+    ]);
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.click(
+      within(dialog).getByRole('button', {
+        name: 'Reset Confederation to automatic',
+      })
+    );
+    expect(within(dialog).getByLabelText('Confederation')).toHaveTextContent(
+      'CONMEBOL'
+    );
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Use provider geography' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenCalled()
+    );
+    const payload = (updateMatchRankingCompetition as jest.Mock).mock
+      .calls[0][1];
+    expect(payload.resetGeographyFields).toEqual(['confederation']);
+    expect(payload).not.toHaveProperty('confederation');
+  });
+
+  it('expands priority regions, rejects conflicting overlaps, and reopens saved countries', async () => {
+    (updateMatchRankingCompetition as jest.Mock).mockImplementation(
+      (_id, payload) => {
+        (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+          { ...competition, ...payload },
+        ]);
+        return Promise.resolve({ ...competition, ...payload });
+      }
+    );
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    let dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Add country adjustment' })
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText('Priority countries / regions 1'),
+      { target: { value: 'South America' } }
+    );
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'South America' })
+    );
+    fireEvent.keyDown(
+      within(dialog).getByLabelText('Priority countries / regions 1'),
+      { key: 'Escape' }
+    );
+    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Add country adjustment' })
+    );
+    fireEvent.change(
+      within(dialog).getByLabelText('Priority countries / regions 2'),
+      { target: { value: 'Brazil' } }
+    );
+    fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
+    fireEvent.keyDown(
+      within(dialog).getByLabelText('Priority countries / regions 2'),
+      { key: 'Escape' }
+    );
+    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 2'), {
+      target: { value: '-5' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Market priority' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    expect(
+      await within(dialog).findByText(/Conflicting adjustments for BR/)
+    ).toBeInTheDocument();
+    expect(updateMatchRankingCompetition).not.toHaveBeenCalled();
+    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 2'), {
+      target: { value: '10' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    expect(
+      (updateMatchRankingCompetition as jest.Mock).mock.calls[0][1]
+        .countryPriorityAdjustments
+    ).toEqual({
+      AR: 10,
+      BO: 10,
+      BR: 10,
+      CL: 10,
+      CO: 10,
+      EC: 10,
+      GY: 10,
+      PY: 10,
+      PE: 10,
+      SR: 10,
+      UY: 10,
+      VE: 10,
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    expect(within(dialog).getByText('Brazil (BR)')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveValue(
+      10
+    );
+    expect(
+      within(dialog).queryByLabelText('Priority adjustment 2')
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('button', {
+        name: 'Remove country adjustment 1',
+      })
+    );
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Restore automatic priorities' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenLastCalledWith(
+        'league-1',
+        expect.objectContaining({ countryPriorityAdjustments: {} })
+      )
+    );
+  }, 30000);
+
+  it('retains Svalbard and Jan Mayen when reopening and editing a shared country adjustment', async () => {
+    (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+      {
+        ...competition,
+        countryPriorityAdjustments: { BR: 10, SJ: 10 },
+      },
+    ]);
+    (updateMatchRankingCompetition as jest.Mock).mockImplementation(
+      (_id, payload) => {
+        (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([
+          { ...competition, ...payload },
+        ]);
+        return Promise.resolve({ ...competition, ...payload });
+      }
+    );
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    let dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
+      target: { value: '11' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Increase both country priorities' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    await waitFor(() =>
+      expect(updateMatchRankingCompetition).toHaveBeenCalledWith(
+        'league-1',
+        expect.objectContaining({
+          countryPriorityAdjustments: { BR: 11, SJ: 11 },
+        })
+      )
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    expect(within(dialog).getByText('Brazil (BR)')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('Svalbard and Jan Mayen (SJ)')
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveValue(
+      11
+    );
+  });
+
+  it('requires a nonempty audience and an integer adjustment within the allowed range', async () => {
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit Copa Libertadores' })
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Review competition' });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Add country adjustment' })
+    );
+    fireEvent.change(within(dialog).getByLabelText('Reason'), {
+      target: { value: 'Market adjustment' },
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Save review' })
+    );
+    expect(
+      await within(dialog).findByText(
+        'Select at least one country or region for each adjustment.'
+      )
+    ).toBeInTheDocument();
+    fireEvent.change(
+      within(dialog).getByLabelText('Priority countries / regions 1'),
+      { target: { value: 'Brazil' } }
+    );
+    fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
+    fireEvent.keyDown(
+      within(dialog).getByLabelText('Priority countries / regions 1'),
+      { key: 'Escape' }
+    );
+    for (const value of ['21', '-21', '1.5', '']) {
+      fireEvent.change(within(dialog).getByLabelText('Priority adjustment 1'), {
+        target: { value },
+      });
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Save review' })
+      );
+      expect(
+        await within(dialog).findByText(
+          'Priority adjustments must be whole numbers from -20 to 20.'
+        )
+      ).toBeInTheDocument();
+    }
+    expect(updateMatchRankingCompetition).not.toHaveBeenCalled();
+  }, 15000);
+
   it('filters review queues and bulk-approves selected ready competitions', async () => {
     (bulkReviewMatchRankingCompetitions as jest.Mock).mockResolvedValue([]);
     render(<MatchRankingPage />);
@@ -855,7 +1196,7 @@ describe('MatchRankingPage', () => {
           homeTeamName: 'River Plate',
           awayTeamName: 'Flamengo',
           kickoff: '2026-09-08T20:00:00.000Z',
-          components: { B: 28, L: 14, T: 12, S: 8, U: 5, E: 0 },
+          components: { B: 28, L: 14, R: 10, T: 12, S: 8, U: 5, E: 0 },
           importance: 67,
           topScore: 67,
           eligible: true,
@@ -902,6 +1243,10 @@ describe('MatchRankingPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('B 28')).toBeInTheDocument();
     expect(screen.getByText('L 14')).toBeInTheDocument();
+    expect(screen.getByText('R 10')).toBeInTheDocument();
+    expect(
+      screen.getByText('Country priority (R): +10 points')
+    ).toBeInTheDocument();
     expect(screen.getByText('T 12')).toBeInTheDocument();
     expect(screen.getByText('S 8')).toBeInTheDocument();
     expect(screen.getByText('U 5')).toBeInTheDocument();

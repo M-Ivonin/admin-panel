@@ -62,6 +62,7 @@ import {
 } from '@/lib/api/match-ranking';
 import type {
   CompetitionClassification,
+  CompetitionGeographyField,
   CompetitionScope,
   MatchRankingAuditEvent,
   MatchRankingCompetition,
@@ -109,7 +110,7 @@ const tabHelp: Record<
       },
       {
         title: 'What to fill in',
-        body: 'Effective category controls the competition importance used by ranking. Country, confederation, and scope describe where the competition belongs. Classification identifies senior, women, youth, reserve, or friendly competitions. Set the review state to reviewed only after checking these values, and always write a short reason for the decision.',
+        body: 'Effective category controls the competition importance used by ranking. Country, confederation, and scope describe where the competition belongs. Automatic values follow synchronization; manual corrections persist until you choose Use automatic. Priority by user country adds or subtracts points for selected audiences in All Matches and Top Matches. Classification identifies senior, women, youth, reserve, or friendly competitions. Set the review state to reviewed only after checking these values, and always write a short reason for the decision.',
       },
     ],
   },
@@ -1335,15 +1336,110 @@ function CompetitionDialog({
   );
   const [confederation, setConfederation] = useState(item.confederation ?? '');
   const [scope, setScope] = useState<CompetitionScope>(item.scope);
+  const [resetFields, setResetFields] = useState<CompetitionGeographyField[]>(
+    []
+  );
+  function markEdited(field: CompetitionGeographyField) {
+    setResetFields((fields) => fields.filter((value) => value !== field));
+  }
+  function resetGeography(field: CompetitionGeographyField) {
+    setResetFields((fields) => [...new Set([...fields, field])]);
+    if (field === 'countryCode')
+      setCountryCode(item.providerGeography?.countryCode ?? '');
+    if (field === 'confederation')
+      setConfederation(item.providerGeography?.confederation ?? '');
+    if (field === 'scope') setScope(item.providerGeography?.scope ?? 'unknown');
+  }
+  function geographySource(
+    field: CompetitionGeographyField,
+    label: string,
+    changed: boolean
+  ) {
+    const manual =
+      !resetFields.includes(field) &&
+      (changed || item.manualGeographyFields?.includes(field));
+    return (
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="caption" color="text.secondary">
+          {label}: {manual ? 'Manual' : 'Automatic'}
+        </Typography>
+        {manual ? (
+          <Button
+            size="small"
+            aria-label={`Reset ${label} to automatic`}
+            onClick={() => resetGeography(field)}
+          >
+            Use automatic
+          </Button>
+        ) : null}
+      </Stack>
+    );
+  }
   const [classification, setClassification] =
     useState<CompetitionClassification>(item.classification);
   const [reviewState, setReviewState] = useState(item.reviewState);
+  const [priorityRows, setPriorityRows] = useState<
+    Array<{ countries: CountryScopeOption[]; value: string }>
+  >(() => {
+    const rows = new Map<number, CountryScopeOption[]>();
+    for (const [code, value] of Object.entries(
+      item.countryPriorityAdjustments ?? {}
+    )) {
+      rows.set(value, [
+        ...(rows.get(value) ?? []),
+        ...countryScopeSelection(code),
+      ]);
+    }
+    return [...rows].map(([value, countries]) => ({
+      value: String(value),
+      countries,
+    }));
+  });
+  const [priorityChanged, setPriorityChanged] = useState(false);
+  function changePriority(
+    index: number,
+    patch: Partial<(typeof priorityRows)[number]>
+  ) {
+    setPriorityChanged(true);
+    setPriorityRows((rows) =>
+      rows.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, ...patch } : row
+      )
+    );
+  }
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function save() {
     if (!reason.trim()) return setError('Reason is required.');
+    const adjustments: Record<string, number> = {};
+    for (const row of priorityRows) {
+      const countries = expandCountryScopes(row.countries);
+      if (!countries.length)
+        return setError(
+          'Select at least one country or region for each adjustment.'
+        );
+      const value = Number(row.value);
+      if (
+        !row.value.trim() ||
+        !Number.isInteger(value) ||
+        value < -20 ||
+        value > 20
+      ) {
+        return setError(
+          'Priority adjustments must be whole numbers from -20 to 20.'
+        );
+      }
+      for (const code of countries) {
+        if (adjustments[code] !== undefined && adjustments[code] !== value) {
+          return setError(
+            `Conflicting adjustments for ${code}. Use one value per country.`
+          );
+        }
+        adjustments[code] = value;
+      }
+    }
     setSaving(true);
     setError(null);
     try {
@@ -1353,9 +1449,19 @@ function CompetitionDialog({
           : reviewState.trim();
       await updateMatchRankingCompetition(item.id, {
         effectiveCategory: category === '' ? null : Number(category),
-        countryCode: normalizedCountry(countryCode),
-        confederation: confederation.trim() || null,
-        scope,
+        ...(!resetFields.includes('countryCode') &&
+        countryCode !== (item.countryCode ?? '')
+          ? { countryCode: normalizedCountry(countryCode) }
+          : {}),
+        ...(!resetFields.includes('confederation') &&
+        confederation !== (item.confederation ?? '')
+          ? { confederation: confederation.trim() || null }
+          : {}),
+        ...(!resetFields.includes('scope') && scope !== item.scope
+          ? { scope }
+          : {}),
+        ...(resetFields.length ? { resetGeographyFields: resetFields } : {}),
+        ...(priorityChanged ? { countryPriorityAdjustments: adjustments } : {}),
         classification,
         ...(persistedReviewState ? { reviewState: persistedReviewState } : {}),
         reason: reason.trim(),
@@ -1405,9 +1511,10 @@ function CompetitionDialog({
               isOptionEqualToValue={(option, selected) =>
                 option.id === selected.id
               }
-              onChange={(_event, option) =>
-                setCountryCode(option?.countryCodes[0] ?? '')
-              }
+              onChange={(_event, option) => {
+                markEdited('countryCode');
+                setCountryCode(option?.countryCodes[0] ?? '');
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -1418,10 +1525,21 @@ function CompetitionDialog({
                       title="Identifies the country this competition belongs to and is used for country relevance in ranking. Leave blank when the competition is not tied to one country."
                     />
                   }
+                  helperText={
+                    countryCode && !selectedCountry
+                      ? `Saved country code: ${countryCode} (not in the country list). Choose a country or use automatic.`
+                      : undefined
+                  }
                 />
               )}
             />
+            {geographySource(
+              'countryCode',
+              'Country code',
+              countryCode !== (item.countryCode ?? '')
+            )}
             <TextField
+              select
               label={
                 <HelpLabel
                   text="Confederation"
@@ -1430,8 +1548,25 @@ function CompetitionDialog({
                 />
               }
               value={confederation}
-              onChange={(e) => setConfederation(e.target.value)}
-            />
+              onChange={(e) => {
+                markEdited('confederation');
+                setConfederation(e.target.value);
+              }}
+            >
+              <MenuItem value="">Not applicable / unknown</MenuItem>
+              {['UEFA', 'CONMEBOL', 'CONCACAF', 'AFC', 'CAF', 'OFC'].map(
+                (value) => (
+                  <MenuItem key={value} value={value}>
+                    {value}
+                  </MenuItem>
+                )
+              )}
+            </TextField>
+            {geographySource(
+              'confederation',
+              'Confederation',
+              confederation !== (item.confederation ?? '')
+            )}
             <TextField
               select
               label={
@@ -1442,7 +1577,10 @@ function CompetitionDialog({
                 />
               }
               value={scope}
-              onChange={(e) => setScope(e.target.value as CompetitionScope)}
+              onChange={(e) => {
+                markEdited('scope');
+                setScope(e.target.value as CompetitionScope);
+              }}
             >
               {scopes.map((value) => (
                 <MenuItem key={value} value={value}>
@@ -1450,6 +1588,7 @@ function CompetitionDialog({
                 </MenuItem>
               ))}
             </TextField>
+            {geographySource('scope', 'Scope', scope !== item.scope)}
             <TextField
               select
               label={
@@ -1493,6 +1632,90 @@ function CompetitionDialog({
               <MenuItem value="reviewed">reviewed</MenuItem>
             </TextField>
           </>
+          <Divider />
+          <Typography fontWeight={600}>Priority by user country</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Adjust this league for users in selected countries, in All Matches
+            and Top Matches. Automatic geographic bonuses still apply. Without a
+            rule, the adjustment is zero.
+          </Typography>
+          {priorityRows.map((row, index) => (
+            <Stack
+              key={index}
+              spacing={1}
+              sx={{
+                p: 1.5,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+              }}
+            >
+              <Autocomplete
+                multiple
+                disableCloseOnSelect
+                options={countryScopeOptions}
+                value={row.countries}
+                autoHighlight
+                groupBy={(option) =>
+                  option.kind === 'region' ? 'Regions' : 'Countries'
+                }
+                getOptionLabel={(option) => option.label}
+                isOptionEqualToValue={(option, selected) =>
+                  option.id === selected.id
+                }
+                onChange={(_event, countries) =>
+                  changePriority(index, { countries })
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={`Priority countries / regions ${index + 1}`}
+                  />
+                )}
+              />
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ overflowWrap: 'anywhere' }}
+              >
+                Selected countries:{' '}
+                {expandCountryScopes(row.countries).join(', ') || 'None'}
+              </Typography>
+              <TextField
+                label={`Priority adjustment ${index + 1}`}
+                type="number"
+                value={row.value}
+                inputProps={{ min: -20, max: 20, step: 1 }}
+                helperText="Whole number from −20 to +20 points."
+                onChange={(event) =>
+                  changePriority(index, { value: event.target.value })
+                }
+              />
+              <Button
+                aria-label={`Remove country adjustment ${index + 1}`}
+                onClick={() => {
+                  setPriorityChanged(true);
+                  setPriorityRows((rows) =>
+                    rows.filter((_row, rowIndex) => rowIndex !== index)
+                  );
+                }}
+              >
+                Remove adjustment
+              </Button>
+            </Stack>
+          ))}
+          <Button
+            startIcon={<Add />}
+            onClick={() => {
+              setPriorityChanged(true);
+              setPriorityRows((rows) => [
+                ...rows,
+                { countries: [], value: '0' },
+              ]);
+            }}
+          >
+            Add country adjustment
+          </Button>
           <TextField
             label={
               <HelpLabel
@@ -2674,6 +2897,12 @@ function PreviewFixtureCard({
             ))}
             <Chip label={`Importance ${fixture.importance}`} size="small" />
           </Stack>
+          {fixture.components.R !== undefined ? (
+            <Typography variant="body2" color="text.secondary">
+              Country priority (R): {fixture.components.R > 0 ? '+' : ''}
+              {fixture.components.R} points
+            </Typography>
+          ) : null}
           {fixture.tieBreak ? (
             <Typography variant="body2">
               Tie-break: {fixture.tieBreak}
