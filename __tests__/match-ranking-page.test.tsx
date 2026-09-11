@@ -1235,7 +1235,12 @@ describe('MatchRankingPage', () => {
     const userId = '8dcbf25e-8074-4f8d-94b6-9a7a3626eb85';
     (getUsers as jest.Mock).mockResolvedValue({
       users: [
-        { id: userId, email: 'alice@example.com', timezone: 'Europe/Chisinau' },
+        {
+          id: userId,
+          email: 'alice@example.com',
+          timezone: 'Europe/Kiev',
+          rankingCountry: 'UA',
+        },
       ],
     });
     (previewMatchRanking as jest.Mock).mockResolvedValue({
@@ -1259,24 +1264,31 @@ describe('MatchRankingPage', () => {
       screen.getByRole('combobox', { name: 'Preview country' })
     ).toBeDisabled();
     expect(
+      screen.getByRole('combobox', { name: 'Preview country' })
+    ).toHaveValue('Ukraine (UA)');
+    expect(
+      screen.getByRole('combobox', { name: /Country region/ })
+    ).toHaveTextContent('Europe');
+    expect(
       screen.getByRole('combobox', { name: /Country region/ })
     ).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByLabelText('IANA timezone')).toHaveValue(
-      'Europe/Chisinau'
-    );
+    expect(screen.getByLabelText('IANA timezone')).toHaveValue('Europe/Kiev');
     fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
     await waitFor(() =>
       expect(previewMatchRanking).toHaveBeenCalledWith(
         expect.objectContaining({
           userId,
           countryCode: null,
-          timezone: 'Europe/Chisinau',
+          timezone: 'Europe/Kiev',
         })
       )
     );
     expect(
       await screen.findByText(/Preview for alice@example.com/)
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: 'Preview country' })
+    ).toHaveValue('Moldova (MD)');
     expect(
       screen.getByText(/New ranking is not enabled for this user/)
     ).toBeInTheDocument();
@@ -1298,6 +1310,55 @@ describe('MatchRankingPage', () => {
       )
     );
   });
+
+  it.each([
+    ['BR', 'Brazil (BR)', 'South America'],
+    ['US', 'United States (US)', 'North America'],
+    ['JP', 'Japan (JP)', 'Outside listed regions'],
+    [null, '', 'Unknown'],
+  ])(
+    'fills account geography without inventing a region for %s',
+    async (rankingCountry, label, regionLabel) => {
+      (getUsers as jest.Mock).mockResolvedValue({
+        users: [
+          {
+            id: 'known',
+            email: 'known@example.com',
+            timezone: 'Europe/Kiev',
+            rankingCountry: 'UA',
+          },
+          {
+            id: 'next',
+            email: 'next@example.com',
+            timezone: 'Etc/UTC',
+            rankingCountry,
+          },
+        ],
+      });
+      render(<MatchRankingPage />);
+      await screen.findByText('Copa Libertadores');
+      fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+      const picker = screen.getByRole('combobox', { name: 'Preview user' });
+      fireEvent.change(picker, { target: { value: 'known' } });
+      fireEvent.click(
+        await screen.findByRole('option', { name: 'known@example.com' })
+      );
+      expect(
+        screen.getByRole('combobox', { name: 'Preview country' })
+      ).toHaveValue('Ukraine (UA)');
+      fireEvent.change(picker, { target: { value: 'next' } });
+      fireEvent.click(
+        await screen.findByRole('option', { name: 'next@example.com' })
+      );
+      expect(
+        screen.getByRole('combobox', { name: 'Preview country' })
+      ).toHaveValue(label);
+      expect(
+        screen.getByRole('combobox', { name: /Country region/ })
+      ).toHaveTextContent(regionLabel!);
+      expect(screen.getByLabelText('IANA timezone')).toHaveValue('Etc/UTC');
+    }
+  );
 
   it('keeps the latest email search, reports failure, and retries after editing the query', async () => {
     let resolveOld!: (value: {

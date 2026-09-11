@@ -29,6 +29,7 @@ export interface User {
   phone_number: string | null;
   email: string | null;
   timezone: string;
+  rankingCountry?: string | null;
   first_seen_at: string | null;
   last_active_at: string | null;
   previous_active_at: string | null;

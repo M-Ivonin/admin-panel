@@ -2840,6 +2840,17 @@ function PreviewPanel({
     : countryCodeOptions;
   const [preview, setPreview] = useState<MatchRankingPreview | null>(null);
   const [loading, setLoading] = useState(false);
+  function fillUserCountry(code?: string | null) {
+    const option =
+      countryCodeOptions.find((item) => item.countryCodes[0] === code) ?? null;
+    setCountry(option);
+    setRegionId(
+      countryScopeOptions.find(
+        (item) =>
+          item.kind === 'region' && item.countryCodes.includes(code ?? '')
+      )?.id ?? ''
+    );
+  }
   async function run() {
     setLoading(true);
     onError(null);
@@ -2856,6 +2867,7 @@ function PreviewPanel({
           'The selected user’s preview is unavailable. Please try again later.'
         );
       }
+      if (selectedUser) fillUserCountry(result.rankingCountry);
       setPreview(result);
     } catch (caught) {
       onError(messageOf(caught));
@@ -2867,62 +2879,69 @@ function PreviewPanel({
     <Stack spacing={2}>
       <Card>
         <CardContent>
-          <Autocomplete
-            options={selectedUser ? [selectedUser] : userOptions}
-            value={selectedUser}
-            inputValue={userQuery}
-            disabled={loading}
-            loading={usersLoading}
-            loadingText="Searching users…"
-            noOptionsText={
-              userSearchError
-                ? 'Search failed. Edit the email to retry.'
-                : userQuery.trim().length < 2
-                  ? 'Type at least two characters of an email.'
-                  : 'No users found. Try a more specific email.'
-            }
-            filterOptions={(options) => options}
-            getOptionLabel={(option) => option.email ?? option.id}
-            isOptionEqualToValue={(option, selected) =>
-              option.id === selected.id
-            }
-            onInputChange={(_event, value, reason) => {
-              if (reason === 'input') {
-                setUserQuery(value);
-                setSelectedUser(null);
-                setPreview(null);
-              }
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'minmax(0, 1fr)',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(3, minmax(0, 1fr))',
+                lg: 'minmax(0, 1.5fr) 150px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.15fr) auto',
+              },
+              gap: 1.5,
+              alignItems: 'start',
+              '& > *': { minWidth: 0 },
             }}
-            onChange={(_event, user) => {
-              setSelectedUser(user);
-              setUserQuery(user?.email ?? '');
-              setPreview(null);
-              if (user) {
-                setCountry(null);
-                setRegionId('');
-                setTimezone(user.timezone || 'Etc/UTC');
-              }
-            }}
-            sx={{ width: { xs: '100%', md: 440 }, mb: 2 }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Preview user"
-                error={Boolean(userSearchError)}
-                helperText={
-                  userSearchError ??
-                  (selectedUser
-                    ? 'Uses this user’s saved country and followed teams / leagues.'
-                    : 'Search by email. Leave empty to preview by country.')
-                }
-              />
-            )}
-          />
-          <Stack
-            direction={{ xs: 'column', lg: 'row' }}
-            spacing={2}
-            alignItems={{ lg: 'flex-start' }}
           >
+            <Autocomplete
+              options={selectedUser ? [selectedUser] : userOptions}
+              value={selectedUser}
+              inputValue={userQuery}
+              disabled={loading}
+              loading={usersLoading}
+              loadingText="Searching users…"
+              noOptionsText={
+                userSearchError
+                  ? 'Search failed. Edit the email to retry.'
+                  : userQuery.trim().length < 2
+                    ? 'Type at least two characters of an email.'
+                    : 'No users found. Try a more specific email.'
+              }
+              filterOptions={(options) => options}
+              getOptionLabel={(option) => option.email ?? option.id}
+              isOptionEqualToValue={(option, selected) =>
+                option.id === selected.id
+              }
+              onInputChange={(_event, value, reason) => {
+                if (reason === 'input') {
+                  setUserQuery(value);
+                  setSelectedUser(null);
+                  setPreview(null);
+                }
+              }}
+              onChange={(_event, user) => {
+                setSelectedUser(user);
+                setUserQuery(user?.email ?? '');
+                setPreview(null);
+                if (user) {
+                  fillUserCountry(user.rankingCountry);
+                  setTimezone(user.timezone || 'Etc/UTC');
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Preview user"
+                  error={Boolean(userSearchError)}
+                  helperText={
+                    userSearchError ??
+                    (selectedUser
+                      ? 'User’s saved preferences.'
+                      : 'Search by email (optional).')
+                  }
+                />
+              )}
+            />
             <TextField
               disabled={loading}
               label="Preview date"
@@ -2936,7 +2955,11 @@ function PreviewPanel({
               label="IANA timezone"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              helperText="For example Europe/Chisinau"
+              helperText={
+                selectedUser
+                  ? 'User’s timezone; editable.'
+                  : 'E.g. Europe/Chisinau'
+              }
             />
             <TextField
               select
@@ -2958,10 +2981,19 @@ function PreviewPanel({
                   setCountry(null);
                 }
               }}
-              sx={{ minWidth: 200 }}
-              helperText="Filters the country list."
+              helperText={
+                selectedUser
+                  ? 'From user’s country.'
+                  : 'Filters the country list.'
+              }
             >
-              <MenuItem value="">All regions</MenuItem>
+              <MenuItem value="">
+                {selectedUser
+                  ? country
+                    ? 'Outside listed regions'
+                    : 'Unknown'
+                  : 'All regions'}
+              </MenuItem>
               {countryScopeOptions
                 .filter((option) => option.kind === 'region')
                 .map((option) => (
@@ -2980,14 +3012,16 @@ function PreviewPanel({
                 option.id === selected.id
               }
               onChange={(_event, option) => setCountry(option)}
-              sx={{ width: { xs: '100%', md: 280 } }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Preview country"
+                  placeholder={selectedUser && !country ? 'Unknown' : undefined}
                   helperText={
                     selectedUser
-                      ? 'Uses the selected user’s saved country.'
+                      ? country
+                        ? 'User’s saved country.'
+                        : 'Global fallback.'
                       : region
                         ? 'Choose a country in this region.'
                         : 'User’s country. Leave empty for Global.'
@@ -3009,7 +3043,7 @@ function PreviewPanel({
             >
               Run preview
             </Button>
-          </Stack>
+          </Box>
         </CardContent>
       </Card>
       {preview ? (

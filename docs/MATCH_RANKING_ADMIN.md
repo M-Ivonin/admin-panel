@@ -67,8 +67,14 @@ operator contracts below.
   responses are ignored; failed searches can be retried by editing the query.
   Choosing an account uses its current saved ranking country and canonical
   followed teams/leagues, and seeds the timezone field from its profile. The
-  date and timezone remain editable. Manual country and region are disabled
+  saved country and its shared region are displayed immediately; countries outside
+  the three region presets show Outside listed regions, and missing country shows
+  Unknown with Global fallback. A completed preview refreshes these displays from
+  the country actually used by the server. Date and timezone remain editable.
+  Manual country and region are disabled
   while a user is selected; clearing the user restores manual country mode.
+  At desktop widths (1200px and above), user, date, timezone, region, country and
+  Run preview share one row; smaller screens use a responsive grid.
 - User preview respects the same country rollout and experiment assignment as
   Matches. Control users see ordinary league ordering and no Top Matches;
   their scores are absent rather than zero. The response identifies the user,
