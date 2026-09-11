@@ -39,6 +39,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, Edit, HelpOutline, SportsSoccer } from '@mui/icons-material';
+import { getUsers, type PaginatedUser } from '@/lib/api/users';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   activateMatchRankingConfiguration,
@@ -167,7 +168,7 @@ const tabHelp: Record<
       },
       {
         title: 'What Preview does not do',
-        body: 'Running a preview does not publish, activate, or change anything. It uses the active configuration and no user follows. Use it to check saved catalog, prominence, and override changes. Draft configurations cannot be previewed here.',
+        body: 'Running a preview does not publish, activate, or change anything. It uses the active configuration. Select a user by email to include their saved country, followed teams and leagues, and rollout assignment. Without a user, the preview uses the selected country and no follows. User preview recalculates the chosen day; it does not reproduce an already cached phone screen. Use it to check saved catalog, prominence, and override changes. Draft configurations cannot be previewed here.',
       },
     ],
   },
@@ -2794,6 +2795,43 @@ function PreviewPanel({
   const [timezone, setTimezone] = useState('Etc/UTC');
   const [country, setCountry] = useState<CountryScopeOption | null>(null);
   const [regionId, setRegionId] = useState('');
+  const [selectedUser, setSelectedUser] = useState<PaginatedUser | null>(null);
+  const [userQuery, setUserQuery] = useState('');
+  const [userOptions, setUserOptions] = useState<PaginatedUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearchError, setUserSearchError] = useState<string | null>(null);
+  useEffect(() => {
+    const query = userQuery.trim();
+    setUserOptions([]);
+    setUserSearchError(null);
+    if (selectedUser || query.length < 2) {
+      setUsersLoading(false);
+      return;
+    }
+    let active = true;
+    setUsersLoading(true);
+    const timer = window.setTimeout(() => {
+      void getUsers({ page: 1, limit: 25, search: query })
+        .then(
+          (response) => {
+            if (active)
+              setUserOptions(
+                response.users.filter((user) => Boolean(user.email))
+              );
+          },
+          (caught) => {
+            if (active) setUserSearchError(messageOf(caught));
+          }
+        )
+        .finally(() => {
+          if (active) setUsersLoading(false);
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [userQuery, selectedUser]);
   const region = countryScopeOptions.find((option) => option.id === regionId);
   const countries = region
     ? countryCodeOptions.filter((option) =>
@@ -2806,13 +2844,19 @@ function PreviewPanel({
     setLoading(true);
     onError(null);
     try {
-      setPreview(
-        await previewMatchRanking({
-          date,
-          timezone: timezone.trim(),
-          countryCode: country?.countryCodes[0] ?? null,
-        })
-      );
+      setPreview(null);
+      const result = await previewMatchRanking({
+        date,
+        timezone: timezone.trim(),
+        countryCode: selectedUser ? null : (country?.countryCodes[0] ?? null),
+        ...(selectedUser ? { userId: selectedUser.id } : {}),
+      });
+      if (selectedUser && result.previewUser?.id !== selectedUser.id) {
+        throw new Error(
+          'The selected user’s preview is unavailable. Please try again later.'
+        );
+      }
+      setPreview(result);
     } catch (caught) {
       onError(messageOf(caught));
     } finally {
@@ -2823,12 +2867,64 @@ function PreviewPanel({
     <Stack spacing={2}>
       <Card>
         <CardContent>
+          <Autocomplete
+            options={selectedUser ? [selectedUser] : userOptions}
+            value={selectedUser}
+            inputValue={userQuery}
+            disabled={loading}
+            loading={usersLoading}
+            loadingText="Searching users…"
+            noOptionsText={
+              userSearchError
+                ? 'Search failed. Edit the email to retry.'
+                : userQuery.trim().length < 2
+                  ? 'Type at least two characters of an email.'
+                  : 'No users found. Try a more specific email.'
+            }
+            filterOptions={(options) => options}
+            getOptionLabel={(option) => option.email ?? option.id}
+            isOptionEqualToValue={(option, selected) =>
+              option.id === selected.id
+            }
+            onInputChange={(_event, value, reason) => {
+              if (reason === 'input') {
+                setUserQuery(value);
+                setSelectedUser(null);
+                setPreview(null);
+              }
+            }}
+            onChange={(_event, user) => {
+              setSelectedUser(user);
+              setUserQuery(user?.email ?? '');
+              setPreview(null);
+              if (user) {
+                setCountry(null);
+                setRegionId('');
+                setTimezone(user.timezone || 'Etc/UTC');
+              }
+            }}
+            sx={{ width: { xs: '100%', md: 440 }, mb: 2 }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Preview user"
+                error={Boolean(userSearchError)}
+                helperText={
+                  userSearchError ??
+                  (selectedUser
+                    ? 'Uses this user’s saved country and followed teams / leagues.'
+                    : 'Search by email. Leave empty to preview by country.')
+                }
+              />
+            )}
+          />
           <Stack
             direction={{ xs: 'column', lg: 'row' }}
             spacing={2}
             alignItems={{ lg: 'flex-start' }}
           >
             <TextField
+              disabled={loading}
               label="Preview date"
               type="date"
               value={date}
@@ -2836,6 +2932,7 @@ function PreviewPanel({
               InputLabelProps={{ shrink: true }}
             />
             <TextField
+              disabled={loading}
               label="IANA timezone"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
@@ -2843,6 +2940,7 @@ function PreviewPanel({
             />
             <TextField
               select
+              disabled={loading || Boolean(selectedUser)}
               label="Country region"
               SelectProps={{ displayEmpty: true }}
               InputLabelProps={{ shrink: true }}
@@ -2873,6 +2971,7 @@ function PreviewPanel({
                 ))}
             </TextField>
             <Autocomplete
+              disabled={loading || Boolean(selectedUser)}
               options={countries}
               value={country}
               autoHighlight
@@ -2887,9 +2986,11 @@ function PreviewPanel({
                   {...params}
                   label="Preview country"
                   helperText={
-                    region
-                      ? 'Choose a country in this region.'
-                      : 'User’s country. Leave empty for Global.'
+                    selectedUser
+                      ? 'Uses the selected user’s saved country.'
+                      : region
+                        ? 'Choose a country in this region.'
+                        : 'User’s country. Leave empty for Global.'
                   }
                 />
               )}
@@ -2897,7 +2998,11 @@ function PreviewPanel({
             <Button
               variant="contained"
               disabled={
-                loading || !date || !timezone.trim() || (!!region && !country)
+                loading ||
+                !date ||
+                !timezone.trim() ||
+                (!selectedUser &&
+                  ((!!region && !country) || Boolean(userQuery.trim())))
               }
               onClick={() => void run()}
               sx={{ minHeight: 56, whiteSpace: 'nowrap' }}
@@ -2913,6 +3018,18 @@ function PreviewPanel({
             Version {preview.rankingVersion} · generated{' '}
             {formatDate(preview.generatedAt)}
           </Alert>
+          {preview.previewUser ? (
+            <Alert severity="info">
+              Preview for {preview.previewUser.email ?? preview.previewUser.id}{' '}
+              · Country: {preview.rankingCountry ?? 'Unknown (Global fallback)'}
+            </Alert>
+          ) : null}
+          {preview.experimentArm === 'control' ? (
+            <Alert severity="info">
+              New ranking is not enabled for this user. Showing their ordinary
+              league order without Top Matches or ranking scores.
+            </Alert>
+          ) : null}
           <Typography variant="h6">Top Matches</Typography>
           {preview.topMatches.length === 0 ? (
             <EmptyCard text="No eligible Top Matches" />
@@ -2952,24 +3069,35 @@ function PreviewPanel({
                         >
                           {index === 0 ? (
                             <>
-                              <TableCell rowSpan={Math.max(1, group.fixtures.length)} sx={{ minWidth: 180 }}>
+                              <TableCell
+                                rowSpan={Math.max(1, group.fixtures.length)}
+                                sx={{ minWidth: 180 }}
+                              >
                                 <Typography fontWeight={600}>
                                   {group.competitionName ??
                                     `Competition ${group.competitionId}`}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
                                   Competition {group.competitionId}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {group.followed ? 'Followed group' : 'Not followed'} ·{' '}
-                                  {group.fixtures.length} fixtures
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {group.followed
+                                    ? 'Followed group'
+                                    : 'Not followed'}{' '}
+                                  · {group.fixtures.length} fixtures
                                 </Typography>
                               </TableCell>
                               <TableCell
                                 align="right"
                                 rowSpan={Math.max(1, group.fixtures.length)}
                               >
-                                {group.groupScore}
+                                {group.groupScore ?? '—'}
                               </TableCell>
                             </>
                           ) : null}
@@ -2982,7 +3110,10 @@ function PreviewPanel({
                                     ? `${fixture.homeTeamName} vs ${fixture.awayTeamName}`
                                     : `Fixture ${fixture.fixtureId}`}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
                                   {formatDate(fixture.kickoff)}
                                 </Typography>
                                 {fixture.tieBreak ? (
@@ -2998,42 +3129,79 @@ function PreviewPanel({
                               <TableCell align="right">
                                 <Chip
                                   size="small"
-                                  label={fixture.topScore}
-                                  color={fixture.eligible ? 'success' : 'default'}
+                                  label={fixture.topScore ?? '—'}
+                                  color={
+                                    fixture.eligible ? 'success' : 'default'
+                                  }
                                 />
                               </TableCell>
                               <TableCell sx={{ minWidth: 240 }}>
-                                <Stack direction="row" gap={0.5} flexWrap="wrap">
-                                  {Object.entries(fixture.components).map(([key, value]) => (
-                                    <Chip key={key} label={`${key} ${value}`} size="small" variant="outlined" />
-                                  ))}
-                                  <Chip label={`Importance ${fixture.importance}`} size="small" />
+                                <Stack
+                                  direction="row"
+                                  gap={0.5}
+                                  flexWrap="wrap"
+                                >
+                                  {Object.entries(fixture.components ?? {}).map(
+                                    ([key, value]) => (
+                                      <Chip
+                                        key={key}
+                                        label={`${key} ${value}`}
+                                        size="small"
+                                        variant="outlined"
+                                      />
+                                    )
+                                  )}
+                                  {fixture.importance != null ? (
+                                    <Chip
+                                      label={`Importance ${fixture.importance}`}
+                                      size="small"
+                                    />
+                                  ) : null}
                                 </Stack>
-                                {fixture.components.R !== undefined ? (
-                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                    Country priority (R): {fixture.components.R > 0 ? '+' : ''}
+                                {fixture.components?.R !== undefined ? (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ mt: 0.5 }}
+                                  >
+                                    Country priority (R):{' '}
+                                    {fixture.components.R > 0 ? '+' : ''}
                                     {fixture.components.R} points
                                   </Typography>
                                 ) : null}
                               </TableCell>
                               <TableCell sx={{ minWidth: 150 }}>
                                 {fixture.exclusionReason ? (
-                                  <Typography variant="body2" color="warning.main" sx={{ overflowWrap: 'anywhere' }}>
+                                  <Typography
+                                    variant="body2"
+                                    color="warning.main"
+                                    sx={{ overflowWrap: 'anywhere' }}
+                                  >
                                     {fixture.exclusionReason}
                                   </Typography>
                                 ) : (
                                   <Chip
                                     size="small"
                                     variant="outlined"
-                                    color={fixture.eligible ? 'success' : 'default'}
-                                    label={fixture.eligible ? 'Eligible' : 'Not eligible'}
+                                    color={
+                                      fixture.eligible ? 'success' : 'default'
+                                    }
+                                    label={
+                                      fixture.components == null
+                                        ? 'Ranking not enabled'
+                                        : fixture.eligible
+                                          ? 'Eligible'
+                                          : 'Not eligible'
+                                    }
                                   />
                                 )}
                               </TableCell>
                             </>
                           ) : (
                             <TableCell colSpan={4}>
-                              <Typography color="text.secondary">No fixtures</Typography>
+                              <Typography color="text.secondary">
+                                No fixtures
+                              </Typography>
                             </TableCell>
                           )}
                         </TableRow>
@@ -3072,7 +3240,7 @@ function PreviewFixtureCard({
                 : `Fixture ${fixture.fixtureId}`}
             </Typography>
             <Chip
-              label={`#${position} · score ${fixture.topScore}`}
+              label={`#${position}${fixture.topScore != null ? ` · score ${fixture.topScore}` : ''}`}
               color={fixture.eligible ? 'success' : 'default'}
             />
           </Stack>
@@ -3081,7 +3249,7 @@ function PreviewFixtureCard({
             {formatDate(fixture.kickoff)}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {Object.entries(fixture.components).map(([key, value]) => (
+            {Object.entries(fixture.components ?? {}).map(([key, value]) => (
               <Chip
                 key={key}
                 label={`${key} ${value}`}
@@ -3089,9 +3257,11 @@ function PreviewFixtureCard({
                 variant="outlined"
               />
             ))}
-            <Chip label={`Importance ${fixture.importance}`} size="small" />
+            {fixture.importance != null ? (
+              <Chip label={`Importance ${fixture.importance}`} size="small" />
+            ) : null}
           </Stack>
-          {fixture.components.R !== undefined ? (
+          {fixture.components?.R !== undefined ? (
             <Typography variant="body2" color="text.secondary">
               Country priority (R): {fixture.components.R > 0 ? '+' : ''}
               {fixture.components.R} points

@@ -212,6 +212,17 @@ describe('match ranking API', () => {
       method: 'POST',
       body: JSON.stringify(preview),
     });
+    const userPreview = {
+      ...preview,
+      countryCode: null,
+      userId: '8dcbf25e-8074-4f8d-94b6-9a7a3626eb85',
+    };
+    await previewMatchRanking(userPreview);
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({
+      path: '/admin/match-ranking/preview',
+      method: 'POST',
+      body: JSON.stringify(userPreview),
+    });
     await getMatchRankingAudit();
     expect(adminAuthFetch).toHaveBeenLastCalledWith({
       path: '/admin/match-ranking/audit',

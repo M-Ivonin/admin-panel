@@ -28,6 +28,9 @@ import {
   upsertTeamProminence,
 } from '@/lib/api/match-ranking';
 
+import { getUsers } from '@/lib/api/users';
+jest.mock('@/lib/api/users', () => ({ getUsers: jest.fn() }));
+
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -75,6 +78,7 @@ const competition = {
 describe('MatchRankingPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (getUsers as jest.Mock).mockResolvedValue({ users: [] });
     (getMatchRankingCompetitions as jest.Mock).mockResolvedValue([competition]);
     (getTeamProminence as jest.Mock).mockResolvedValue([]);
     (getMatchRankingOverrides as jest.Mock).mockResolvedValue([]);
@@ -1225,6 +1229,153 @@ describe('MatchRankingPage', () => {
         })
       )
     );
+  });
+
+  it('previews a selected email using the account context and returns to manual country mode when cleared', async () => {
+    const userId = '8dcbf25e-8074-4f8d-94b6-9a7a3626eb85';
+    (getUsers as jest.Mock).mockResolvedValue({
+      users: [
+        { id: userId, email: 'alice@example.com', timezone: 'Europe/Chisinau' },
+      ],
+    });
+    (previewMatchRanking as jest.Mock).mockResolvedValue({
+      rankingVersion: 'rank-user',
+      generatedAt: '2026-09-11T12:00:00Z',
+      previewUser: { id: userId, email: 'alice@example.com' },
+      rankingCountry: 'MD',
+      experimentArm: 'control',
+      topMatches: [],
+      groups: [],
+    });
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+    const picker = screen.getByRole('combobox', { name: 'Preview user' });
+    fireEvent.change(picker, { target: { value: 'alice@' } });
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'alice@example.com' })
+    );
+    expect(
+      screen.getByRole('combobox', { name: 'Preview country' })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('combobox', { name: /Country region/ })
+    ).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByLabelText('IANA timezone')).toHaveValue(
+      'Europe/Chisinau'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    await waitFor(() =>
+      expect(previewMatchRanking).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          countryCode: null,
+          timezone: 'Europe/Chisinau',
+        })
+      )
+    );
+    expect(
+      await screen.findByText(/Preview for alice@example.com/)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/New ranking is not enabled for this user/)
+    ).toBeInTheDocument();
+    fireEvent.mouseDown(picker);
+    expect(
+      await screen.findByRole('option', { name: 'alice@example.com' })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('Clear'));
+    expect(
+      screen.getByRole('combobox', { name: 'Preview country' })
+    ).toBeEnabled();
+    expect(
+      screen.queryByText(/Preview for alice@example.com/)
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    await waitFor(() =>
+      expect(previewMatchRanking).toHaveBeenLastCalledWith(
+        expect.not.objectContaining({ userId })
+      )
+    );
+  });
+
+  it('keeps the latest email search, reports failure, and retries after editing the query', async () => {
+    let resolveOld!: (value: {
+      users: { id: string; email: string }[];
+    }) => void;
+    (getUsers as jest.Mock)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveOld = resolve;
+          })
+      )
+      .mockResolvedValueOnce({
+        users: [{ id: 'bob', email: 'bob@example.com' }],
+      })
+      .mockRejectedValueOnce(new Error('User search unavailable'))
+      .mockResolvedValueOnce({
+        users: [{ id: 'carol', email: 'carol@example.com' }],
+      });
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+    const picker = screen.getByRole('combobox', { name: 'Preview user' });
+    fireEvent.change(picker, { target: { value: 'alice' } });
+    await waitFor(() =>
+      expect(getUsers).toHaveBeenCalledWith({
+        page: 1,
+        limit: 25,
+        search: 'alice',
+      })
+    );
+    fireEvent.change(picker, { target: { value: 'bob' } });
+    expect(
+      await screen.findByRole('option', { name: 'bob@example.com' })
+    ).toBeInTheDocument();
+    await act(async () =>
+      resolveOld({ users: [{ id: 'alice', email: 'alice@example.com' }] })
+    );
+    expect(
+      screen.queryByRole('option', { name: 'alice@example.com' })
+    ).not.toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: 'carol' } });
+    expect(
+      await screen.findByText('User search unavailable')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run preview' })).toBeDisabled();
+    fireEvent.change(picker, { target: { value: 'carol@' } });
+    expect(
+      await screen.findByRole('option', { name: 'carol@example.com' })
+    ).toBeInTheDocument();
+  });
+
+  it('does not display generic ranking as a selected user preview when the server omits the user context', async () => {
+    (getUsers as jest.Mock).mockResolvedValue({
+      users: [{ id: 'alice', email: 'alice@example.com', timezone: 'Etc/UTC' }],
+    });
+    (previewMatchRanking as jest.Mock).mockResolvedValue({
+      rankingVersion: 'generic-only',
+      generatedAt: '2026-09-11T12:00:00Z',
+      topMatches: [],
+      groups: [],
+    });
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Preview user' }), {
+      target: { value: 'alice' },
+    });
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'alice@example.com' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    expect(
+      await screen.findByText(
+        'The selected user’s preview is unavailable. Please try again later.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Version generic-only/)).not.toBeInTheDocument();
   });
 
   it('filters preview countries by region and requires a country for regional previews', async () => {

@@ -170,6 +170,7 @@ export interface MatchRankingConfigurationInput {
 }
 
 export interface MatchRankingPreviewInput {
+  userId?: string;
   date: string;
   timezone: string;
   countryCode: string | null;
@@ -191,9 +192,9 @@ export interface MatchRankingPreviewFixture {
   homeTeamName?: string;
   awayTeamName?: string;
   kickoff?: string | null;
-  components: MatchRankingComponents;
-  importance: number;
-  topScore: number;
+  components: MatchRankingComponents | null;
+  importance: number | null;
+  topScore: number | null;
   eligible: boolean;
   pinned?: boolean;
   tieBreak?: string;
@@ -203,12 +204,16 @@ export interface MatchRankingPreviewFixture {
 export interface MatchRankingPreviewGroup {
   competitionId: number;
   competitionName?: string;
-  groupScore: number;
+  groupScore: number | null;
   followed: boolean;
   fixtures: MatchRankingPreviewFixture[];
 }
 
 export interface MatchRankingPreview {
+  previewUser?: { id: string; email: string | null } | null;
+  rankingCountry?: string | null;
+  rankingCountrySource?: string | null;
+  experimentArm?: 'control' | 'treatment' | null;
   rankingVersion: string;
   generatedAt: string;
   topMatches: MatchRankingPreviewFixture[];

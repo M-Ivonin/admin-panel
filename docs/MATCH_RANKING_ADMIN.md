@@ -62,8 +62,21 @@ operator contracts below.
   or South America; a region requires selecting a country because rankings
   can differ within the same region. Changing to a region that excludes the
   selected country clears that country. All regions with no country means Global.
-- Preview uses the active configuration without user follows; it cannot preview
-  an inactive configuration. The selected timezone determines the calendar-day
+- Preview user is an optional email autocomplete backed by the existing paginated
+  user search (two characters minimum, 25 results, 300 ms delay). Stale search
+  responses are ignored; failed searches can be retried by editing the query.
+  Choosing an account uses its current saved ranking country and canonical
+  followed teams/leagues, and seeds the timezone field from its profile. The
+  date and timezone remain editable. Manual country and region are disabled
+  while a user is selected; clearing the user restores manual country mode.
+- User preview respects the same country rollout and experiment assignment as
+  Matches. Control users see ordinary league ordering and no Top Matches;
+  their scores are absent rather than zero. The response identifies the user,
+  actual ranking country (unknown means Global fallback), and assignment. It
+  recalculates the selected day without reading or changing the phone's existing
+  ranking snapshot. It does not reproduce phone search/Following/Live filters.
+- Preview uses the active configuration; it cannot preview an inactive
+  configuration. Without a user, country preview still has no user follows. The selected timezone determines the calendar-day
   boundary, while displayed kickoff timestamps use the browser's local timezone.
 - Preview output is read-only. Configuration changes affect ranking only after
   an explicit activation request succeeds.
