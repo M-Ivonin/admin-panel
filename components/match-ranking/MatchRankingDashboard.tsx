@@ -2926,32 +2926,124 @@ function PreviewPanel({
             ))
           )}
           <Typography variant="h6">League groups</Typography>
-          {preview.groups.map((group) => (
-            <Card key={group.competitionId}>
-              <CardContent>
-                <Typography fontWeight={700}>
-                  {group.competitionName ??
-                    `Competition ${group.competitionId}`}{' '}
-                  · group score {group.groupScore}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {group.followed ? 'Followed group' : 'Not followed'} ·{' '}
-                  {group.fixtures.length} fixtures
-                </Typography>
-                {group.fixtures.length > 0 ? (
-                  <Stack spacing={1.5} sx={{ mt: 2 }}>
-                    {group.fixtures.map((fixture, index) => (
-                      <PreviewFixtureCard
-                        key={fixture.fixtureId}
-                        fixture={fixture}
-                        position={index + 1}
-                      />
-                    ))}
-                  </Stack>
-                ) : null}
-              </CardContent>
-            </Card>
-          ))}
+          {preview.groups.length === 0 ? (
+            <EmptyCard text="No league groups" />
+          ) : (
+            <TableContainer component={Card}>
+              <Table aria-label="League groups" sx={{ minWidth: 1050 }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>League</TableCell>
+                    <TableCell align="right">Group score</TableCell>
+                    <TableCell>Match / kickoff</TableCell>
+                    <TableCell align="right">Score</TableCell>
+                    <TableCell>Breakdown</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {preview.groups.flatMap((group) =>
+                    (group.fixtures.length > 0 ? group.fixtures : [null]).map(
+                      (fixture, index) => (
+                        <TableRow
+                          key={`${group.competitionId}-${fixture?.fixtureId ?? 'empty'}`}
+                          hover
+                          sx={{ '& > td': { verticalAlign: 'top' } }}
+                        >
+                          {index === 0 ? (
+                            <>
+                              <TableCell rowSpan={Math.max(1, group.fixtures.length)} sx={{ minWidth: 180 }}>
+                                <Typography fontWeight={600}>
+                                  {group.competitionName ??
+                                    `Competition ${group.competitionId}`}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Competition {group.competitionId}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {group.followed ? 'Followed group' : 'Not followed'} ·{' '}
+                                  {group.fixtures.length} fixtures
+                                </Typography>
+                              </TableCell>
+                              <TableCell
+                                align="right"
+                                rowSpan={Math.max(1, group.fixtures.length)}
+                              >
+                                {group.groupScore}
+                              </TableCell>
+                            </>
+                          ) : null}
+                          {fixture ? (
+                            <>
+                              <TableCell sx={{ minWidth: 230 }}>
+                                <Typography fontWeight={600}>
+                                  #{index + 1}{' '}
+                                  {fixture.homeTeamName && fixture.awayTeamName
+                                    ? `${fixture.homeTeamName} vs ${fixture.awayTeamName}`
+                                    : `Fixture ${fixture.fixtureId}`}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {formatDate(fixture.kickoff)}
+                                </Typography>
+                                {fixture.tieBreak ? (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ overflowWrap: 'anywhere' }}
+                                  >
+                                    Tie-break: {fixture.tieBreak}
+                                  </Typography>
+                                ) : null}
+                              </TableCell>
+                              <TableCell align="right">
+                                <Chip
+                                  size="small"
+                                  label={fixture.topScore}
+                                  color={fixture.eligible ? 'success' : 'default'}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ minWidth: 240 }}>
+                                <Stack direction="row" gap={0.5} flexWrap="wrap">
+                                  {Object.entries(fixture.components).map(([key, value]) => (
+                                    <Chip key={key} label={`${key} ${value}`} size="small" variant="outlined" />
+                                  ))}
+                                  <Chip label={`Importance ${fixture.importance}`} size="small" />
+                                </Stack>
+                                {fixture.components.R !== undefined ? (
+                                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                    Country priority (R): {fixture.components.R > 0 ? '+' : ''}
+                                    {fixture.components.R} points
+                                  </Typography>
+                                ) : null}
+                              </TableCell>
+                              <TableCell sx={{ minWidth: 150 }}>
+                                {fixture.exclusionReason ? (
+                                  <Typography variant="body2" color="warning.main" sx={{ overflowWrap: 'anywhere' }}>
+                                    {fixture.exclusionReason}
+                                  </Typography>
+                                ) : (
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color={fixture.eligible ? 'success' : 'default'}
+                                    label={fixture.eligible ? 'Eligible' : 'Not eligible'}
+                                  />
+                                )}
+                              </TableCell>
+                            </>
+                          ) : (
+                            <TableCell colSpan={4}>
+                              <Typography color="text.secondary">No fixtures</Typography>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    )
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </>
       ) : null}
     </Stack>

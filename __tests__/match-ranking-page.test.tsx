@@ -1343,7 +1343,7 @@ describe('MatchRankingPage', () => {
       screen.getByText(/Tie-break: kickoff,fixtureId/)
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Copa Libertadores · group score 42')
+      screen.getByRole('table', { name: 'League groups' })
     ).toBeInTheDocument();
     expect(previewMatchRanking).toHaveBeenCalledWith({
       date: '2026-09-08',
