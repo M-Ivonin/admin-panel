@@ -16,6 +16,7 @@ import {
   getMatchRankingAudit,
   getMatchRankingCompetitions,
   getMatchRankingConfigurations,
+  getMatchRankingRuleDefaults,
   getMatchRankingOverrides,
   getMatchFixtures,
   getSportmonksTeams,
@@ -43,6 +44,7 @@ jest.mock('@/lib/api/match-ranking', () => ({
   getMatchRankingAudit: jest.fn(),
   getMatchRankingCompetitions: jest.fn(),
   getMatchRankingConfigurations: jest.fn(),
+  getMatchRankingRuleDefaults: jest.fn(),
   getMatchRankingOverrides: jest.fn(),
   getMatchFixtures: jest.fn(),
   getSportmonksTeams: jest.fn(),
@@ -76,6 +78,189 @@ const competition = {
 };
 
 describe('MatchRankingPage', () => {
+  it('edits weights with help and saves a draft preserving rollout and stage mappings', async () => {
+    const base = {
+      id: 'active',
+      version: 'v1',
+      active: true,
+      rules: { categoryBaseline: { '1': 44 }, stageById: { '9': 'final' } },
+      countryAllowlist: ['GB'],
+      treatmentPercentage: 50,
+      experimentId: 'exp',
+      assignmentSalt: 'salt',
+    };
+    (getMatchRankingConfigurations as jest.Mock).mockResolvedValue([base]);
+    (getMatchRankingRuleDefaults as jest.Mock).mockResolvedValue({
+      categoryBaseline: { '1': 40 },
+    });
+    (createMatchRankingConfiguration as jest.Mock).mockResolvedValue({
+      ...base,
+      id: 'draft',
+      active: false,
+    });
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('tab', { name: 'Weights & formula' })
+    );
+    const field = await screen.findByRole('combobox', {
+      name: 'Category 1 base points',
+    });
+    expect(field).toHaveValue('44');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Help: Category 1 base points' })
+    );
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Base importance'
+    );
+    expect(
+      screen.getByText('Top score = B + L + T + S + R + P + U + E')
+    ).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: '51' } });
+    fireEvent.change(screen.getByLabelText('New version'), {
+      target: { value: 'v2' },
+    });
+    fireEvent.change(screen.getByLabelText('Change reason'), {
+      target: { value: 'Tune weights' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() =>
+      expect(createMatchRankingConfiguration).toHaveBeenCalledWith(
+        expect.objectContaining({
+          version: 'v2',
+          rules: {
+            categoryBaseline: { '1': 51 },
+            stageById: { '9': 'final' },
+            interest: { enabled: false },
+          },
+          countryAllowlist: ['GB'],
+          treatmentPercentage: 50,
+          experimentId: 'exp',
+          assignmentSalt: 'salt',
+          reason: 'Tune weights',
+        })
+      )
+    );
+    expect(activateMatchRankingConfiguration).not.toHaveBeenCalled();
+  });
+
+  it('offers only valid limit choices and keeps failed saves editable', async () => {
+    const base = {
+      id: 'active',
+      version: 'v1',
+      active: true,
+      rules: {},
+      countryAllowlist: [],
+      treatmentPercentage: 100,
+      experimentId: 'exp',
+      assignmentSalt: 'salt',
+    };
+    (getMatchRankingConfigurations as jest.Mock).mockResolvedValue([base]);
+    (getMatchRankingRuleDefaults as jest.Mock).mockResolvedValue({
+      topMatchLimit: 3,
+    });
+    (createMatchRankingConfiguration as jest.Mock).mockRejectedValue(
+      new Error('Save unavailable')
+    );
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('tab', { name: 'Weights & formula' })
+    );
+    const field = await screen.findByRole('combobox', {
+      name: 'Top Matches limit',
+    });
+    fireEvent.change(screen.getByLabelText('New version'), {
+      target: { value: 'v2' },
+    });
+    fireEvent.change(screen.getByLabelText('Change reason'), {
+      target: { value: 'Tune weights' },
+    });
+    expect(
+      within(field)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value'))
+    ).toEqual(Array.from({ length: 20 }, (_, i) => String(i + 1)));
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    fireEvent.change(field, { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    expect(await screen.findByText('Save unavailable')).toBeInTheDocument();
+    expect(field).toHaveValue('4');
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled();
+  });
+
+  it('constrains dependent day choices and preserves a custom valid fractional weight', async () => {
+    const base = {
+      id: 'active',
+      version: 'v1',
+      active: true,
+      rules: { interest: { teamFactor: 0.0005 } },
+      countryAllowlist: [],
+      treatmentPercentage: 100,
+      experimentId: 'exp',
+      assignmentSalt: 'salt',
+    };
+    (getMatchRankingConfigurations as jest.Mock).mockResolvedValue([base]);
+    (getMatchRankingRuleDefaults as jest.Mock).mockResolvedValue({
+      interest: {
+        enabled: true,
+        windowDays: 30,
+        recentDays: 7,
+        minimumDays: 10,
+        teamFactor: 0.5,
+      },
+    });
+    (createMatchRankingConfiguration as jest.Mock).mockResolvedValue({
+      ...base,
+      id: 'draft',
+      active: false,
+    });
+    render(<MatchRankingPage />);
+    fireEvent.click(
+      await screen.findByRole('tab', { name: 'Weights & formula' })
+    );
+    const window = await screen.findByRole('combobox', {
+      name: 'Interest window (days)',
+    });
+    fireEvent.change(window, { target: { value: '3' } });
+    const recent = screen.getByRole('combobox', {
+      name: 'Recent window (days)',
+    });
+    const minimum = screen.getByRole('combobox', {
+      name: 'Minimum distinct days',
+    });
+    expect(recent).toHaveValue('3');
+    expect(
+      within(recent)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('value'))
+    ).toEqual(['1', '2', '3']);
+    expect(minimum).toHaveValue('4');
+    expect(
+      screen.getByRole('combobox', { name: 'Interest team factor' })
+    ).toHaveValue('0.0005');
+    fireEvent.change(screen.getByLabelText('New version'), {
+      target: { value: 'v2' },
+    });
+    fireEvent.change(screen.getByLabelText('Change reason'), {
+      target: { value: 'Shorter history' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await waitFor(() =>
+      expect(createMatchRankingConfiguration).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rules: {
+            interest: {
+              enabled: true,
+              windowDays: 3,
+              recentDays: 3,
+              minimumDays: 4,
+              teamFactor: 0.0005,
+            },
+          },
+        })
+      )
+    );
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     (getUsers as jest.Mock).mockResolvedValue({ users: [] });

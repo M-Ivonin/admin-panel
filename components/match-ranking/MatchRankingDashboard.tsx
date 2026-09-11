@@ -1,5 +1,6 @@
 'use client';
 
+import { RankingWeightsPanel } from './RankingWeightsPanel';
 import {
   SyntheticEvent,
   useCallback,
@@ -94,6 +95,7 @@ const tabs = [
   'Configurations',
   'Preview',
   'Audit',
+  'Weights & formula',
 ] as const;
 
 type HelpTopic = 'general' | (typeof tabs)[number];
@@ -169,6 +171,24 @@ const tabHelp: Record<
       {
         title: 'What Preview does not do',
         body: 'Running a preview does not publish, activate, or change anything. It uses the active configuration. Select a user by email to include their saved country, followed teams and leagues, and rollout assignment. Without a user, the preview uses the selected country and no follows. User preview recalculates the chosen day; it does not reproduce an already cached phone screen. Use it to check saved catalog, prominence, and override changes. Draft configurations cannot be previewed here.',
+      },
+    ],
+  },
+  'Weights & formula': {
+    intro:
+      'Edit every ranking weight with an explanation and the scoring formula.',
+    sections: [
+      {
+        title: 'Save and apply',
+        body: 'Start from a saved configuration. Save a new draft with a version and reason, then activate it to apply the weights. Audience and experiment settings stay inherited from the base configuration.',
+      },
+      {
+        title: 'How to enable personal interest',
+        body: 'In Weights & formula, select the configuration to start from. Find Personal interest · P and turn on Enable personal interest. Enter a new version name and a reason, then click Save draft. Open Configurations, find that version and click Activate, or use Activate saved version here. Saving only creates a draft; the switch takes effect after activation. Refresh Matches in the app to see the new ranking.',
+      },
+      {
+        title: 'History window and event retention',
+        body: 'Interest window (days) selects how much opening history the ranking uses: 1–30 days, with a default of 30. It does not change how long events are stored. Storage retention is configured separately on the backend with CAMPAIGN_SOURCE_EVENT_RETENTION_DAYS (default: 45 days), and cannot be changed here. Before enabling personal interest, confirm that the running backend retains events for at least 30 days. By default, an interest needs 3 distinct fixtures opened across at least 2 UTC days; enabling the switch does not immediately qualify a new account.',
       },
     ],
   },
@@ -398,6 +418,15 @@ export function MatchRankingDashboard() {
           ) : null}
           {!loading && tab === 4 ? <PreviewPanel onError={setError} /> : null}
           {!loading && tab === 5 ? <AuditPanel /> : null}
+          {!loading && tab === 6 ? (
+            <RankingWeightsPanel
+              items={configurations}
+              onSaved={async () =>
+                setConfigurations(await getMatchRankingConfigurations())
+              }
+              onActivate={setActivatingConfiguration}
+            />
+          ) : null}
         </Stack>
       </Box>
 

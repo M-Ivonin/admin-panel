@@ -278,3 +278,11 @@ export async function linkLegacyCompetition(
     })
   );
 }
+
+export async function getMatchRankingRuleDefaults(): Promise<
+  Record<string, unknown>
+> {
+  return readJson(
+    await adminAuthFetch({ path: `${BASE_PATH}/rule-defaults`, method: 'GET' })
+  );
+}

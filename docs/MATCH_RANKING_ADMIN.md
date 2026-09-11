@@ -128,3 +128,34 @@ The adjustment applies to users' ranking country in All Matches and Top Matches,
 on top of the automatic geographic bonus. No configured/known country means zero
 adjustment. Preview exposes the separate `R` component and the backend's final
 scores. The existing review reason covers these changes in the ranking audit.
+
+## Weights & formula
+
+The separate **Weights & formula** tab loads current defaults from the protected
+`GET /admin/match-ranking/rule-defaults` endpoint and overlays the selected
+configuration, initially the active version. Numeric dropdowns cover category,
+country, team, stage, timing, selection, league order and personal-interest
+rules. Each field has a question-mark help button and shows its server default.
+Personal interest has an explicit enable switch; its weights remain editable
+while disabled.
+
+The formula card explains importance, Top score, league order, threshold,
+interest, pin/exclusion precedence, competition-cap relaxation and stable
+snapshot ordering. Competition-specific country priority R stays in the
+Competition catalog; team classification stays in Team prominence.
+
+**Save draft** requires a new version and reason, validates finite numbers,
+integer limits and interest windows, and creates an inactive configuration
+through the existing audited API. It preserves the base audience, country
+allowlist, experiment ID, salt and stage mappings. **Activate saved version**
+opens the existing activation dialog. Saving alone does not apply weights.
+When no configuration exists, defaults are shown; create the initial audience
+configuration in Configurations first. A defaults-fetch error offers Retry;
+a failed save retains the entered values.
+
+All numeric weights are selected from dropdowns; there is no free numeric input.
+Lists include preset choices plus valid stored/default values, so an existing
+custom fractional weight is preserved. Top/per-competition limits offer 1–20;
+interest day choices follow the current window. Reducing the history window
+reduces recent/minimum days only if needed to remain within backend boundaries.
+Server validation remains authoritative for configuration writes.
