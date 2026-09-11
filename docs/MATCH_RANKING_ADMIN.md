@@ -159,3 +159,8 @@ custom fractional weight is preserved. Top/per-competition limits offer 1–20;
 interest day choices follow the current window. Reducing the history window
 reduces recent/minimum days only if needed to remain within backend boundaries.
 Server validation remains authoritative for configuration writes.
+
+Configurations use compact version cards with status, audience, countries and
+creation/activation dates. The Activate action remains at the top of an inactive
+card. Saved rules are collapsed by default under **View saved rules**; expanded
+content scrolls within a bounded area instead of stretching the card/button.

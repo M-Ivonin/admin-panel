@@ -2588,47 +2588,136 @@ function ConfigurationsPanel({
         <EmptyCard text="No ranking configurations" />
       ) : (
         items.map((item) => (
-          <Card key={item.id}>
+          <Card key={item.id} variant="outlined">
             <CardContent>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                justifyContent="space-between"
-                spacing={2}
-              >
-                <Box>
-                  <Stack direction="row" spacing={1}>
-                    <Typography variant="h6">{item.version}</Typography>
-                    {item.active ? (
-                      <Chip label="Active" color="success" size="small" />
-                    ) : null}
-                  </Stack>
-                  <Typography color="text.secondary">
-                    Experiment {item.experimentId} · treatment{' '}
-                    {item.treatmentPercentage}% · countries{' '}
-                    {item.countryAllowlist.join(', ') || 'all'}
-                  </Typography>
-                  <Typography variant="body2">
-                    Created {formatDate(item.createdAt)} · activated{' '}
-                    {formatDate(item.activatedAt)}
+              <Stack spacing={2}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="flex-start"
+                  spacing={2}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Stack
+                      direction="row"
+                      gap={1}
+                      alignItems="center"
+                      flexWrap="wrap"
+                    >
+                      <Typography
+                        variant="h6"
+                        sx={{ overflowWrap: 'anywhere' }}
+                      >
+                        Version {item.version}
+                      </Typography>
+                      <Chip
+                        label={item.active ? 'Active' : 'Inactive'}
+                        color={item.active ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ overflowWrap: 'anywhere' }}
+                    >
+                      {item.experimentId}
+                    </Typography>
+                  </Box>
+                  {!item.active ? (
+                    <Button
+                      variant="outlined"
+                      onClick={() => onActivate(item)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      Activate
+                    </Button>
+                  ) : null}
+                </Stack>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, minmax(0, 1fr))',
+                      lg: 'repeat(4, minmax(0, 1fr))',
+                    },
+                    gap: 2,
+                  }}
+                >
+                  {[
+                    ['Audience', `${item.treatmentPercentage}% of users`],
+                    [
+                      'Countries',
+                      item.countryAllowlist.join(', ') || 'All countries',
+                    ],
+                    ['Created', formatDate(item.createdAt)],
+                    [
+                      'Activated',
+                      item.activatedAt
+                        ? formatDate(item.activatedAt)
+                        : 'Not activated',
+                    ],
+                  ].map(([label, value]) => (
+                    <Box key={label} sx={{ minWidth: 0 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {label}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ overflowWrap: 'anywhere' }}
+                      >
+                        {value}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Box
+                  component="details"
+                  sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5 }}
+                >
+                  <Box
+                    component="summary"
+                    sx={{
+                      cursor: 'pointer',
+                      color: 'primary.main',
+                      typography: 'body2',
+                      width: 'fit-content',
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineOffset: 4,
+                        borderRadius: 0.5,
+                      },
+                    }}
+                  >
+                    View saved rules
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1.5 }}
+                  >
+                    Edit numeric settings in the Weights &amp; formula tab.
                   </Typography>
                   <Box
                     component="pre"
                     sx={{
+                      m: 0,
+                      mt: 1,
+                      p: 2,
+                      maxHeight: 280,
+                      overflow: 'auto',
                       whiteSpace: 'pre-wrap',
                       overflowWrap: 'anywhere',
                       bgcolor: 'action.hover',
-                      p: 1,
                       borderRadius: 1,
+                      typography: 'body2',
+                      fontFamily: 'monospace',
                     }}
                   >
                     {JSON.stringify(item.rules, null, 2)}
                   </Box>
                 </Box>
-                {!item.active ? (
-                  <Button variant="outlined" onClick={() => onActivate(item)}>
-                    Activate
-                  </Button>
-                ) : null}
               </Stack>
             </CardContent>
           </Card>
