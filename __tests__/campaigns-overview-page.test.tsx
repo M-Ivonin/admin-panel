@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { CampaignsOverviewPage } from '@/components/campaigns/CampaignsOverviewPage';
-import { downloadCampaignJson } from '@/components/campaigns/export';
+import {
+  downloadCampaignJson,
+  downloadCampaignsJson,
+} from '@/components/campaigns/export';
 import { campaignsRepository } from '@/modules/campaigns/repository';
 import { resetMockCampaignsRepository } from '@/test-support/campaigns/mock-repository';
 import { createInitialCampaignsOverviewResponse } from '@/test-support/campaigns/mock-data';
@@ -60,6 +63,7 @@ jest.mock('@/modules/campaigns/repository', () => {
 
 jest.mock('@/components/campaigns/export', () => ({
   downloadCampaignJson: jest.fn(),
+  downloadCampaignsJson: jest.fn(),
 }));
 
 jest.mock('next/navigation', () => ({
@@ -90,6 +94,84 @@ describe('CampaignsOverviewPage', () => {
         })
       );
     } finally {
+      overviewSpy.mockRestore();
+    }
+  });
+
+  it('exports every page including archived campaigns despite list filters', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const first = seeded.items[0];
+    const second = { ...seeded.items[1], status: 'archived' as const };
+    const original =
+      campaignsRepository.getCampaignsOverview.bind(campaignsRepository);
+    const overviewSpy = jest
+      .spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockImplementation(async (params) =>
+        params.limit === 50
+          ? {
+              ...seeded,
+              items: params.page === 1 ? [first] : [second],
+              page: params.page,
+              total: 2,
+              totalPages: 2,
+            }
+          : original(params)
+      );
+    const exportSpy = jest.spyOn(
+      campaignsRepository,
+      'getCampaignAnalyticsExport'
+    );
+    const download = jest.mocked(downloadCampaignsJson);
+    download.mockReset();
+    try {
+      render(<CampaignsOverviewPage />);
+      await screen.findByText(first.name);
+      fireEvent.change(screen.getByLabelText('Search campaigns'), {
+        target: { value: first.name },
+      });
+      fireEvent.click(screen.getByText('7 days'));
+      fireEvent.click(screen.getByRole('button', { name: /export all json/i }));
+      await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+      expect(
+        download.mock.calls[0][0].map((item) => item.campaign.identity.id)
+      ).toEqual([first.id, second.id]);
+      expect(overviewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          page: 2,
+          search: '',
+          statuses: [],
+          triggerTypes: [],
+          quickView: null,
+        })
+      );
+      expect(exportSpy).toHaveBeenCalledWith(second.id, {
+        statsPeriod: 'last_7_days',
+      });
+    } finally {
+      overviewSpy.mockRestore();
+      exportSpy.mockRestore();
+    }
+  });
+
+  it('shows export failures without downloading a partial file and allows retry', async () => {
+    const seeded = createInitialCampaignsOverviewResponse();
+    const overviewSpy = jest.spyOn(campaignsRepository, 'getCampaignsOverview')
+      .mockResolvedValue({ ...seeded, items: seeded.items.slice(0, 2), total: 2, totalPages: 1 });
+    const download = jest.mocked(downloadCampaignsJson);
+    download.mockReset();
+    const exportSpy = jest.spyOn(campaignsRepository, 'getCampaignAnalyticsExport')
+      .mockRejectedValueOnce(new Error('Export unavailable'));
+    try {
+      render(<CampaignsOverviewPage />);
+      await screen.findByText('onboarding_not_completed');
+      fireEvent.click(screen.getByRole('button', { name: /export all json/i }));
+      await screen.findByText('Export unavailable');
+      expect(download).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /export all json/i })).toBeEnabled();
+      fireEvent.click(screen.getByRole('button', { name: /export all json/i }));
+      await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+    } finally {
+      exportSpy.mockRestore();
       overviewSpy.mockRestore();
     }
   });

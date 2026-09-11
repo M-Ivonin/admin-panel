@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import type {
+  CampaignAnalyticsExport,
   CampaignEntryTriggerType,
   CampaignListItem,
   CampaignListMetricSummary,
@@ -49,7 +50,10 @@ import type {
   CampaignsOverviewResponse,
 } from '@/modules/campaigns/contracts';
 import { campaignsRepository } from '@/modules/campaigns/repository';
-import { downloadCampaignJson } from '@/components/campaigns/export';
+import {
+  downloadCampaignJson,
+  downloadCampaignsJson,
+} from '@/components/campaigns/export';
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -953,6 +957,7 @@ export function CampaignsOverviewPage() {
   const [resettingCampaignId, setResettingCampaignId] = useState<string | null>(
     null
   );
+  const [isExportingAll, setIsExportingAll] = useState(false);
   const [exportingCampaignId, setExportingCampaignId] = useState<string | null>(
     null
   );
@@ -1024,10 +1029,7 @@ export function CampaignsOverviewPage() {
               setHydratedItemsById((current) => ({
                 ...current,
                 ...Object.fromEntries(
-                  items.map((hydratedItem) => [
-                    hydratedItem.id,
-                    hydratedItem,
-                  ])
+                  items.map((hydratedItem) => [hydratedItem.id, hydratedItem])
                 ),
               }));
             },
@@ -1161,6 +1163,53 @@ export function CampaignsOverviewPage() {
     }
   }
 
+  async function handleExportAllCampaigns() {
+    setIsExportingAll(true);
+    setError(null);
+    const periodParams = { statsPeriod, ...statsRangeParams };
+
+    try {
+      const exports: CampaignAnalyticsExport[] = [];
+      const seenIds = new Set<string>();
+      let exportPage = 1;
+      let totalPages = 1;
+      do {
+        const response = await campaignsRepository.getCampaignsOverview({
+          page: exportPage,
+          limit: 50,
+          search: '',
+          statuses: [],
+          triggerTypes: [],
+          quickView: null,
+          includeMetrics: false,
+          ...periodParams,
+        });
+        totalPages = response.totalPages;
+        for (const campaign of response.items) {
+          if (!seenIds.has(campaign.id)) {
+            exports.push(
+              await campaignsRepository.getCampaignAnalyticsExport(
+                campaign.id,
+                periodParams
+              )
+            );
+            seenIds.add(campaign.id);
+          }
+        }
+        exportPage += 1;
+      } while (exportPage <= totalPages);
+      downloadCampaignsJson(exports);
+    } catch (exportError) {
+      setError(
+        exportError instanceof Error
+          ? exportError.message
+          : 'Failed to export all campaigns JSON.'
+      );
+    } finally {
+      setIsExportingAll(false);
+    }
+  }
+
   async function handleExportCampaign(campaign: CampaignListItem) {
     setExportingCampaignId(campaign.id);
     setError(null);
@@ -1189,13 +1238,23 @@ export function CampaignsOverviewPage() {
         title="Campaigns"
         subtitle="Overview, filters, and lifecycle monitoring for every campaign in flight."
         actions={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => router.push('/dashboard/campaigns/new')}
-          >
-            New Campaign
-          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadOutlined />}
+              disabled={isExportingAll}
+              onClick={() => void handleExportAllCampaigns()}
+            >
+              {isExportingAll ? 'Exporting all…' : 'Export all JSON'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => router.push('/dashboard/campaigns/new')}
+            >
+              New Campaign
+            </Button>
+          </Stack>
         }
         maxWidth={1440}
       />

@@ -144,6 +144,12 @@ runtime metadata, aggregate performance, UTC daily metrics, safe content
 dimensions, and related source-event counts. It excludes raw deliveries and
 user-level identifiers.
 
+The header’s "Export all JSON" downloads one JSON array of these same V2
+snapshots for every campaign, including archived campaigns, across all pages.
+It uses the selected statistics period and ignores list filters. Requests run
+sequentially; if any request fails, the screen shows the error and no partial
+file is downloaded.
+
 #### KPI cards
 
 The KPI cards show:
