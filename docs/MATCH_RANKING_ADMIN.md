@@ -57,6 +57,14 @@ operator contracts below.
   reference data.
 - Preview requires a date and IANA timezone. Its default timezone is `Etc/UTC`;
   operators may replace it when checking another calendar-day boundary.
+- Preview country is a searchable single-country dropdown reused from the
+  shared country scopes. Country region filters it by Europe, North America,
+  or South America; a region requires selecting a country because rankings
+  can differ within the same region. Changing to a region that excludes the
+  selected country clears that country. All regions with no country means Global.
+- Preview uses the active configuration without user follows; it cannot preview
+  an inactive configuration. The selected timezone determines the calendar-day
+  boundary, while displayed kickoff timestamps use the browser's local timezone.
 - Preview output is read-only. Configuration changes affect ranking only after
   an explicit activation request succeeds.
 

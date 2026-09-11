@@ -403,7 +403,9 @@ describe('MatchRankingPage', () => {
       screen.getByRole('button', { name: 'Edit Copa Libertadores' })
     );
     const dialog = screen.getByRole('dialog', { name: 'Review competition' });
-    expect(within(dialog).getByLabelText('Effective category')).toHaveTextContent('Automatic — use provider category');
+    expect(
+      within(dialog).getByLabelText('Effective category')
+    ).toHaveTextContent('Automatic — use provider category');
     expect(
       within(dialog).getByText('Provider category: 1')
     ).toBeInTheDocument();
@@ -699,7 +701,9 @@ describe('MatchRankingPage', () => {
     );
     dialog = screen.getByRole('dialog', { name: 'Review competition' });
     expect(within(dialog).getByText('Brazil (BR)')).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveTextContent('+10');
+    expect(
+      within(dialog).getByLabelText('Priority adjustment 1')
+    ).toHaveTextContent('+10');
     expect(
       within(dialog).queryByLabelText('Priority adjustment 2')
     ).not.toBeInTheDocument();
@@ -770,7 +774,9 @@ describe('MatchRankingPage', () => {
     expect(
       within(dialog).getByText('Svalbard and Jan Mayen (SJ)')
     ).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Priority adjustment 1')).toHaveTextContent('+11');
+    expect(
+      within(dialog).getByLabelText('Priority adjustment 1')
+    ).toHaveTextContent('+11');
   });
 
   it('requires a nonempty audience and an integer adjustment within the allowed range', async () => {
@@ -804,7 +810,9 @@ describe('MatchRankingPage', () => {
       { key: 'Escape' }
     );
     fireEvent.mouseDown(within(dialog).getByLabelText('Priority adjustment 1'));
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(
+    expect(
+      screen.getAllByRole('option').map((option) => option.textContent)
+    ).toEqual(
       Array.from({ length: 41 }, (_, index) => index - 20).map((points) =>
         points > 0 ? `+${points}` : String(points)
       )
@@ -1219,6 +1227,48 @@ describe('MatchRankingPage', () => {
     );
   });
 
+  it('filters preview countries by region and requires a country for regional previews', async () => {
+    (previewMatchRanking as jest.Mock).mockResolvedValue({
+      rankingVersion: 'ranking-test',
+      generatedAt: '2026-09-11T12:00:00Z',
+      topMatches: [],
+      groups: [],
+    });
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    await waitFor(() =>
+      expect(previewMatchRanking).toHaveBeenCalledWith(
+        expect.objectContaining({ countryCode: null })
+      )
+    );
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Country region' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'South America' }));
+    expect(screen.getByRole('button', { name: 'Run preview' })).toBeDisabled();
+    const country = screen.getByRole('combobox', { name: 'Preview country' });
+    fireEvent.change(country, { target: { value: 'Germany' } });
+    expect(
+      screen.queryByRole('option', { name: 'Germany (DE)' })
+    ).not.toBeInTheDocument();
+    fireEvent.change(country, { target: { value: 'Brazil' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    await waitFor(() =>
+      expect(previewMatchRanking).toHaveBeenLastCalledWith(
+        expect.objectContaining({ countryCode: 'BR' })
+      )
+    );
+    fireEvent.mouseDown(
+      screen.getByRole('combobox', { name: 'Country region' })
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Europe' }));
+    expect(country).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Run preview' })).toBeDisabled();
+  });
+
   it('runs deterministic preview and displays component breakdown and audit', async () => {
     (previewMatchRanking as jest.Mock).mockResolvedValue({
       rankingVersion: 'ranking-2026-09',
@@ -1267,9 +1317,13 @@ describe('MatchRankingPage', () => {
       target: { value: '2026-09-08' },
     });
     expect(screen.getByLabelText('IANA timezone')).toHaveValue('Etc/UTC');
-    fireEvent.change(screen.getByLabelText('Preview country code'), {
-      target: { value: 'br' },
-    });
+    fireEvent.change(
+      screen.getByRole('combobox', { name: 'Preview country' }),
+      {
+        target: { value: 'Brazil' },
+      }
+    );
+    fireEvent.click(await screen.findByRole('option', { name: 'Brazil (BR)' }));
     fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
 
     expect(

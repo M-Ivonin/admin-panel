@@ -163,11 +163,11 @@ const tabHelp: Record<
     sections: [
       {
         title: 'How to check a result',
-        body: 'Choose the local date, the matching IANA timezone, and an optional two-letter country code. Compare Top Matches and league groups, then inspect the score parts and any exclusion explanation for unexpected results.',
+        body: 'Choose the local date, the matching IANA timezone, and a user country from the searchable list. Optionally filter countries by Europe, North America, or South America. Leave country empty with All regions for Global. Compare Top Matches and league groups, then inspect the score parts and any exclusion explanation for unexpected results.',
       },
       {
         title: 'What Preview does not do',
-        body: 'Running a preview does not publish, activate, or change anything. Use it after catalog, prominence, override, or configuration changes and before activating a new configuration.',
+        body: 'Running a preview does not publish, activate, or change anything. It uses the active configuration and no user follows. Use it to check saved catalog, prominence, and override changes. Draft configurations cannot be previewed here.',
       },
     ],
   },
@@ -2792,7 +2792,14 @@ function PreviewPanel({
 }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [timezone, setTimezone] = useState('Etc/UTC');
-  const [country, setCountry] = useState('');
+  const [country, setCountry] = useState<CountryScopeOption | null>(null);
+  const [regionId, setRegionId] = useState('');
+  const region = countryScopeOptions.find((option) => option.id === regionId);
+  const countries = region
+    ? countryCodeOptions.filter((option) =>
+        region.countryCodes.includes(option.countryCodes[0])
+      )
+    : countryCodeOptions;
   const [preview, setPreview] = useState<MatchRankingPreview | null>(null);
   const [loading, setLoading] = useState(false);
   async function run() {
@@ -2803,7 +2810,7 @@ function PreviewPanel({
         await previewMatchRanking({
           date,
           timezone: timezone.trim(),
-          countryCode: normalizedCountry(country),
+          countryCode: country?.countryCodes[0] ?? null,
         })
       );
     } catch (caught) {
@@ -2817,9 +2824,9 @@ function PreviewPanel({
       <Card>
         <CardContent>
           <Stack
-            direction={{ xs: 'column', md: 'row' }}
+            direction={{ xs: 'column', lg: 'row' }}
             spacing={2}
-            alignItems={{ md: 'flex-start' }}
+            alignItems={{ lg: 'flex-start' }}
           >
             <TextField
               label="Preview date"
@@ -2835,14 +2842,63 @@ function PreviewPanel({
               helperText="For example Europe/Chisinau"
             />
             <TextField
-              label="Preview country code"
+              select
+              label="Country region"
+              SelectProps={{ displayEmpty: true }}
+              InputLabelProps={{ shrink: true }}
+              value={regionId}
+              onChange={(event) => {
+                const nextRegion = countryScopeOptions.find(
+                  (option) => option.id === event.target.value
+                );
+                setRegionId(event.target.value);
+                if (
+                  country &&
+                  nextRegion &&
+                  !nextRegion.countryCodes.includes(country.countryCodes[0])
+                ) {
+                  setCountry(null);
+                }
+              }}
+              sx={{ minWidth: 200 }}
+              helperText="Filters the country list."
+            >
+              <MenuItem value="">All regions</MenuItem>
+              {countryScopeOptions
+                .filter((option) => option.kind === 'region')
+                .map((option) => (
+                  <MenuItem key={option.id} value={option.id}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+            </TextField>
+            <Autocomplete
+              options={countries}
               value={country}
-              onChange={(e) => setCountry(e.target.value.toUpperCase())}
-              inputProps={{ maxLength: 2 }}
+              autoHighlight
+              getOptionLabel={(option) => option.label}
+              isOptionEqualToValue={(option, selected) =>
+                option.id === selected.id
+              }
+              onChange={(_event, option) => setCountry(option)}
+              sx={{ width: { xs: '100%', md: 280 } }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Preview country"
+                  helperText={
+                    region
+                      ? 'Choose a country in this region.'
+                      : 'User’s country. Leave empty for Global.'
+                  }
+                />
+              )}
             />
             <Button
               variant="contained"
-              disabled={loading || !date || !timezone.trim()}
+              disabled={
+                loading || !date || !timezone.trim() || (!!region && !country)
+              }
               onClick={() => void run()}
               sx={{ minHeight: 56, whiteSpace: 'nowrap' }}
             >
