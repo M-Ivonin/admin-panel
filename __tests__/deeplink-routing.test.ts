@@ -9,6 +9,7 @@ describe('deep link routing', () => {
   it('keeps external match links on the public deep-link route', () => {
     for (const pathname of [
       '/matches/12345',
+      '/feed/news%3A0c0e6593-dd75-4e0a-8d27-63365b699d77',
       '/profile/support-chat',
       '/settings',
       '/setup-content-preferences',

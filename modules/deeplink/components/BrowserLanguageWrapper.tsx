@@ -10,6 +10,7 @@ import type { Translations } from '@/lib/i18n/translations';
 interface BrowserLanguageWrapperProps {
   channelId?: string;
   appPath?: string;
+  fallbackUrl?: string;
   token?: string;
   config: ClientDeepLinkConfig;
   showError?: boolean;
@@ -18,6 +19,7 @@ interface BrowserLanguageWrapperProps {
 export function BrowserLanguageWrapper({
   channelId,
   appPath,
+  fallbackUrl,
   token,
   config,
   showError = false,
@@ -69,6 +71,7 @@ export function BrowserLanguageWrapper({
   return (
     <DeepLinkHandler
       appPath={resolvedAppPath}
+      fallbackUrl={fallbackUrl}
       channelId={channelId}
       token={token}
       config={config}

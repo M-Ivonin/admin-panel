@@ -3,6 +3,7 @@ const profile = process.argv[2] || 'deeplink'
 
 const profiles = {
   deeplink: [
+    { path: '/feed/news%3A0c0e6593-dd75-4e0a-8d27-63365b699d77', status: 200, noRedirect: true },
     { path: '/.well-known/assetlinks.json', status: 200, json: true },
     { path: '/.well-known/apple-app-site-association', status: 200, json: true },
     { path: '/app-ads.txt', status: 200, text: true },

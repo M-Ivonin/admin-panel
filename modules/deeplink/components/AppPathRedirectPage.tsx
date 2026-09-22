@@ -7,12 +7,14 @@ import {
 
 interface AppPathRedirectPageProps {
   basePath: string;
+  fallbackUrl?: string;
   segments?: string[];
   searchParams: DeepLinkSearchParams;
 }
 
 export function AppPathRedirectPage({
   basePath,
+  fallbackUrl,
   segments = [],
   searchParams,
 }: AppPathRedirectPageProps) {
@@ -23,5 +25,5 @@ export function AppPathRedirectPage({
     : basePath;
   const appPath = queryString ? `${path}?${queryString}` : path;
 
-  return <BrowserLanguageWrapper appPath={appPath} config={config} />;
+  return <BrowserLanguageWrapper appPath={appPath} config={config} fallbackUrl={fallbackUrl} />;
 }

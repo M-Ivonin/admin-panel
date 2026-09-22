@@ -287,3 +287,12 @@ Admin authoring для `insights`, `entities`, `quizzes` и trust pages долж
 - admin UI может создавать и редактировать content entities;
 - public routes только читают нормализованный content contract;
 - deep-link routes вообще не зависят от этого слоя.
+
+## Shared Feed news links
+
+`/feed/:tileId` belongs to the unlocalized deeplink contour and is noindex.
+It opens the matching `sirbro://feed/:tileId` (or host-selected product scheme).
+Until web news pages are implemented, a browser without an app falls back to
+the website root, not a store. Desktop browsers go directly to the root.
+The fallback timer is cancelled on page hide or transition to hidden visibility.
+The HTTPS URL remains stable for future web article support.

@@ -22,6 +22,7 @@ import type { Translations } from '@/lib/i18n/translations';
 
 interface DeepLinkHandlerProps {
   appPath: string;
+  fallbackUrl?: string;
   channelId?: string;
   token?: string;
   config: ClientDeepLinkConfig;
@@ -31,6 +32,7 @@ interface DeepLinkHandlerProps {
 
 export function DeepLinkHandler({
   appPath,
+  fallbackUrl,
   channelId,
   token,
   config,
@@ -80,7 +82,8 @@ export function DeepLinkHandler({
 
       const fallbackTimer = setTimeout(() => {
         setShowFallback(true);
-        const storeUrl = getAppStoreUrl(
+        if (document.visibilityState === 'hidden') return;
+        const storeUrl = fallbackUrl ?? getAppStoreUrl(
           platformInfo.platform,
           hostConfig.iosAppStoreUrl,
           hostConfig.androidPlayUrl
@@ -91,15 +94,18 @@ export function DeepLinkHandler({
       }, DEEPLINK_FALLBACK_MS);
 
       const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'hidden') {
           clearTimeout(fallbackTimer);
         }
       };
 
+      const cancelFallback = () => clearTimeout(fallbackTimer);
       document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('pagehide', cancelFallback);
 
       return () => {
         clearTimeout(fallbackTimer);
+        window.removeEventListener('pagehide', cancelFallback);
         document.removeEventListener(
           'visibilitychange',
           handleVisibilityChange
@@ -107,8 +113,12 @@ export function DeepLinkHandler({
       };
     }
 
+    if (fallbackUrl) {
+      window.location.replace(fallbackUrl);
+      return;
+    }
     setShowFallback(true);
-  }, [channelId, token, config, normalizedAppPath]);
+  }, [channelId, token, config, normalizedAppPath, fallbackUrl]);
 
   const handleOpenApp = () => {
     const deepLinkUrl = buildInternalAppDeepLink(
