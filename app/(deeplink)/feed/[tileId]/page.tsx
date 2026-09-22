@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { AppPathRedirectPage } from '@/modules/deeplink/components/AppPathRedirectPage';
 
 export const metadata: Metadata = {
@@ -13,10 +14,17 @@ export default async function FeedDeepLinkPage({
   params: Promise<{ tileId: string }>;
 }) {
   const { tileId } = await params;
+  // The deployed route can supply the escaped colon; encode it only once below.
+  let decodedTileId: string;
+  try {
+    decodedTileId = decodeURIComponent(tileId);
+  } catch {
+    redirect('/');
+  }
   return (
     <AppPathRedirectPage
       basePath="/feed"
-      segments={[tileId]}
+      segments={[decodedTileId]}
       searchParams={{}}
       fallbackUrl="/"
     />
