@@ -9,6 +9,7 @@ import {
   getAccessToken,
   isTokenExpired,
   decodeToken,
+  authUserFromAccessToken,
   AuthUser,
 } from '@/lib/auth';
 
@@ -34,7 +35,12 @@ export function useAuth(): UseAuthReturn {
 
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser) as AuthUser;
+        const normalized = authUserFromAccessToken(token, parsed) || parsed;
+        setUser(normalized);
+        if (JSON.stringify(parsed) !== JSON.stringify(normalized)) {
+          localStorage.setItem('user', JSON.stringify(normalized));
+        }
       } catch {
         localStorage.removeItem('user');
       }
@@ -49,7 +55,8 @@ export function useAuth(): UseAuthReturn {
       } else if (decoded && decoded.email) {
         // Token is valid (either no expiration or not expired yet)
         const user: AuthUser = {
-          id: decoded.appUserId || decoded.sub || '',
+          id: decoded.sub || decoded.appUserId || '',
+          appUserId: decoded.appUserId,
           email: decoded.email,
           name: decoded.name || decoded.email,
         };
@@ -67,8 +74,11 @@ export function useAuth(): UseAuthReturn {
       try {
         const response = await authenticateWithGoogle(idToken);
         storeTokens(response.tokens);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
+        const user =
+          authUserFromAccessToken(response.tokens.accessToken, response.user) ||
+          response.user;
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Login failed';
         setError(message);
@@ -87,8 +97,11 @@ export function useAuth(): UseAuthReturn {
       try {
         const response = await exchangeMagicLink(token);
         storeTokens(response.tokens);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setUser(response.user);
+        const user =
+          authUserFromAccessToken(response.tokens.accessToken, response.user) ||
+          response.user;
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Magic link login failed';
         setError(message);

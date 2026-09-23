@@ -33,6 +33,7 @@ export interface User {
   first_seen_at: string | null;
   last_active_at: string | null;
   previous_active_at: string | null;
+  /** @deprecated Legacy users.app_user_id retained for compatibility display. */
   app_user_id: string | null;
   sessions: number | null;
   lifecycle_state: 'NEW' | 'ACTIVE' | 'INACTIVE' | null;

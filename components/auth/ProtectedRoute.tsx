@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { storeTokens } from '@/lib/auth';
+import { authUserFromAccessToken, storeTokens } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
@@ -49,11 +49,16 @@ function ProtectedRouteInner({ children }: ProtectedRouteProps) {
 
       // Store user info
       if (userId && userEmail) {
-        localStorage.setItem('user', JSON.stringify({
+        const user = authUserFromAccessToken(accessToken, {
           id: userId,
           email: userEmail,
           name: userName || userEmail,
-        }));
+        }) || {
+          id: userId,
+          email: userEmail,
+          name: userName || userEmail,
+        };
+        localStorage.setItem('user', JSON.stringify(user));
       }
 
       // Remove tokens from URL for cleaner look

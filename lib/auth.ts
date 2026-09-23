@@ -6,7 +6,10 @@ import { publicApiFetch } from '@/modules/http/public-client';
  */
 
 export interface AuthUser {
+  /** Primary backend users.id for admin-owned API operations. */
   id: string;
+  /** @deprecated Legacy users.app_user_id retained for compatibility only. */
+  appUserId?: string;
   email: string;
   name: string;
 }
@@ -37,6 +40,25 @@ function readStoredUser(): AuthUser | null {
     localStorage.removeItem('user');
     return null;
   }
+}
+
+export function authUserFromAccessToken(
+  accessToken: string | null | undefined,
+  fallback?: Partial<AuthUser> | null
+): AuthUser | null {
+  const decoded = accessToken ? decodeToken(accessToken) : null;
+  const email = decoded?.email || fallback?.email;
+
+  if (!email) {
+    return null;
+  }
+
+  return {
+    id: decoded?.sub || fallback?.id || decoded?.appUserId || '',
+    appUserId: decoded?.appUserId || fallback?.appUserId,
+    email,
+    name: decoded?.name || fallback?.name || email,
+  };
 }
 
 /**
@@ -135,22 +157,19 @@ export function isAuthenticated(): boolean {
 
 export function getStoredAuthUser(): AuthUser | null {
   const storedUser = readStoredUser();
-  if (storedUser) {
-    return storedUser;
-  }
-
   const token = getAccessToken();
-  const decoded = token ? decodeToken(token) : null;
-
-  if (!decoded?.email) {
-    return null;
+  const tokenUser = authUserFromAccessToken(token, storedUser);
+  if (tokenUser) {
+    if (
+      storedUser &&
+      typeof window !== 'undefined' &&
+      JSON.stringify(storedUser) !== JSON.stringify(tokenUser)
+    ) {
+      localStorage.setItem('user', JSON.stringify(tokenUser));
+    }
+    return tokenUser;
   }
-
-  return {
-    id: decoded.appUserId || decoded.sub || '',
-    email: decoded.email,
-    name: decoded.name || decoded.email,
-  };
+  return storedUser;
 }
 
 /**
