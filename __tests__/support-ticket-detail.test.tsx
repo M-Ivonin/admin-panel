@@ -89,6 +89,7 @@ const ticket = {
       device_model: 'iPhone',
     },
     issue_snapshot: { issue_id: 'subscription-locked' },
+    issue_identifiers: { match_id: 'match-42', prediction_id: 'pred-7' },
     troubleshooting_attempted: ['reinstalled'],
     articles_used: ['push-help'],
   },
@@ -253,6 +254,10 @@ describe('SupportTicketDetail', () => {
     expect(screen.getByText('18.6')).toBeVisible();
     expect(screen.getByText('Issue id')).toBeVisible();
     expect(screen.getByText('subscription-locked')).toBeVisible();
+    expect(screen.getByText('Issue identifiers')).toBeVisible();
+    expect(screen.getByText('Match id')).toBeVisible();
+    expect(screen.getByText('match-42')).toBeVisible();
+    expect(screen.getByText('pred-7')).toBeVisible();
     expect(screen.getByText('Troubleshooting attempted')).toBeVisible();
     expect(screen.getByText('reinstalled')).toBeVisible();
     expect(
