@@ -388,7 +388,7 @@ export default function UsersPage() {
         {/* Main content */}
         <Box
           sx={{
-            maxWidth: 1280,
+            width: '100%',
             mx: 'auto',
             px: { xs: 2, sm: 3, lg: 4 },
             py: 4,
@@ -503,7 +503,49 @@ export default function UsersPage() {
           {!isLoading && !error && (
             <Paper>
               <TableContainer>
-                <Table>
+                <Table
+                  size="small"
+                  sx={{
+                    tableLayout: 'fixed',
+                    '& .MuiTableCell-root': {
+                      px: 1,
+                      py: 1.5,
+                      overflowWrap: 'anywhere',
+                    },
+                    '& .MuiTableCell-head': {
+                      overflowWrap: 'normal',
+                      fontSize: '0.75rem',
+                      px: 0.75,
+                    },
+                    '& .MuiTableSortLabel-root': { maxWidth: '100%' },
+                    '& .MuiTableSortLabel-root:not(.Mui-active) .MuiTableSortLabel-icon':
+                      { display: 'none' },
+                    '& .MuiTableSortLabel-icon': {
+                      fontSize: 16,
+                      flexShrink: 0,
+                      ml: 0.25,
+                      mr: 0,
+                    },
+                    '& .MuiChip-root': { maxWidth: '100%' },
+                  }}
+                >
+                  <colgroup>
+                    {[
+                      '16%',
+                      '11%',
+                      '8%',
+                      '10%',
+                      '6%',
+                      '7%',
+                      '9%',
+                      '9%',
+                      '7%',
+                      '6%',
+                      112,
+                    ].map((width, index) => (
+                      <col key={index} style={{ width }} />
+                    ))}
+                  </colgroup>
                   <TableHead>
                     <TableRow>
                       <TableCell>
@@ -660,6 +702,11 @@ export default function UsersPage() {
                                 ? getRetentionStageLabel(user.retentionStage)
                                 : 'Unknown'
                             }
+                            title={
+                              user.retentionStage
+                                ? getRetentionStageLabel(user.retentionStage)
+                                : 'Unknown'
+                            }
                             size="small"
                             variant="outlined"
                             sx={getRetentionChipSx(
@@ -678,6 +725,7 @@ export default function UsersPage() {
                             return (
                               <Chip
                                 label={appProfileChip.label}
+                                title={appProfileChip.label}
                                 size="small"
                                 color={appProfileChip.color}
                                 variant={appProfileChip.variant}
@@ -693,6 +741,7 @@ export default function UsersPage() {
                             return (
                               <Chip
                                 label={effectivePlan}
+                                title={effectivePlan}
                                 size="small"
                                 color={getPlanColor(effectivePlan)}
                               />
@@ -751,7 +800,7 @@ export default function UsersPage() {
                                 setPartnerFilter(user.partnerId!);
                                 setPage(0);
                               }}
-                              title="Click to filter by this partner"
+                              title={`${user.partnerId} — Click to filter by this partner`}
                             />
                           ) : (
                             <Typography variant="body2" color="text.disabled">
@@ -760,21 +809,34 @@ export default function UsersPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="small"
-                            onClick={() => setGrantUser(user)}
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              gap: 1,
+                              '& .MuiButton-root': { whiteSpace: 'nowrap' },
+                            }}
                           >
-                            Выдать Pro
-                          </Button>
-                          <Link href={`/dashboard/bot-chat?userId=${user.id}`}>
                             <Button
                               variant="outlined"
                               size="small"
-                              startIcon={<Chat />}
+                              onClick={() => setGrantUser(user)}
                             >
-                              Chat
+                              Выдать Pro
                             </Button>
-                          </Link>
+                            <Link
+                              href={`/dashboard/bot-chat?userId=${user.id}`}
+                            >
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Chat />}
+                              >
+                                Chat
+                              </Button>
+                            </Link>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))}
