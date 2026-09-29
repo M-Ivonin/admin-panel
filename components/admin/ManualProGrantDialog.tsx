@@ -24,20 +24,27 @@ import {
   revokeManualGrant,
 } from '@/lib/api/manual-grants';
 
-const date = (value: string) => new Date(value).toLocaleString();
+const durationLabels = {
+  PASS_24H: '24 hours',
+  PASS_3D: '3 days',
+  PRO_MONTHLY: '1 month',
+  PRO_ANNUAL: '1 year',
+};
+
+const date = (value: string) => new Date(value).toLocaleString('en-US');
 function errorMessage(error: unknown) {
   if (!(error instanceof ManualGrantError))
-    return 'Ответ не получен. Проверьте результат или повторите с теми же параметрами.';
+    return 'No response received. Check the result or retry with the same details.';
   if (error.code === 'MANUAL_GRANT_PASSWORD_INVALID')
-    return 'Неверный пароль подтверждения.';
+    return 'Incorrect confirmation password.';
   if (error.code === 'MANUAL_GRANT_DISABLED')
-    return 'Ручная выдача отключена: пароль не настроен на сервере.';
+    return 'Manual grants are disabled: the server password is not configured.';
   if (error.status === 429)
-    return `Слишком много попыток. Повторите через ${error.retryAfterSeconds ?? 900} сек.`;
+    return `Too many attempts. Retry in ${error.retryAfterSeconds ?? 900} seconds.`;
   if (error.status === 409)
-    return 'Выдача уже существует или параметры операции изменились. История обновлена.';
-  if (error.status === 403) return 'Нет прав администратора.';
-  return `Не удалось выполнить запрос (${error.status}).`;
+    return 'A grant already exists or the request details changed. History has been refreshed.';
+  if (error.status === 403) return 'Administrator access is required.';
+  return `Request failed (${error.status}).`;
 }
 
 export function ManualProGrantDialog({
@@ -115,7 +122,7 @@ export function ManualProGrantDialog({
         unresolved.current.delete(user.id);
         setPending(null);
         setSuccess(
-          `Выдача подтверждена. Окончание: ${date(result.operation.expiresAt)}`
+          `Grant confirmed. Expires: ${date(result.operation.expiresAt)}`
         );
         onChanged();
       }
@@ -155,8 +162,8 @@ export function ManualProGrantDialog({
       setReason('');
       setSuccess(
         result.grant.revokedAt
-          ? 'Ручная выдача отозвана.'
-          : `Pro выдан до ${date(result.grant.expiresAt)}.`
+          ? 'Manual grant revoked.'
+          : `Pro granted until ${date(result.grant.expiresAt)}.`
       );
       const updated = await getManualGrants(recipient);
       if (version !== generation.current) return;
@@ -208,52 +215,52 @@ export function ManualProGrantDialog({
   return (
     <Dialog open={!!user} onClose={close} fullWidth maxWidth="sm">
       <DialogTitle>
-        Ручная выдача Pro {data ? `· ${data.environment}` : ''}
+        Manual Pro grant {data ? `· ${data.environment}` : ''}
       </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2}>
           <Box>
-            <Typography>{user?.email ?? 'Без email'}</Typography>
+            <Typography>{user?.email ?? 'No email'}</Typography>
             <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
               ID: {user?.id}
             </Typography>
           </Box>
           {data && (
             <Typography>
-              Текущий доступ:{' '}
+              Current access:{' '}
               {data.access.authorization === 'FULL_ACCESS' ? 'Pro' : 'Free'}
             </Typography>
           )}
           {paid && (
             <Alert severity="warning">
-              У пользователя есть оплаченный доступ. Ручная выдача не отменяет
-              покупку и списания; её срок начинается сразу.
+              This user has paid access. A manual grant does not cancel the
+              purchase or billing; its duration starts immediately.
             </Alert>
           )}
           {error && <Alert severity="error">{error}</Alert>}
           {success && <Alert severity="success">{success}</Alert>}
           {pending && (
             <Alert severity="warning">
-              Результат выдачи ещё не подтверждён. Проверьте результат или
-              повторите ту же выдачу с паролем.
+              The grant result is not yet confirmed. Check the result or retry
+              the same grant with the password.
             </Alert>
           )}
           {data?.activeGrant && (
             <Alert severity="info">
-              Ручной Pro до {date(data.activeGrant.expiresAt)}. Для новой выдачи
-              сначала отзовите текущую.
+              Manual Pro until {date(data.activeGrant.expiresAt)}. Revoke the
+              current grant before creating another.
             </Alert>
           )}
           {revoke && (
             <Alert severity="warning">
-              Отзыв выдачи до {date(revoke.expiresAt)}. Покупки магазина
-              сохраняются.
+              Revoking the grant ending {date(revoke.expiresAt)}. Store
+              purchases are unaffected.
             </Alert>
           )}
           {!revoke && (
             <TextField
               select
-              label="Срок"
+              label="Duration"
               value={productKey}
               onChange={(e) =>
                 setProductKey(
@@ -262,17 +269,20 @@ export function ManualProGrantDialog({
               }
               disabled={busy || !!pending || !!data?.activeGrant}
             >
-              <MenuItem value="PRO_MONTHLY">1 месяц</MenuItem>
-              <MenuItem value="PRO_ANNUAL">1 год</MenuItem>
+              {Object.entries(durationLabels).map(([key, label]) => (
+                <MenuItem key={key} value={key}>
+                  {label}
+                </MenuItem>
+              ))}
             </TextField>
           )}
           {!revoke && (
             <Typography variant="body2">
-              С момента выдачи, без автоматического продления.
+              Starts immediately, without automatic renewal.
             </Typography>
           )}
           <TextField
-            label={revoke ? 'Причина отзыва' : 'Причина'}
+            label={revoke ? 'Revocation reason' : 'Reason'}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             multiline
@@ -281,7 +291,7 @@ export function ManualProGrantDialog({
             disabled={busy || !!pending}
           />
           <TextField
-            label="Пароль подтверждения"
+            label="Confirmation password"
             type="password"
             autoComplete="new-password"
             value={password}
@@ -301,10 +311,10 @@ export function ManualProGrantDialog({
             }
           >
             {revoke
-              ? 'Подтвердить отзыв'
+              ? 'Confirm revocation'
               : pending
-                ? 'Повторить выдачу'
-                : 'Выдать Pro'}
+                ? 'Retry grant'
+                : 'Grant Pro'}
           </Button>
           {revoke && (
             <Button
@@ -314,12 +324,12 @@ export function ManualProGrantDialog({
                 setPassword('');
               }}
             >
-              Отменить отзыв
+              Cancel revocation
             </Button>
           )}
-          <Typography variant="subtitle1">История ручных выдач</Typography>
+          <Typography variant="subtitle1">Manual grant history</Typography>
           {data?.history.length === 0 && (
-            <Typography color="text.secondary">Выдач пока нет.</Typography>
+            <Typography color="text.secondary">No grants yet.</Typography>
           )}
           {data?.history.map((grant) => (
             <Box
@@ -327,25 +337,25 @@ export function ManualProGrantDialog({
               sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}
             >
               <Typography>
-                {grant.productKey === 'PRO_MONTHLY' ? '1 месяц' : '1 год'} ·{' '}
+                {durationLabels[grant.productKey]} ·{' '}
                 {grant.revokedAt
-                  ? 'Отозвана'
+                  ? 'Revoked'
                   : new Date(grant.expiresAt).getTime() <= Date.now()
-                    ? 'Истекла'
-                    : 'Действует'}
+                    ? 'Expired'
+                    : 'Active'}
               </Typography>
               <Typography variant="body2">
                 {date(grant.startsAt)} — {date(grant.expiresAt)}
               </Typography>
               <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                Выдал: {grant.createdBy} · {date(grant.createdAt)}
+                Granted by: {grant.createdBy} · {date(grant.createdAt)}
               </Typography>
               <Typography sx={{ overflowWrap: 'anywhere' }}>
                 {grant.reason}
               </Typography>
               {grant.revokedAt && (
                 <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                  Отозвал: {grant.revokedBy} · {date(grant.revokedAt)} ·{' '}
+                  Revoked by: {grant.revokedBy} · {date(grant.revokedAt)} ·{' '}
                   {grant.revokeReason}
                 </Typography>
               )}
@@ -359,7 +369,7 @@ export function ManualProGrantDialog({
                       setPassword('');
                     }}
                   >
-                    Отозвать
+                    Revoke
                   </Button>
                 )}
             </Box>
@@ -370,14 +380,14 @@ export function ManualProGrantDialog({
                 disabled={busy || data.page === 1}
                 onClick={() => refresh(data.page - 1)}
               >
-                Назад
+                Previous
               </Button>
-              <Typography>Страница {data.page}</Typography>
+              <Typography>Page {data.page}</Typography>
               <Button
                 disabled={busy || data.page * data.pageSize >= data.total}
                 onClick={() => refresh(data.page + 1)}
               >
-                Далее
+                Next
               </Button>
             </Stack>
           )}
@@ -385,9 +395,9 @@ export function ManualProGrantDialog({
       </DialogContent>
       <DialogActions>
         <Button disabled={busy} onClick={() => refresh()}>
-          Проверить результат
+          Check result
         </Button>
-        <Button onClick={close}>Закрыть</Button>
+        <Button onClick={close}>Close</Button>
       </DialogActions>
     </Dialog>
   );

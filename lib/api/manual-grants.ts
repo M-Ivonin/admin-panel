@@ -3,7 +3,7 @@ import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 export interface ManualGrant {
   id: string;
   userId: string;
-  productKey: 'PRO_MONTHLY' | 'PRO_ANNUAL';
+  productKey: 'PASS_24H' | 'PASS_3D' | 'PRO_MONTHLY' | 'PRO_ANNUAL';
   startsAt: string;
   expiresAt: string;
   reason: string;
@@ -35,7 +35,7 @@ export interface ManualGrantHistory {
 }
 export interface ManualGrantRequest {
   operationId: string;
-  productKey: 'PRO_MONTHLY' | 'PRO_ANNUAL';
+  productKey: 'PASS_24H' | 'PASS_3D' | 'PRO_MONTHLY' | 'PRO_ANNUAL';
   reason: string;
 }
 export class ManualGrantError extends Error {

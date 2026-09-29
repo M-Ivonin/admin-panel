@@ -823,7 +823,7 @@ export default function UsersPage() {
                               size="small"
                               onClick={() => setGrantUser(user)}
                             >
-                              Выдать Pro
+                              Grant Pro
                             </Button>
                             <Link
                               href={`/dashboard/bot-chat?userId=${user.id}`}
