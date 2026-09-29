@@ -31,6 +31,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Refresh, Search, Chat } from '@mui/icons-material';
+import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUsers,
@@ -244,6 +245,8 @@ export default function UsersPage() {
   // Sorting state
   const [sortBy, setSortBy] = useState('registered_at');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
+  const [grantUser, setGrantUser] = useState<PaginatedUser | null>(null);
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
@@ -757,6 +760,12 @@ export default function UsersPage() {
                           )}
                         </TableCell>
                         <TableCell>
+                          <Button
+                            size="small"
+                            onClick={() => setGrantUser(user)}
+                          >
+                            Выдать Pro
+                          </Button>
                           <Link href={`/dashboard/bot-chat?userId=${user.id}`}>
                             <Button
                               variant="outlined"
@@ -796,6 +805,11 @@ export default function UsersPage() {
           )}
         </Box>
       </Box>
+      <ManualProGrantDialog
+        user={grantUser}
+        onClose={() => setGrantUser(null)}
+        onChanged={fetchUsers}
+      />
     </ProtectedRoute>
   );
 }
