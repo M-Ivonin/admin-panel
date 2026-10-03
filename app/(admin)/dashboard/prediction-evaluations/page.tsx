@@ -20,6 +20,7 @@ import {
   Select,
   SelectChangeEvent,
   Stack,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TablePagination,
   TextField,
   Typography,
@@ -43,6 +44,8 @@ import {
   PredictionEvaluationSourceType,
   PredictionEvaluationStatus,
   PredictionEvaluationSummary,
+  PredictionEvaluationV9Metrics,
+  PredictionEvaluationV9Summary,
 } from '@/lib/api/prediction-evaluations';
 import {
   PERIOD_PRESET_OPTIONS,
@@ -94,6 +97,7 @@ const SOURCE_OPTIONS: Array<{
   value: PredictionEvaluationSourceType;
   label: string;
 }> = [
+  { value: 'published_prediction', label: 'Published Prediction' },
   { value: 'match_prediction', label: 'Match Prediction' },
   { value: 'prediction_session', label: 'Prediction Session' },
 ];
@@ -102,6 +106,7 @@ const SLOT_OPTIONS: Array<{
   value: PredictionEvaluationSlotKey;
   label: string;
 }> = [
+  { value: 'main', label: 'Main' },
   { value: 'primary', label: 'Primary' },
   { value: 'safe', label: 'Safe' },
   { value: 'risky', label: 'Risky' },
@@ -138,7 +143,8 @@ interface MergedPredictionEvaluationItem extends PredictionEvaluationItem {
 }
 
 const SLOT_KEY_ORDER: Record<PredictionEvaluationSlotKey, number> = {
-  primary: 0,
+  main: 0,
+  primary: 1,
   safe: 1,
   risky: 2,
 };
@@ -351,6 +357,50 @@ function mergePredictions(
   return Array.from(merged.values());
 }
 
+function V9Metrics({ metrics }: { metrics: PredictionEvaluationV9Metrics }) {
+  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' }, gap: 1, mb: 2 }}>
+    {[
+      ['Predictions', metrics.predictionCount], ['Matches', metrics.fixtureCount],
+      ['Accuracy', formatPercentage(metrics.accuracy)], ['Evaluated', metrics.evaluated],
+      ['Average reference odds', formatOdds(metrics.averageOdds)], ['Pending', metrics.pending],
+      ['Not Found', metrics.notFound], ['Unsupported', metrics.unsupported], ['Failed', metrics.failed],
+    ].map(([label, value]) => <Paper variant="outlined" key={label} sx={{ p: 1.5 }}>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Typography fontWeight={700}>{value}</Typography>
+    </Paper>)}
+  </Box>;
+}
+
+function V9Breakdown({ title, rows }: { title: string; rows: Array<PredictionEvaluationV9Metrics & { label: string }> }) {
+  return <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+    <Typography variant="subtitle1" fontWeight={700}>{title}</Typography>
+    <Typography variant="caption" color="text.secondary">Void results have zero accuracy weight. No weighted outcomes: —.</Typography>
+    <TableContainer><Table size="small" aria-label={title}>
+      <TableHead><TableRow>{['Market / range', 'Predictions', 'Matches', 'Evaluated', 'Accuracy', 'Average reference odds', 'Pending', 'Not Found', 'Unsupported', 'Failed'].map((label) => <TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead>
+      <TableBody>{rows.map((row) => <TableRow key={row.label}>
+        <TableCell>{row.label}</TableCell><TableCell>{row.predictionCount}</TableCell><TableCell>{row.fixtureCount}</TableCell>
+        <TableCell>{row.evaluated}</TableCell><TableCell>{formatPercentage(row.accuracy)}</TableCell><TableCell>{formatOdds(row.averageOdds)}</TableCell>
+        <TableCell>{row.pending}</TableCell><TableCell>{row.notFound}</TableCell><TableCell>{row.unsupported}</TableCell><TableCell>{row.failed}</TableCell>
+      </TableRow>)}</TableBody>
+    </Table></TableContainer>
+  </Paper>;
+}
+
+function V9Summary({ summary }: { summary: PredictionEvaluationV9Summary }) {
+  return <Box sx={{ mb: 3 }}>
+    <Typography variant="h6" sx={{ mb: 1 }}>Public V9</Typography>
+    <V9Metrics metrics={summary} />
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      Accuracy uses settlement credit / weight. Evaluated includes void results, which have zero weight.
+      {summary.accuracy === null && ' No evaluated outcomes with nonzero weight.'}
+    </Typography>
+    <Stack spacing={2}>
+      <V9Breakdown title="By market" rows={summary.byMarket.map((row) => ({ ...row, label: row.marketKey ?? 'Unrecognized market' }))} />
+      <V9Breakdown title="By reference odds" rows={summary.byOdds.map((row) => ({ ...row, label: row.lowerInclusive === null ? 'No reference odds' : `[${row.lowerInclusive}, ${row.upperExclusive ?? '∞'})` }))} />
+    </Stack>
+  </Box>;
+}
+
 export default function PredictionEvaluationsPage() {
   const [items, setItems] = useState<FixtureEvaluationGroup[]>([]);
   const [summary, setSummary] = useState<PredictionEvaluationSummary>(
@@ -362,7 +412,7 @@ export default function PredictionEvaluationsPage() {
   const [search, setSearch] = useState('');
   const [statuses, setStatuses] = useState<PredictionEvaluationStatus[]>([]);
   const [sourceTypes, setSourceTypes] = useState<PredictionEvaluationSourceType[]>(
-    [],
+    ['published_prediction'],
   );
   const [slotKeys, setSlotKeys] = useState<PredictionEvaluationSlotKey[]>([]);
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
@@ -407,7 +457,7 @@ export default function PredictionEvaluationsPage() {
             limit: rowsPerPage,
             search: search.trim() || undefined,
             statuses: statuses.length > 0 ? statuses : undefined,
-            sourceTypes: sourceTypes.length > 0 ? sourceTypes : undefined,
+            sourceTypes: sourceTypes.length > 0 ? sourceTypes : SOURCE_OPTIONS.map((option) => option.value),
             slotKeys: slotKeys.length > 0 ? slotKeys : undefined,
             marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
             dateFrom: dateRange.dateFrom || undefined,
@@ -479,7 +529,7 @@ export default function PredictionEvaluationsPage() {
   const hasActiveFilters =
     search.trim().length > 0 ||
     statuses.length > 0 ||
-    sourceTypes.length > 0 ||
+    !(sourceTypes.length === 1 && sourceTypes[0] === 'published_prediction') ||
     slotKeys.length > 0 ||
     marketKeys.length > 0 ||
     Boolean(oddsRange.oddsFrom.trim()) ||
@@ -552,6 +602,8 @@ export default function PredictionEvaluationsPage() {
             py: 4,
           }}
         >
+          {summary.v9 && <V9Summary summary={summary.v9} />}
+          {(!summary.v9 || sourceTypes.length === 0 || sourceTypes.some((source) => source !== 'published_prediction')) && (
           <Box
             sx={{
               display: 'grid',
@@ -645,6 +697,7 @@ export default function PredictionEvaluationsPage() {
               </Typography>
             </Paper>
           </Box>
+          )}
 
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box
@@ -940,7 +993,7 @@ export default function PredictionEvaluationsPage() {
                   onClick={() => {
                     setSearch('');
                     setStatuses([]);
-                    setSourceTypes([]);
+                    setSourceTypes(['published_prediction']);
                     setSlotKeys([]);
                     setMarketKeys([]);
                     setOddsRange({
@@ -1059,6 +1112,8 @@ export default function PredictionEvaluationsPage() {
                         />
                       </Box>
 
+                      {group.stats.v9 && <V9Metrics metrics={group.stats.v9} />}
+                      {(!group.stats.v9 || group.predictions.some((prediction) => prediction.sourceType !== 'published_prediction')) && (
                       <Box
                         sx={{
                           display: 'grid',
@@ -1137,7 +1192,8 @@ export default function PredictionEvaluationsPage() {
                             {group.stats.unsupported} / {group.stats.failed}
                           </Typography>
                         </Paper>
-                      </Box>
+                      </Box>                      )}
+
                     </Box>
                   </AccordionSummary>
 
@@ -1161,9 +1217,7 @@ export default function PredictionEvaluationsPage() {
                             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
                               <Chip
                                 label={
-                                  prediction.sourceType === 'match_prediction'
-                                    ? 'Match Prediction'
-                                    : 'Prediction Session'
+                                  SOURCE_OPTIONS.find((option) => option.value === prediction.sourceType)?.label ?? prediction.sourceType
                                 }
                                 color={getSourceChipColor(prediction.sourceType)}
                                 size="small"
@@ -1177,7 +1231,7 @@ export default function PredictionEvaluationsPage() {
                                 />
                               ))}
                               <Chip
-                                label={getStatusLabel(prediction.status)}
+                                label={prediction.reasonCode === 'awaiting_evaluation' ? 'Awaiting processing' : getStatusLabel(prediction.status)}
                                 color={getStatusChipColor(prediction.status)}
                                 size="small"
                                 variant={
@@ -1200,12 +1254,13 @@ export default function PredictionEvaluationsPage() {
                             </Box>
 
                             <Typography variant="caption" color="text.secondary">
-                              Created {formatDateTime(prediction.createdAt)}
+                              Created {formatDateTime(prediction.sourceCreatedAt ?? prediction.createdAt)}
+                              {prediction.sourceType === 'published_prediction' && <><br />Revision {prediction.revision} · Published {formatDateTime(prediction.publishedAt ?? null)}<br />Version {prediction.sourceId}{prediction.withdrawnAt && <><br />Withdrawn {formatDateTime(prediction.withdrawnAt)}</>}</>}
                             </Typography>
                           </Box>
 
                           <Typography variant="subtitle1" fontWeight={700}>
-                            {prediction.predictionValue}
+                            {prediction.sourceType === 'published_prediction' ? `${prediction.selectionLabel ?? prediction.selectionKey ?? prediction.predictionValue}${prediction.line == null ? '' : ` ${prediction.line}`} · ${prediction.periodKey ?? '-'}` : prediction.predictionValue}
                           </Typography>
 
                           <Box
@@ -1224,7 +1279,7 @@ export default function PredictionEvaluationsPage() {
                                 Market
                               </Typography>
                               <Typography fontWeight={600}>
-                                {prediction.marketKey || '-'}
+                                {prediction.canonicalMarketKey ?? prediction.marketKey ?? '-'}
                               </Typography>
                             </Paper>
                             <Paper variant="outlined" sx={{ p: 1 }}>
@@ -1237,7 +1292,7 @@ export default function PredictionEvaluationsPage() {
                             </Paper>
                             <Paper variant="outlined" sx={{ p: 1 }}>
                               <Typography variant="caption" color="text.secondary">
-                                Odds
+                                {prediction.sourceType === 'published_prediction' ? 'Reference odds' : 'Odds'}
                               </Typography>
                               <Typography fontWeight={600}>
                                 {prediction.oddsValue ?? '-'}
@@ -1269,7 +1324,7 @@ export default function PredictionEvaluationsPage() {
                               color="text.secondary"
                               sx={{ mt: 1.25 }}
                             >
-                              Reason: {prediction.reasonCode}
+                              Reason: {prediction.reasonCode === 'awaiting_evaluation' ? 'Awaiting processing' : prediction.reasonCode}
                             </Typography>
                           )}
                         </Paper>

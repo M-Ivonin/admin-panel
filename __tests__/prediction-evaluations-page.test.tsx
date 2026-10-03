@@ -103,6 +103,10 @@ const populatedResponse = {
 };
 
 describe('PredictionEvaluationsPage', () => {
+  it('requests public V9 explicitly on first open', async () => {
+    render(<PredictionEvaluationsPage />);
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenCalledWith(expect.objectContaining({ sourceTypes: ['published_prediction'] })));
+  });
   let dateNowSpy: jest.SpyInstance<number, []>;
 
   beforeEach(() => {
@@ -119,6 +123,36 @@ describe('PredictionEvaluationsPage', () => {
     dateNowSpy.mockRestore();
   });
 
+
+  it('renders canonical V9 metrics, independent breakdowns and exact versions across pages', async () => {
+    const metrics = { predictionCount: 2, fixtureCount: 1, evaluated: 1, correct: 0, accuracy: 0,
+      averageOdds: 2.5, pending: 1, notFound: 0, unsupported: 0, failed: 0 };
+    const v9 = { ...metrics, byMarket: [{ ...metrics, marketKey: 'over_under' }],
+      byOdds: [{ ...metrics, lowerInclusive: 2, upperExclusive: 3 }] };
+    const row = { ...populatedResponse.items[0].predictions[0], sourceType: 'published_prediction', slotKey: 'main',
+      marketKey: 'over_under', selectionKey: 'OVER', selectionLabel: 'Over', line: 2.5, periodKey: 'FT',
+      revision: 3, publishedAt: '2026-04-08T09:00:00.000Z', predictionId: 'stable-id' };
+    const response = { ...populatedResponse, summary: { ...populatedResponse.summary, v9 },
+      items: [{ ...populatedResponse.items[0], stats: { ...populatedResponse.items[0].stats, v9: metrics },
+        predictions: [{ ...row, id: 'version-a', sourceId: 'version-a' },
+          { ...row, id: 'version-b', sourceId: 'version-b', status: 'pending', reasonCode: 'awaiting_evaluation' }] }] };
+    (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue(response);
+    render(<PredictionEvaluationsPage />);
+    expect(await screen.findByText('Public V9')).toBeTruthy();
+    expect(screen.queryByText('Safe Accuracy')).toBeNull();
+    expect(screen.getByRole('table', { name: 'By market' })).toBeTruthy();
+    expect(screen.getByRole('table', { name: 'By reference odds' })).toBeTruthy();
+    expect(screen.getByText('[2, 3)')).toBeTruthy();
+    fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
+    expect(await screen.findAllByText('Over 2.5 · FT')).toHaveLength(2);
+    expect(screen.getAllByText('Published Prediction')).toHaveLength(2);
+    expect(screen.getAllByText('Awaiting processing').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Version version-a/)).toBeTruthy();
+    expect(screen.getByText(/Version version-b/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, sourceTypes: ['published_prediction'] })));
+    expect(screen.getByText('[2, 3)')).toBeTruthy();
+  });
   it('renders grouped results and reveals prediction details on accordion expand', async () => {
     render(<PredictionEvaluationsPage />);
 

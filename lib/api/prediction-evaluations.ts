@@ -9,9 +9,10 @@ export type PredictionEvaluationStatus =
 
 export type PredictionEvaluationSourceType =
   | 'match_prediction'
-  | 'prediction_session';
+  | 'prediction_session'
+  | 'published_prediction';
 
-export type PredictionEvaluationSlotKey = 'primary' | 'safe' | 'risky';
+export type PredictionEvaluationSlotKey = 'primary' | 'safe' | 'risky' | 'main';
 
 export type PredictionEvaluationOutcomeType = 'win' | 'loss' | 'void';
 
@@ -31,6 +32,7 @@ export type PredictionEvaluationGroupSortField =
 export type PredictionEvaluationGroupSortOrder = 'asc' | 'desc';
 
 export interface PredictionEvaluationStats {
+  v9?: PredictionEvaluationV9Metrics;
   total: number;
   evaluated: number;
   correct: number;
@@ -51,11 +53,36 @@ export interface PredictionEvaluationAccuracyBreakdown {
 }
 
 export interface PredictionEvaluationSummary extends PredictionEvaluationStats {
+  v9?: PredictionEvaluationV9Summary;
   fixtureCount: number;
   predictionCount: number;
 }
 
+export interface PredictionEvaluationV9Metrics extends PredictionEvaluationAccuracyBreakdown {
+  predictionCount: number;
+  fixtureCount: number;
+  pending: number;
+  notFound: number;
+  unsupported: number;
+  failed: number;
+}
+
+export interface PredictionEvaluationV9Summary extends PredictionEvaluationV9Metrics {
+  byMarket: Array<PredictionEvaluationV9Metrics & { marketKey: string | null }>;
+  byOdds: Array<PredictionEvaluationV9Metrics & { lowerInclusive: number | null; upperExclusive: number | null }>;
+}
+
 export interface PredictionEvaluationItem {
+  predictionId?: string | null;
+  revision?: number | null;
+  publishedAt?: string | null;
+  sourceCreatedAt?: string | null;
+  canonicalMarketKey?: string | null;
+  selectionKey?: string | null;
+  selectionLabel?: string | null;
+  line?: number | null;
+  periodKey?: string | null;
+  withdrawnAt?: string | null;
   id: string;
   fixtureId: number;
   sourceType: PredictionEvaluationSourceType;
