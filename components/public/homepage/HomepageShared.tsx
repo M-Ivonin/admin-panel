@@ -33,7 +33,6 @@ export function SeoCardVisual({ index }: { index: number }) {
           border: '1px solid',
           borderColor: alpha('#f8e7b0', 0.28),
           boxShadow: `0 10px 24px ${alpha('#020617', 0.24)}`,
-          overflow: 'hidden',
         }}
       >
         <Box
