@@ -122,24 +122,38 @@ describe('PredictionEvaluationsPage', () => {
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
       fireEvent.click(await screen.findByRole('option', { name: label }));
       await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, predictionScope: scope })));
-      expect(within(screen.getByRole('table', { name: 'Public V9 summary' })).getByRole('row', { name: new RegExp('^' + label) })).toBeTruthy();
+      expect(within(screen.getByRole('table', { name: 'Generated V9 summary' })).getByRole('row', { name: new RegExp('^' + label) })).toBeTruthy();
     }
     fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all' })));
   });
   it('hides previous totals while a changed scope loads and when that request fails', async () => {
     render(<PredictionEvaluationsPage />);
-    await screen.findByRole('table', { name: 'Public V9 summary' });
+    await screen.findByRole('table', { name: 'Generated V9 summary' });
     let rejectRequest: (reason: Error) => void = () => {};
     (getPredictionEvaluationGroups as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectRequest = reject; }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Top Picks' }));
-    await waitFor(() => expect(screen.queryByRole('table', { name: 'Public V9 summary' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('table', { name: 'Generated V9 summary' })).toBeNull());
     await act(async () => rejectRequest(new Error('Scope request failed')));
     expect(await screen.findByText('Scope request failed')).toBeTruthy();
     expect(screen.queryByRole('table', { name: 'Fixture evaluations' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Go to next page' })).toBeNull();
-    expect(screen.queryByRole('table', { name: 'Public V9 summary' })).toBeNull();
+    expect(screen.queryByRole('table', { name: 'Generated V9 summary' })).toBeNull();
+  });
+  it('shows source value and conservative EV even for an unpublished non-value prediction', async () => {
+    (getPredictionEvaluationGroups as jest.Mock).mockResolvedValueOnce({
+      ...populatedResponse,
+      items: [{ ...populatedResponse.items[0], predictions: [{ ...populatedResponse.items[0].predictions[0], isValue: false, conservativeEv: -0.12, publishedAt: null }] }],
+    });
+    render(<PredictionEvaluationsPage />);
+    fireEvent.click(await screen.findByText('Alpha FC vs Beta FC'));
+    const table = screen.getByRole('table', { name: 'Predictions for Alpha FC vs Beta FC' });
+    expect(within(table).getByRole('columnheader', { name: 'Value' })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: 'Conservative EV' })).toBeTruthy();
+    expect(within(table).getByText('No')).toBeTruthy();
+    expect(within(table).getByText('-0.12')).toBeTruthy();
+    expect(screen.queryByText('Public V9')).toBeNull();
   });
   let dateNowSpy: jest.SpyInstance<number, []>;
 
@@ -208,7 +222,7 @@ describe('PredictionEvaluationsPage', () => {
           { ...row, id: 'version-b', sourceId: 'version-b', status: 'pending', reasonCode: 'awaiting_evaluation' }] }] };
     (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue(response);
     render(<PredictionEvaluationsPage />);
-    expect(await screen.findByText('Public V9')).toBeTruthy();
+    expect(await screen.findByText('Generated V9')).toBeTruthy();
     expect(screen.queryByText('Safe Accuracy')).toBeNull();
     expect(screen.getByRole('table', { name: 'By market' })).toBeTruthy();
     expect(screen.getByRole('table', { name: 'By reference odds' })).toBeTruthy();

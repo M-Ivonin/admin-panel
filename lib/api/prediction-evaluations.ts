@@ -73,6 +73,8 @@ export interface PredictionEvaluationV9Summary extends PredictionEvaluationV9Met
 }
 
 export interface PredictionEvaluationItem {
+  isValue?: boolean | null;
+  conservativeEv?: number | null;
   predictionId?: string | null;
   revision?: number | null;
   publishedAt?: string | null;

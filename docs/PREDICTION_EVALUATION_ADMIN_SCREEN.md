@@ -68,9 +68,9 @@ The `evaluated` field still counts all rows with `status=evaluated`, including v
 
 ## UI Behavior
 
-- the source is always `published_prediction` (Public V9); the initial prediction scope is All predictions
+- the source is always `published_prediction` (V9 source versions); the initial prediction scope is All predictions
 - Source and Slot selectors are replaced by All predictions / Top Picks / Other predictions
-- Public V9 summary and the independent market/reference-odds tables read `summary.v9`, across the full filtered scope before fixture pagination
+- Generated V9 summary and the independent market/reference-odds tables read `summary.v9`, across the full filtered scope before fixture pagination
 - V9 counts distinct `prediction_id` recommendations and distinct fixtures; multiple recommendations on one fixture remain separate prediction rows
 - accuracy with zero settlement weight is absent, including when all evaluated results are void; evaluated is not the accuracy denominator
 - a selected version without an evaluation remains pending with reason `awaiting_evaluation`, displayed as Awaiting processing
@@ -78,9 +78,9 @@ The `evaluated` field still counts all rows with `status=evaluated`, including v
 - pagination is fixture-group based
 - filters are applied to prediction rows first, then matching fixture groups are paginated
 - the fixture table shows one row per match with grouped metrics for the filtered child rows only
-- the match button expands inline prediction and public-version tables containing only rows that matched the current filters
+- the match button expands inline prediction and source-version tables containing only rows that matched the current filters
 - summary, fixture metrics and prediction details use tables instead of metric or prediction cards
-- fixture rows and expanded tables show public V9 metrics and exact prediction versions
+- fixture rows and expanded tables show generated V9 metrics and exact prediction versions
 - wide tables scroll horizontally within their own containers on small screens
 - evaluated prediction rows show their richer settlement outcome: `Win`, `Loss`, or `Void`
 - session user identity is intentionally hidden in v1
@@ -107,13 +107,15 @@ sorting and `createdAt` use source `created_at`; `publishedAt` is separate.
 
 ## V9 Selection And Response
 
-The backend selects the last public prematch version per stable `prediction_id`,
-ordered by publication, source creation and version UUID descending. Publication
-requires V9/PREMADE, a nonfuture `published_at`, both retained public-output flags
-and PUBLIC analysis visibility. Versions published at/after kickoff are excluded
-from this scope. Currentness, withdrawal, current status and today's engine config
-do not erase prior publication. Ranking precedes evaluation/status/market/odds
-filters, so filtering never substitutes an older revision.
+With `predictionScope` supplied (as this page always does), the backend selects
+all generated V9 source predictions, including unpublished/internal/shadow and
+on-demand records. Each stable prediction ID counts once, using its latest
+version created strictly before kickoff (created_at, revision and version ID
+descending). No publication, currentness, withdrawal or visibility gate hides
+source records. Ranking precedes value/EV, evaluation/status/market/odds filters.
+
+Calls without `predictionScope` retain the historical public pre-match selection
+for compatibility; mobile/public recommendation admission is unchanged.
 
 The optional `summary.v9` contains `predictionCount`, `fixtureCount`, `evaluated`,
 `correct`, `accuracy`, `averageOdds`, `pending`, `notFound`, `unsupported`, `failed`,
@@ -136,10 +138,10 @@ settle results. Omitted `sourceTypes` retains the legacy API and Flutter Home sc
 
 ## Prediction selection
 
-The screen shows historical public V9 predictions only. Deprecated Source and Slot controls, Safe/Risky statistics and slot/source columns were removed.
+The screen shows generated V9 predictions directly from `predictions.predictions`, including unpublished and internal records. Deprecated Source and Slot controls, Safe/Risky statistics and slot/source columns were removed.
 
 - All predictions: no value or EV restriction, including false/null value and zero/negative/null EV.
 - Top Picks: `is_value = true OR conservative_ev > 0`.
 - Other predictions: neither criterion holds, including missing values.
 
-Scope is evaluated on the latest public version before kickoff per prediction ID, before pagination, fixture grouping and statistics. It does not require a future kickoff or current admission. Each scope change resets pagination; Reset filters restores All predictions. Period, market, odds and status filters continue to intersect the selected scope. All predictions means all historical public V9 predictions in those filters, not unpublished/on-demand records or older revisions.
+Scope is evaluated on the latest generated version created before kickoff per prediction ID, before pagination, fixture grouping and statistics. It does not require a future kickoff or current admission. Each scope change resets pagination; Reset filters restores All predictions. Period, market, odds and status filters continue to intersect the selected scope. All predictions includes unpublished and on-demand records; older revisions and versions created at/after kickoff are not counted separately. Rows expose source `isValue` and `conservativeEv` so the assessment can be checked directly. Unseeded evaluations remain visible as Awaiting processing until the existing evaluation scheduler seeds and settles them.

@@ -366,10 +366,10 @@ function V9Summary({ summary, scopeLabel }: { summary: PredictionEvaluationV9Sum
     <Stack spacing={2} sx={{ mb: 3 }}>
       <Box>
         <Typography variant="h6" sx={{ mb: 1 }}>
-          Public V9
+          Generated V9
         </Typography>
         <V9MetricsTable
-          title="Public V9 summary"
+          title="Generated V9 summary"
           rows={[{ ...summary, label: scopeLabel }]}
         />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -433,6 +433,8 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
               {[
                 'Prediction',
                 'Market',
+                'Value',
+                'Conservative EV',
                 'Confidence',
                 'Reference odds',
                 'Status',
@@ -454,6 +456,8 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
                 <TableCell>
                   {prediction.canonicalMarketKey ?? prediction.marketKey ?? '-'}
                 </TableCell>
+                <TableCell>{prediction.isValue == null ? '-' : prediction.isValue ? 'Yes' : 'No'}</TableCell>
+                <TableCell align="right">{prediction.conservativeEv == null ? '-' : prediction.conservativeEv}</TableCell>
                 <TableCell align="right">
                   {prediction.confidenceValue ?? '-'}
                 </TableCell>
@@ -509,12 +513,12 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
       {predictions.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Public versions
+            Source versions
           </Typography>
           <TableContainer component={Paper} variant="outlined">
             <Table
               size="small"
-              aria-label={`Public versions for ${formatFixtureLabel(group)}`}
+              aria-label={`Source versions for ${formatFixtureLabel(group)}`}
               sx={{ ...TABLE_SX, minWidth: 1100 }}
             >
               <TableHead>
@@ -743,7 +747,7 @@ export default function PredictionEvaluationsPage() {
         <AdminPageHeader
           maxWidth={1600}
           title="Prediction Evaluation"
-          subtitle="Review all public predictions, Top Picks, and other predictions by fixture and market."
+          subtitle="Review all generated predictions, Top Picks, and other predictions by fixture and market."
         />
 
         <Box
@@ -756,7 +760,7 @@ export default function PredictionEvaluationsPage() {
         >
           {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={SCOPE_OPTIONS.find((option) => option.value === predictionScope)?.label ?? 'All predictions'} />}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Top Picks: value is true or conservative EV is greater than zero. All predictions includes other predictions and missing value/EV data.
+            Top Picks: value is true or conservative EV is greater than zero. All predictions includes unpublished and internal source records, other predictions, and missing value/EV data.
           </Typography>
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box
