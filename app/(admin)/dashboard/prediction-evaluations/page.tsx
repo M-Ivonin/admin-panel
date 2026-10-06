@@ -38,11 +38,9 @@ import {
   PredictionEvaluationGroupSortOrder,
   PredictionEvaluationOutcomeType,
   PaginatedPredictionEvaluationGroupsResponse,
-  PredictionEvaluationSlotKey,
-  PredictionEvaluationSourceType,
+  PredictionEvaluationScope,
   PredictionEvaluationStatus,
   PredictionEvaluationSummary,
-  PredictionEvaluationStats,
   PredictionEvaluationV9Metrics,
   PredictionEvaluationV9Summary,
 } from '@/lib/api/prediction-evaluations';
@@ -92,23 +90,10 @@ const SORT_FIELD_OPTIONS: Array<{
   { value: 'failed', label: 'Failed' },
 ];
 
-const SOURCE_OPTIONS: Array<{
-  value: PredictionEvaluationSourceType;
-  label: string;
-}> = [
-  { value: 'published_prediction', label: 'Published Prediction' },
-  { value: 'match_prediction', label: 'Match Prediction' },
-  { value: 'prediction_session', label: 'Prediction Session' },
-];
-
-const SLOT_OPTIONS: Array<{
-  value: PredictionEvaluationSlotKey;
-  label: string;
-}> = [
-  { value: 'main', label: 'Main' },
-  { value: 'primary', label: 'Primary' },
-  { value: 'safe', label: 'Safe' },
-  { value: 'risky', label: 'Risky' },
+const SCOPE_OPTIONS: Array<{ value: PredictionEvaluationScope; label: string }> = [
+  { value: 'all', label: 'All predictions' },
+  { value: 'top_picks', label: 'Top Picks' },
+  { value: 'other', label: 'Other predictions' },
 ];
 
 const EMPTY_SUMMARY: PredictionEvaluationSummary = {
@@ -134,18 +119,6 @@ const EMPTY_SUMMARY: PredictionEvaluationSummary = {
     accuracy: null,
     averageOdds: null,
   },
-};
-
-interface MergedPredictionEvaluationItem extends PredictionEvaluationItem {
-  slotKeys: PredictionEvaluationSlotKey[];
-  mergedIds: string[];
-}
-
-const SLOT_KEY_ORDER: Record<PredictionEvaluationSlotKey, number> = {
-  main: 0,
-  primary: 1,
-  safe: 1,
-  risky: 2,
 };
 
 function formatDateTime(dateString: string | null): string {
@@ -271,12 +244,6 @@ function getOutcomeLabel(
   }
 }
 
-function getSourceChipColor(
-  sourceType: PredictionEvaluationSourceType,
-): 'primary' | 'secondary' {
-  return sourceType === 'match_prediction' ? 'primary' : 'secondary';
-}
-
 function getSelectValue(value: unknown): string[] {
   return typeof value === 'string' ? value.split(',') : (value as string[]);
 }
@@ -304,56 +271,6 @@ function getSortOrderOptions(
     { value: 'asc', label: 'Ascending' },
     { value: 'desc', label: 'Descending' },
   ];
-}
-
-function buildPredictionMergeKey(prediction: PredictionEvaluationItem): string {
-  return [
-    prediction.sourceType,
-    prediction.sourceId,
-    prediction.marketKey ?? '',
-    prediction.predictionValue,
-    prediction.confidenceValue ?? '',
-    prediction.oddsValue ?? '',
-    prediction.status,
-    prediction.isCorrect ?? '',
-    prediction.outcomeType ?? '',
-    prediction.reasonCode ?? '',
-    prediction.evaluatedAt ?? '',
-  ].join('::');
-}
-
-function mergePredictions(
-  predictions: PredictionEvaluationItem[],
-): MergedPredictionEvaluationItem[] {
-  const merged = new Map<string, MergedPredictionEvaluationItem>();
-
-  for (const prediction of predictions) {
-    const key = buildPredictionMergeKey(prediction);
-    const existing = merged.get(key);
-
-    if (!existing) {
-      merged.set(key, {
-        ...prediction,
-        slotKeys: [prediction.slotKey],
-        mergedIds: [prediction.id],
-      });
-      continue;
-    }
-
-    if (!existing.slotKeys.includes(prediction.slotKey)) {
-      existing.slotKeys.push(prediction.slotKey);
-      existing.slotKeys.sort(
-        (left, right) => SLOT_KEY_ORDER[left] - SLOT_KEY_ORDER[right],
-      );
-    }
-
-    existing.mergedIds.push(prediction.id);
-    if (new Date(prediction.createdAt).getTime() < new Date(existing.createdAt).getTime()) {
-      existing.createdAt = prediction.createdAt;
-    }
-  }
-
-  return Array.from(merged.values());
 }
 
 const METRIC_COLUMNS = [
@@ -444,7 +361,7 @@ function V9MetricsTable({
   );
 }
 
-function V9Summary({ summary }: { summary: PredictionEvaluationV9Summary }) {
+function V9Summary({ summary, scopeLabel }: { summary: PredictionEvaluationV9Summary; scopeLabel: string }) {
   return (
     <Stack spacing={2} sx={{ mb: 3 }}>
       <Box>
@@ -453,7 +370,7 @@ function V9Summary({ summary }: { summary: PredictionEvaluationV9Summary }) {
         </Typography>
         <V9MetricsTable
           title="Public V9 summary"
-          rows={[{ ...summary, label: 'All public predictions' }]}
+          rows={[{ ...summary, label: scopeLabel }]}
         />
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Accuracy uses settlement credit / weight. Evaluated includes void
@@ -495,89 +412,6 @@ function V9Summary({ summary }: { summary: PredictionEvaluationV9Summary }) {
   );
 }
 
-function LegacyStatsTable({
-  stats,
-  title,
-  fixtureCount,
-}: {
-  stats: PredictionEvaluationStats;
-  title: string;
-  fixtureCount: number;
-}) {
-  return (
-    <TableContainer component={Paper} variant="outlined">
-      <Table
-        size="small"
-        aria-label={title}
-        sx={{ ...TABLE_SX, minWidth: 1050 }}
-      >
-        <TableHead>
-          <TableRow>
-            {[
-              'Scope',
-              'Predictions',
-              'Matches',
-              'Evaluated',
-              'Correct',
-              'Accuracy',
-              'Average odds',
-              'Pending',
-              'Not Found',
-              'Unsupported',
-              'Failed',
-            ].map((label, index) => (
-              <TableCell key={label} align={index === 0 ? 'left' : 'right'}>
-                {label}
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <TableRow>
-            <TableCell component="th" scope="row">
-              All sources
-            </TableCell>
-            <TableCell align="right">{stats.total}</TableCell>
-            <TableCell align="right">{fixtureCount}</TableCell>
-            <TableCell align="right">{stats.evaluated}</TableCell>
-            <TableCell align="right">{stats.correct}</TableCell>
-            <TableCell align="right">
-              {formatPercentage(stats.accuracy)}
-            </TableCell>
-            <TableCell align="right">-</TableCell>
-            <TableCell align="right">{stats.pending}</TableCell>
-            <TableCell align="right">{stats.notFound}</TableCell>
-            <TableCell align="right">{stats.unsupported}</TableCell>
-            <TableCell align="right">{stats.failed}</TableCell>
-          </TableRow>
-          {(['safe', 'risky'] as const).map((slot) => (
-            <TableRow key={slot}>
-              <TableCell component="th" scope="row">
-                {slot === 'safe' ? 'Safe' : 'Risky'}
-              </TableCell>
-              <TableCell align="right">-</TableCell>
-              <TableCell align="right">-</TableCell>
-              <TableCell align="right">{stats[slot].evaluated}</TableCell>
-              <TableCell align="right">{stats[slot].correct}</TableCell>
-              <TableCell align="right">
-                {formatPercentage(stats[slot].accuracy)}
-              </TableCell>
-              <TableCell align="right">
-                {formatOdds(stats[slot].averageOdds)}
-              </TableCell>
-              {[0, 1, 2, 3].map((index) => (
-                <TableCell key={index} align="right">
-                  -
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  );
-}
-
 function formatPredictionLabel(prediction: PredictionEvaluationItem): string {
   return prediction.sourceType === 'published_prediction'
     ? `${prediction.selectionLabel ?? prediction.selectionKey ?? prediction.predictionValue}${prediction.line == null ? '' : ` ${prediction.line}`} · ${prediction.periodKey ?? '-'}`
@@ -585,28 +419,9 @@ function formatPredictionLabel(prediction: PredictionEvaluationItem): string {
 }
 
 function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
-  const predictions = mergePredictions(group.predictions);
-  const publicPredictions = predictions.filter(
-    (prediction) => prediction.sourceType === 'published_prediction'
-  );
-  const hasLegacy = predictions.some(
-    (prediction) => prediction.sourceType !== 'published_prediction'
-  );
+  const predictions = group.predictions;
   return (
     <Stack spacing={2}>
-      {hasLegacy && (
-        <LegacyStatsTable
-          stats={group.stats}
-          title={`Source metrics for ${formatFixtureLabel(group)}`}
-          fixtureCount={1}
-        />
-      )}
-      {hasLegacy && group.stats.v9 && (
-        <V9MetricsTable
-          title={`Public V9 metrics for ${formatFixtureLabel(group)}`}
-          rows={[{ ...group.stats.v9, label: 'Public V9' }]}
-        />
-      )}
       <TableContainer component={Paper} variant="outlined">
         <Table
           size="small"
@@ -617,11 +432,9 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
             <TableRow>
               {[
                 'Prediction',
-                'Source',
-                'Slot',
                 'Market',
                 'Confidence',
-                publicPredictions.length ? (hasLegacy ? 'Reference odds / Odds' : 'Reference odds') : 'Odds',
+                'Reference odds',
                 'Status',
                 'Outcome',
                 'Created',
@@ -634,32 +447,9 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
           </TableHead>
           <TableBody>
             {predictions.map((prediction) => (
-              <TableRow key={prediction.mergedIds.join(':')}>
+              <TableRow key={prediction.id}>
                 <TableCell sx={{ minWidth: 170, fontWeight: 600 }}>
                   {formatPredictionLabel(prediction)}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={
-                      SOURCE_OPTIONS.find(
-                        (option) => option.value === prediction.sourceType
-                      )?.label ?? prediction.sourceType
-                    }
-                    color={getSourceChipColor(prediction.sourceType)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5}>
-                    {prediction.slotKeys.map((slotKey) => (
-                      <Chip
-                        key={slotKey}
-                        label={slotKey}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Stack>
                 </TableCell>
                 <TableCell>
                   {prediction.canonicalMarketKey ?? prediction.marketKey ?? '-'}
@@ -716,7 +506,7 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
           </TableBody>
         </Table>
       </TableContainer>
-      {publicPredictions.length > 0 && (
+      {predictions.length > 0 && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             Public versions
@@ -741,7 +531,7 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {publicPredictions.map((prediction) => (
+                {predictions.map((prediction) => (
                   <TableRow key={prediction.id}>
                     <TableCell>{formatPredictionLabel(prediction)}</TableCell>
                     <TableCell>{prediction.revision ?? '-'}</TableCell>
@@ -777,10 +567,7 @@ export default function PredictionEvaluationsPage() {
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [search, setSearch] = useState('');
   const [statuses, setStatuses] = useState<PredictionEvaluationStatus[]>([]);
-  const [sourceTypes, setSourceTypes] = useState<PredictionEvaluationSourceType[]>(
-    ['published_prediction'],
-  );
-  const [slotKeys, setSlotKeys] = useState<PredictionEvaluationSlotKey[]>([]);
+  const [predictionScope, setPredictionScope] = useState<PredictionEvaluationScope>('all');
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
   const [marketOptions, setMarketOptions] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState(() => {
@@ -823,8 +610,8 @@ export default function PredictionEvaluationsPage() {
             limit: rowsPerPage,
             search: search.trim() || undefined,
             statuses: statuses.length > 0 ? statuses : undefined,
-            sourceTypes: sourceTypes.length > 0 ? sourceTypes : SOURCE_OPTIONS.map((option) => option.value),
-            slotKeys: slotKeys.length > 0 ? slotKeys : undefined,
+            sourceTypes: ['published_prediction'],
+            predictionScope,
             marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
             dateFrom: dateRange.dateFrom || undefined,
             dateTo: dateRange.dateTo || undefined,
@@ -882,8 +669,7 @@ export default function PredictionEvaluationsPage() {
     rowsPerPage,
     search,
     statuses,
-    sourceTypes,
-    slotKeys,
+    predictionScope,
     marketKeys,
     dateRange,
     oddsRange,
@@ -895,8 +681,7 @@ export default function PredictionEvaluationsPage() {
   const hasActiveFilters =
     search.trim().length > 0 ||
     statuses.length > 0 ||
-    !(sourceTypes.length === 1 && sourceTypes[0] === 'published_prediction') ||
-    slotKeys.length > 0 ||
+    predictionScope !== 'all' ||
     marketKeys.length > 0 ||
     Boolean(oddsRange.oddsFrom.trim()) ||
     Boolean(oddsRange.oddsTo.trim()) ||
@@ -958,7 +743,7 @@ export default function PredictionEvaluationsPage() {
         <AdminPageHeader
           maxWidth={1600}
           title="Prediction Evaluation"
-          subtitle="Review grouped evaluation results by fixture, source, slot, and market."
+          subtitle="Review all public predictions, Top Picks, and other predictions by fixture and market."
         />
 
         <Box
@@ -969,29 +754,10 @@ export default function PredictionEvaluationsPage() {
             py: 4,
           }}
         >
-          {summary.v9 && <V9Summary summary={summary.v9} />}
-          {(!summary.v9 ||
-            sourceTypes.length === 0 ||
-            sourceTypes.some(
-              (source) => source !== 'published_prediction'
-            )) && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                All sources summary
-              </Typography>
-              <LegacyStatsTable
-                stats={summary}
-                title="All sources summary"
-                fixtureCount={summary.fixtureCount}
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {summary.predictionCount} predictions in scope. Pending results
-                await evaluation; Not Found means the result is missing after
-                the settlement grace window.
-              </Typography>
-            </Box>
-          )}
-
+          {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={SCOPE_OPTIONS.find((option) => option.value === predictionScope)?.label ?? 'All predictions'} />}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Top Picks: value is true or conservative EV is greater than zero. All predictions includes other predictions and missing value/EV data.
+          </Typography>
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box
               sx={{
@@ -1077,7 +843,7 @@ export default function PredictionEvaluationsPage() {
                 gridTemplateColumns: {
                   xs: '1fr',
                   md: 'repeat(2, minmax(0, 1fr))',
-                  xl: 'repeat(6, minmax(0, 1fr))',
+                  xl: 'repeat(5, minmax(0, 1fr))',
                 },
                 gap: 2,
               }}
@@ -1110,53 +876,19 @@ export default function PredictionEvaluationsPage() {
               </FormControl>
 
               <FormControl size="small">
-                <InputLabel id="prediction-evaluation-sources-label">
-                  Source
-                </InputLabel>
-                <Select<string[]>
-                  labelId="prediction-evaluation-sources-label"
-                  multiple
-                  value={sourceTypes}
-                  onChange={(event: SelectChangeEvent<string[]>) => {
-                    setSourceTypes(
-                      getSelectValue(event.target.value) as PredictionEvaluationSourceType[],
-                    );
+                <InputLabel id="prediction-evaluation-scope-label">Predictions</InputLabel>
+                <Select
+                  labelId="prediction-evaluation-scope-label"
+                  label="Predictions"
+                  value={predictionScope}
+                  onChange={(event) => {
+                    setPredictionScope(event.target.value as PredictionEvaluationScope);
+                    setExpandedFixtureId(null);
                     setPage(0);
                   }}
-                  input={<OutlinedInput label="Source" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
                 >
-                  {SOURCE_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small">
-                <InputLabel id="prediction-evaluation-slots-label">Slot</InputLabel>
-                <Select<string[]>
-                  labelId="prediction-evaluation-slots-label"
-                  multiple
-                  value={slotKeys}
-                  onChange={(event: SelectChangeEvent<string[]>) => {
-                    setSlotKeys(
-                      getSelectValue(event.target.value) as PredictionEvaluationSlotKey[],
-                    );
-                    setPage(0);
-                  }}
-                  input={<OutlinedInput label="Slot" />}
-                  renderValue={(selected) =>
-                    renderSelectChips(selected as string[])
-                  }
-                >
-                  {SLOT_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
+                  {SCOPE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -1286,8 +1018,7 @@ export default function PredictionEvaluationsPage() {
                   onClick={() => {
                     setSearch('');
                     setStatuses([]);
-                    setSourceTypes(['published_prediction']);
-                    setSlotKeys([]);
+                    setPredictionScope('all');
                     setMarketKeys([]);
                     setOddsRange({
                       oddsFrom: '',
@@ -1336,7 +1067,7 @@ export default function PredictionEvaluationsPage() {
             >
               <CircularProgress />
             </Paper>
-          ) : items.length === 0 ? (
+          ) : error ? null : items.length === 0 ? (
             <Paper sx={{ p: 5, textAlign: 'center' }}>
               <Typography variant="h6" gutterBottom>
                 {hasActiveFilters
@@ -1482,7 +1213,7 @@ export default function PredictionEvaluationsPage() {
             </TableContainer>
           )}
 
-          <Paper sx={{ mt: 3 }}>
+          {!isLoading && !error && <Paper sx={{ mt: 3 }}>
             <TablePagination
               component="div"
               count={total}
@@ -1496,7 +1227,7 @@ export default function PredictionEvaluationsPage() {
               rowsPerPageOptions={PAGE_SIZE_OPTIONS}
               labelRowsPerPage="Fixture groups per page"
             />
-          </Paper>
+          </Paper>}
         </Box>
       </Box>
     </ProtectedRoute>

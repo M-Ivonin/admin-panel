@@ -21,6 +21,8 @@ jest.mock('@/lib/api/prediction-evaluations', () => ({
   getPredictionEvaluationGroups: jest.fn(),
 }));
 
+const publicMetrics = { predictionCount: 2, fixtureCount: 1, evaluated: 1, correct: 1, accuracy: 100, averageOdds: 1.95, pending: 1, notFound: 0, unsupported: 0, failed: 0 };
+
 const populatedResponse = {
   items: [
     {
@@ -30,6 +32,7 @@ const populatedResponse = {
       homeTeamName: 'Alpha FC',
       awayTeamName: 'Beta FC',
       stats: {
+        v9: publicMetrics,
         total: 2,
         evaluated: 1,
         correct: 1,
@@ -55,9 +58,9 @@ const populatedResponse = {
         {
           id: 'eval-1',
           fixtureId: 101,
-          sourceType: 'match_prediction',
+          sourceType: 'published_prediction',
           sourceId: 'mp-1',
-          slotKey: 'safe',
+          slotKey: 'main',
           marketKey: 'goals_over_under',
           predictionValue: 'Over 2.5',
           confidenceValue: 78,
@@ -77,6 +80,7 @@ const populatedResponse = {
   limit: 20,
   totalPages: 2,
   summary: {
+    v9: { ...publicMetrics, byMarket: [], byOdds: [] },
     fixtureCount: 21,
     predictionCount: 44,
     total: 44,
@@ -106,6 +110,36 @@ describe('PredictionEvaluationsPage', () => {
   it('requests public V9 explicitly on first open', async () => {
     render(<PredictionEvaluationsPage />);
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenCalledWith(expect.objectContaining({ sourceTypes: ['published_prediction'] })));
+  });
+  it('filters all, Top Picks and other predictions and resets pagination', async () => {
+    render(<PredictionEvaluationsPage />);
+    await screen.findByText('Alpha FC vs Beta FC');
+    expect(screen.queryByLabelText('Source')).toBeNull();
+    expect(screen.queryByLabelText('Slot')).toBeNull();
+    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all', sourceTypes: ['published_prediction'] }));
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+    for (const [label, scope] of [['Top Picks', 'top_picks'], ['Other predictions', 'other']]) {
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
+      fireEvent.click(await screen.findByRole('option', { name: label }));
+      await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, predictionScope: scope })));
+      expect(within(screen.getByRole('table', { name: 'Public V9 summary' })).getByRole('row', { name: new RegExp('^' + label) })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all' })));
+  });
+  it('hides previous totals while a changed scope loads and when that request fails', async () => {
+    render(<PredictionEvaluationsPage />);
+    await screen.findByRole('table', { name: 'Public V9 summary' });
+    let rejectRequest: (reason: Error) => void = () => {};
+    (getPredictionEvaluationGroups as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectRequest = reject; }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Top Picks' }));
+    await waitFor(() => expect(screen.queryByRole('table', { name: 'Public V9 summary' })).toBeNull());
+    await act(async () => rejectRequest(new Error('Scope request failed')));
+    expect(await screen.findByText('Scope request failed')).toBeTruthy();
+    expect(screen.queryByRole('table', { name: 'Fixture evaluations' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Go to next page' })).toBeNull();
+    expect(screen.queryByRole('table', { name: 'Public V9 summary' })).toBeNull();
   });
   let dateNowSpy: jest.SpyInstance<number, []>;
 
@@ -181,7 +215,8 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.getByText('[2, 3)')).toBeTruthy();
     fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
     expect(within(screen.getByRole('table', { name: 'Predictions for Alpha FC vs Beta FC' })).getAllByText('Over 2.5 · FT')).toHaveLength(2);
-    expect(screen.getAllByText('Published Prediction')).toHaveLength(2);
+    expect(screen.queryByText('Safe')).toBeNull();
+    expect(screen.queryByText('Risky')).toBeNull();
     expect(screen.getAllByText('Awaiting processing').length).toBeGreaterThan(0);
     expect(screen.getByText('version-a')).toBeTruthy();
     expect(screen.getByText('version-b')).toBeTruthy();
@@ -189,108 +224,6 @@ describe('PredictionEvaluationsPage', () => {
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, sourceTypes: ['published_prediction'] })));
     expect(screen.getByText('[2, 3)')).toBeTruthy();
   });
-  it('renders source summary metrics and reveals prediction details from the fixture row', async () => {
-    render(<PredictionEvaluationsPage />);
-
-    expect(await screen.findByText('Prediction Evaluation')).toBeTruthy();
-    expect(await screen.findByText('Alpha FC vs Beta FC')).toBeTruthy();
-    const summary = screen.getByRole('table', { name: 'All sources summary' });
-    const safe = within(summary).getByRole('row', { name: /^Safe/ });
-    expect(within(safe).getByText('70%')).toBeTruthy();
-    expect(within(safe).getByText('1.88')).toBeTruthy();
-    const risky = within(summary).getByRole('row', { name: /^Risky/ });
-    expect(within(risky).getByText('40%')).toBeTruthy();
-    expect(within(risky).getByText('2.37')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
-    });
-
-    expect(await screen.findByText('Over 2.5')).toBeTruthy();
-    expect(screen.getByText('goals_over_under')).toBeTruthy();
-    expect(screen.getAllByText('Win').length).toBeGreaterThan(0);
-  });
-
-  it('merges identical prediction session rows and shows all slots in one prediction row', async () => {
-    (getPredictionEvaluationGroups as jest.Mock).mockResolvedValueOnce({
-      ...populatedResponse,
-      items: [
-        {
-          ...populatedResponse.items[0],
-          fixtureId: 202,
-          homeTeamName: 'Corinthians',
-          awayTeamName: 'Palmeiras',
-          predictions: [
-            {
-              id: 'session-primary',
-              fixtureId: 202,
-              sourceType: 'prediction_session',
-              sourceId: 'session-1',
-              slotKey: 'primary',
-              marketKey: 'asian_handicap',
-              predictionValue: 'Palmeiras -0.25',
-              confidenceValue: null,
-              oddsValue: 1.53,
-              status: 'evaluated',
-              isCorrect: false,
-              outcomeType: 'loss',
-              reasonCode: null,
-              evaluatedAt: '2026-04-14T12:12:07.739Z',
-              createdAt: '2026-04-11T01:10:03.626Z',
-            },
-            {
-              id: 'session-risky',
-              fixtureId: 202,
-              sourceType: 'prediction_session',
-              sourceId: 'session-1',
-              slotKey: 'risky',
-              marketKey: 'asian_handicap',
-              predictionValue: 'Palmeiras -0.25',
-              confidenceValue: null,
-              oddsValue: 1.53,
-              status: 'evaluated',
-              isCorrect: false,
-              outcomeType: 'loss',
-              reasonCode: null,
-              evaluatedAt: '2026-04-14T12:12:07.739Z',
-              createdAt: '2026-04-12T10:10:00.857Z',
-            },
-            {
-              id: 'session-safe',
-              fixtureId: 202,
-              sourceType: 'prediction_session',
-              sourceId: 'session-1',
-              slotKey: 'safe',
-              marketKey: 'double_chance',
-              predictionValue: 'Draw or Palmeiras',
-              confidenceValue: null,
-              oddsValue: 1.4,
-              status: 'evaluated',
-              isCorrect: true,
-              outcomeType: 'win',
-              reasonCode: null,
-              evaluatedAt: '2026-04-13T02:30:00.000Z',
-              createdAt: '2026-04-11T01:10:03.626Z',
-            },
-          ],
-        },
-      ],
-    });
-
-    render(<PredictionEvaluationsPage />);
-
-    expect(await screen.findByText('Corinthians vs Palmeiras')).toBeTruthy();
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('Corinthians vs Palmeiras'));
-    });
-
-    expect(await screen.findAllByText('Palmeiras -0.25')).toHaveLength(1);
-    expect(screen.getByText('primary')).toBeTruthy();
-    expect(screen.getByText('risky')).toBeTruthy();
-    expect(screen.getByText('Draw or Palmeiras')).toBeTruthy();
-  });
-
   it('refetches with updated pagination and filters and shows empty state when needed', async () => {
     (getPredictionEvaluationGroups as jest.Mock)
       .mockResolvedValueOnce(populatedResponse)

@@ -119,7 +119,10 @@ export interface PaginatedPredictionEvaluationGroupsResponse {
   summary: PredictionEvaluationSummary;
 }
 
+export type PredictionEvaluationScope = 'all' | 'top_picks' | 'other';
+
 export interface PredictionEvaluationFilters {
+  predictionScope?: PredictionEvaluationScope;
   page?: number;
   limit?: number;
   search?: string;
@@ -144,6 +147,7 @@ export async function getPredictionEvaluationGroups(
 ): Promise<PaginatedPredictionEvaluationGroupsResponse> {
   const searchParams = new URLSearchParams();
 
+  if (params.predictionScope) searchParams.set('predictionScope', params.predictionScope);
   if (params.page) searchParams.set('page', params.page.toString());
   if (params.limit) searchParams.set('limit', params.limit.toString());
   if (params.search) searchParams.set('search', params.search);

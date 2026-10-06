@@ -22,8 +22,9 @@ Access rules:
 - `limit`
 - `search`
 - `statuses`
-- `sourceTypes`
-- `slotKeys`
+- `sourceTypes` (the screen always sends `published_prediction`)
+- `predictionScope`: `all` (default), `top_picks`, or `other`
+- `slotKeys` (legacy API callers only)
 - `marketKeys`
 - `dateFrom`
 - `dateTo`
@@ -67,8 +68,8 @@ The `evaluated` field still counts all rows with `status=evaluated`, including v
 
 ## UI Behavior
 
-- the initial source is explicitly `published_prediction` (Public V9); clearing Source sends all three supported sources explicitly
-- `published_prediction` uses `main`; legacy sources and Safe/Risky views remain selectable
+- the source is always `published_prediction` (Public V9); the initial prediction scope is All predictions
+- Source and Slot selectors are replaced by All predictions / Top Picks / Other predictions
 - Public V9 summary and the independent market/reference-odds tables read `summary.v9`, across the full filtered scope before fixture pagination
 - V9 counts distinct `prediction_id` recommendations and distinct fixtures; multiple recommendations on one fixture remain separate prediction rows
 - accuracy with zero settlement weight is absent, including when all evaluated results are void; evaluated is not the accuracy denominator
@@ -78,8 +79,8 @@ The `evaluated` field still counts all rows with `status=evaluated`, including v
 - filters are applied to prediction rows first, then matching fixture groups are paginated
 - the fixture table shows one row per match with grouped metrics for the filtered child rows only
 - the match button expands inline prediction and public-version tables containing only rows that matched the current filters
-- summary, Safe/Risky metrics, fixture metrics and prediction details use tables instead of metric or prediction cards
-- mixed-source fixture rows show all-source metrics; their expanded tables retain separate Public V9 and Safe/Risky metrics
+- summary, fixture metrics and prediction details use tables instead of metric or prediction cards
+- fixture rows and expanded tables show public V9 metrics and exact prediction versions
 - wide tables scroll horizontally within their own containers on small screens
 - evaluated prediction rows show their richer settlement outcome: `Win`, `Loss`, or `Void`
 - session user identity is intentionally hidden in v1
@@ -131,3 +132,14 @@ Nullable V9 metadata includes `predictionId`, `revision`, `sourceCreatedAt`,
 `publishedAt`, `canonicalMarketKey`, `selectionKey`, `selectionLabel`, `line`,
 `periodKey`, `withdrawnAt`. Legacy IDs retain their meaning. Reads never seed or
 settle results. Omitted `sourceTypes` retains the legacy API and Flutter Home scope.
+
+
+## Prediction selection
+
+The screen shows historical public V9 predictions only. Deprecated Source and Slot controls, Safe/Risky statistics and slot/source columns were removed.
+
+- All predictions: no value or EV restriction, including false/null value and zero/negative/null EV.
+- Top Picks: `is_value = true OR conservative_ev > 0`.
+- Other predictions: neither criterion holds, including missing values.
+
+Scope is evaluated on the latest public version before kickoff per prediction ID, before pagination, fixture grouping and statistics. It does not require a future kickoff or current admission. Each scope change resets pagination; Reset filters restores All predictions. Period, market, odds and status filters continue to intersect the selected scope. All predictions means all historical public V9 predictions in those filters, not unpublished/on-demand records or older revisions.
