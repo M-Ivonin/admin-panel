@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Autocomplete,
   Box,
@@ -12,6 +9,7 @@ import {
   Chip,
   CircularProgress,
   FormControl,
+  ButtonBase,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -44,6 +42,7 @@ import {
   PredictionEvaluationSourceType,
   PredictionEvaluationStatus,
   PredictionEvaluationSummary,
+  PredictionEvaluationStats,
   PredictionEvaluationV9Metrics,
   PredictionEvaluationV9Summary,
 } from '@/lib/api/prediction-evaluations';
@@ -357,48 +356,415 @@ function mergePredictions(
   return Array.from(merged.values());
 }
 
-function V9Metrics({ metrics }: { metrics: PredictionEvaluationV9Metrics }) {
-  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' }, gap: 1, mb: 2 }}>
-    {[
-      ['Predictions', metrics.predictionCount], ['Matches', metrics.fixtureCount],
-      ['Accuracy', formatPercentage(metrics.accuracy)], ['Evaluated', metrics.evaluated],
-      ['Average reference odds', formatOdds(metrics.averageOdds)], ['Pending', metrics.pending],
-      ['Not Found', metrics.notFound], ['Unsupported', metrics.unsupported], ['Failed', metrics.failed],
-    ].map(([label, value]) => <Paper variant="outlined" key={label} sx={{ p: 1.5 }}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography fontWeight={700}>{value}</Typography>
-    </Paper>)}
-  </Box>;
+const METRIC_COLUMNS = [
+  'Predictions',
+  'Matches',
+  'Evaluated',
+  'Correct',
+  'Accuracy',
+  'Average reference odds',
+  'Pending',
+  'Not Found',
+  'Unsupported',
+  'Failed',
+];
+
+const TABLE_SX = {
+  '& th': { color: 'text.secondary', fontWeight: 600, verticalAlign: 'bottom' },
+  '& td': { verticalAlign: 'top' },
+  '& th, & td': { px: 1.5, py: 1.25 },
+  '& td:not(:first-of-type)': { fontVariantNumeric: 'tabular-nums' },
+};
+
+function V9MetricCells({
+  metrics,
+}: {
+  metrics: PredictionEvaluationV9Metrics;
+}) {
+  return (
+    <>
+      {[
+        metrics.predictionCount,
+        metrics.fixtureCount,
+        metrics.evaluated,
+        metrics.correct,
+        formatPercentage(metrics.accuracy),
+        formatOdds(metrics.averageOdds),
+        metrics.pending,
+        metrics.notFound,
+        metrics.unsupported,
+        metrics.failed,
+      ].map((value, index) => (
+        <TableCell align="right" key={METRIC_COLUMNS[index]}>
+          {value}
+        </TableCell>
+      ))}
+    </>
+  );
 }
 
-function V9Breakdown({ title, rows }: { title: string; rows: Array<PredictionEvaluationV9Metrics & { label: string }> }) {
-  return <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
-    <Typography variant="subtitle1" fontWeight={700}>{title}</Typography>
-    <Typography variant="caption" color="text.secondary">Void results have zero accuracy weight. No weighted outcomes: —.</Typography>
-    <TableContainer><Table size="small" aria-label={title}>
-      <TableHead><TableRow>{['Market / range', 'Predictions', 'Matches', 'Evaluated', 'Accuracy', 'Average reference odds', 'Pending', 'Not Found', 'Unsupported', 'Failed'].map((label) => <TableCell key={label}>{label}</TableCell>)}</TableRow></TableHead>
-      <TableBody>{rows.map((row) => <TableRow key={row.label}>
-        <TableCell>{row.label}</TableCell><TableCell>{row.predictionCount}</TableCell><TableCell>{row.fixtureCount}</TableCell>
-        <TableCell>{row.evaluated}</TableCell><TableCell>{formatPercentage(row.accuracy)}</TableCell><TableCell>{formatOdds(row.averageOdds)}</TableCell>
-        <TableCell>{row.pending}</TableCell><TableCell>{row.notFound}</TableCell><TableCell>{row.unsupported}</TableCell><TableCell>{row.failed}</TableCell>
-      </TableRow>)}</TableBody>
-    </Table></TableContainer>
-  </Paper>;
+function V9MetricsTable({
+  title,
+  rows,
+  labelColumn = 'Scope',
+}: {
+  title: string;
+  rows: Array<PredictionEvaluationV9Metrics & { label: string }>;
+  labelColumn?: string;
+}) {
+  return (
+    <TableContainer component={Paper} variant="outlined">
+      <Table
+        size="small"
+        aria-label={title}
+        sx={{ ...TABLE_SX, minWidth: 1050 }}
+      >
+        <TableHead>
+          <TableRow>
+            <TableCell>{labelColumn}</TableCell>
+            {METRIC_COLUMNS.map((label) => (
+              <TableCell key={label} align="right">
+                {label}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.label}>
+              <TableCell component="th" scope="row">
+                {row.label}
+              </TableCell>
+              <V9MetricCells metrics={row} />
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
 }
 
 function V9Summary({ summary }: { summary: PredictionEvaluationV9Summary }) {
-  return <Box sx={{ mb: 3 }}>
-    <Typography variant="h6" sx={{ mb: 1 }}>Public V9</Typography>
-    <V9Metrics metrics={summary} />
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-      Accuracy uses settlement credit / weight. Evaluated includes void results, which have zero weight.
-      {summary.accuracy === null && ' No evaluated outcomes with nonzero weight.'}
-    </Typography>
-    <Stack spacing={2}>
-      <V9Breakdown title="By market" rows={summary.byMarket.map((row) => ({ ...row, label: row.marketKey ?? 'Unrecognized market' }))} />
-      <V9Breakdown title="By reference odds" rows={summary.byOdds.map((row) => ({ ...row, label: row.lowerInclusive === null ? 'No reference odds' : `[${row.lowerInclusive}, ${row.upperExclusive ?? '∞'})` }))} />
+  return (
+    <Stack spacing={2} sx={{ mb: 3 }}>
+      <Box>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Public V9
+        </Typography>
+        <V9MetricsTable
+          title="Public V9 summary"
+          rows={[{ ...summary, label: 'All public predictions' }]}
+        />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Accuracy uses settlement credit / weight. Evaluated includes void
+          results, which have zero weight.
+          {summary.accuracy === null &&
+            ' No evaluated outcomes with nonzero weight.'}
+        </Typography>
+      </Box>
+      <Box>
+        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+          By market
+        </Typography>
+        <V9MetricsTable
+          title="By market"
+          labelColumn="Market"
+          rows={summary.byMarket.map((row) => ({
+            ...row,
+            label: row.marketKey ?? 'Unrecognized market',
+          }))}
+        />
+      </Box>
+      <Box>
+        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+          By reference odds
+        </Typography>
+        <V9MetricsTable
+          title="By reference odds"
+          labelColumn="Reference odds range"
+          rows={summary.byOdds.map((row) => ({
+            ...row,
+            label:
+              row.lowerInclusive === null
+                ? 'No reference odds'
+                : `[${row.lowerInclusive}, ${row.upperExclusive ?? '∞'})`,
+          }))}
+        />
+      </Box>
     </Stack>
-  </Box>;
+  );
+}
+
+function LegacyStatsTable({
+  stats,
+  title,
+  fixtureCount,
+}: {
+  stats: PredictionEvaluationStats;
+  title: string;
+  fixtureCount: number;
+}) {
+  return (
+    <TableContainer component={Paper} variant="outlined">
+      <Table
+        size="small"
+        aria-label={title}
+        sx={{ ...TABLE_SX, minWidth: 1050 }}
+      >
+        <TableHead>
+          <TableRow>
+            {[
+              'Scope',
+              'Predictions',
+              'Matches',
+              'Evaluated',
+              'Correct',
+              'Accuracy',
+              'Average odds',
+              'Pending',
+              'Not Found',
+              'Unsupported',
+              'Failed',
+            ].map((label, index) => (
+              <TableCell key={label} align={index === 0 ? 'left' : 'right'}>
+                {label}
+              </TableCell>
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <TableRow>
+            <TableCell component="th" scope="row">
+              All sources
+            </TableCell>
+            <TableCell align="right">{stats.total}</TableCell>
+            <TableCell align="right">{fixtureCount}</TableCell>
+            <TableCell align="right">{stats.evaluated}</TableCell>
+            <TableCell align="right">{stats.correct}</TableCell>
+            <TableCell align="right">
+              {formatPercentage(stats.accuracy)}
+            </TableCell>
+            <TableCell align="right">-</TableCell>
+            <TableCell align="right">{stats.pending}</TableCell>
+            <TableCell align="right">{stats.notFound}</TableCell>
+            <TableCell align="right">{stats.unsupported}</TableCell>
+            <TableCell align="right">{stats.failed}</TableCell>
+          </TableRow>
+          {(['safe', 'risky'] as const).map((slot) => (
+            <TableRow key={slot}>
+              <TableCell component="th" scope="row">
+                {slot === 'safe' ? 'Safe' : 'Risky'}
+              </TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="right">-</TableCell>
+              <TableCell align="right">{stats[slot].evaluated}</TableCell>
+              <TableCell align="right">{stats[slot].correct}</TableCell>
+              <TableCell align="right">
+                {formatPercentage(stats[slot].accuracy)}
+              </TableCell>
+              <TableCell align="right">
+                {formatOdds(stats[slot].averageOdds)}
+              </TableCell>
+              {[0, 1, 2, 3].map((index) => (
+                <TableCell key={index} align="right">
+                  -
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+function formatPredictionLabel(prediction: PredictionEvaluationItem): string {
+  return prediction.sourceType === 'published_prediction'
+    ? `${prediction.selectionLabel ?? prediction.selectionKey ?? prediction.predictionValue}${prediction.line == null ? '' : ` ${prediction.line}`} · ${prediction.periodKey ?? '-'}`
+    : prediction.predictionValue;
+}
+
+function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
+  const predictions = mergePredictions(group.predictions);
+  const publicPredictions = predictions.filter(
+    (prediction) => prediction.sourceType === 'published_prediction'
+  );
+  const hasLegacy = predictions.some(
+    (prediction) => prediction.sourceType !== 'published_prediction'
+  );
+  return (
+    <Stack spacing={2}>
+      {hasLegacy && (
+        <LegacyStatsTable
+          stats={group.stats}
+          title={`Source metrics for ${formatFixtureLabel(group)}`}
+          fixtureCount={1}
+        />
+      )}
+      {hasLegacy && group.stats.v9 && (
+        <V9MetricsTable
+          title={`Public V9 metrics for ${formatFixtureLabel(group)}`}
+          rows={[{ ...group.stats.v9, label: 'Public V9' }]}
+        />
+      )}
+      <TableContainer component={Paper} variant="outlined">
+        <Table
+          size="small"
+          aria-label={`Predictions for ${formatFixtureLabel(group)}`}
+          sx={{ ...TABLE_SX, minWidth: 1500 }}
+        >
+          <TableHead>
+            <TableRow>
+              {[
+                'Prediction',
+                'Source',
+                'Slot',
+                'Market',
+                'Confidence',
+                publicPredictions.length ? (hasLegacy ? 'Reference odds / Odds' : 'Reference odds') : 'Odds',
+                'Status',
+                'Outcome',
+                'Created',
+                'Evaluated At',
+                'Reason',
+              ].map((label) => (
+                <TableCell key={label}>{label}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {predictions.map((prediction) => (
+              <TableRow key={prediction.mergedIds.join(':')}>
+                <TableCell sx={{ minWidth: 170, fontWeight: 600 }}>
+                  {formatPredictionLabel(prediction)}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={
+                      SOURCE_OPTIONS.find(
+                        (option) => option.value === prediction.sourceType
+                      )?.label ?? prediction.sourceType
+                    }
+                    color={getSourceChipColor(prediction.sourceType)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={0.5}>
+                    {prediction.slotKeys.map((slotKey) => (
+                      <Chip
+                        key={slotKey}
+                        label={slotKey}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </TableCell>
+                <TableCell>
+                  {prediction.canonicalMarketKey ?? prediction.marketKey ?? '-'}
+                </TableCell>
+                <TableCell align="right">
+                  {prediction.confidenceValue ?? '-'}
+                </TableCell>
+                <TableCell align="right">
+                  {formatOdds(prediction.oddsValue)}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={
+                      prediction.reasonCode === 'awaiting_evaluation'
+                        ? 'Awaiting processing'
+                        : getStatusLabel(prediction.status)
+                    }
+                    color={getStatusChipColor(prediction.status)}
+                    size="small"
+                    variant={
+                      prediction.status === 'unsupported'
+                        ? 'outlined'
+                        : 'filled'
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  {prediction.outcomeType ? (
+                    <Chip
+                      label={getOutcomeLabel(prediction.outcomeType)}
+                      color={getOutcomeChipColor(prediction.outcomeType)}
+                      size="small"
+                      variant="outlined"
+                    />
+                  ) : (
+                    '-'
+                  )}
+                </TableCell>
+                <TableCell sx={{ minWidth: 150 }}>
+                  {formatDateTime(
+                    prediction.sourceCreatedAt ?? prediction.createdAt
+                  )}
+                </TableCell>
+                <TableCell sx={{ minWidth: 150 }}>
+                  {formatDateTime(prediction.evaluatedAt)}
+                </TableCell>
+                <TableCell>
+                  {prediction.reasonCode === 'awaiting_evaluation'
+                    ? 'Awaiting processing'
+                    : (prediction.reasonCode ?? '-')}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {publicPredictions.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Public versions
+          </Typography>
+          <TableContainer component={Paper} variant="outlined">
+            <Table
+              size="small"
+              aria-label={`Public versions for ${formatFixtureLabel(group)}`}
+              sx={{ ...TABLE_SX, minWidth: 1100 }}
+            >
+              <TableHead>
+                <TableRow>
+                  {[
+                    'Prediction',
+                    'Revision',
+                    'Version',
+                    'Published',
+                    'Withdrawn',
+                  ].map((label) => (
+                    <TableCell key={label}>{label}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {publicPredictions.map((prediction) => (
+                  <TableRow key={prediction.id}>
+                    <TableCell>{formatPredictionLabel(prediction)}</TableCell>
+                    <TableCell>{prediction.revision ?? '-'}</TableCell>
+                    <TableCell
+                      sx={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}
+                    >
+                      {prediction.sourceId}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateTime(prediction.publishedAt ?? null)}
+                    </TableCell>
+                    <TableCell>
+                      {formatDateTime(prediction.withdrawnAt ?? null)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      )}
+    </Stack>
+  );
 }
 
 export default function PredictionEvaluationsPage() {
@@ -590,113 +956,40 @@ export default function PredictionEvaluationsPage() {
     <ProtectedRoute>
       <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
         <AdminPageHeader
+          maxWidth={1600}
           title="Prediction Evaluation"
           subtitle="Review grouped evaluation results by fixture, source, slot, and market."
         />
 
         <Box
           sx={{
-            maxWidth: 1280,
+            maxWidth: 1600,
             mx: 'auto',
             px: { xs: 2, sm: 3, lg: 4 },
             py: 4,
           }}
         >
           {summary.v9 && <V9Summary summary={summary.v9} />}
-          {(!summary.v9 || sourceTypes.length === 0 || sourceTypes.some((source) => source !== 'published_prediction')) && (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2, 1fr)',
-                lg: 'repeat(3, 1fr)',
-                xl: 'repeat(6, 1fr)',
-              },
-              gap: 2,
-              mb: 3,
-            }}
-          >
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Fixture Groups
+          {(!summary.v9 ||
+            sourceTypes.length === 0 ||
+            sourceTypes.some(
+              (source) => source !== 'published_prediction'
+            )) && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                All sources summary
               </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.fixtureCount}
+              <LegacyStatsTable
+                stats={summary}
+                title="All sources summary"
+                fixtureCount={summary.fixtureCount}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                {summary.predictionCount} predictions in scope. Pending results
+                await evaluation; Not Found means the result is missing after
+                the settlement grace window.
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {summary.predictionCount} predictions in scope
-              </Typography>
-            </Paper>
-
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Safe Accuracy
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {formatPercentage(summary.safe.accuracy)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {summary.safe.correct} correct out of {summary.safe.evaluated}{' '}
-                evaluated
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Avg odds {formatOdds(summary.safe.averageOdds)}
-              </Typography>
-            </Paper>
-
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Risky Accuracy
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {formatPercentage(summary.risky.accuracy)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {summary.risky.correct} correct out of {summary.risky.evaluated}{' '}
-                evaluated
-              </Typography>
-              <Typography variant="caption" color="text.secondary" display="block">
-                Avg odds {formatOdds(summary.risky.averageOdds)}
-              </Typography>
-            </Paper>
-
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Pending
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.pending}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Awaiting evaluation
-              </Typography>
-            </Paper>
-
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Not Found
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.notFound}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Result missing after the settlement grace window
-              </Typography>
-            </Paper>
-
-            <Paper sx={{ p: 2.5 }}>
-              <Typography variant="body2" color="text.secondary">
-                Failed / Unsupported
-              </Typography>
-              <Typography variant="h4" fontWeight={700}>
-                {summary.failed + summary.unsupported}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {summary.failed} failed, {summary.unsupported} unsupported
-              </Typography>
-            </Paper>
-          </Box>
+            </Box>
           )}
 
           <Paper sx={{ p: 2.5, mb: 3 }}>
@@ -1057,283 +1350,136 @@ export default function PredictionEvaluationsPage() {
               </Typography>
             </Paper>
           ) : (
-            <Stack spacing={1.5}>
-              {items.map((group) => (
-                <Accordion
-                  key={group.fixtureId}
-                  expanded={expandedFixtureId === group.fixtureId}
-                  onChange={(_event, isExpanded) =>
-                    setExpandedFixtureId(isExpanded ? group.fixtureId : null)
-                  }
-                  disableGutters
-                  elevation={0}
-                  sx={{
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: '18px !important',
-                    overflow: 'hidden',
-                    '&::before': { display: 'none' },
-                  }}
-                >
-                  <AccordionSummary
-                    expandIcon={<ExpandMore />}
-                    sx={{
-                      px: 2.5,
-                      py: 1.25,
-                      '& .MuiAccordionSummary-content': {
-                        my: 0.5,
-                      },
-                    }}
-                  >
-                    <Box sx={{ width: '100%' }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: 2,
-                          flexWrap: 'wrap',
-                          mb: 1.5,
-                        }}
-                      >
-                        <Box>
-                          <Typography variant="h6" fontWeight={700}>
-                            {formatFixtureLabel(group)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {group.leagueName || 'Unknown league'} •{' '}
-                            {formatDateTime(group.fixtureTime)}
-                          </Typography>
-                        </Box>
-
-                        <Chip
-                          label={`Fixture #${group.fixtureId}`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </Box>
-
-                      {group.stats.v9 && <V9Metrics metrics={group.stats.v9} />}
-                      {(!group.stats.v9 || group.predictions.some((prediction) => prediction.sourceType !== 'published_prediction')) && (
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: {
-                            xs: 'repeat(2, minmax(0, 1fr))',
-                            md: 'repeat(7, minmax(0, 1fr))',
-                          },
-                          gap: 1,
-                        }}
-                      >
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Total
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {group.stats.total}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Evaluated
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {group.stats.evaluated}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Correct
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {group.stats.correct}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Safe Accuracy
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {formatPercentage(group.stats.safe.accuracy)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {group.stats.safe.correct}/{group.stats.safe.evaluated}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Avg odds {formatOdds(group.stats.safe.averageOdds)}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Risky Accuracy
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {formatPercentage(group.stats.risky.accuracy)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {group.stats.risky.correct}/{group.stats.risky.evaluated}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Avg odds {formatOdds(group.stats.risky.averageOdds)}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Pending / Not Found
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {group.stats.pending} / {group.stats.notFound}
-                          </Typography>
-                        </Paper>
-                        <Paper variant="outlined" sx={{ p: 1.25 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Unsupported / Failed
-                          </Typography>
-                          <Typography fontWeight={700}>
-                            {group.stats.unsupported} / {group.stats.failed}
-                          </Typography>
-                        </Paper>
-                      </Box>                      )}
-
-                    </Box>
-                  </AccordionSummary>
-
-                  <AccordionDetails sx={{ px: 2.5, pb: 2.5, pt: 0.5 }}>
-                    <Stack spacing={1.25}>
-                      {mergePredictions(group.predictions).map((prediction) => (
-                        <Paper
-                          key={prediction.mergedIds.join(':')}
-                          variant="outlined"
-                          sx={{ p: 1.5 }}
+            <TableContainer component={Paper} variant="outlined">
+              <Table
+                size="small"
+                aria-label="Fixture evaluations"
+                sx={{ ...TABLE_SX, minWidth: 1350 }}
+              >
+                <TableHead>
+                  <TableRow>
+                    {['Match', 'League', 'Kickoff', ...METRIC_COLUMNS].map(
+                      (label, index) => (
+                        <TableCell
+                          key={label}
+                          align={index < 3 ? 'left' : 'right'}
                         >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              gap: 1,
-                              flexWrap: 'wrap',
-                              mb: 1,
-                            }}
+                          {label}
+                        </TableCell>
+                      )
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {items.map((group) => {
+                    const expanded = expandedFixtureId === group.fixtureId;
+                    const metrics =
+                      group.stats.v9 &&
+                      group.predictions.every(
+                        (prediction) =>
+                          prediction.sourceType === 'published_prediction'
+                      )
+                        ? group.stats.v9
+                        : {
+                            ...group.stats,
+                            predictionCount: group.stats.total,
+                            fixtureCount: 1,
+                            averageOdds: null,
+                          };
+                    return (
+                      <Fragment key={group.fixtureId}>
+                        <TableRow
+                          hover
+                          sx={{
+                            bgcolor: expanded ? 'action.selected' : undefined,
+                          }}
+                        >
+                          <TableCell
+                            component="th"
+                            scope="row"
+                            sx={{ minWidth: 240 }}
                           >
-                            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                              <Chip
-                                label={
-                                  SOURCE_OPTIONS.find((option) => option.value === prediction.sourceType)?.label ?? prediction.sourceType
-                                }
-                                color={getSourceChipColor(prediction.sourceType)}
-                                size="small"
-                              />
-                              {prediction.slotKeys.map((slotKey) => (
-                                <Chip
-                                  key={`${prediction.id}-${slotKey}`}
-                                  label={slotKey}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              ))}
-                              <Chip
-                                label={prediction.reasonCode === 'awaiting_evaluation' ? 'Awaiting processing' : getStatusLabel(prediction.status)}
-                                color={getStatusChipColor(prediction.status)}
-                                size="small"
-                                variant={
-                                  prediction.status === 'unsupported'
-                                    ? 'outlined'
-                                    : 'filled'
-                                }
-                              />
-                              {prediction.status === 'evaluated' &&
-                                prediction.outcomeType && (
-                                  <Chip
-                                    label={getOutcomeLabel(prediction.outcomeType)}
-                                    color={getOutcomeChipColor(
-                                      prediction.outcomeType,
-                                    )}
-                                    size="small"
-                                    variant="outlined"
-                                  />
-                                )}
-                            </Box>
-
-                            <Typography variant="caption" color="text.secondary">
-                              Created {formatDateTime(prediction.sourceCreatedAt ?? prediction.createdAt)}
-                              {prediction.sourceType === 'published_prediction' && <><br />Revision {prediction.revision} · Published {formatDateTime(prediction.publishedAt ?? null)}<br />Version {prediction.sourceId}{prediction.withdrawnAt && <><br />Withdrawn {formatDateTime(prediction.withdrawnAt)}</>}</>}
-                            </Typography>
-                          </Box>
-
-                          <Typography variant="subtitle1" fontWeight={700}>
-                            {prediction.sourceType === 'published_prediction' ? `${prediction.selectionLabel ?? prediction.selectionKey ?? prediction.predictionValue}${prediction.line == null ? '' : ` ${prediction.line}`} · ${prediction.periodKey ?? '-'}` : prediction.predictionValue}
-                          </Typography>
-
-                          <Box
-                            sx={{
-                              mt: 1,
-                              display: 'grid',
-                              gridTemplateColumns: {
-                                xs: 'repeat(2, minmax(0, 1fr))',
-                                md: 'repeat(5, minmax(0, 1fr))',
-                              },
-                              gap: 1,
-                            }}
-                          >
-                            <Paper variant="outlined" sx={{ p: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                Market
-                              </Typography>
-                              <Typography fontWeight={600}>
-                                {prediction.canonicalMarketKey ?? prediction.marketKey ?? '-'}
-                              </Typography>
-                            </Paper>
-                            <Paper variant="outlined" sx={{ p: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                Confidence
-                              </Typography>
-                              <Typography fontWeight={600}>
-                                {prediction.confidenceValue ?? '-'}
-                              </Typography>
-                            </Paper>
-                            <Paper variant="outlined" sx={{ p: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                {prediction.sourceType === 'published_prediction' ? 'Reference odds' : 'Odds'}
-                              </Typography>
-                              <Typography fontWeight={600}>
-                                {prediction.oddsValue ?? '-'}
-                              </Typography>
-                            </Paper>
-                            <Paper variant="outlined" sx={{ p: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                Outcome
-                              </Typography>
-                              <Typography fontWeight={600}>
-                                {prediction.outcomeType
-                                  ? getOutcomeLabel(prediction.outcomeType)
-                                  : '-'}
-                              </Typography>
-                            </Paper>
-                            <Paper variant="outlined" sx={{ p: 1 }}>
-                              <Typography variant="caption" color="text.secondary">
-                                Evaluated At
-                              </Typography>
-                              <Typography fontWeight={600}>
-                                {formatDateTime(prediction.evaluatedAt)}
-                              </Typography>
-                            </Paper>
-                          </Box>
-
-                          {prediction.reasonCode && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ mt: 1.25 }}
+                            <ButtonBase
+                              onClick={() =>
+                                setExpandedFixtureId(
+                                  expanded ? null : group.fixtureId
+                                )
+                              }
+                              aria-expanded={expanded}
+                              aria-controls={
+                                expanded
+                                  ? `fixture-details-${group.fixtureId}`
+                                  : undefined
+                              }
+                              sx={{
+                                textAlign: 'left',
+                                alignItems: 'flex-start',
+                                gap: 1,
+                                borderRadius: 1,
+                                '&.Mui-focusVisible': {
+                                  outline: '2px solid',
+                                  outlineColor: 'primary.main',
+                                },
+                              }}
                             >
-                              Reason: {prediction.reasonCode === 'awaiting_evaluation' ? 'Awaiting processing' : prediction.reasonCode}
-                            </Typography>
-                          )}
-                        </Paper>
-                      ))}
-                    </Stack>
-                  </AccordionDetails>
-                </Accordion>
-              ))}
-            </Stack>
+                              <ExpandMore
+                                fontSize="small"
+                                sx={{
+                                  mt: 0.25,
+                                  transform: expanded
+                                    ? 'rotate(180deg)'
+                                    : undefined,
+                                }}
+                              />
+                              <Box>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {formatFixtureLabel(group)}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Fixture #{group.fixtureId}
+                                </Typography>
+                              </Box>
+                            </ButtonBase>
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 130 }}>
+                            {group.leagueName || 'Unknown league'}
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 145 }}>
+                            {formatDateTime(group.fixtureTime)}
+                          </TableCell>
+                          <V9MetricCells metrics={metrics} />
+                        </TableRow>
+                        {expanded && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={3 + METRIC_COLUMNS.length}
+                              sx={{ bgcolor: 'action.hover' }}
+                            >
+                              <Box
+                                id={`fixture-details-${group.fixtureId}`}
+                                sx={{ p: 1, maxWidth: 'calc(100vw - 100px)' }}
+                              >
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight={700}
+                                  sx={{ mb: 1 }}
+                                >
+                                  Prediction details
+                                </Typography>
+                                <PredictionDetailsTable group={group} />
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
 
           <Paper sx={{ mt: 3 }}>

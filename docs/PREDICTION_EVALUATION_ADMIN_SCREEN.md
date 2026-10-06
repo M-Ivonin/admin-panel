@@ -69,15 +69,18 @@ The `evaluated` field still counts all rows with `status=evaluated`, including v
 
 - the initial source is explicitly `published_prediction` (Public V9); clearing Source sends all three supported sources explicitly
 - `published_prediction` uses `main`; legacy sources and Safe/Risky views remain selectable
-- Public V9 cards and the independent market/reference-odds tables read `summary.v9`, across the full filtered scope before fixture pagination
-- V9 counts distinct `prediction_id` recommendations and distinct fixtures; multiple recommendations on one fixture remain separate cards
+- Public V9 summary and the independent market/reference-odds tables read `summary.v9`, across the full filtered scope before fixture pagination
+- V9 counts distinct `prediction_id` recommendations and distinct fixtures; multiple recommendations on one fixture remain separate prediction rows
 - accuracy with zero settlement weight is absent, including when all evaluated results are void; evaluated is not the accuracy denominator
 - a selected version without an evaluation remains pending with reason `awaiting_evaluation`, displayed as Awaiting processing
 - V9 details include canonical market/selection/line/period, revision, exact version UUID, official reference odds, source creation/publication dates and withdrawal metadata
 - pagination is fixture-group based
 - filters are applied to prediction rows first, then matching fixture groups are paginated
-- collapsed accordion rows show grouped accuracy stats for the filtered child rows only
-- expanded accordion content shows only the prediction rows that matched the current filters
+- the fixture table shows one row per match with grouped metrics for the filtered child rows only
+- the match button expands inline prediction and public-version tables containing only rows that matched the current filters
+- summary, Safe/Risky metrics, fixture metrics and prediction details use tables instead of metric or prediction cards
+- mixed-source fixture rows show all-source metrics; their expanded tables retain separate Public V9 and Safe/Risky metrics
+- wide tables scroll horizontally within their own containers on small screens
 - evaluated prediction rows show their richer settlement outcome: `Win`, `Loss`, or `Void`
 - session user identity is intentionally hidden in v1
 - the `Search` field covers fixture id, team names, and league name; there is no separate league input in the UI

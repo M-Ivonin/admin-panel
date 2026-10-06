@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import PredictionEvaluationsPage from '@/app/(admin)/dashboard/prediction-evaluations/page';
 import { getPredictionEvaluationGroups } from '@/lib/api/prediction-evaluations';
 import { toIsoTimestampFromLocalDateTime } from '@/app/(admin)/dashboard/prediction-evaluations/period-filter';
@@ -124,6 +124,42 @@ describe('PredictionEvaluationsPage', () => {
   });
 
 
+  it('shows fixture metrics in a table and toggles the prediction table from its row', async () => {
+    render(<PredictionEvaluationsPage />);
+    const fixtures = await screen.findByRole('table', {
+      name: 'Fixture evaluations',
+    });
+    const fixtureRow = within(fixtures).getByRole('row', {
+      name: /Alpha FC vs Beta FC/,
+    });
+    expect(within(fixtureRow).getByText('Premier League')).toBeTruthy();
+    const toggle = within(fixtureRow).getByRole('button', {
+      name: /Alpha FC vs Beta FC/,
+    });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      screen.queryByRole('table', {
+        name: 'Predictions for Alpha FC vs Beta FC',
+      })
+    ).toBeNull();
+    fireEvent.click(toggle);
+    const predictions = await screen.findByRole('table', {
+      name: 'Predictions for Alpha FC vs Beta FC',
+    });
+    const prediction = within(predictions).getByRole('row', {
+      name: /Over 2.5/,
+    });
+    expect(within(prediction).getByText('goals_over_under')).toBeTruthy();
+    expect(within(prediction).getByText('Win')).toBeTruthy();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    fireEvent.click(toggle);
+    expect(
+      screen.queryByRole('table', {
+        name: 'Predictions for Alpha FC vs Beta FC',
+      })
+    ).toBeNull();
+  });
+
   it('renders canonical V9 metrics, independent breakdowns and exact versions across pages', async () => {
     const metrics = { predictionCount: 2, fixtureCount: 1, evaluated: 1, correct: 0, accuracy: 0,
       averageOdds: 2.5, pending: 1, notFound: 0, unsupported: 0, failed: 0 };
@@ -144,24 +180,27 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.getByRole('table', { name: 'By reference odds' })).toBeTruthy();
     expect(screen.getByText('[2, 3)')).toBeTruthy();
     fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
-    expect(await screen.findAllByText('Over 2.5 · FT')).toHaveLength(2);
+    expect(within(screen.getByRole('table', { name: 'Predictions for Alpha FC vs Beta FC' })).getAllByText('Over 2.5 · FT')).toHaveLength(2);
     expect(screen.getAllByText('Published Prediction')).toHaveLength(2);
     expect(screen.getAllByText('Awaiting processing').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Version version-a/)).toBeTruthy();
-    expect(screen.getByText(/Version version-b/)).toBeTruthy();
+    expect(screen.getByText('version-a')).toBeTruthy();
+    expect(screen.getByText('version-b')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, sourceTypes: ['published_prediction'] })));
     expect(screen.getByText('[2, 3)')).toBeTruthy();
   });
-  it('renders grouped results and reveals prediction details on accordion expand', async () => {
+  it('renders source summary metrics and reveals prediction details from the fixture row', async () => {
     render(<PredictionEvaluationsPage />);
 
     expect(await screen.findByText('Prediction Evaluation')).toBeTruthy();
     expect(await screen.findByText('Alpha FC vs Beta FC')).toBeTruthy();
-    expect(await screen.findAllByText('Safe Accuracy')).toHaveLength(2);
-    expect(await screen.findAllByText('Risky Accuracy')).toHaveLength(2);
-    expect(await screen.findByText('Avg odds 1.88')).toBeTruthy();
-    expect(await screen.findByText('Avg odds 1.95')).toBeTruthy();
+    const summary = screen.getByRole('table', { name: 'All sources summary' });
+    const safe = within(summary).getByRole('row', { name: /^Safe/ });
+    expect(within(safe).getByText('70%')).toBeTruthy();
+    expect(within(safe).getByText('1.88')).toBeTruthy();
+    const risky = within(summary).getByRole('row', { name: /^Risky/ });
+    expect(within(risky).getByText('40%')).toBeTruthy();
+    expect(within(risky).getByText('2.37')).toBeTruthy();
 
     await act(async () => {
       fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
@@ -172,7 +211,7 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.getAllByText('Win').length).toBeGreaterThan(0);
   });
 
-  it('merges identical prediction session rows and shows all slot chips on one card', async () => {
+  it('merges identical prediction session rows and shows all slots in one prediction row', async () => {
     (getPredictionEvaluationGroups as jest.Mock).mockResolvedValueOnce({
       ...populatedResponse,
       items: [
