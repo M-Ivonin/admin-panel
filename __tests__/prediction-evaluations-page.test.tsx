@@ -127,6 +127,24 @@ describe('PredictionEvaluationsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all' })));
   });
+  it('combines publication and assessment filters, resets pagination and restores both on reset', async () => {
+    render(<PredictionEvaluationsPage />);
+    await screen.findByText('Alpha FC vs Beta FC');
+    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ publicationStatus: 'all' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Top Picks' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'top_picks' })));
+    for (const [label, status] of [['Published', 'published'], ['Unpublished', 'unpublished']]) {
+      fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+      await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Publication' }));
+      fireEvent.click(await screen.findByRole('option', { name: label }));
+      await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, predictionScope: 'top_picks', publicationStatus: status })));
+      expect(within(screen.getByRole('table', { name: 'Generated V9 summary' })).getByRole('row', { name: new RegExp('^Top Picks · ' + label) })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all', publicationStatus: 'all' })));
+  });
   it('hides previous totals while a changed scope loads and when that request fails', async () => {
     render(<PredictionEvaluationsPage />);
     await screen.findByRole('table', { name: 'Generated V9 summary' });

@@ -39,6 +39,7 @@ import {
   PredictionEvaluationOutcomeType,
   PaginatedPredictionEvaluationGroupsResponse,
   PredictionEvaluationScope,
+  PredictionEvaluationPublicationStatus,
   PredictionEvaluationStatus,
   PredictionEvaluationSummary,
   PredictionEvaluationV9Metrics,
@@ -94,6 +95,12 @@ const SCOPE_OPTIONS: Array<{ value: PredictionEvaluationScope; label: string }> 
   { value: 'all', label: 'All predictions' },
   { value: 'top_picks', label: 'Top Picks' },
   { value: 'other', label: 'Other predictions' },
+];
+
+const PUBLICATION_OPTIONS: Array<{ value: PredictionEvaluationPublicationStatus; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'published', label: 'Published' },
+  { value: 'unpublished', label: 'Unpublished' },
 ];
 
 const EMPTY_SUMMARY: PredictionEvaluationSummary = {
@@ -572,6 +579,7 @@ export default function PredictionEvaluationsPage() {
   const [search, setSearch] = useState('');
   const [statuses, setStatuses] = useState<PredictionEvaluationStatus[]>([]);
   const [predictionScope, setPredictionScope] = useState<PredictionEvaluationScope>('all');
+  const [publicationStatus, setPublicationStatus] = useState<PredictionEvaluationPublicationStatus>('all');
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
   const [marketOptions, setMarketOptions] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState(() => {
@@ -616,6 +624,7 @@ export default function PredictionEvaluationsPage() {
             statuses: statuses.length > 0 ? statuses : undefined,
             sourceTypes: ['published_prediction'],
             predictionScope,
+            publicationStatus,
             marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
             dateFrom: dateRange.dateFrom || undefined,
             dateTo: dateRange.dateTo || undefined,
@@ -674,6 +683,7 @@ export default function PredictionEvaluationsPage() {
     search,
     statuses,
     predictionScope,
+    publicationStatus,
     marketKeys,
     dateRange,
     oddsRange,
@@ -686,6 +696,7 @@ export default function PredictionEvaluationsPage() {
     search.trim().length > 0 ||
     statuses.length > 0 ||
     predictionScope !== 'all' ||
+    publicationStatus !== 'all' ||
     marketKeys.length > 0 ||
     Boolean(oddsRange.oddsFrom.trim()) ||
     Boolean(oddsRange.oddsTo.trim()) ||
@@ -740,6 +751,9 @@ export default function PredictionEvaluationsPage() {
   const displayedDateTo = toLocalDateTimeInputValueFromIso(dateRange.dateTo);
 
   const sortOrderOptions = getSortOrderOptions();
+  const scopeLabel = SCOPE_OPTIONS.find((option) => option.value === predictionScope)?.label ?? 'All predictions';
+  const publicationLabel = PUBLICATION_OPTIONS.find((option) => option.value === publicationStatus)?.label ?? 'All';
+  const summaryScopeLabel = publicationStatus === 'all' ? scopeLabel : `${scopeLabel} · ${publicationLabel}`;
 
   return (
     <ProtectedRoute>
@@ -758,9 +772,9 @@ export default function PredictionEvaluationsPage() {
             py: 4,
           }}
         >
-          {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={SCOPE_OPTIONS.find((option) => option.value === predictionScope)?.label ?? 'All predictions'} />}
+          {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={summaryScopeLabel} />}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Top Picks: value is true or conservative EV is greater than zero. All predictions includes unpublished and internal source records, other predictions, and missing value/EV data.
+            Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.
           </Typography>
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box
@@ -846,8 +860,8 @@ export default function PredictionEvaluationsPage() {
                 display: 'grid',
                 gridTemplateColumns: {
                   xs: '1fr',
-                  md: 'repeat(2, minmax(0, 1fr))',
-                  xl: 'repeat(5, minmax(0, 1fr))',
+                  md: 'repeat(3, minmax(0, 1fr))',
+                  xl: 'repeat(6, minmax(0, 1fr))',
                 },
                 gap: 2,
               }}
@@ -892,6 +906,24 @@ export default function PredictionEvaluationsPage() {
                   }}
                 >
                   {SCOPE_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small">
+                <InputLabel id="prediction-evaluation-publication-label">Publication</InputLabel>
+                <Select
+                  labelId="prediction-evaluation-publication-label"
+                  label="Publication"
+                  value={publicationStatus}
+                  onChange={(event) => {
+                    setPublicationStatus(event.target.value as PredictionEvaluationPublicationStatus);
+                    setExpandedFixtureId(null);
+                    setPage(0);
+                  }}
+                >
+                  {PUBLICATION_OPTIONS.map((option) => (
                     <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
                   ))}
                 </Select>
@@ -1023,6 +1055,7 @@ export default function PredictionEvaluationsPage() {
                     setSearch('');
                     setStatuses([]);
                     setPredictionScope('all');
+                    setPublicationStatus('all');
                     setMarketKeys([]);
                     setOddsRange({
                       oddsFrom: '',

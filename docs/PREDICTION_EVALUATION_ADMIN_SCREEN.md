@@ -24,6 +24,7 @@ Access rules:
 - `statuses`
 - `sourceTypes` (the screen always sends `published_prediction`)
 - `predictionScope`: `all` (default), `top_picks`, or `other`
+- `publicationStatus`: `all` (UI default), `published`, or `unpublished`; independent of predictionScope
 - `slotKeys` (legacy API callers only)
 - `marketKeys`
 - `dateFrom`
@@ -107,14 +108,14 @@ sorting and `createdAt` use source `created_at`; `publishedAt` is separate.
 
 ## V9 Selection And Response
 
-With `predictionScope` supplied (as this page always does), the backend selects
+With `predictionScope` or `publicationStatus` supplied (as this page always does), the backend selects
 all generated V9 source predictions, including unpublished/internal/shadow and
 on-demand records. Each stable prediction ID counts once, using its latest
 version created strictly before kickoff (created_at, revision and version ID
-descending). No publication, currentness, withdrawal or visibility gate hides
-source records. Ranking precedes value/EV, evaluation/status/market/odds filters.
+descending). Publication, currentness, withdrawal and visibility do not gate
+canonical ranking. Ranking precedes publication, value/EV and evaluation/status/market/odds filters.
 
-Calls without `predictionScope` retain the historical public pre-match selection
+Calls without either filter retain the historical public pre-match selection
 for compatibility; mobile/public recommendation admission is unchanged.
 
 The optional `summary.v9` contains `predictionCount`, `fixtureCount`, `evaluated`,
@@ -144,4 +145,12 @@ The screen shows generated V9 predictions directly from `predictions.predictions
 - Top Picks: `is_value = true OR conservative_ev > 0`.
 - Other predictions: neither criterion holds, including missing values.
 
-Scope is evaluated on the latest generated version created before kickoff per prediction ID, before pagination, fixture grouping and statistics. It does not require a future kickoff or current admission. Each scope change resets pagination; Reset filters restores All predictions. Period, market, odds and status filters continue to intersect the selected scope. All predictions includes unpublished and on-demand records; older revisions and versions created at/after kickoff are not counted separately. Rows expose source `isValue` and `conservativeEv` so the assessment can be checked directly. Unseeded evaluations remain visible as Awaiting processing until the existing evaluation scheduler seeds and settles them.
+Scope is evaluated on the latest generated version created before kickoff per prediction ID, before pagination, fixture grouping and statistics. It does not require a future kickoff or current admission. Each scope change resets pagination; Reset filters restores All predictions. Period, market, odds and status filters continue to intersect the selected scope. With Publication set to All, All predictions includes unpublished and on-demand records; older revisions and versions created at/after kickoff are not counted separately. Rows expose source `isValue` and `conservativeEv` so the assessment can be checked directly. Unseeded evaluations remain visible as Awaiting processing until the existing evaluation scheduler seeds and settles them.
+
+## Publication filter
+
+Publication is independent of the All predictions / Top Picks / Other predictions assessment. The default is All, preserving the existing administrative scope. Published selects the canonical generated version only when it is a historical public PREMADE publication before kickoff: published_at is not in the future, both public-output flags are true, and full_analysis.visibility is PUBLIC. Unpublished is the complete complement, including missing publication facts, INTERNAL, INTERNAL_SHADOW and on-demand assessments.
+
+Select the latest generated version before kickoff first, then intersect publication and assessment filters. An older published revision must not replace a newer unpublished version. This filter evaluates the selected version, not whether any older version of the recommendation was ever published. Calls without both filters keep historical-public selection for compatibility. Publication filtering applies to V9 rows; legacy sources retain their existing behavior.
+
+Summary, market/odds breakdowns, fixture grouping and pagination use the same filtered scope. The summary identifies a selected publication filter, changing it resets pagination and expanded fixtures, and Reset filters restores both selectors to All.

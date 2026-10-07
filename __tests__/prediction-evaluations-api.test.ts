@@ -72,6 +72,12 @@ describe('getPredictionEvaluationGroups', () => {
     expect(adminAuthFetch).toHaveBeenCalledWith({ path: '/match-predictions/admin/evaluations?predictionScope=top_picks&sourceTypes=published_prediction', method: 'GET' });
   });
 
+  it.each(['all', 'published', 'unpublished'] as const)('sends publication %s independently of Top Picks', async (publicationStatus) => {
+    (adminAuthFetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ items: [] }) });
+    await getPredictionEvaluationGroups({ predictionScope: 'top_picks', publicationStatus, sourceTypes: ['published_prediction'] });
+    expect(adminAuthFetch).toHaveBeenLastCalledWith({ path: `/match-predictions/admin/evaluations?predictionScope=top_picks&publicationStatus=${publicationStatus}&sourceTypes=published_prediction`, method: 'GET' });
+  });
+
   it('throws a readable forbidden error for 403 responses', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValue({
       ok: false,
