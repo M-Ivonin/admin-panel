@@ -195,3 +195,5 @@ typecheck and build evidence.
 ## Filter layout
 
 Filters appear directly below the page header, before all summary tables. On desktop (1200 px and wider), Odds from, Odds to, Sort by, Order, Download JSON, Reset filters and Refresh share one row. Controls wrap into fewer columns on narrow screens. The fixture table is introduced by the heading "Predictions by match".
+
+Explanations are shown as tooltips rather than inline paragraphs: Predictions explains the value/EV and publication scope, Accuracy explains settlement credit/weight, and ROI explains the unit stake and exclusions. Accuracy and ROI hints appear on their headers in summary, breakdown and fixture tables; the headers also support keyboard focus.

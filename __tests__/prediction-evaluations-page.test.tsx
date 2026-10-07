@@ -108,6 +108,22 @@ const populatedResponse = {
 };
 
 describe('PredictionEvaluationsPage', () => {
+  it('shows explanations only as hints on Predictions, Accuracy and ROI', async () => {
+    render(<PredictionEvaluationsPage />);
+    const summary = await screen.findByRole('table', { name: 'Generated V9 summary' });
+    const hints = [
+      [screen.getByRole('combobox', { name: 'Predictions' }), 'Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.'],
+      [within(summary).getByText('Accuracy'), 'Accuracy uses settlement credit / weight. Evaluated includes void results, which have zero weight.'],
+      [within(summary).getByText('ROI'), 'ROI uses one unit per eligible settled pick across all filtered matches. Odds come from the original prediction version. Void and excluded picks do not contribute.'],
+    ] as const;
+    for (const [target, hint] of hints) {
+      expect(screen.queryByText(hint)).toBeNull();
+      fireEvent.mouseOver(target);
+      expect((await screen.findByRole('tooltip')).textContent).toBe(hint);
+      fireEvent.mouseOut(target);
+      await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    }
+  });
   it('selects generation flow independently and resets it to All', async () => {
     render(<PredictionEvaluationsPage />);
     await screen.findByText('Alpha FC vs Beta FC');

@@ -21,6 +21,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TablePagination,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import {
@@ -308,6 +309,20 @@ function getSortOrderOptions(
   ];
 }
 
+const PREDICTIONS_HINT = 'Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.';
+const ACCURACY_HINT = 'Accuracy uses settlement credit / weight. Evaluated includes void results, which have zero weight.';
+const ROI_HINT = 'ROI uses one unit per eligible settled pick across all filtered matches. Odds come from the original prediction version. Void and excluded picks do not contribute.';
+
+function MetricHeaderLabel({ label }: { label: string }) {
+  const hint = label === 'Accuracy' ? ACCURACY_HINT : label === 'ROI' ? ROI_HINT : null;
+  if (!hint) return <>{label}</>;
+  return (
+    <Tooltip title={hint} describeChild>
+      <Box component="span" tabIndex={0} sx={{ cursor: 'help' }}>{label}</Box>
+    </Tooltip>
+  );
+}
+
 const METRIC_COLUMNS = [
   'Predictions',
   'Matches',
@@ -386,7 +401,7 @@ function V9MetricsTable({
             <TableCell>{labelColumn}</TableCell>
             {METRIC_COLUMNS.map((label) => (
               <TableCell key={label} align="right">
-                {label}
+                <MetricHeaderLabel label={label} />
               </TableCell>
             ))}
           </TableRow>
@@ -417,15 +432,6 @@ function V9Summary({ summary, scopeLabel }: { summary: PredictionEvaluationV9Sum
           title="Generated V9 summary"
           rows={[{ ...summary, label: scopeLabel }]}
         />
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Accuracy uses settlement credit / weight. Evaluated includes void
-          results, which have zero weight.
-          {summary.accuracy === null &&
-            ' No evaluated outcomes with nonzero weight.'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          ROI uses one unit per eligible settled pick across all filtered matches. Odds come from the original prediction version. Void and excluded picks do not contribute.
-        </Typography>
       </Box>
       <Box>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
@@ -982,23 +988,25 @@ export default function PredictionEvaluationsPage() {
                 </Select>
               </FormControl>
 
-              <FormControl size="small">
-                <InputLabel id="prediction-evaluation-scope-label">Predictions</InputLabel>
-                <Select
-                  labelId="prediction-evaluation-scope-label"
-                  label="Predictions"
-                  value={predictionScope}
-                  onChange={(event) => {
-                    setPredictionScope(event.target.value as PredictionEvaluationScope);
-                    setExpandedFixtureId(null);
-                    setPage(0);
-                  }}
-                >
-                  {SCOPE_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Tooltip title={PREDICTIONS_HINT} describeChild>
+                <FormControl size="small">
+                  <InputLabel id="prediction-evaluation-scope-label">Predictions</InputLabel>
+                  <Select
+                    labelId="prediction-evaluation-scope-label"
+                    label="Predictions"
+                    value={predictionScope}
+                    onChange={(event) => {
+                      setPredictionScope(event.target.value as PredictionEvaluationScope);
+                      setExpandedFixtureId(null);
+                      setPage(0);
+                    }}
+                  >
+                    {SCOPE_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Tooltip>
 
               <FormControl size="small">
                 <InputLabel id="prediction-evaluation-publication-label">Publication</InputLabel>
@@ -1176,9 +1184,6 @@ export default function PredictionEvaluationsPage() {
           </Paper>
 
           {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={summaryScopeLabel} />}
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.
-          </Typography>
           <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
             Predictions by match
           </Typography>
@@ -1228,7 +1233,7 @@ export default function PredictionEvaluationsPage() {
                           key={label}
                           align={index < 3 ? 'left' : 'right'}
                         >
-                          {label}
+                          <MetricHeaderLabel label={label} />
                         </TableCell>
                       )
                     )}
