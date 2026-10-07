@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import PredictionEvaluationsPage from '@/app/(admin)/dashboard/prediction-evaluations/page';
-import { getPredictionEvaluationGroups } from '@/lib/api/prediction-evaluations';
+import { getPredictionEvaluationGroups, exportPredictionEvaluations } from '@/lib/api/prediction-evaluations';
 import { toIsoTimestampFromLocalDateTime } from '@/app/(admin)/dashboard/prediction-evaluations/period-filter';
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
@@ -19,6 +19,7 @@ jest.mock('next/link', () => ({
 
 jest.mock('@/lib/api/prediction-evaluations', () => ({
   getPredictionEvaluationGroups: jest.fn(),
+  exportPredictionEvaluations: jest.fn(),
 }));
 
 const publicMetrics = { predictionCount: 2, fixtureCount: 1, evaluated: 1, correct: 1, accuracy: 100, averageOdds: 1.95, pending: 1, notFound: 0, unsupported: 0, failed: 0 };
@@ -107,6 +108,68 @@ const populatedResponse = {
 };
 
 describe('PredictionEvaluationsPage', () => {
+  it('selects generation flow independently and resets it to All', async () => {
+    render(<PredictionEvaluationsPage />);
+    await screen.findByText('Alpha FC vs Beta FC');
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Generation' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'On demand' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, flowType: 'ON_DEMAND', publicationStatus: 'all', predictionScope: 'all' })));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Generation' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Pre-made' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ flowType: 'PREMADE' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ flowType: 'all' })));
+  });
+  it('shows backend ROI and settlement without calculating from displayed odds', async () => {
+    const finance = { settledPicks: 100, totalStaked: 100, totalReturn: 106.8, netProfit: 6.8, roiPercent: 6.8 };
+    (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue({ ...populatedResponse,
+      summary: { ...populatedResponse.summary, v9: { ...publicMetrics, ...finance, byMarket: [], byOdds: [] } },
+      items: [{ ...populatedResponse.items[0], stats: { ...populatedResponse.items[0].stats, v9: { ...publicMetrics, ...finance, netProfit: -1, roiPercent: -100 } },
+        predictions: [{ ...populatedResponse.items[0].predictions[0], flowType: 'PREMADE', settlement: 'HALF_WIN', stakeUnits: 1, returnUnits: 1.45, profitUnits: 0.45, roiEligible: true }] }] });
+    render(<PredictionEvaluationsPage />);
+    const summary = await screen.findByRole('table', { name: 'Generated V9 summary' });
+    expect(within(summary).getByText('+6.80%')).toBeTruthy();
+    expect(within(summary).getByText('106.80')).toBeTruthy();
+    expect(within(screen.getByRole('table', { name: 'Fixture evaluations' })).getByText('−100.00%')).toBeTruthy();
+    fireEvent.click(screen.getByText('Alpha FC vs Beta FC'));
+    const details = screen.getByRole('table', { name: 'Predictions for Alpha FC vs Beta FC' });
+    for (const text of ['Half win', 'Pre-made', '+0.45', '1.45']) expect(within(details).getByText(text)).toBeTruthy();
+  });
+  it('downloads all filtered JSON through export with loading and readable errors', async () => {
+    let rejectExport: (reason: Error) => void = () => {};
+    (exportPredictionEvaluations as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectExport = reject; }));
+    render(<PredictionEvaluationsPage />);
+    await screen.findByText('Alpha FC vs Beta FC');
+    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download JSON' }).hasAttribute('disabled')).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    expect(exportPredictionEvaluations).toHaveBeenCalledWith(expect.objectContaining({ flowType: 'all', sourceTypes: ['published_prediction'], predictionScope: 'all' }));
+    expect((exportPredictionEvaluations as jest.Mock).mock.calls[0][0]).not.toHaveProperty('page');
+    expect(screen.getByRole('button', { name: 'Downloading JSON…' }).hasAttribute('disabled')).toBe(true);
+    await act(async () => rejectExport(new Error('Export limit exceeded')));
+    expect(await screen.findByText('Export limit exceeded')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Download JSON' }).hasAttribute('disabled')).toBe(false);
+  });
+  it('saves backend JSON preserving its precision and complete rows', async () => {
+    const result = { schemaVersion: 1, calculatedAt: '2026-10-07T01:02:03.000Z', summary: { roiPercent: 6.8123456789 }, rows: [{ profitUnits: 0.1234567890123 }, { profitUnits: null }] };
+    (exportPredictionEvaluations as jest.Mock).mockResolvedValueOnce(result);
+    const createUrl = jest.fn().mockReturnValue('blob:roi');
+    const revokeUrl = jest.fn();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createUrl });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeUrl });
+    const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<PredictionEvaluationsPage />);
+    await screen.findByText('Alpha FC vs Beta FC');
+    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    await waitFor(() => expect(createUrl).toHaveBeenCalled());
+    const blob = createUrl.mock.calls[0][0] as Blob;
+    const contents = await new Promise<string>((resolve) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob); });
+    expect(JSON.parse(contents)).toEqual(result);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeUrl).toHaveBeenCalledWith('blob:roi');
+    click.mockRestore();
+  });
   it('requests public V9 explicitly on first open', async () => {
     render(<PredictionEvaluationsPage />);
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenCalledWith(expect.objectContaining({ sourceTypes: ['published_prediction'] })));
@@ -179,6 +242,7 @@ describe('PredictionEvaluationsPage', () => {
     dateNowSpy = jest
       .spyOn(Date, 'now')
       .mockReturnValue(new Date('2026-04-09T12:34:45.678Z').getTime());
+    (exportPredictionEvaluations as jest.Mock).mockReset();
     (getPredictionEvaluationGroups as jest.Mock).mockReset();
     (getPredictionEvaluationGroups as jest.Mock).mockResolvedValue(
       populatedResponse,

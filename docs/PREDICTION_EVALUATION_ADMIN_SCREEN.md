@@ -154,3 +154,40 @@ Publication is independent of the All predictions / Top Picks / Other prediction
 Select the latest generated version before kickoff first, then intersect publication and assessment filters. An older published revision must not replace a newer unpublished version. This filter evaluates the selected version, not whether any older version of the recommendation was ever published. Calls without both filters keep historical-public selection for compatibility. Publication filtering applies to V9 rows; legacy sources retain their existing behavior.
 
 Summary, market/odds breakdowns, fixture grouping and pagination use the same filtered scope. The summary identifies a selected publication filter, changing it resets pagination and expanded fixtures, and Reset filters restores both selectors to All.
+
+## Financial evaluation and generation flow
+
+The Generation selector sends `flowType=all|ON_DEMAND|PREMADE`, independently of
+assessment and publication. All is the default and reset value; changing it
+resets fixture pagination and expansion. Unknown flow is labelled Unknown and
+is included only by All. The backend selects the canonical version before flow
+and other filters; UI never replaces it with an older matching revision.
+
+`summary.v9`, fixture `stats.v9`, `byMarket` and `byOdds` add `settledPicks`,
+`totalStaked`, `totalReturn`, `netProfit`, and nullable `roiPercent`. Summary covers
+the entire filtered selection before pagination. The screen formats units and
+ROI to two decimals, with explicit positive/negative signs and green/red color;
+null ROI displays an em dash. These values are computed by the backend, never
+from rounded child-row values or averaged percentages.
+
+Expanded rows show original-version Odds, Generation, Settlement (Win, Half win,
+Push, Half loss, Loss, Void), Profit units, Stake units, Return units and ROI
+exclusion reason. Missing financial values display an em dash. A fixed stake of
+one unit applies to every eligible settled pick, including half outcomes and
+push. Void, invalid/missing odds, technical states and unverifiable historical
+settlements are excluded with a reason; unpublished status alone does not
+exclude a recommendation. Existing outcome/accuracy columns remain independent.
+
+Download JSON calls admin-only `GET /match-predictions/admin/evaluations/export`
+with exactly the current selection and sorting filters, omitting page and limit.
+It uses the same authenticated HTTP client as the list. Loading disables repeat
+downloads; an export failure is shown separately from list errors. The downloaded
+JSON is the complete backend snapshot, preserving numeric precision and excluded
+rows. It includes `schemaVersion:1`, UTC `calculatedAt`, normalized `filters`,
+`staking:{stakeUnits:1,oddsSource:'prediction_version.reference_odds'}`, summary,
+and flat version-aware rows. The UI does not walk pages or reconstruct totals.
+The backend rejects an oversized export explicitly rather than truncating it.
+
+All summary, breakdown, fixture and detail tables retain horizontal scrolling
+on narrow screens. UI runtime visual proof is required separately from Jest,
+typecheck and build evidence.

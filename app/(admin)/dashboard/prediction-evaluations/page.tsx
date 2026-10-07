@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -33,6 +33,9 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import {
   FixtureEvaluationGroup,
   getPredictionEvaluationGroups,
+  exportPredictionEvaluations,
+  PredictionEvaluationFilters,
+  PredictionEvaluationFlowType,
   PredictionEvaluationItem,
   PredictionEvaluationGroupSortField,
   PredictionEvaluationGroupSortOrder,
@@ -97,6 +100,12 @@ const SCOPE_OPTIONS: Array<{ value: PredictionEvaluationScope; label: string }> 
   { value: 'other', label: 'Other predictions' },
 ];
 
+const FLOW_OPTIONS: Array<{ value: PredictionEvaluationFlowType; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'ON_DEMAND', label: 'On demand' },
+  { value: 'PREMADE', label: 'Pre-made' },
+];
+
 const PUBLICATION_OPTIONS: Array<{ value: PredictionEvaluationPublicationStatus; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'published', label: 'Published' },
@@ -157,6 +166,23 @@ function formatOdds(value: number | null): string {
 
   return value.toFixed(2);
 }
+
+function formatUnits(value: number | null | undefined, signed = false): string {
+  if (value == null) return '—';
+  return `${value < 0 ? '−' : signed && value > 0 ? '+' : ''}${Math.abs(value).toFixed(2)}`;
+}
+
+function FinancialCell({ value, percent = false, signed = false }: { value: number | null | undefined; percent?: boolean; signed?: boolean }) {
+  return <TableCell align="right" sx={{ color: value != null && (percent || signed) ? value > 0 ? 'success.main' : value < 0 ? 'error.main' : 'text.primary' : 'text.primary', whiteSpace: 'nowrap' }}>
+    {formatUnits(value, signed || percent)}{value != null && percent ? '%' : ''}
+  </TableCell>;
+}
+
+function formatFlow(value: string | null | undefined): string {
+  return FLOW_OPTIONS.find((option) => option.value !== 'all' && option.value === value)?.label ?? 'Unknown';
+}
+
+const SETTLEMENT_LABELS = { FULL_WIN: 'Win', HALF_WIN: 'Half win', PUSH: 'Push', HALF_LOSS: 'Half loss', FULL_LOSS: 'Loss', VOID: 'Void' };
 
 function parseOddsInput(value: string): number | undefined {
   if (!value.trim()) {
@@ -291,6 +317,11 @@ const METRIC_COLUMNS = [
   'Not Found',
   'Unsupported',
   'Failed',
+  'Settled picks',
+  'Total staked',
+  'Total return',
+  'Net profit',
+  'ROI',
 ];
 
 const TABLE_SX = {
@@ -323,6 +354,11 @@ function V9MetricCells({
           {value}
         </TableCell>
       ))}
+      <TableCell align="right">{metrics.settledPicks ?? '—'}</TableCell>
+      <FinancialCell value={metrics.totalStaked} />
+      <FinancialCell value={metrics.totalReturn} />
+      <FinancialCell value={metrics.netProfit} signed />
+      <FinancialCell value={metrics.roiPercent} percent />
     </>
   );
 }
@@ -385,6 +421,9 @@ function V9Summary({ summary, scopeLabel }: { summary: PredictionEvaluationV9Sum
           {summary.accuracy === null &&
             ' No evaluated outcomes with nonzero weight.'}
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          ROI uses one unit per eligible settled pick across all filtered matches. Odds come from the original prediction version. Void and excluded picks do not contribute.
+        </Typography>
       </Box>
       <Box>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
@@ -443,7 +482,13 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
                 'Value',
                 'Conservative EV',
                 'Confidence',
-                'Reference odds',
+                'Odds',
+                'Generation',
+                'Settlement',
+                'Profit units',
+                'Stake units',
+                'Return units',
+                'ROI exclusion',
                 'Status',
                 'Outcome',
                 'Created',
@@ -471,6 +516,12 @@ function PredictionDetailsTable({ group }: { group: FixtureEvaluationGroup }) {
                 <TableCell align="right">
                   {formatOdds(prediction.oddsValue)}
                 </TableCell>
+                <TableCell>{formatFlow(prediction.flowType)}</TableCell>
+                <TableCell>{prediction.settlement ? SETTLEMENT_LABELS[prediction.settlement] : '—'}</TableCell>
+                <FinancialCell value={prediction.profitUnits} signed />
+                <FinancialCell value={prediction.stakeUnits} />
+                <FinancialCell value={prediction.returnUnits} />
+                <TableCell sx={{ minWidth: 170 }}>{prediction.roiExclusionReason ?? (prediction.roiEligible ? '—' : 'Unavailable')}</TableCell>
                 <TableCell>
                   <Chip
                     label={
@@ -580,6 +631,7 @@ export default function PredictionEvaluationsPage() {
   const [statuses, setStatuses] = useState<PredictionEvaluationStatus[]>([]);
   const [predictionScope, setPredictionScope] = useState<PredictionEvaluationScope>('all');
   const [publicationStatus, setPublicationStatus] = useState<PredictionEvaluationPublicationStatus>('all');
+  const [flowType, setFlowType] = useState<PredictionEvaluationFlowType>('all');
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
   const [marketOptions, setMarketOptions] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState(() => {
@@ -606,7 +658,44 @@ export default function PredictionEvaluationsPage() {
   );
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const filters = useMemo<PredictionEvaluationFilters>(() => ({
+      search: search.trim() || undefined,
+      statuses: statuses.length > 0 ? statuses : undefined,
+      sourceTypes: ['published_prediction'],
+      predictionScope, publicationStatus, flowType,
+      marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
+      dateFrom: dateRange.dateFrom || undefined,
+      dateTo: dateRange.dateTo || undefined,
+      oddsFrom: parseOddsInput(oddsRange.oddsFrom),
+      oddsTo: parseOddsInput(oddsRange.oddsTo),
+      sortBy: sortField, sortOrder,
+    }), [search, statuses, predictionScope, publicationStatus, flowType, marketKeys, dateRange, oddsRange, sortField, sortOrder]);
+
+  async function handleDownload() {
+    setIsExporting(true);
+    setExportError(null);
+    let url: string | undefined;
+    try {
+      const result = await exportPredictionEvaluations(filters);
+      url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `prediction-evaluations-${result.calculatedAt.replace(/[:.]/g, '-')}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (downloadError) {
+      setExportError(downloadError instanceof Error ? downloadError.message : 'Failed to download prediction evaluations');
+    } finally {
+      if (url) URL.revokeObjectURL(url);
+      setIsExporting(false);
+    }
+  }
+
 
   useEffect(() => {
     let active = true;
@@ -620,18 +709,7 @@ export default function PredictionEvaluationsPage() {
           await getPredictionEvaluationGroups({
             page: page + 1,
             limit: rowsPerPage,
-            search: search.trim() || undefined,
-            statuses: statuses.length > 0 ? statuses : undefined,
-            sourceTypes: ['published_prediction'],
-            predictionScope,
-            publicationStatus,
-            marketKeys: marketKeys.length > 0 ? marketKeys : undefined,
-            dateFrom: dateRange.dateFrom || undefined,
-            dateTo: dateRange.dateTo || undefined,
-            oddsFrom: parseOddsInput(oddsRange.oddsFrom),
-            oddsTo: parseOddsInput(oddsRange.oddsTo),
-            sortBy: sortField,
-            sortOrder,
+            ...filters,
           });
 
         if (!active) {
@@ -684,12 +762,14 @@ export default function PredictionEvaluationsPage() {
     statuses,
     predictionScope,
     publicationStatus,
+    flowType,
     marketKeys,
     dateRange,
     oddsRange,
     sortField,
     sortOrder,
     refreshNonce,
+    filters,
   ]);
 
   const hasActiveFilters =
@@ -697,6 +777,7 @@ export default function PredictionEvaluationsPage() {
     statuses.length > 0 ||
     predictionScope !== 'all' ||
     publicationStatus !== 'all' ||
+    flowType !== 'all' ||
     marketKeys.length > 0 ||
     Boolean(oddsRange.oddsFrom.trim()) ||
     Boolean(oddsRange.oddsTo.trim()) ||
@@ -753,7 +834,7 @@ export default function PredictionEvaluationsPage() {
   const sortOrderOptions = getSortOrderOptions();
   const scopeLabel = SCOPE_OPTIONS.find((option) => option.value === predictionScope)?.label ?? 'All predictions';
   const publicationLabel = PUBLICATION_OPTIONS.find((option) => option.value === publicationStatus)?.label ?? 'All';
-  const summaryScopeLabel = publicationStatus === 'all' ? scopeLabel : `${scopeLabel} · ${publicationLabel}`;
+  const summaryScopeLabel = [scopeLabel, publicationStatus === 'all' ? null : publicationLabel, flowType === 'all' ? null : formatFlow(flowType)].filter(Boolean).join(' · ');
 
   return (
     <ProtectedRoute>
@@ -866,6 +947,16 @@ export default function PredictionEvaluationsPage() {
                 gap: 2,
               }}
             >
+              <FormControl size="small">
+                <InputLabel id="prediction-evaluation-flow-label">Generation</InputLabel>
+                <Select<PredictionEvaluationFlowType> labelId="prediction-evaluation-flow-label" value={flowType} label="Generation" onChange={(event) => {
+                  setFlowType(event.target.value as PredictionEvaluationFlowType);
+                  setExpandedFixtureId(null);
+                  setPage(0);
+                }}>
+                  {FLOW_OPTIONS.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}
+                </Select>
+              </FormControl>
               <FormControl size="small">
                 <InputLabel id="prediction-evaluation-statuses-label">
                   Status
@@ -1049,6 +1140,9 @@ export default function PredictionEvaluationsPage() {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button variant="contained" disabled={isExporting || isLoading || Boolean(error)} onClick={() => void handleDownload()}>
+                  {isExporting ? 'Downloading JSON…' : 'Download JSON'}
+                </Button>
                 <Button
                   variant="outlined"
                   onClick={() => {
@@ -1056,6 +1150,7 @@ export default function PredictionEvaluationsPage() {
                     setStatuses([]);
                     setPredictionScope('all');
                     setPublicationStatus('all');
+                    setFlowType('all');
                     setMarketKeys([]);
                     setOddsRange({
                       oddsFrom: '',
@@ -1088,6 +1183,7 @@ export default function PredictionEvaluationsPage() {
             </Box>
           </Paper>
 
+          {exportError && <Alert severity="error" sx={{ mb: 3 }}>{exportError}</Alert>}
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}

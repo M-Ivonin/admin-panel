@@ -58,7 +58,18 @@ export interface PredictionEvaluationSummary extends PredictionEvaluationStats {
   predictionCount: number;
 }
 
-export interface PredictionEvaluationV9Metrics extends PredictionEvaluationAccuracyBreakdown {
+export interface PredictionEvaluationRoiMetrics {
+  settledPicks: number;
+  totalStaked: number;
+  totalReturn: number;
+  netProfit: number;
+  roiPercent: number | null;
+}
+
+export type PredictionEvaluationSettlement = 'FULL_WIN' | 'HALF_WIN' | 'PUSH' | 'HALF_LOSS' | 'FULL_LOSS' | 'VOID';
+export type PredictionEvaluationFlowType = 'all' | 'ON_DEMAND' | 'PREMADE';
+
+export interface PredictionEvaluationV9Metrics extends PredictionEvaluationAccuracyBreakdown, Partial<PredictionEvaluationRoiMetrics> {
   predictionCount: number;
   fixtureCount: number;
   pending: number;
@@ -73,6 +84,13 @@ export interface PredictionEvaluationV9Summary extends PredictionEvaluationV9Met
 }
 
 export interface PredictionEvaluationItem {
+  flowType?: string | null;
+  settlement?: PredictionEvaluationSettlement | null;
+  roiEligible?: boolean;
+  roiExclusionReason?: string | null;
+  stakeUnits?: number | null;
+  returnUnits?: number | null;
+  profitUnits?: number | null;
   isValue?: boolean | null;
   conservativeEv?: number | null;
   predictionId?: string | null;
@@ -126,6 +144,7 @@ export type PredictionEvaluationScope = 'all' | 'top_picks' | 'other';
 export type PredictionEvaluationPublicationStatus = 'all' | 'published' | 'unpublished';
 
 export interface PredictionEvaluationFilters {
+  flowType?: PredictionEvaluationFlowType;
   predictionScope?: PredictionEvaluationScope;
   publicationStatus?: PredictionEvaluationPublicationStatus;
   page?: number;
@@ -150,12 +169,32 @@ export interface PredictionEvaluationFilters {
 export async function getPredictionEvaluationGroups(
   params: PredictionEvaluationFilters = {},
 ): Promise<PaginatedPredictionEvaluationGroupsResponse> {
+  return fetchPredictionEvaluations(params, false);
+}
+
+export interface PredictionEvaluationExport {
+  schemaVersion: 1;
+  calculatedAt: string;
+  filters: Omit<PredictionEvaluationFilters, 'page' | 'limit'>;
+  staking: { stakeUnits: 1; oddsSource: 'prediction_version.reference_odds' };
+  summary: PredictionEvaluationSummary;
+  rows: Array<PredictionEvaluationItem & { predictionVersionId: string | null; leagueId: number | null; engineVersion: string | null; configVersion: string | null }>;
+}
+
+export async function exportPredictionEvaluations(params: PredictionEvaluationFilters = {}): Promise<PredictionEvaluationExport> {
+  return fetchPredictionEvaluations(params, true);
+}
+
+async function fetchPredictionEvaluations(params: PredictionEvaluationFilters, exporting: false): Promise<PaginatedPredictionEvaluationGroupsResponse>;
+async function fetchPredictionEvaluations(params: PredictionEvaluationFilters, exporting: true): Promise<PredictionEvaluationExport>;
+async function fetchPredictionEvaluations(params: PredictionEvaluationFilters, exporting: boolean): Promise<PaginatedPredictionEvaluationGroupsResponse | PredictionEvaluationExport> {
   const searchParams = new URLSearchParams();
 
+  if (params.flowType) searchParams.set('flowType', params.flowType);
   if (params.predictionScope) searchParams.set('predictionScope', params.predictionScope);
   if (params.publicationStatus) searchParams.set('publicationStatus', params.publicationStatus);
-  if (params.page) searchParams.set('page', params.page.toString());
-  if (params.limit) searchParams.set('limit', params.limit.toString());
+  if (!exporting && params.page) searchParams.set('page', params.page.toString());
+  if (!exporting && params.limit) searchParams.set('limit', params.limit.toString());
   if (params.search) searchParams.set('search', params.search);
   if (params.league) searchParams.set('league', params.league);
   if (params.dateFrom) searchParams.set('dateFrom', params.dateFrom);
@@ -180,7 +219,7 @@ export async function getPredictionEvaluationGroups(
 
   const queryString = searchParams.toString();
   const response = await adminAuthFetch({
-    path: `/match-predictions/admin/evaluations${queryString ? `?${queryString}` : ''}`,
+    path: `/match-predictions/admin/evaluations${exporting ? '/export' : ''}${queryString ? `?${queryString}` : ''}`,
     method: 'GET',
   });
 
