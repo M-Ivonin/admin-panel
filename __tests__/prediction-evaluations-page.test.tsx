@@ -114,7 +114,7 @@ describe('PredictionEvaluationsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Generation' }));
     fireEvent.click(await screen.findByRole('option', { name: 'On demand' }));
-    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, flowType: 'ON_DEMAND', publicationStatus: 'all', predictionScope: 'all' })));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, flowType: 'ON_DEMAND', publicationStatus: 'published', predictionScope: 'top_picks' })));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Generation' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Pre-made' }));
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ flowType: 'PREMADE' })));
@@ -144,7 +144,7 @@ describe('PredictionEvaluationsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Download JSON' }).hasAttribute('disabled')).toBe(false));
     fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
-    expect(exportPredictionEvaluations).toHaveBeenCalledWith(expect.objectContaining({ flowType: 'all', sourceTypes: ['published_prediction'], predictionScope: 'all' }));
+    expect(exportPredictionEvaluations).toHaveBeenCalledWith(expect.objectContaining({ flowType: 'all', sourceTypes: ['published_prediction'], predictionScope: 'top_picks', publicationStatus: 'published' }));
     expect((exportPredictionEvaluations as jest.Mock).mock.calls[0][0]).not.toHaveProperty('page');
     expect(screen.getByRole('button', { name: 'Downloading JSON…' }).hasAttribute('disabled')).toBe(true);
     await act(async () => rejectExport(new Error('Export limit exceeded')));
@@ -170,43 +170,47 @@ describe('PredictionEvaluationsPage', () => {
     expect(revokeUrl).toHaveBeenCalledWith('blob:roi');
     click.mockRestore();
   });
-  it('requests public V9 explicitly on first open', async () => {
+  it('opens published Top Picks by default with no modified filters', async () => {
     render(<PredictionEvaluationsPage />);
-    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenCalledWith(expect.objectContaining({ sourceTypes: ['published_prediction'] })));
+    await screen.findByText('Alpha FC vs Beta FC');
+    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ sourceTypes: ['published_prediction'], predictionScope: 'top_picks', publicationStatus: 'published' }));
+    expect(screen.getByRole('combobox', { name: 'Predictions' }).textContent).toContain('Top Picks');
+    expect(screen.getByRole('combobox', { name: 'Publication' }).textContent).toContain('Published');
+    expect(screen.getByRole('button', { name: 'Reset filters' }).hasAttribute('disabled')).toBe(true);
   });
   it('filters all, Top Picks and other predictions and resets pagination', async () => {
     render(<PredictionEvaluationsPage />);
     await screen.findByText('Alpha FC vs Beta FC');
     expect(screen.queryByLabelText('Source')).toBeNull();
     expect(screen.queryByLabelText('Slot')).toBeNull();
-    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all', sourceTypes: ['published_prediction'] }));
+    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'top_picks', sourceTypes: ['published_prediction'] }));
     fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
-    for (const [label, scope] of [['Top Picks', 'top_picks'], ['Other predictions', 'other']]) {
+    for (const [label, scope] of [['All predictions', 'all'], ['Other predictions', 'other']]) {
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
       fireEvent.click(await screen.findByRole('option', { name: label }));
       await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, predictionScope: scope })));
       expect(within(screen.getByRole('table', { name: 'Generated V9 summary' })).getByRole('row', { name: new RegExp('^' + label) })).toBeTruthy();
     }
     fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
-    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all' })));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'top_picks' })));
   });
   it('combines publication and assessment filters, resets pagination and restores both on reset', async () => {
     render(<PredictionEvaluationsPage />);
     await screen.findByText('Alpha FC vs Beta FC');
-    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ publicationStatus: 'all' }));
+    expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ publicationStatus: 'published' }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
     fireEvent.click(await screen.findByRole('option', { name: 'Top Picks' }));
     await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'top_picks' })));
-    for (const [label, status] of [['Published', 'published'], ['Unpublished', 'unpublished']]) {
+    for (const [label, status] of [['All', 'all'], ['Unpublished', 'unpublished']]) {
       fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
       await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 })));
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Publication' }));
       fireEvent.click(await screen.findByRole('option', { name: label }));
       await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, predictionScope: 'top_picks', publicationStatus: status })));
-      expect(within(screen.getByRole('table', { name: 'Generated V9 summary' })).getByRole('row', { name: new RegExp('^Top Picks · ' + label) })).toBeTruthy();
+      expect(within(screen.getByRole('table', { name: 'Generated V9 summary' })).getByRole('row', { name: new RegExp('^Top Picks' + (status === 'all' ? '' : ' · ' + label)) })).toBeTruthy();
     }
     fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
-    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'all', publicationStatus: 'all' })));
+    await waitFor(() => expect(getPredictionEvaluationGroups).toHaveBeenLastCalledWith(expect.objectContaining({ predictionScope: 'top_picks', publicationStatus: 'published' })));
   });
   it('hides previous totals while a changed scope loads and when that request fails', async () => {
     render(<PredictionEvaluationsPage />);
@@ -214,7 +218,7 @@ describe('PredictionEvaluationsPage', () => {
     let rejectRequest: (reason: Error) => void = () => {};
     (getPredictionEvaluationGroups as jest.Mock).mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectRequest = reject; }));
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Predictions' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'Top Picks' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'All predictions' }));
     await waitFor(() => expect(screen.queryByRole('table', { name: 'Generated V9 summary' })).toBeNull());
     await act(async () => rejectRequest(new Error('Scope request failed')));
     expect(await screen.findByText('Scope request failed')).toBeTruthy();

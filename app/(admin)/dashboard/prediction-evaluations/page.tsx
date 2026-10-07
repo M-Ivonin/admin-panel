@@ -69,6 +69,8 @@ const STATUS_OPTIONS: Array<{
   { value: 'pending', label: 'Pending' },
 ];
 
+const DEFAULT_PREDICTION_SCOPE: PredictionEvaluationScope = 'top_picks';
+const DEFAULT_PUBLICATION_STATUS: PredictionEvaluationPublicationStatus = 'published';
 const DEFAULT_SORT_FIELD: PredictionEvaluationGroupSortField =
   'prediction_created_at';
 const DEFAULT_SORT_ORDER: PredictionEvaluationGroupSortOrder = 'desc';
@@ -629,8 +631,8 @@ export default function PredictionEvaluationsPage() {
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [search, setSearch] = useState('');
   const [statuses, setStatuses] = useState<PredictionEvaluationStatus[]>([]);
-  const [predictionScope, setPredictionScope] = useState<PredictionEvaluationScope>('all');
-  const [publicationStatus, setPublicationStatus] = useState<PredictionEvaluationPublicationStatus>('all');
+  const [predictionScope, setPredictionScope] = useState<PredictionEvaluationScope>(DEFAULT_PREDICTION_SCOPE);
+  const [publicationStatus, setPublicationStatus] = useState<PredictionEvaluationPublicationStatus>(DEFAULT_PUBLICATION_STATUS);
   const [flowType, setFlowType] = useState<PredictionEvaluationFlowType>('all');
   const [marketKeys, setMarketKeys] = useState<string[]>([]);
   const [marketOptions, setMarketOptions] = useState<string[]>([]);
@@ -775,8 +777,8 @@ export default function PredictionEvaluationsPage() {
   const hasActiveFilters =
     search.trim().length > 0 ||
     statuses.length > 0 ||
-    predictionScope !== 'all' ||
-    publicationStatus !== 'all' ||
+    predictionScope !== DEFAULT_PREDICTION_SCOPE ||
+    publicationStatus !== DEFAULT_PUBLICATION_STATUS ||
     flowType !== 'all' ||
     marketKeys.length > 0 ||
     Boolean(oddsRange.oddsFrom.trim()) ||
@@ -853,10 +855,6 @@ export default function PredictionEvaluationsPage() {
             py: 4,
           }}
         >
-          {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={summaryScopeLabel} />}
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.
-          </Typography>
           <Paper sx={{ p: 2.5, mb: 3 }}>
             <Box
               sx={{
@@ -941,8 +939,8 @@ export default function PredictionEvaluationsPage() {
                 display: 'grid',
                 gridTemplateColumns: {
                   xs: '1fr',
-                  md: 'repeat(3, minmax(0, 1fr))',
-                  xl: 'repeat(6, minmax(0, 1fr))',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(5, minmax(0, 1fr))',
                 },
                 gap: 2,
               }}
@@ -1038,6 +1036,26 @@ export default function PredictionEvaluationsPage() {
                 )}
               />
 
+            </Box>
+
+            <Box
+              sx={{
+                mt: 2,
+                pt: 2,
+                borderTop: 1,
+                borderColor: 'divider',
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                  lg: 'minmax(100px, 1fr) minmax(100px, 1fr) minmax(180px, 1.4fr) minmax(140px, 1fr) auto auto auto',
+                },
+                gap: 1.5,
+                alignItems: 'center',
+                '& .MuiButton-root': { whiteSpace: 'nowrap' },
+              }}
+            >
               <TextField
                 size="small"
                 label="Odds from"
@@ -1067,121 +1085,103 @@ export default function PredictionEvaluationsPage() {
                 }}
                 inputProps={{ min: 1, step: '0.01' }}
               />
-            </Box>
-
-            <Box
-              sx={{
-                mt: 2,
-                pt: 2,
-                borderTop: 1,
-                borderColor: 'divider',
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 2,
-                flexWrap: 'wrap',
-                alignItems: 'center',
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 1.5,
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                }}
-              >
-                <FormControl size="small" sx={{ minWidth: 220 }}>
-                  <InputLabel id="prediction-evaluation-sort-field-label">
-                    Sort by
-                  </InputLabel>
-                  <Select<PredictionEvaluationGroupSortField>
-                    labelId="prediction-evaluation-sort-field-label"
-                    value={sortField}
-                    label="Sort by"
-                    onChange={(event) => {
-                      setSortField(
-                        event.target.value as PredictionEvaluationGroupSortField,
-                      );
-                      setExpandedFixtureId(null);
-                      setPage(0);
-                    }}
-                  >
-                    {SORT_FIELD_OPTIONS.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel id="prediction-evaluation-sort-order-label">
-                    Order
-                  </InputLabel>
-                  <Select<PredictionEvaluationGroupSortOrder>
-                    labelId="prediction-evaluation-sort-order-label"
-                    value={sortOrder}
-                    label="Order"
-                    onChange={(event) => {
-                      setSortOrder(
-                        event.target.value as PredictionEvaluationGroupSortOrder,
-                      );
-                      setExpandedFixtureId(null);
-                      setPage(0);
-                    }}
-                  >
-                    {sortOrderOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button variant="contained" disabled={isExporting || isLoading || Boolean(error)} onClick={() => void handleDownload()}>
-                  {isExporting ? 'Downloading JSON…' : 'Download JSON'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    setSearch('');
-                    setStatuses([]);
-                    setPredictionScope('all');
-                    setPublicationStatus('all');
-                    setFlowType('all');
-                    setMarketKeys([]);
-                    setOddsRange({
-                      oddsFrom: '',
-                      oddsTo: '',
-                    });
-                    const defaultRange =
-                      getPeriodPresetIsoRange(DEFAULT_PERIOD_PRESET);
-                    setDateRange({
-                      dateFrom: defaultRange.dateFrom ?? '',
-                      dateTo: defaultRange.dateTo ?? '',
-                    });
-                    setPeriodPreset(DEFAULT_PERIOD_PRESET);
-                    setSortField(DEFAULT_SORT_FIELD);
-                    setSortOrder(DEFAULT_SORT_ORDER);
+              <FormControl size="small">
+                <InputLabel id="prediction-evaluation-sort-field-label">
+                  Sort by
+                </InputLabel>
+                <Select<PredictionEvaluationGroupSortField>
+                  labelId="prediction-evaluation-sort-field-label"
+                  value={sortField}
+                  label="Sort by"
+                  onChange={(event) => {
+                    setSortField(
+                      event.target.value as PredictionEvaluationGroupSortField,
+                    );
                     setExpandedFixtureId(null);
                     setPage(0);
                   }}
-                  disabled={!hasActiveFilters}
                 >
-                  Reset filters
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<Refresh />}
-                  onClick={() => setRefreshNonce((value) => value + 1)}
+                  {SORT_FIELD_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small">
+                <InputLabel id="prediction-evaluation-sort-order-label">
+                  Order
+                </InputLabel>
+                <Select<PredictionEvaluationGroupSortOrder>
+                  labelId="prediction-evaluation-sort-order-label"
+                  value={sortOrder}
+                  label="Order"
+                  onChange={(event) => {
+                    setSortOrder(
+                      event.target.value as PredictionEvaluationGroupSortOrder,
+                    );
+                    setExpandedFixtureId(null);
+                    setPage(0);
+                  }}
                 >
-                  Refresh
-                </Button>
-              </Box>
+                  {sortOrderOptions.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Button variant="contained" disabled={isExporting || isLoading || Boolean(error)} onClick={() => void handleDownload()}>
+                {isExporting ? 'Downloading JSON…' : 'Download JSON'}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setSearch('');
+                  setStatuses([]);
+                  setPredictionScope(DEFAULT_PREDICTION_SCOPE);
+                  setPublicationStatus(DEFAULT_PUBLICATION_STATUS);
+                  setFlowType('all');
+                  setMarketKeys([]);
+                  setOddsRange({
+                    oddsFrom: '',
+                    oddsTo: '',
+                  });
+                  const defaultRange =
+                    getPeriodPresetIsoRange(DEFAULT_PERIOD_PRESET);
+                  setDateRange({
+                    dateFrom: defaultRange.dateFrom ?? '',
+                    dateTo: defaultRange.dateTo ?? '',
+                  });
+                  setPeriodPreset(DEFAULT_PERIOD_PRESET);
+                  setSortField(DEFAULT_SORT_FIELD);
+                  setSortOrder(DEFAULT_SORT_ORDER);
+                  setExpandedFixtureId(null);
+                  setPage(0);
+                }}
+                disabled={!hasActiveFilters}
+              >
+                Reset filters
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Refresh />}
+                onClick={() => setRefreshNonce((value) => value + 1)}
+              >
+                Refresh
+              </Button>
             </Box>
           </Paper>
+
+          {!isLoading && !error && summary.v9 && <V9Summary summary={summary.v9} scopeLabel={summaryScopeLabel} />}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Top Picks: value is true or conservative EV is greater than zero. Publication is a separate filter; Unpublished includes internal and shadow predictions.
+          </Typography>
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+            Predictions by match
+          </Typography>
 
           {exportError && <Alert severity="error" sx={{ mb: 3 }}>{exportError}</Alert>}
           {error && (
