@@ -119,7 +119,10 @@ describe('PredictionEvaluationsPage', () => {
     for (const [target, hint] of hints) {
       expect(screen.queryByText(hint)).toBeNull();
       fireEvent.mouseOver(target);
-      expect((await screen.findByRole('tooltip')).textContent).toBe(hint);
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip.textContent).toBe(hint);
+      expect(tooltip.getAttribute('data-popper-placement')).toBe('top');
+      expect(getComputedStyle(tooltip).pointerEvents).toBe('none');
       fireEvent.mouseOut(target);
       await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     }

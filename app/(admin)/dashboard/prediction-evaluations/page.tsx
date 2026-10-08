@@ -317,7 +317,7 @@ function MetricHeaderLabel({ label }: { label: string }) {
   const hint = label === 'Accuracy' ? ACCURACY_HINT : label === 'ROI' ? ROI_HINT : null;
   if (!hint) return <>{label}</>;
   return (
-    <Tooltip title={hint} describeChild>
+    <Tooltip title={hint} describeChild placement="top" disableInteractive leaveDelay={0} slotProps={{ transition: { timeout: 0 } }}>
       <Box component="span" tabIndex={0} sx={{ cursor: 'help' }}>{label}</Box>
     </Tooltip>
   );
@@ -988,7 +988,7 @@ export default function PredictionEvaluationsPage() {
                 </Select>
               </FormControl>
 
-              <Tooltip title={PREDICTIONS_HINT} describeChild>
+              <Tooltip title={PREDICTIONS_HINT} describeChild placement="top" disableInteractive leaveDelay={0} slotProps={{ transition: { timeout: 0 } }}>
                 <FormControl size="small">
                   <InputLabel id="prediction-evaluation-scope-label">Predictions</InputLabel>
                   <Select
