@@ -57,3 +57,6 @@ next-env.d.ts
 .codex-orchestrator/v2/state/
 .codex-orchestrator/v2/proofs/
 # codex-orchestrator v2 runtime end
+
+# Local Codex Orchestrator files
+.codex-orchestrator/
