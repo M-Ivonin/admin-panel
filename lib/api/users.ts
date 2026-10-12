@@ -50,9 +50,22 @@ export interface User {
   latestAppProfile?: UserLatestAppProfile;
 }
 
+/** One installation, with the package version reported by that device. */
+export interface UserDevice {
+  id: string;
+  appProfile: UserLatestAppProfile;
+  platform: string;
+  deviceModel: string | null;
+  appVersion: string | null;
+  buildNumber: string | null;
+  environment: string | null;
+  lastSeenAt: string | null;
+}
+
 export interface PaginatedUser extends User {
   registered_at: string | null;
   commerceAccess: UserCommerceAccess;
+  devices: UserDevice[];
 }
 
 export enum RetentionStage {

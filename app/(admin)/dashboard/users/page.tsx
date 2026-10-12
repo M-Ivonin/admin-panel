@@ -31,6 +31,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Refresh, Search, Chat } from '@mui/icons-material';
+import { UserDeviceDetails } from '@/components/admin/UserDeviceDetails';
 import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
@@ -507,6 +508,7 @@ export default function UsersPage() {
                   size="small"
                   sx={{
                     tableLayout: 'fixed',
+                    minWidth: 1400,
                     '& .MuiTableCell-root': {
                       px: 1,
                       py: 1.5,
@@ -531,9 +533,9 @@ export default function UsersPage() {
                 >
                   <colgroup>
                     {[
-                      '16%',
-                      '11%',
-                      '8%',
+                      '14%',
+                      '9%',
+                      '12%',
                       '10%',
                       '6%',
                       '7%',
@@ -733,6 +735,10 @@ export default function UsersPage() {
                               />
                             );
                           })()}
+                          <UserDeviceDetails
+                            devices={user.devices ?? []}
+                            userLabel={user.email ?? user.name_app ?? user.id}
+                          />
                         </TableCell>
                         <TableCell>
                           {(() => {

@@ -94,6 +94,7 @@ function createCampaignUser(
     levelName: 'Rookie',
     subscription: null,
     commerceAccess: { authorization: 'FREE', productKey: null },
+    devices: [],
     partnerId: null,
   };
 }
@@ -1495,6 +1496,7 @@ describe('CampaignEditorPage', () => {
           levelName: 'Rookie',
           subscription: null,
           commerceAccess: { authorization: 'FREE', productKey: null },
+          devices: [],
           partnerId: null,
         },
       ],
@@ -1702,6 +1704,7 @@ describe('CampaignEditorPage', () => {
           levelName: 'Rookie',
           subscription: null,
           commerceAccess: { authorization: 'FREE', productKey: null },
+          devices: [],
           partnerId: null,
         },
       ],

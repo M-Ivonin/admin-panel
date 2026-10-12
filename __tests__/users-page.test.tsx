@@ -60,6 +60,7 @@ function createUser(overrides: Partial<PaginatedUser>): PaginatedUser {
     },
     partnerId: null,
     latestAppProfile: null,
+    devices: [],
     ...overrides,
   };
 }
@@ -78,6 +79,76 @@ describe('UsersPage', () => {
         },
       ],
     } as Awaited<ReturnType<typeof getCampaignEditorCatalog>>);
+  });
+
+  it('shows the latest installation and each device with its own version and last seen time', async () => {
+    mockedGetUsers.mockResolvedValue({
+      users: [
+        createUser({
+          id: 'two_devices',
+          name_app: 'Two devices',
+          latestAppProfile: 'SirBro',
+          devices: [
+            {
+              id: 'newer',
+              appProfile: 'SirBro',
+              platform: 'android',
+              deviceModel: 'Mi Note 10 Lite',
+              appVersion: '1.1.318',
+              buildNumber: '318',
+              environment: 'PRODUCTION',
+              lastSeenAt: '2026-10-11T09:31:14.646Z',
+            },
+            {
+              id: 'older',
+              appProfile: 'SirBro',
+              platform: 'ios',
+              deviceModel: 'iPhone',
+              appVersion: '1.1.400',
+              buildNumber: '402',
+              environment: 'PRODUCTION',
+              lastSeenAt: '2026-10-09T08:00:00Z',
+            },
+          ],
+        }),
+        createUser({ id: 'no_devices', name_app: 'No devices' }),
+      ],
+      total: 2,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+      retentionCounts: {
+        [RetentionStage.NEW]: 0,
+        [RetentionStage.CURRENT]: 2,
+        [RetentionStage.AT_RISK_WAU]: 0,
+        [RetentionStage.AT_RISK_MAU]: 0,
+        [RetentionStage.DEAD]: 0,
+        [RetentionStage.REACTIVATED]: 0,
+        [RetentionStage.RESURRECTED]: 0,
+        [RetentionStage.PRE_REG_ONBOARDING_INCOMPLETE]: 0,
+      },
+    });
+    render(<UsersPage />);
+    const row = (await screen.findByText('Two devices')).closest('tr')!;
+    expect(within(row).getByText('1.1.318 (318)')).toBeVisible();
+    expect(within(row).getByText('Android')).toBeVisible();
+    expect(within(row).queryByText('1.1.400 (402)')).not.toBeInTheDocument();
+    expect(
+      within(screen.getByText('No devices').closest('tr')!).getByText(
+        'No device data'
+      )
+    ).toBeVisible();
+    fireEvent.click(within(row).getByRole('button', { name: 'Devices (2)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Mi Note 10 Lite')).toBeVisible();
+    expect(within(dialog).getByText('1.1.318')).toBeVisible();
+    expect(within(dialog).getByText('1.1.400')).toBeVisible();
+    expect(within(dialog).getByText('Last seen (UTC)')).toBeVisible();
+    expect(within(dialog).getByText('Oct 11, 2026, 09:31 AM')).toBeVisible();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
   });
 
   it('renders latest app profile between Status and Plan without adding an App filter', async () => {
