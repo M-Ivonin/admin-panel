@@ -47,6 +47,7 @@ const command = (id: string, action: string, body?: unknown) =>
   request<EmailPublicationMutationResult>(`${ROOT}/${encodeURIComponent(id)}/${action}`, 'POST', body);
 
 export const emailMarketingRepository: EmailMarketingRepository = {
+  getSubscriptionSummary: () => request(`${ROOT}/subscription-summary`),
   async list(state?: EmailPublicationState) {
     const query = state ? `?state=${encodeURIComponent(state)}` : '';
     return (await request<{ items: EmailPublication[] }>(`${ROOT}${query}`)).items;

@@ -208,6 +208,62 @@ const analytics: EmailPublicationAnalytics = {
   },
 };
 
+test('shows confirmed subscriptions by country in place of the technical notice', async () => {
+  const repo = repository();
+  Object.assign(repo, {
+    getSubscriptionSummary: jest.fn().mockResolvedValue({
+      totals: {
+        predictions: { confirmed: 7, pending: 1 },
+        productUpdates: { confirmed: 12, pending: 3 },
+        partnerMarketing: { confirmed: 5, pending: 2 },
+      },
+      countries: [
+        {
+          countryCode: 'UA',
+          predictions: { confirmed: 7, pending: 1 },
+          productUpdates: { confirmed: 12, pending: 3 },
+          partnerMarketing: { confirmed: 5, pending: 2 },
+        },
+      ],
+    }),
+  });
+  render(<EmailMarketingDashboard repository={repo} />);
+  const table = await screen.findByRole('table', {
+    name: 'Email subscriptions by country',
+  });
+  expect(within(table).getByText('Ukraine')).toBeInTheDocument();
+  expect(within(table).getByText('SirBro predictions')).toBeInTheDocument();
+  expect(within(table).getByText('Product updates')).toBeInTheDocument();
+  expect(within(table).getByText('Partner offers')).toBeInTheDocument();
+  expect(within(table).getAllByText('12')).toHaveLength(2);
+  expect(within(table).getAllByText('7')).toHaveLength(2);
+  expect(
+    screen.queryByText(/SirBro is fixed by the backend/)
+  ).not.toBeInTheDocument();
+});
+
+test('keeps publications visible when subscriptions fail and lets the operator retry', async () => {
+  const repo = repository();
+  repo.getSubscriptionSummary.mockRejectedValueOnce(new Error('Unavailable'));
+  render(<EmailMarketingDashboard repository={repo} />);
+  expect(
+    await screen.findByText(
+      'Could not load email subscriptions. Please try again.'
+    )
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByRole('table', { name: 'Email publications' })
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /^Refresh$/ }));
+  expect(
+    await screen.findByRole('table', { name: 'Email subscriptions by country' })
+  ).toBeInTheDocument();
+  expect(screen.getByText('No subscriptions yet.')).toBeInTheDocument();
+  expect(
+    screen.queryByText('Could not load email subscriptions. Please try again.')
+  ).not.toBeInTheDocument();
+});
+
 describe('Email Marketing schedule conversion', () => {
   it('rejects a local time that does not exist during a DST gap', () => {
     expect(() =>
@@ -220,6 +276,14 @@ describe('Email Marketing schedule conversion', () => {
 
 function repository(): jest.Mocked<EmailMarketingRepository> {
   return {
+    getSubscriptionSummary: jest.fn().mockResolvedValue({
+      totals: {
+        predictions: { confirmed: 0, pending: 0 },
+        productUpdates: { confirmed: 0, pending: 0 },
+        partnerMarketing: { confirmed: 0, pending: 0 },
+      },
+      countries: [],
+    }),
     list: jest.fn().mockResolvedValue([basePublication]),
     get: jest.fn().mockResolvedValue(basePublication),
     getAnalytics: jest.fn().mockResolvedValue(analytics),

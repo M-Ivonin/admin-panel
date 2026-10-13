@@ -11,6 +11,23 @@ backend projection. Operators select a SendGrid Dynamic Template by name and
 then one of its versions. The backend loads that catalog without exposing the
 provider API key; only stable IDs are frozen in each immutable definition.
 
+## Subscription summary
+
+Above the publication list, a compact table shows confirmed users and users
+awaiting confirmation for SirBro predictions (`sirbro_predictions`), Product updates
+(`sirbro_product_updates`) and Partner offers (`betting_partner_offers`), with
+totals and a country breakdown. Prediction + partner offer is a publication
+type requiring both prediction and partner consents; it has no separate consent.
+Refresh reloads this aggregate independently of publication actions. Loading,
+empty and failed requests are explicit; errors never display invented zeroes.
+
+The admin-only `GET /campaigns/admin/email-publications/subscription-summary`
+counts distinct users per topic and state from current email consent records.
+Withdrawn/expired consents and obsolete email addresses are excluded. Pending
+replacement addresses count only for the selected pending topics. Country uses
+the consent country, then trusted edge IP country; missing country is shown as
+Unknown country. These are subscription counts, not delivery eligibility counts.
+
 ## Ownership and boundaries
 
 - The admin page owns draft input, localized preview selection, explicit

@@ -34,6 +34,7 @@ import {
 } from '@mui/material';
 import { Add, Email, Refresh } from '@mui/icons-material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { EmailSubscriptionSummaryPanel } from '@/components/email-marketing/EmailSubscriptionSummaryPanel';
 import { EmailPublicationAnalyticsPanel } from '@/components/email-marketing/EmailPublicationAnalyticsPanel';
 import { downloadEmailAnalyticsJson } from '@/components/email-marketing/analytics-export';
 import { RetentionStage } from '@/lib/api/users';
@@ -475,11 +476,7 @@ export function EmailMarketingDashboard({
       />
       <Box sx={{ maxWidth: 1440, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}>
         <Stack spacing={3}>
-          <Alert severity="info">
-            SirBro is fixed by the backend. Email eligibility, legal
-            projections, lifecycle state, and counters are never inferred in
-            this page.
-          </Alert>
+          <EmailSubscriptionSummaryPanel repository={repository} />
           {error ? (
             <Alert severity="error" onClose={() => setError(null)}>
               {error}

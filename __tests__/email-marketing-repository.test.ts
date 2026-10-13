@@ -30,6 +30,27 @@ const input: EmailPublicationInput = {
 const ok = (payload: unknown) => ({ ok: true, json: async () => payload }) as Response;
 
 describe('EmailMarketingRepository HTTP contract', () => {
+  it('loads subscription counts from the authenticated aggregate endpoint', async () => {
+    const summary = {
+      totals: {
+        predictions: { confirmed: 7, pending: 1 },
+        productUpdates: { confirmed: 4, pending: 1 },
+        partnerMarketing: { confirmed: 2, pending: 0 },
+      },
+      countries: [],
+    };
+    jest.mocked(adminAuthFetch).mockResolvedValue(ok(summary));
+    expect(await emailMarketingRepository.getSubscriptionSummary()).toEqual(
+      summary
+    );
+    expect(adminAuthFetch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/campaigns/admin/email-publications/subscription-summary',
+        method: 'GET',
+      })
+    );
+  });
+
   beforeEach(() => jest.mocked(adminAuthFetch).mockReset());
 
   it('uses the dedicated contour and reuses the supplied stable create key', async () => {

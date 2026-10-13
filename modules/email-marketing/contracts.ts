@@ -359,7 +359,23 @@ export interface SendGridTemplateReference {
   }>;
 }
 
+export type EmailSubscriptionCounts = { confirmed: number; pending: number };
+export type EmailSubscriptionSummary = {
+  totals: {
+    predictions: EmailSubscriptionCounts;
+    productUpdates: EmailSubscriptionCounts;
+    partnerMarketing: EmailSubscriptionCounts;
+  };
+  countries: Array<{
+    countryCode: string | null;
+    predictions: EmailSubscriptionCounts;
+    productUpdates: EmailSubscriptionCounts;
+    partnerMarketing: EmailSubscriptionCounts;
+  }>;
+};
+
 export interface EmailMarketingRepository {
+  getSubscriptionSummary(): Promise<EmailSubscriptionSummary>;
   list(state?: EmailPublicationState): Promise<EmailPublication[]>;
   get(id: string): Promise<EmailPublication>;
   getAnalytics(id: string): Promise<EmailPublicationAnalytics>;
