@@ -88,7 +88,9 @@ it('does not fetch monitor records when the current user has no access', async (
 });
 it('shows fresh status and loads bounded history when the period changes', async () => {
   render(<SystemMonitorDashboard />);
-  expect(await screen.findByText('Fresh')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('button', { name: /Application API: Pass, Fresh/ })
+  ).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '7 days' }));
   await waitFor(() =>
     expect(api.history).toHaveBeenLastCalledWith(
@@ -121,8 +123,43 @@ it('never leaves an old success green after its freshness deadline', async () =>
     ],
   });
   render(<SystemMonitorDashboard />);
-  expect(await screen.findByText('Stale')).toBeInTheDocument();
-  expect(screen.getByText('Unknown')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('button', {
+      name: /Application API: Unknown, Stale/,
+    })
+  ).toBeInTheDocument();
+  expect(screen.getByText('0 of 1 checks passing')).toBeInTheDocument();
+});
+it('selects a map node and loads its exact result and history', async () => {
+  const catalog = {
+    ...overview.checks[0],
+    checkId: 'backend.catalog',
+    lastRun: {
+      ...overview.checks[0].lastRun!,
+      runId: 'catalog-run',
+      checkId: 'backend.catalog',
+    },
+  };
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [...overview.checks, catalog],
+  });
+  api.run.mockResolvedValue(catalog.lastRun);
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: /Subscription catalog: Pass, Fresh/,
+    })
+  );
+  await waitFor(() => expect(api.run).toHaveBeenCalledWith('catalog-run'));
+  expect(
+    await screen.findByText('Check details · Subscription catalog')
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(api.history).toHaveBeenLastCalledWith(
+      expect.objectContaining({ checkId: 'backend.catalog', offset: 0 })
+    )
+  );
 });
 it('shows an expired incident link honestly', async () => {
   Object.assign(window.location, { search: '?incident=expired' });
@@ -132,12 +169,14 @@ it('shows an expired incident link honestly', async () => {
 it('keeps a Loki outage separate from monitor results', async () => {
   api.logs.mockRejectedValue(new MonitorApiError(503));
   render(<SystemMonitorDashboard />);
-  await screen.findByText('Fresh');
+  await screen.findByRole('button', { name: /Application API: Pass, Fresh/ });
   fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
   expect(
     await screen.findByText(/Loki logs are unavailable/)
   ).toBeInTheDocument();
-  expect(screen.getByText('Fresh')).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: /Application API: Pass, Fresh/ })
+  ).toBeInTheDocument();
 });
 
 it('shows a source outage without presenting last-known health as current', async () => {
@@ -300,7 +339,7 @@ it('exposes truncation and suppresses unsafe Grafana links', async () => {
     grafanaUrl: 'javascript:alert(1)',
   });
   render(<SystemMonitorDashboard />);
-  await screen.findByText('Fresh');
+  await screen.findByRole('button', { name: /Application API: Pass, Fresh/ });
   fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
   expect(
     await screen.findByText(/Log results are truncated/)
@@ -334,9 +373,7 @@ it('does not send an inverted log window for an old retained open incident', asy
   render(<SystemMonitorDashboard />);
   await screen.findByText('Old retained open incident');
   fireEvent.click(screen.getByRole('button', { name: 'View related logs' }));
-  await waitFor(() =>
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  );
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
   expect(
     await screen.findByText(/Selected log window is outside retention/)

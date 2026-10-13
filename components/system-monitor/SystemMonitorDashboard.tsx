@@ -5,8 +5,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Dialog,
@@ -31,6 +29,7 @@ import {
 } from '@mui/material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { MonitorCharts } from './MonitorCharts';
+import { MonitorCheckMap } from './MonitorCheckMap';
 import {
   monitorApi,
   MonitorApiError,
@@ -438,90 +437,23 @@ export function SystemMonitorDashboard() {
                     Current target health is unknown.
                   </Alert>
                 )}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 2,
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, 1fr)',
-                      lg: 'repeat(3, 1fr)',
-                    },
-                  }}
-                >
-                  {overview.checks.map((check) => {
-                    const stale =
-                      !check.lastRun?.endedAt ||
-                      now - Date.parse(check.lastRun.endedAt) >
-                        check.intervalMs * 2 + check.deadlineMs;
-                    const outcome = !check.enabled
-                      ? 'unavailable'
-                      : offline ||
-                          sourceStale ||
-                          (stale &&
-                            !['unavailable', 'interrupted'].includes(
-                              check.status
-                            ))
-                        ? 'unknown'
-                        : check.status;
-                    return (
-                      <Card key={check.checkId} variant="outlined">
-                        <CardContent>
-                          <Stack spacing={1}>
-                            <Typography
-                              variant="subtitle1"
-                              fontWeight={600}
-                              sx={{ overflowWrap: 'anywhere' }}
-                            >
-                              {checkName(check.checkId)}
-                            </Typography>
-                            <Stack direction="row" gap={1} flexWrap="wrap">
-                              <Status outcome={outcome} />
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={
-                                  !check.enabled
-                                    ? 'Disabled'
-                                    : stale
-                                      ? 'Stale'
-                                      : 'Fresh'
-                                }
-                              />
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label={check.required ? 'Required' : 'Optional'}
-                              />
-                            </Stack>
-                            <Typography variant="body2" color="text.secondary">
-                              Last check: {time(check.lastRun?.endedAt ?? null)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              Every {check.intervalMs / 60000} min · Deadline{' '}
-                              {check.deadlineMs / 1000}s
-                            </Typography>
-                            {check.lastRun && (
-                              <Button
-                                size="small"
-                                onClick={() => {
-                                  setCheckId(check.checkId);
-                                  setPage(0);
-                                  void selectRun(check.lastRun!.runId);
-                                }}
-                              >
-                                Check details
-                              </Button>
-                            )}
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </Box>
+                {overview.checks.length > 0 && (
+                  <MonitorCheckMap
+                    checks={overview.checks}
+                    now={now}
+                    sourceUnavailable={offline || Boolean(sourceStale)}
+                    onSelect={(check) => {
+                      setCheckId(check.checkId);
+                      setPage(0);
+                      if (check.lastRun) void selectRun(check.lastRun.runId);
+                      else {
+                        ++runRequest.current;
+                        setRun(null);
+                        setRunState(null);
+                      }
+                    }}
+                  />
+                )}
                 {!overview.checks.length && (
                   <Alert severity="info">No checks are configured.</Alert>
                 )}
@@ -755,46 +687,39 @@ export function SystemMonitorDashboard() {
                 scroll="paper"
                 sx={{ '& .MuiDialog-container': { alignItems: 'flex-start' } }}
               >
-                <DialogTitle id="monitor-incident-dialog-title">
-                  Incident details
-                </DialogTitle>
+                <DialogTitle id="monitor-incident-dialog-title">Incident details</DialogTitle>
                 <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
-                  <Stack spacing={1}>
+                <Stack spacing={1}>
+                  <Typography>
+                    {checkName(selectedIncident.checkId)} ·{' '}
+                    {selectedIncident.kind === 'coverage'
+                      ? 'Probe coverage lost'
+                      : 'Target failure'}
+                  </Typography>
+                  <Typography variant="body2">
+                    Incident ID: {selectedIncident.incidentId}
+                  </Typography>
+                  <Typography variant="body2">
+                    First failure {time(selectedIncident.openedAt)} · Confirmed{' '}
+                    {time(selectedIncident.confirmedAt)} ·{' '}
+                    {selectedIncident.resolvedAt
+                      ? `Resolved ${time(selectedIncident.resolvedAt)}`
+                      : 'Still open'}
+                  </Typography>
+                  <Typography>{selectedIncident.reason}</Typography>
+                  {selectedIncident.blockedChecks.length > 0 && (
                     <Typography>
-                      {checkName(selectedIncident.checkId)} ·{' '}
-                      {selectedIncident.kind === 'coverage'
-                        ? 'Probe coverage lost'
-                        : 'Target failure'}
+                      Blocked checks:{' '}
+                      {selectedIncident.blockedChecks.map(checkName).join(', ')}
                     </Typography>
-                    <Typography variant="body2">
-                      Incident ID: {selectedIncident.incidentId}
-                    </Typography>
-                    <Typography variant="body2">
-                      First failure {time(selectedIncident.openedAt)} ·
-                      Confirmed {time(selectedIncident.confirmedAt)} ·{' '}
-                      {selectedIncident.resolvedAt
-                        ? `Resolved ${time(selectedIncident.resolvedAt)}`
-                        : 'Still open'}
-                    </Typography>
-                    <Typography>{selectedIncident.reason}</Typography>
-                    {selectedIncident.blockedChecks.length > 0 && (
-                      <Typography>
-                        Blocked checks:{' '}
-                        {selectedIncident.blockedChecks
-                          .map(checkName)
-                          .join(', ')}
-                      </Typography>
-                    )}
-                    <Typography variant="caption" color="text.secondary">
-                      Related logs use a 10-minute context window around this
-                      incident.
-                    </Typography>
-                  </Stack>
+                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    Related logs use a 10-minute context window around this incident.
+                  </Typography>
+                </Stack>
                 </DialogContent>
                 <DialogActions>
-                  <Button onClick={() => setIncidentDetailsOpen(false)}>
-                    View related logs
-                  </Button>
+                  <Button onClick={() => setIncidentDetailsOpen(false)}>View related logs</Button>
                   <Button
                     size="small"
                     onClick={() => setSelectedIncident(null)}
@@ -856,22 +781,11 @@ export function SystemMonitorDashboard() {
                   correlation. Up to 200 records, within seven days.
                 </Typography>
                 {selectedIncident && !incidentDetailsOpen && (
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems="flex-start"
-                  >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
                     <Typography variant="body2">
-                      Incident log context:{' '}
-                      {checkName(selectedIncident.checkId)} ·{' '}
-                      {time(selectedIncident.openedAt)}
+                      Incident log context: {checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
                     </Typography>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedIncident(null)}
-                    >
-                      Clear incident context
-                    </Button>
+                    <Button size="small" onClick={() => setSelectedIncident(null)}>Clear incident context</Button>
                   </Stack>
                 )}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
