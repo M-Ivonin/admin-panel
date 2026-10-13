@@ -15,7 +15,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import { ExpandMore, Refresh } from '@mui/icons-material';
 import type {
   EmailMarketingRepository,
   EmailSubscriptionSummary,
@@ -35,6 +35,7 @@ export function EmailSubscriptionSummaryPanel({
   repository: EmailMarketingRepository;
 }) {
   const [summary, setSummary] = useState<EmailSubscriptionSummary | null>(null);
+  const [countriesExpanded, setCountriesExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -94,23 +95,58 @@ export function EmailSubscriptionSummaryPanel({
           <Table
             size="small"
             aria-label="Email subscriptions by country"
-            sx={{ minWidth: 780 }}
+            sx={{
+              minWidth: 900,
+              tableLayout: 'fixed',
+              '& th, & td': { py: 1.25 },
+            }}
           >
+            <colgroup>
+              <col style={{ width: '22%' }} />
+              {subscriptionTopics.flatMap(({ key }) => [
+                <col key={`${key}-confirmed`} style={{ width: '13%' }} />,
+                <col key={`${key}-pending`} style={{ width: '13%' }} />,
+              ])}
+            </colgroup>
             <TableHead>
               <TableRow>
                 <TableCell rowSpan={2}>Country</TableCell>
                 {subscriptionTopics.map(({ key, label }) => (
-                  <TableCell key={key} colSpan={2} align="center">
+                  <TableCell
+                    key={key}
+                    colSpan={2}
+                    align="center"
+                    sx={{
+                      borderLeft: 2,
+                      borderLeftColor: 'divider',
+                      bgcolor: 'action.hover',
+                      fontWeight: 600,
+                      py: 1.5,
+                    }}
+                  >
                     {label}
                   </TableCell>
                 ))}
               </TableRow>
               <TableRow>
                 {subscriptionTopics.flatMap(({ key: topic }) => [
-                  <TableCell key={`${topic}-confirmed`} align="right">
+                  <TableCell
+                    key={`${topic}-confirmed`}
+                    align="center"
+                    sx={{
+                      borderLeft: 2,
+                      borderLeftColor: 'divider',
+                      color: 'text.secondary',
+                      fontSize: 12,
+                    }}
+                  >
                     Confirmed
                   </TableCell>,
-                  <TableCell key={`${topic}-pending`} align="right">
+                  <TableCell
+                    key={`${topic}-pending`}
+                    align="center"
+                    sx={{ color: 'text.secondary', fontSize: 12 }}
+                  >
                     Pending confirmation
                   </TableCell>,
                 ])}
@@ -119,28 +155,76 @@ export function EmailSubscriptionSummaryPanel({
             <TableBody>
               {[
                 { countryCode: 'total', ...summary.totals },
-                ...summary.countries,
+                ...(countriesExpanded ? summary.countries : []),
               ].map((row) => (
                 <TableRow
                   key={row.countryCode ?? 'unknown'}
                   sx={
                     row.countryCode === 'total'
-                      ? { '& th, & td': { fontWeight: 600 } }
+                      ? {
+                          bgcolor: 'action.hover',
+                          '& th, & td': { fontWeight: 600 },
+                        }
                       : undefined
                   }
                 >
                   <TableCell component="th" scope="row">
-                    {row.countryCode === 'total'
-                      ? 'All countries'
-                      : row.countryCode
-                        ? (countryNames.of(row.countryCode) ?? row.countryCode)
-                        : 'Unknown country'}
+                    {row.countryCode === 'total' ? (
+                      <Button
+                        size="small"
+                        color="inherit"
+                        disabled={summary.countries.length === 0}
+                        aria-expanded={countriesExpanded}
+                        aria-label={
+                          countriesExpanded
+                            ? 'Hide country breakdown'
+                            : 'Show country breakdown'
+                        }
+                        onClick={() =>
+                          setCountriesExpanded((expanded) => !expanded)
+                        }
+                        startIcon={
+                          <ExpandMore
+                            sx={{
+                              transform: countriesExpanded
+                                ? 'rotate(180deg)'
+                                : 'none',
+                              transition: 'transform 150ms',
+                            }}
+                          />
+                        }
+                        sx={{
+                          ml: -0.75,
+                          whiteSpace: 'nowrap',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                        }}
+                      >
+                        All countries
+                      </Button>
+                    ) : row.countryCode ? (
+                      (countryNames.of(row.countryCode) ?? row.countryCode)
+                    ) : (
+                      'Unknown country'
+                    )}
                   </TableCell>
                   {subscriptionTopics.flatMap(({ key }) => [
-                    <TableCell key={`${key}-confirmed`} align="right">
+                    <TableCell
+                      key={`${key}-confirmed`}
+                      align="center"
+                      sx={{
+                        borderLeft: 2,
+                        borderLeftColor: 'divider',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
                       {row[key].confirmed.toLocaleString('en')}
                     </TableCell>,
-                    <TableCell key={`${key}-pending`} align="right">
+                    <TableCell
+                      key={`${key}-pending`}
+                      align="center"
+                      sx={{ fontVariantNumeric: 'tabular-nums' }}
+                    >
                       {row[key].pending.toLocaleString('en')}
                     </TableCell>,
                   ])}

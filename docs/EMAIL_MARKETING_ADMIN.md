@@ -18,7 +18,10 @@ awaiting confirmation for SirBro predictions (`sirbro_predictions`), Product upd
 (`sirbro_product_updates`) and Partner offers (`betting_partner_offers`), with
 totals and a country breakdown. Prediction + partner offer is a publication
 type requiring both prediction and partner consents; it has no separate consent.
-Refresh reloads this aggregate independently of publication actions. Loading,
+Initially only All countries totals are visible. Its disclosure button expands
+or collapses country rows. All numeric columns are centered; borders and shaded
+headers separate the three consent groups. Refresh reloads this aggregate
+independently of publication actions. Loading,
 empty and failed requests are explicit; errors never display invented zeroes.
 
 The admin-only `GET /campaigns/admin/email-publications/subscription-summary`

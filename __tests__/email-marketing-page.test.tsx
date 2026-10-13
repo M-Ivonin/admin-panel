@@ -231,12 +231,21 @@ test('shows confirmed subscriptions by country in place of the technical notice'
   const table = await screen.findByRole('table', {
     name: 'Email subscriptions by country',
   });
+  expect(within(table).queryByText('Ukraine')).not.toBeInTheDocument();
+  const toggle = within(table).getByRole('button', { name: 'Show country breakdown' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(within(table).getAllByText('12')).toHaveLength(1);
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
   expect(within(table).getByText('Ukraine')).toBeInTheDocument();
   expect(within(table).getByText('SirBro predictions')).toBeInTheDocument();
   expect(within(table).getByText('Product updates')).toBeInTheDocument();
   expect(within(table).getByText('Partner offers')).toBeInTheDocument();
   expect(within(table).getAllByText('12')).toHaveLength(2);
   expect(within(table).getAllByText('7')).toHaveLength(2);
+  fireEvent.click(within(table).getByRole('button', { name: 'Hide country breakdown' }));
+  expect(within(table).queryByText('Ukraine')).not.toBeInTheDocument();
+  expect(within(table).getAllByText('7')).toHaveLength(1);
   expect(
     screen.queryByText(/SirBro is fixed by the backend/)
   ).not.toBeInTheDocument();
