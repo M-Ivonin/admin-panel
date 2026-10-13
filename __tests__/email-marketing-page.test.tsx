@@ -273,6 +273,47 @@ test('keeps publications visible when subscriptions fail and lets the operator r
   ).not.toBeInTheDocument();
 });
 
+test('estimates the selected publication topic and removes stale estimates after edits', async () => {
+  const repo = repository();
+  repo.list.mockResolvedValue([]);
+  repo.estimateAudience.mockResolvedValue({ reachableUsers: 2, warnings: ['Confirmed consent only'] });
+  render(<EmailMarketingDashboard repository={repo} />);
+  await screen.findByText('No email publications found');
+  fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+  await screen.findByLabelText(/^Publication name/);
+  const cases = [
+    ['SirBro prediction', 'sirbro_predictions'],
+    ['SirBro prediction + partner offer', 'sirbro_predictions_with_partner_offer'],
+    ['SirBro product update', 'sirbro_product_updates'],
+    ['Betting partner offer', 'betting_partner_offers'],
+  ] as const;
+  for (const [label, topic] of cases) {
+    selectOption('Publication type', label);
+    expect(screen.queryByText(/Backend estimate: 2 reachable users/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Estimate audience' }));
+    expect(await screen.findByText(/Backend estimate: 2 reachable users/)).toBeInTheDocument();
+    expect(repo.estimateAudience).toHaveBeenLastCalledWith(expect.objectContaining({ criteria: expect.any(Object) }), topic);
+  }
+  fireEvent.change(screen.getByLabelText(/^Exact user IDs/), { target: { value: 'user-1' } });
+  expect(screen.queryByText(/Backend estimate: 2 reachable users/)).not.toBeInTheDocument();
+});
+
+test('ignores an estimate that finishes after the selected topic changes', async () => {
+  const repo = repository();
+  repo.list.mockResolvedValue([]);
+  let finishEstimate!: (result: { reachableUsers: number; warnings: string[] }) => void;
+  repo.estimateAudience.mockImplementation(() => new Promise((resolve) => { finishEstimate = resolve; }));
+  render(<EmailMarketingDashboard repository={repo} />);
+  await screen.findByText('No email publications found');
+  fireEvent.click(screen.getByRole('button', { name: 'Create publication' }));
+  await screen.findByLabelText(/^Publication name/);
+  fireEvent.click(screen.getByRole('button', { name: 'Estimate audience' }));
+  selectOption('Publication type', 'SirBro prediction');
+  finishEstimate({ reachableUsers: 99, warnings: [] });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Estimate audience' })).toBeEnabled());
+  expect(screen.queryByText(/99 reachable users/)).not.toBeInTheDocument();
+});
+
 describe('Email Marketing schedule conversion', () => {
   it('rejects a local time that does not exist during a DST gap', () => {
     expect(() =>

@@ -155,6 +155,7 @@ export function EmailMarketingDashboard({
   const [timezone, setTimezone] = useState('Europe/Paris');
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  const estimateRequestVersion = useRef(0);
   const createKey = useRef(createEmailPublicationIdempotencyKey());
   const groupedItems = groupPublications(items);
 
@@ -175,6 +176,8 @@ export function EmailMarketingDashboard({
   }, [loadList]);
 
   async function openPublication(item: EmailPublication) {
+    estimateRequestVersion.current += 1;
+    setEstimate(null);
     setBusy(true);
     setError(null);
     setAnalytics(null);
@@ -223,6 +226,7 @@ export function EmailMarketingDashboard({
   }
 
   async function startCreate() {
+    estimateRequestVersion.current += 1;
     setSelected(null);
     setAnalytics(null);
     setAnalyticsError(null);
@@ -254,6 +258,7 @@ export function EmailMarketingDashboard({
 
   function closeEditor() {
     if (busy) return;
+    estimateRequestVersion.current += 1;
     setDraft(null);
     setSelected(null);
     setAnalytics(null);
@@ -311,7 +316,9 @@ export function EmailMarketingDashboard({
     setBusy(true);
     setError(null);
     try {
-      setEstimate(await repository.estimateAudience(draft.audience));
+      const requestVersion = ++estimateRequestVersion.current;
+      const result = await repository.estimateAudience(draft.audience, draft.topic);
+      if (requestVersion === estimateRequestVersion.current) setEstimate(result);
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
@@ -607,6 +614,10 @@ export function EmailMarketingDashboard({
               onEdit={() => setEditing(true)}
               draft={draft}
               setDraft={(next) => {
+                if (next.topic !== draft.topic || next.audience !== draft.audience) {
+                  estimateRequestVersion.current += 1;
+                  setEstimate(null);
+                }
                 setDraft(next);
                 setEditorDirty(true);
               }}

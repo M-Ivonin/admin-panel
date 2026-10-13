@@ -70,7 +70,7 @@ export const emailMarketingRepository: EmailMarketingRepository = {
     request(`${ROOT}/${encodeURIComponent(id)}/incidents/acknowledge`, 'POST', {
       note: note.trim(),
     }),
-  estimateAudience: (audience: CampaignAudienceDefinition) => request(`${ROOT}/estimate-audience`, 'POST', { audience }),
+  estimateAudience: (audience: CampaignAudienceDefinition, topic) => request(`${ROOT}/estimate-audience`, 'POST', { audience, topic }),
   async listPredictionReferences(): Promise<PredictionReference[]> {
     return (await request<{ items: PredictionReference[] }>(`${ROOT}/references/predictions`)).items;
   },

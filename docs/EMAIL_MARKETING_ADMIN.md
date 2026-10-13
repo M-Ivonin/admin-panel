@@ -74,6 +74,13 @@ Unknown country. These are subscription counts, not delivery eligibility counts.
 
 An operator creates or edits a publication, requests the backend audience
 estimate and canonical locale preview, and then requests backend approval.
+The estimate request includes the selected publication topic. It intersects the
+selected audience with confirmed consent on each user's current communication
+email: predictions, product updates or partner offers respectively. Prediction
++ partner offer requires both prediction and partner consent on that email.
+Pending, withdrawn, expired and obsolete-address consent does not contribute.
+Changing topic or audience clears the estimate; late replies for an edited
+selection are ignored. Send-time eligibility and suppressions may lower reach.
 Unsaved successor changes disable send and schedule controls. Once the backend
 returns an approved publication, the operator can send immediately or schedule
 it, and can later request pause, resume, or cancellation when the returned

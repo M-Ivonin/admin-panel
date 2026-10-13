@@ -403,7 +403,8 @@ export interface EmailMarketingRepository {
     note: string
   ): Promise<{ acknowledged: true }>;
   estimateAudience(
-    audience: CampaignAudienceDefinition
+    audience: CampaignAudienceDefinition,
+    topic: EmailPublicationTopic
   ): Promise<{ reachableUsers: number; warnings: string[] }>;
   listPredictionReferences(): Promise<PredictionReference[]>;
   listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]>;

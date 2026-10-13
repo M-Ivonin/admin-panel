@@ -51,6 +51,15 @@ describe('EmailMarketingRepository HTTP contract', () => {
     );
   });
 
+  it('includes the publication topic when requesting a consent-aware audience estimate', async () => {
+    jest.mocked(adminAuthFetch).mockResolvedValue(ok({ reachableUsers: 2, warnings: [] }));
+    await emailMarketingRepository.estimateAudience(input.audience, 'sirbro_predictions');
+    expect(adminAuthFetch).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/campaigns/admin/email-publications/estimate-audience',
+      body: JSON.stringify({ audience: input.audience, topic: 'sirbro_predictions' }),
+    }));
+  });
+
   beforeEach(() => jest.mocked(adminAuthFetch).mockReset());
 
   it('uses the dedicated contour and reuses the supplied stable create key', async () => {
@@ -131,7 +140,7 @@ describe('EmailMarketingRepository HTTP contract', () => {
     await emailMarketingRepository.preview('publication-1', 'es');
     await emailMarketingRepository.listPredictionReferences();
     await emailMarketingRepository.listSendGridTemplates();
-    await emailMarketingRepository.estimateAudience(input.audience);
+    await emailMarketingRepository.estimateAudience(input.audience, input.topic);
     expect(jest.mocked(adminAuthFetch).mock.calls.map(([request]) => request.path)).toEqual([
       '/campaigns/admin/email-publications?state=paused',
       '/campaigns/admin/email-publications/publication-1',
