@@ -33,8 +33,12 @@ letterboxing. Dates and chart tooltips use Europe/Kyiv;
 requests carry UTC timestamps.
 
 `?incident=<id>` performs an exact incident lookup within the viewer's seven-day
-window and opens that incident's details in the same top-aligned MUI dialog as
-the incident list action. Close, Escape and backdrop dismiss the details;
+window and opens that incident's details in the same centered MUI dialog as
+the incident list action. Its main view shows a plain-language explanation,
+Open/Resolved status, timing and duration, and friendly affected-check names.
+Technical IDs and the recorded reason are available in a collapsed Technical
+details section. Coverage problems describe an inability to verify service
+health rather than asserting an outage. Close, Escape and backdrop dismiss the details;
 View related logs closes the dialog while retaining the incident's bounded log
 context. Clear incident context returns logs to the selected history period. Missing/expired IDs show a dedicated
 message rather than selecting a nearby result. Check details use the run-ID
@@ -42,6 +46,7 @@ endpoint and handle removed results separately. Target outages and loss of probe
 coverage retain different labels.
 
 Loki logs are explicitly requested, independent of monitor history and overview.
+The service dropdown offers System Monitor and backend logs.
 The browser sends only the selected allowed service and bounded UTC times, never
 LogQL. Requests use a maximum of 200 records. Selecting a run/incident narrows the
 context to ten minutes around its end/confirmation time; otherwise the history

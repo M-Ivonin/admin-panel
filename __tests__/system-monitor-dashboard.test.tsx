@@ -198,9 +198,9 @@ it('looks up the exact linked incident and expands coverage details', async () =
             checkId: 'backend.health',
             kind: 'coverage',
             openedAt: overview.generatedAt,
-            confirmedAt: overview.generatedAt,
+            confirmedAt: null,
             resolvedAt: null,
-            reason: 'Probe credentials expired',
+            reason: 'probe_credentials_missing',
             blockedChecks: ['backend.catalog'],
           },
         ]
@@ -211,12 +211,21 @@ it('looks up the exact linked incident and expands coverage details', async () =
   }));
   render(<SystemMonitorDashboard />);
   expect(
-    await screen.findByText('Probe credentials expired')
+    await screen.findByText(
+      'The monitoring account credentials were not configured.'
+    )
   ).toBeInTheDocument();
+  expect(screen.getByText('Subscription catalog')).toBeInTheDocument();
   expect(
-    screen.getByText('Blocked checks: Subscription catalog')
+    screen.getByText(
+      'This means monitoring could not verify the service; it does not confirm a service outage.'
+    )
   ).toBeInTheDocument();
-  expect(screen.getByText('Incident ID: coverage-1')).toBeInTheDocument();
+  expect(screen.getByText('Not applicable')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Technical details' }));
+  expect(
+    await screen.findByText('Incident ID: coverage-1')
+  ).toBeInTheDocument();
   expect(
     screen.getByRole('dialog', { name: 'Incident details' })
   ).toBeInTheDocument();
@@ -232,7 +241,7 @@ it('opens incident details in a named dialog and closes it without changing the 
         openedAt: overview.generatedAt,
         confirmedAt: overview.generatedAt,
         resolvedAt: null,
-        reason: 'No response received',
+        reason: 'timeout',
         blockedChecks: [],
       },
     ],
@@ -248,9 +257,16 @@ it('opens incident details in a named dialog and closes it without changing the 
     name: 'Incident details',
   });
   expect(
-    within(dialog).getByText('Incident ID: incident-dialog')
+    within(dialog).getByText(
+      'The service did not respond before the monitoring request timed out.'
+    )
   ).toBeInTheDocument();
-  expect(within(dialog).getByText('No response received')).toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Technical details' })
+  );
+  expect(
+    await within(dialog).findByText('Incident ID: incident-dialog')
+  ).toBeInTheDocument();
   fireEvent.click(
     within(dialog).getByRole('button', { name: 'Close incident details' })
   );
@@ -312,6 +328,53 @@ it('keeps the incident time window when opening related logs from the dialog', a
   ).not.toBeInTheDocument();
 });
 
+it('explains a resolved timeout plainly and hides identifiers until technical details are expanded', async () => {
+  api.incidents.mockResolvedValue({
+    items: [
+      {
+        incidentId: 'readable-timeout',
+        checkId: 'backend.health',
+        kind: 'target',
+        openedAt: '2026-10-13T16:00:00Z',
+        confirmedAt: '2026-10-13T16:02:00Z',
+        resolvedAt: '2026-10-13T16:08:00Z',
+        reason: 'timeout',
+        blockedChecks: ['backend.catalog'],
+      },
+    ],
+    total: 1,
+    offset: 0,
+    limit: 25,
+  });
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Incident details' })
+  );
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Incident details',
+  });
+  expect(within(dialog).getByText('Resolved')).toBeInTheDocument();
+  expect(
+    within(dialog).getByText(
+      'The service did not respond before the monitoring request timed out.'
+    )
+  ).toBeInTheDocument();
+  expect(within(dialog).getByText('8 min')).toBeInTheDocument();
+  expect(within(dialog).getByText('Subscription catalog')).toBeInTheDocument();
+  expect(
+    within(dialog).queryByText('Incident ID: readable-timeout')
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Technical details' })
+  );
+  expect(
+    await within(dialog).findByText('Incident ID: readable-timeout')
+  ).toBeInTheDocument();
+  expect(
+    within(dialog).getByText('Recorded reason: timeout')
+  ).toBeInTheDocument();
+});
+
 it('paginates raw history instead of loading the whole week', async () => {
   api.history.mockResolvedValue({
     items: [],
@@ -371,9 +434,11 @@ it('does not send an inverted log window for an old retained open incident', asy
     limit: 25,
   }));
   render(<SystemMonitorDashboard />);
-  await screen.findByText('Old retained open incident');
+  await screen.findByRole('dialog', { name: 'Incident details' });
   fireEvent.click(screen.getByRole('button', { name: 'View related logs' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
   expect(
     await screen.findByText(/Selected log window is outside retention/)
