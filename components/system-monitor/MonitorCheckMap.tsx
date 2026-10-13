@@ -14,7 +14,8 @@ import type { MonitorCheck, Outcome } from '@/lib/api/system-monitor';
 const names: Record<string, string> = {
   'backend.health': 'Application API',
   'backend.auth': 'Account access',
-  'backend.catalog': 'Subscription catalog',
+  'backend.catalog': 'Google Play catalog',
+  'backend.catalog.app_store': 'App Store catalog',
   'backend.collections': 'Prediction collections',
   'aichat.functional': 'AI chat',
   'n8n.health': 'n8n availability',
@@ -73,6 +74,7 @@ export function MonitorCheckMap({
   const auth = byId('backend.auth');
   const branches = [
     'backend.catalog',
+    'backend.catalog.app_store',
     'backend.collections',
     'aichat.functional',
   ]
@@ -160,6 +162,9 @@ export function MonitorCheckMap({
       </Tooltip>
     );
   };
+  const connectorHeight = branches.length * 84 - 12;
+  const midpoint = connectorHeight / 2;
+  const branchCenters = branches.map((_, index) => 36 + index * 84);
   const connector = (split: boolean) => (
     <Box
       aria-hidden="true"
@@ -172,21 +177,21 @@ export function MonitorCheckMap({
       <svg
         width="100%"
         height="100%"
-        viewBox="0 0 28 240"
+        viewBox={`0 0 28 ${connectorHeight}`}
         preserveAspectRatio="none"
-        style={{ display: 'block', minHeight: 240 }}
+        style={{ display: 'block', minHeight: connectorHeight }}
       >
         <path
           d={
             split
-              ? 'M0 120 H14 M14 36 V204 M14 36 H28 M14 120 H28 M14 204 H28'
-              : 'M0 120 H28'
+              ? `M0 ${midpoint} H14 M14 36 V${branchCenters.at(-1)} ${branchCenters.map((y) => `M14 ${y} H28`).join(' ')}`
+              : `M0 ${midpoint} H28`
           }
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
         />
-        {(split ? [36, 120, 204] : [120]).map((y) => (
+        {(split ? branchCenters : [midpoint]).map((y) => (
           <path
             key={y}
             d={`M23 ${y - 4} L28 ${y} L23 ${y + 4}`}
@@ -257,7 +262,7 @@ export function MonitorCheckMap({
               <Typography variant="overline" color="text.secondary">
                 Backend
               </Typography>
-              {api && auth && branches.length === 3 ? (
+              {api && auth && branches.length > 0 ? (
                 <Box
                   sx={{
                     display: 'grid',

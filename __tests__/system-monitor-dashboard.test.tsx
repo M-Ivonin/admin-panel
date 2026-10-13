@@ -148,12 +148,12 @@ it('selects a map node and loads its exact result and history', async () => {
   render(<SystemMonitorDashboard />);
   fireEvent.click(
     await screen.findByRole('button', {
-      name: /Subscription catalog: Pass, Fresh/,
+      name: /Google Play catalog: Pass, Fresh/,
     })
   );
   await waitFor(() => expect(api.run).toHaveBeenCalledWith('catalog-run'));
   expect(
-    await screen.findByText('Check details · Subscription catalog')
+    await screen.findByText('Check details · Google Play catalog')
   ).toBeInTheDocument();
   await waitFor(() =>
     expect(api.history).toHaveBeenLastCalledWith(
@@ -215,7 +215,7 @@ it('looks up the exact linked incident and expands coverage details', async () =
       'The monitoring account credentials were not configured.'
     )
   ).toBeInTheDocument();
-  expect(screen.getByText('Subscription catalog')).toBeInTheDocument();
+  expect(screen.getByText('Google Play catalog')).toBeInTheDocument();
   expect(
     screen.getByText(
       'This means monitoring could not verify the service; it does not confirm a service outage.'
@@ -360,7 +360,7 @@ it('explains a resolved timeout plainly and hides identifiers until technical de
     )
   ).toBeInTheDocument();
   expect(within(dialog).getByText('8 min')).toBeInTheDocument();
-  expect(within(dialog).getByText('Subscription catalog')).toBeInTheDocument();
+  expect(within(dialog).getByText('Google Play catalog')).toBeInTheDocument();
   expect(
     within(dialog).queryByText('Incident ID: readable-timeout')
   ).not.toBeInTheDocument();
@@ -591,7 +591,7 @@ it('clamps a delayed check selection without automatically reloading all history
   clock.mockReturnValue(start + 120000);
   expect(api.history).toHaveBeenCalledTimes(count);
   fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Check' }));
-  fireEvent.click(screen.getByRole('option', { name: 'Subscription catalog' }));
+  fireEvent.click(screen.getByRole('option', { name: 'Google Play catalog' }));
   await waitFor(() =>
     expect(api.history).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -649,4 +649,18 @@ it('shows an expired selected range honestly without sending history or log requ
     await screen.findByText(/Selected log window is outside retention/)
   ).toBeInTheDocument();
   expect(api.logs).not.toHaveBeenCalled();
+});
+
+
+it('shows each store separately and selects App Store history and details', async () => {
+  const google = { ...overview.checks[0], checkId: 'backend.catalog' };
+  const apple = { ...google, checkId: 'backend.catalog.app_store', lastRun: { ...google.lastRun!, checkId: 'backend.catalog.app_store', runId: 'apple-run' } };
+  api.overview.mockResolvedValue({ ...overview, checks: [google, apple] });
+  api.run.mockResolvedValue(apple.lastRun);
+  render(<SystemMonitorDashboard />);
+  expect(await screen.findByRole('button', { name: /Google Play catalog: Pass/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /App Store catalog: Pass/ }));
+  await waitFor(() => expect(api.run).toHaveBeenCalledWith('apple-run'));
+  expect(await screen.findByText('Check details · App Store catalog')).toBeInTheDocument();
+  await waitFor(() => expect(api.history).toHaveBeenLastCalledWith(expect.objectContaining({ checkId: 'backend.catalog.app_store', offset: 0 })));
 });

@@ -78,3 +78,9 @@ live monitor ingestion, deployment, or production admin authorization.
 
 Build, fresh screenshot artifacts and final visual comparison are recorded by the
 integration owner. Missing final running-page screenshots blocks UI completion.
+
+Catalog nodes are separate: **Google Play catalog** (`backend.catalog`, preserving
+its existing history) and **App Store catalog** (`backend.catalog.app_store`).
+Each node selects its own exact run and history filter. Both depend on backend
+health and account access. They validate backend catalog responses for each store,
+not store uptime or purchases. The map adapts its branch connectors to both catalogs.
