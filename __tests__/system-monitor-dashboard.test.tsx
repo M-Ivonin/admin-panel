@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { SystemMonitorDashboard } from '@/components/system-monitor/SystemMonitorDashboard';
 import {
@@ -174,9 +175,102 @@ it('looks up the exact linked incident and expands coverage details', async () =
     await screen.findByText('Probe credentials expired')
   ).toBeInTheDocument();
   expect(
-    screen.getByText('Blocked checks: backend.catalog')
+    screen.getByText('Blocked checks: Subscription catalog')
   ).toBeInTheDocument();
   expect(screen.getByText('Incident ID: coverage-1')).toBeInTheDocument();
+  expect(
+    screen.getByRole('dialog', { name: 'Incident details' })
+  ).toBeInTheDocument();
+});
+
+it('opens incident details in a named dialog and closes it without changing the list', async () => {
+  api.incidents.mockResolvedValue({
+    items: [
+      {
+        incidentId: 'incident-dialog',
+        checkId: 'backend.health',
+        kind: 'target',
+        openedAt: overview.generatedAt,
+        confirmedAt: overview.generatedAt,
+        resolvedAt: null,
+        reason: 'No response received',
+        blockedChecks: [],
+      },
+    ],
+    total: 1,
+    offset: 0,
+    limit: 25,
+  });
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Incident details' })
+  );
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Incident details',
+  });
+  expect(
+    within(dialog).getByText('Incident ID: incident-dialog')
+  ).toBeInTheDocument();
+  expect(within(dialog).getByText('No response received')).toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Close incident details' })
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
+  expect(
+    screen.getByRole('button', { name: 'Incident details' })
+  ).toBeInTheDocument();
+});
+
+it('keeps the incident time window when opening related logs from the dialog', async () => {
+  const pivot = Date.now() - 10 * 60000;
+  api.incidents.mockResolvedValue({
+    items: [
+      {
+        incidentId: 'incident-logs',
+        checkId: 'backend.health',
+        kind: 'target',
+        openedAt: new Date(pivot).toISOString(),
+        confirmedAt: new Date(pivot).toISOString(),
+        resolvedAt: null,
+        reason: 'No response received',
+        blockedChecks: [],
+      },
+    ],
+    total: 1,
+    offset: 0,
+    limit: 25,
+  });
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Incident details' })
+  );
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Incident details',
+  });
+  expect(api.logs).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'View related logs' })
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
+  await waitFor(() =>
+    expect(api.logs).toHaveBeenCalledWith({
+      service: 'system-monitor',
+      from: new Date(pivot - 5 * 60000).toISOString(),
+      to: new Date(pivot + 5 * 60000).toISOString(),
+      limit: 200,
+    })
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Clear incident context' })
+  );
+  expect(
+    screen.queryByRole('button', { name: 'Clear incident context' })
+  ).not.toBeInTheDocument();
 });
 
 it('paginates raw history instead of loading the whole week', async () => {
@@ -239,6 +333,10 @@ it('does not send an inverted log window for an old retained open incident', asy
   }));
   render(<SystemMonitorDashboard />);
   await screen.findByText('Old retained open incident');
+  fireEvent.click(screen.getByRole('button', { name: 'View related logs' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
   expect(
     await screen.findByText(/Selected log window is outside retention/)

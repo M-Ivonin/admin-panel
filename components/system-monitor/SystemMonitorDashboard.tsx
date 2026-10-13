@@ -9,6 +9,10 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   MenuItem,
   Paper,
@@ -136,6 +140,7 @@ export function SystemMonitorDashboard() {
   const [incidentPage, setIncidentPage] = useState(0);
   const [selectedIncident, setSelectedIncident] =
     useState<MonitorIncident | null>(null);
+  const [incidentDetailsOpen, setIncidentDetailsOpen] = useState(false);
   const [linkState, setLinkState] = useState<
     'loading' | 'missing' | 'error' | null
   >(null);
@@ -274,6 +279,7 @@ export function SystemMonitorDashboard() {
         if (!alive) return;
         const match = data.items.find((item) => item.incidentId === id);
         setSelectedIncident(match ?? null);
+        setIncidentDetailsOpen(Boolean(match));
         setLinkState(match ? null : 'missing');
         if (match) {
           setCheckId(match.checkId);
@@ -703,6 +709,7 @@ export function SystemMonitorDashboard() {
                           onClick={() => {
                             ++runRequest.current;
                             setSelectedIncident(item);
+                            setIncidentDetailsOpen(true);
                             setRun(null);
                             setRunState(null);
                             setLinkState(null);
@@ -739,44 +746,63 @@ export function SystemMonitorDashboard() {
               </Alert>
             )}
             {selectedIncident && (
-              <Paper variant="outlined" sx={{ p: 2, overflowWrap: 'anywhere' }}>
-                <Stack spacing={1}>
-                  <Typography variant="h6">Incident details</Typography>
-                  <Typography>
-                    {checkName(selectedIncident.checkId)} ·{' '}
-                    {selectedIncident.kind === 'coverage'
-                      ? 'Probe coverage lost'
-                      : 'Target failure'}
-                  </Typography>
-                  <Typography variant="body2">
-                    Incident ID: {selectedIncident.incidentId}
-                  </Typography>
-                  <Typography variant="body2">
-                    First failure {time(selectedIncident.openedAt)} · Confirmed{' '}
-                    {time(selectedIncident.confirmedAt)} ·{' '}
-                    {selectedIncident.resolvedAt
-                      ? `Resolved ${time(selectedIncident.resolvedAt)}`
-                      : 'Still open'}
-                  </Typography>
-                  <Typography>{selectedIncident.reason}</Typography>
-                  {selectedIncident.blockedChecks.length > 0 && (
+              <Dialog
+                open={incidentDetailsOpen}
+                onClose={() => setSelectedIncident(null)}
+                aria-labelledby="monitor-incident-dialog-title"
+                fullWidth
+                maxWidth="sm"
+                scroll="paper"
+                sx={{ '& .MuiDialog-container': { alignItems: 'flex-start' } }}
+              >
+                <DialogTitle id="monitor-incident-dialog-title">
+                  Incident details
+                </DialogTitle>
+                <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
+                  <Stack spacing={1}>
                     <Typography>
-                      Blocked checks:{' '}
-                      {selectedIncident.blockedChecks.join(', ')}
+                      {checkName(selectedIncident.checkId)} ·{' '}
+                      {selectedIncident.kind === 'coverage'
+                        ? 'Probe coverage lost'
+                        : 'Target failure'}
                     </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    Logs below use a 10-minute context window around this
-                    incident.
-                  </Typography>
+                    <Typography variant="body2">
+                      Incident ID: {selectedIncident.incidentId}
+                    </Typography>
+                    <Typography variant="body2">
+                      First failure {time(selectedIncident.openedAt)} ·
+                      Confirmed {time(selectedIncident.confirmedAt)} ·{' '}
+                      {selectedIncident.resolvedAt
+                        ? `Resolved ${time(selectedIncident.resolvedAt)}`
+                        : 'Still open'}
+                    </Typography>
+                    <Typography>{selectedIncident.reason}</Typography>
+                    {selectedIncident.blockedChecks.length > 0 && (
+                      <Typography>
+                        Blocked checks:{' '}
+                        {selectedIncident.blockedChecks
+                          .map(checkName)
+                          .join(', ')}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" color="text.secondary">
+                      Related logs use a 10-minute context window around this
+                      incident.
+                    </Typography>
+                  </Stack>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setIncidentDetailsOpen(false)}>
+                    View related logs
+                  </Button>
                   <Button
                     size="small"
                     onClick={() => setSelectedIncident(null)}
                   >
                     Close incident details
                   </Button>
-                </Stack>
-              </Paper>
+                </DialogActions>
+              </Dialog>
             )}
             {runState === 'loading' && (
               <CircularProgress aria-label="Loading check details" />
@@ -829,6 +855,25 @@ export function SystemMonitorDashboard() {
                   Service and time context only; this is not full request
                   correlation. Up to 200 records, within seven days.
                 </Typography>
+                {selectedIncident && !incidentDetailsOpen && (
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems="flex-start"
+                  >
+                    <Typography variant="body2">
+                      Incident log context:{' '}
+                      {checkName(selectedIncident.checkId)} ·{' '}
+                      {time(selectedIncident.openedAt)}
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={() => setSelectedIncident(null)}
+                    >
+                      Clear incident context
+                    </Button>
+                  </Stack>
+                )}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField
                     select

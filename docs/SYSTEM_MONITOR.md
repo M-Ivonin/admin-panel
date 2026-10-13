@@ -33,7 +33,10 @@ letterboxing. Dates and chart tooltips use Europe/Kyiv;
 requests carry UTC timestamps.
 
 `?incident=<id>` performs an exact incident lookup within the viewer's seven-day
-window and expands that incident's details. Missing/expired IDs show a dedicated
+window and opens that incident's details in the same top-aligned MUI dialog as
+the incident list action. Close, Escape and backdrop dismiss the details;
+View related logs closes the dialog while retaining the incident's bounded log
+context. Clear incident context returns logs to the selected history period. Missing/expired IDs show a dedicated
 message rather than selecting a nearby result. Check details use the run-ID
 endpoint and handle removed results separately. Target outages and loss of probe
 coverage retain different labels.
