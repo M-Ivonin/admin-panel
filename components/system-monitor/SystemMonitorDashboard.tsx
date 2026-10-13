@@ -40,6 +40,17 @@ import {
   type Page,
 } from '@/lib/api/system-monitor';
 
+const checkNames: Record<string, string> = {
+  'backend.health': 'Application API',
+  'n8n.health': 'n8n availability',
+  'n8n.readiness': 'n8n readiness',
+  'backend.auth': 'Account access',
+  'backend.catalog': 'Subscription catalog',
+  'backend.collections': 'Prediction collections',
+  'aichat.functional': 'AI chat',
+};
+const checkName = (id: string) => checkNames[id] ?? id;
+
 const retentionMs = 7 * 86400000;
 type TimeWindow = { from: string; to: string };
 function periodWindow(hours: number): TimeWindow {
@@ -456,7 +467,7 @@ export function SystemMonitorDashboard() {
                               fontWeight={600}
                               sx={{ overflowWrap: 'anywhere' }}
                             >
-                              {check.checkId}
+                              {checkName(check.checkId)}
                             </Typography>
                             <Stack direction="row" gap={1} flexWrap="wrap">
                               <Status outcome={outcome} />
@@ -536,7 +547,7 @@ export function SystemMonitorDashboard() {
                   {overview?.checks.length ? (
                     overview.checks.map((check) => (
                       <MenuItem key={check.checkId} value={check.checkId}>
-                        {check.checkId}
+                        {checkName(check.checkId)}
                       </MenuItem>
                     ))
                   ) : (
@@ -678,7 +689,7 @@ export function SystemMonitorDashboard() {
                             fontWeight={600}
                             sx={{ overflowWrap: 'anywhere' }}
                           >
-                            {item.checkId} ·{' '}
+                            {checkName(item.checkId)} ·{' '}
                             {item.kind === 'coverage'
                               ? 'Probe coverage lost'
                               : 'Target failure'}
@@ -732,7 +743,7 @@ export function SystemMonitorDashboard() {
                 <Stack spacing={1}>
                   <Typography variant="h6">Incident details</Typography>
                   <Typography>
-                    {selectedIncident.checkId} ·{' '}
+                    {checkName(selectedIncident.checkId)} ·{' '}
                     {selectedIncident.kind === 'coverage'
                       ? 'Probe coverage lost'
                       : 'Target failure'}
@@ -782,7 +793,7 @@ export function SystemMonitorDashboard() {
               <Paper variant="outlined" sx={{ p: 2, overflowWrap: 'anywhere' }}>
                 <Stack spacing={1}>
                   <Typography variant="h6">
-                    Check details · {run.checkId}
+                    Check details · {checkName(run.checkId)}
                   </Typography>
                   <Status outcome={run.outcome} />
                   <Typography variant="body2">Run ID: {run.runId}</Typography>

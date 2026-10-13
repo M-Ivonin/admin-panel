@@ -391,7 +391,7 @@ it('clamps a delayed check selection without automatically reloading all history
   clock.mockReturnValue(start + 120000);
   expect(api.history).toHaveBeenCalledTimes(count);
   fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Check' }));
-  fireEvent.click(screen.getByRole('option', { name: 'backend.catalog' }));
+  fireEvent.click(screen.getByRole('option', { name: 'Subscription catalog' }));
   await waitFor(() =>
     expect(api.history).toHaveBeenLastCalledWith(
       expect.objectContaining({
