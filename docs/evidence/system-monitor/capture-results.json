@@ -1,0 +1,201 @@
+{
+  "captures": [
+    {
+      "mode": "healthy",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-healthy.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A31.837Z&to=2026-10-13T11%3A44%3A31.837Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A31.837Z&to=2026-10-13T11%3A44%3A31.837Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "mixed",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-mixed.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A32.485Z&to=2026-10-13T11%3A44%3A32.485Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?id=fixture-incident&from=2026-10-06T11%3A44%3A32.530Z&to=2026-10-13T11%3A44%3A32.530Z&limit=1&offset=0",
+        "/v1/system-monitor/admin/history?checkId=n8n.readiness&from=2026-10-12T11%3A44%3A32.485Z&to=2026-10-13T11%3A44%3A32.485Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=n8n.readiness&from=2026-10-06T11%3A44%3A32.694Z&to=2026-10-13T11%3A44%3A32.678Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?from=2026-10-06T11%3A44%3A32.695Z&to=2026-10-13T11%3A44%3A32.678Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/checks/history-0",
+        "/v1/system-monitor/admin/history?checkId=n8n.readiness&from=2026-10-06T11%3A44%3A33.219Z&to=2026-10-13T11%3A44%3A32.678Z&limit=25&offset=25"
+      ]
+    },
+    {
+      "mode": "check-details",
+      "width": 1440,
+      "name": "desktop-check-details.png"
+    },
+    {
+      "mode": "stale",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-stale.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A33.562Z&to=2026-10-13T11%3A44%3A33.562Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A33.562Z&to=2026-10-13T11%3A44%3A33.562Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "offline",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-offline.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A34.103Z&to=2026-10-13T11%3A44%3A34.103Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "empty",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-empty.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A34.580Z&to=2026-10-13T11%3A44%3A34.580Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "denied",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-denied.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities"
+      ]
+    },
+    {
+      "mode": "loading",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-loading.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A35.419Z&to=2026-10-13T11%3A44%3A35.419Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A35.419Z&to=2026-10-13T11%3A44%3A35.419Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "loki-error",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-loki-error.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A39.131Z&to=2026-10-13T11%3A44%3A39.131Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A39.131Z&to=2026-10-13T11%3A44%3A39.131Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/logs?service=system-monitor&from=2026-10-12T11%3A44%3A39.131Z&to=2026-10-13T11%3A44%3A39.131Z&limit=200"
+      ]
+    },
+    {
+      "mode": "truncated",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-truncated.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A40.243Z&to=2026-10-13T11%3A44%3A40.243Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A40.243Z&to=2026-10-13T11%3A44%3A40.243Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/logs?service=system-monitor&from=2026-10-12T11%3A44%3A40.243Z&to=2026-10-13T11%3A44%3A40.243Z&limit=200"
+      ]
+    },
+    {
+      "mode": "expired",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-expired.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A41.047Z&to=2026-10-13T11%3A44%3A41.047Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?id=expired-id&from=2026-10-06T11%3A44%3A41.090Z&to=2026-10-13T11%3A44%3A41.090Z&limit=1&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A41.047Z&to=2026-10-13T11%3A44%3A41.047Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "delayed-refresh",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-delayed-refresh.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A41.636Z&to=2026-10-13T11%3A44%3A41.636Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A41.636Z&to=2026-10-13T11%3A44%3A41.636Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-06T11%3A44%3A41.834Z&to=2026-10-13T11%3A44%3A41.817Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?from=2026-10-06T11%3A44%3A41.834Z&to=2026-10-13T11%3A44%3A41.817Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-06T11%3A47%3A41.973Z&to=2026-10-13T11%3A47%3A41.961Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?from=2026-10-06T11%3A47%3A41.974Z&to=2026-10-13T11%3A47%3A41.961Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "expired-window",
+      "width": 1440,
+      "height": 1000,
+      "name": "desktop-expired-window.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A42.464Z&to=2026-10-13T11%3A44%3A42.464Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A42.464Z&to=2026-10-13T11%3A44%3A42.464Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/overview"
+      ]
+    },
+    {
+      "mode": "mixed",
+      "width": 390,
+      "height": 844,
+      "name": "narrow-mixed.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A43.154Z&to=2026-10-13T11%3A44%3A43.154Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?id=fixture-incident&from=2026-10-06T11%3A44%3A43.197Z&to=2026-10-13T11%3A44%3A43.197Z&limit=1&offset=0",
+        "/v1/system-monitor/admin/history?checkId=n8n.readiness&from=2026-10-12T11%3A44%3A43.154Z&to=2026-10-13T11%3A44%3A43.154Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=n8n.readiness&from=2026-10-06T11%3A44%3A43.345Z&to=2026-10-13T11%3A44%3A43.329Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/incidents?from=2026-10-06T11%3A44%3A43.345Z&to=2026-10-13T11%3A44%3A43.329Z&limit=25&offset=0"
+      ]
+    },
+    {
+      "mode": "denied",
+      "width": 390,
+      "height": 844,
+      "name": "narrow-denied.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities"
+      ]
+    },
+    {
+      "mode": "loki-error",
+      "width": 390,
+      "height": 844,
+      "name": "narrow-loki-error.png",
+      "requested": [
+        "/v1/system-monitor/admin/capabilities",
+        "/v1/system-monitor/admin/overview",
+        "/v1/system-monitor/admin/incidents?from=2026-10-12T11%3A44%3A44.281Z&to=2026-10-13T11%3A44%3A44.281Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/history?checkId=backend.health&from=2026-10-12T11%3A44%3A44.281Z&to=2026-10-13T11%3A44%3A44.281Z&limit=25&offset=0",
+        "/v1/system-monitor/admin/logs?service=system-monitor&from=2026-10-12T11%3A44%3A44.281Z&to=2026-10-13T11%3A44%3A44.281Z&limit=200"
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -107,6 +107,34 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
+            <Link
+              href="/dashboard/system-monitor"
+              style={{ textDecoration: 'none' }}
+            >
+              <Card
+                sx={{
+                  height: '100%',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.2s',
+                }}
+              >
+                <CardActionArea sx={{ p: 3, height: '100%' }}>
+                  <Avatar
+                    sx={{ bgcolor: 'info.dark', width: 48, height: 48, mb: 2 }}
+                  >
+                    <Analytics />
+                  </Avatar>
+                  <Typography variant="h6" color="text.primary" gutterBottom>
+                    System Monitor
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Inspect backend and n8n health, check history, incidents,
+                    and logs
+                  </Typography>
+                </CardActionArea>
+              </Card>
+            </Link>
+
             {/* Bot Chat Card */}
             <Link href="/dashboard/bot-chat" style={{ textDecoration: 'none' }}>
               <Card
