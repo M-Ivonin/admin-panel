@@ -67,50 +67,33 @@ const checkNames: Record<string, string> = {
 };
 const checkName = (id: string) => checkNames[id] ?? id;
 const incidentReasons: Record<string, string> = {
-  timeout:
-    'The service did not respond before the monitoring request timed out.',
-  network_error:
-    'The monitor could not connect to the service. Its availability could not be verified.',
+  timeout: 'The service did not respond before the monitoring request timed out.',
+  network_error: 'The monitor could not connect to the service. Its availability could not be verified.',
   slow_response: 'The service responded more slowly than expected.',
   unexpected_http_status: 'The service returned an unexpected HTTP status.',
-  invalid_schema:
-    'The service responded, but the response did not match the expected format.',
-  response_too_large:
-    'The service response exceeded the size allowed by the monitor.',
-  check_disabled:
-    'This check was disabled, so the service could not be verified.',
+  invalid_schema: 'The service responded, but the response did not match the expected format.',
+  response_too_large: 'The service response exceeded the size allowed by the monitor.',
+  check_disabled: 'This check was disabled, so the service could not be verified.',
   missing_fresh_result: 'The monitor had no recent result for this check.',
-  probe_auth_rejected:
-    'The monitoring account was denied access. Its token or subscription access needs attention.',
-  probe_identity_mismatch:
-    'The authenticated account did not match the configured monitoring account.',
-  probe_credentials_missing:
-    'The monitoring account credentials were not configured.',
-  probe_prerequisites_missing:
-    'The setup required for AI monitoring was incomplete.',
-  daily_budget_exhausted:
-    'The daily AI check limit was reached. No additional AI request was sent.',
-  probe_sportmonks_credentials_missing:
-    'The SportMonks API key was not configured.',
-  probe_sportmonks_auth_rejected:
-    'SportMonks denied access. Its API key or subscription access needs attention.',
-  probe_sportmonks_rate_limited:
-    'The SportMonks request limit was reached. No immediate retry was sent.',
+  probe_auth_rejected: 'The monitoring account was denied access. Its token or subscription access needs attention.',
+  probe_identity_mismatch: 'The authenticated account did not match the configured monitoring account.',
+  probe_credentials_missing: 'The monitoring account credentials were not configured.',
+  probe_prerequisites_missing: 'The setup required for AI monitoring was incomplete.',
+  daily_budget_exhausted: 'The daily AI check limit was reached. No additional AI request was sent.',
+  probe_sportmonks_credentials_missing: 'The SportMonks API key was not configured.',
+  probe_sportmonks_auth_rejected: 'SportMonks denied access. Its API key or subscription access needs attention.',
+  probe_sportmonks_rate_limited: 'The SportMonks request limit was reached. No immediate retry was sent.',
 };
 function incidentDuration(incident: MonitorIncident, now: number): string {
   const end = incident.resolvedAt ? Date.parse(incident.resolvedAt) : now;
-  const seconds = Math.max(
-    0,
-    Math.floor((end - Date.parse(incident.openedAt)) / 1000)
-  );
+  const seconds = Math.max(0, Math.floor((end - Date.parse(incident.openedAt)) / 1000));
   if (seconds < 60) return `${seconds} sec`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
-  return hours < 24
-    ? `${hours} hr ${minutes % 60} min`
-    : `${Math.floor(hours / 24)} days ${hours % 24} hr`;
+  return hours < 24 ? `${hours} hr ${minutes % 60} min` : `${Math.floor(hours / 24)} days ${hours % 24} hr`;
 }
+
 
 const retentionMs = 7 * 86400000;
 type TimeWindow = { from: string; to: string };
@@ -744,132 +727,60 @@ export function SystemMonitorDashboard() {
                 maxWidth="sm"
                 scroll="paper"
               >
-                <DialogTitle id="monitor-incident-dialog-title">
-                  Incident details
-                </DialogTitle>
+                <DialogTitle id="monitor-incident-dialog-title">Incident details</DialogTitle>
                 <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
                   <Stack spacing={2.5}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      justifyContent="space-between"
-                    >
-                      <Typography variant="h6">
-                        {checkName(selectedIncident.checkId)}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={
-                          selectedIncident.resolvedAt ? 'Resolved' : 'Open'
-                        }
-                        color={
-                          selectedIncident.resolvedAt ? 'success' : 'warning'
-                        }
-                      />
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Typography variant="h6">{checkName(selectedIncident.checkId)}</Typography>
+                      <Chip size="small" label={selectedIncident.resolvedAt ? 'Resolved' : 'Open'} color={selectedIncident.resolvedAt ? 'success' : 'warning'} />
                     </Stack>
                     <Box>
                       <Typography variant="subtitle2" gutterBottom>
-                        {selectedIncident.kind === 'coverage'
-                          ? 'Monitoring unavailable'
-                          : 'Service check failed'}
+                        {selectedIncident.kind === 'coverage' ? 'Monitoring unavailable' : 'Service check failed'}
                       </Typography>
                       <Typography variant="body2">
-                        {incidentReasons[selectedIncident.reason] ??
-                          'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
+                        {incidentReasons[selectedIncident.reason] ?? 'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
                       </Typography>
                       {selectedIncident.kind === 'coverage' && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mt: 1 }}
-                        >
-                          This means monitoring could not verify the service; it
-                          does not confirm a service outage.
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                          This means monitoring could not verify the service; it does not confirm a service outage.
                         </Typography>
                       )}
                     </Box>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                        gap: 2,
-                      }}
-                    >
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                       {[
                         ['Started', time(selectedIncident.openedAt)],
-                        [
-                          'Confirmed',
-                          selectedIncident.confirmedAt
-                            ? time(selectedIncident.confirmedAt)
-                            : selectedIncident.kind === 'coverage'
-                              ? 'Not applicable'
-                              : 'Not yet confirmed',
-                        ],
-                        [
-                          'Resolved at',
-                          selectedIncident.resolvedAt
-                            ? time(selectedIncident.resolvedAt)
-                            : 'Still open',
-                        ],
-                        [
-                          'Duration',
-                          `${incidentDuration(selectedIncident, now)}${selectedIncident.resolvedAt ? '' : ' so far'}`,
-                        ],
+                        ['Confirmed', selectedIncident.confirmedAt ? time(selectedIncident.confirmedAt) : selectedIncident.kind === 'coverage' ? 'Not applicable' : 'Not yet confirmed'],
+                        ['Resolved at', selectedIncident.resolvedAt ? time(selectedIncident.resolvedAt) : 'Still open'],
+                        ['Duration', `${incidentDuration(selectedIncident, now)}${selectedIncident.resolvedAt ? '' : ' so far'}`],
                       ].map(([label, value]) => (
                         <Box key={label}>
-                          <Typography variant="caption" color="text.secondary">
-                            {label}
-                          </Typography>
+                          <Typography variant="caption" color="text.secondary">{label}</Typography>
                           <Typography variant="body2">{value}</Typography>
                         </Box>
                       ))}
                     </Box>
-                    <Typography variant="caption" color="text.secondary">
-                      All times Europe/Kyiv.
-                    </Typography>
+                    <Typography variant="caption" color="text.secondary">All times Europe/Kyiv.</Typography>
                     {selectedIncident.blockedChecks.length > 0 && (
                       <Box>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Checks affected
-                        </Typography>
-                        <Typography variant="body2">
-                          {selectedIncident.blockedChecks
-                            .map(checkName)
-                            .join(', ')}
-                        </Typography>
+                        <Typography variant="subtitle2" gutterBottom>Checks affected</Typography>
+                        <Typography variant="body2">{selectedIncident.blockedChecks.map(checkName).join(', ')}</Typography>
                       </Box>
                     )}
-                    <Accordion
-                      disableGutters
-                      elevation={0}
-                      slotProps={{ transition: { unmountOnExit: true } }}
-                    >
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="body2">
-                          Technical details
-                        </Typography>
-                      </AccordionSummary>
+                    <Accordion disableGutters elevation={0} slotProps={{ transition: { unmountOnExit: true } }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}><Typography variant="body2">Technical details</Typography></AccordionSummary>
                       <AccordionDetails>
                         <Stack spacing={1}>
-                          <Typography variant="body2">
-                            Incident ID: {selectedIncident.incidentId}
-                          </Typography>
-                          <Typography variant="body2">
-                            Check ID: {selectedIncident.checkId}
-                          </Typography>
-                          <Typography variant="body2">
-                            Recorded reason: {selectedIncident.reason}
-                          </Typography>
+                          <Typography variant="body2">Incident ID: {selectedIncident.incidentId}</Typography>
+                          <Typography variant="body2">Check ID: {selectedIncident.checkId}</Typography>
+                          <Typography variant="body2">Recorded reason: {selectedIncident.reason}</Typography>
                         </Stack>
                       </AccordionDetails>
                     </Accordion>
                   </Stack>
                 </DialogContent>
                 <DialogActions>
-                  <Button onClick={() => setIncidentDetailsOpen(false)}>
-                    View related logs
-                  </Button>
+                  <Button onClick={() => setIncidentDetailsOpen(false)}>View related logs</Button>
                   <Button
                     size="small"
                     onClick={() => setSelectedIncident(null)}
@@ -931,22 +842,11 @@ export function SystemMonitorDashboard() {
                   correlation. Up to 200 records, within seven days.
                 </Typography>
                 {selectedIncident && !incidentDetailsOpen && (
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems="flex-start"
-                  >
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
                     <Typography variant="body2">
-                      Incident log context:{' '}
-                      {checkName(selectedIncident.checkId)} ·{' '}
-                      {time(selectedIncident.openedAt)}
+                      Incident log context: {checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
                     </Typography>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedIncident(null)}
-                    >
-                      Clear incident context
-                    </Button>
+                    <Button size="small" onClick={() => setSelectedIncident(null)}>Clear incident context</Button>
                   </Stack>
                 )}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
