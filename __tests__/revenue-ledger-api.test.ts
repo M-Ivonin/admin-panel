@@ -81,7 +81,7 @@ describe('getRevenueLedgerEntries', () => {
       })
     ).resolves.toBe(3);
     expect(adminAuthFetch).toHaveBeenCalledWith({
-      path: '/revenue-ledger/admin/entries?page=1&limit=1&dateFrom=2026-07-03T00%3A00%3A00.000Z&dateTo=2026-07-10T23%3A59%3A59.999Z&sortBy=createdAt&sortOrder=desc&tenjinDispatchStatuses=client_reported_failed&tenjinDispatchStatuses=expired_without_client_report',
+      path: '/revenue-ledger/admin/entries?page=1&limit=1&environment=all&dateFrom=2026-07-03T00%3A00%3A00.000Z&dateTo=2026-07-10T23%3A59%3A59.999Z&sortBy=createdAt&sortOrder=desc&tenjinDispatchStatuses=client_reported_failed&tenjinDispatchStatuses=expired_without_client_report',
       method: 'GET',
     });
   });

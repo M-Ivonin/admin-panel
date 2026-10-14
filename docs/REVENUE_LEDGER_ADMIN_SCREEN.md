@@ -100,3 +100,13 @@ If the exchange-rate response does not cover every filtered currency, the
 screen labels the USD values as a partial estimate, lists the excluded
 currencies, and shows the FX source and rate date. Currency-specific ledger
 totals remain visible above the chart.
+
+## Revenue environments
+
+Revenue Ledger opens in Production, which includes only confirmed real revenue.
+The Environment filter exposes Sandbox test purchases, Unknown purchases awaiting
+classification, or an explicit All diagnostic view. Every row shows its environment;
+non-production views display a warning that their totals are not real revenue.
+Reset returns to Production. Tenjin issue monitoring intentionally includes every
+environment so test dispatch failures remain visible. This filter does not turn off
+Sandbox SDK event dispatch.

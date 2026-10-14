@@ -1,5 +1,7 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 
+export type RevenueProviderEnvironment = 'production' | 'sandbox' | 'unknown';
+
 export type RevenueLedgerStore = 'google_play' | 'app_store';
 
 export type RevenueLedgerEventType =
@@ -35,6 +37,7 @@ export interface RevenueLedgerEntry {
   id: string;
   userId: string | null;
   store: RevenueLedgerStore;
+  providerEnvironment: RevenueProviderEnvironment;
   eventType: RevenueLedgerEventType;
   direction: RevenueLedgerDirection;
   businessStatus: RevenueLedgerBusinessStatus;
@@ -135,6 +138,7 @@ export interface PaginatedRevenueLedgerEntriesResponse {
 }
 
 export interface RevenueLedgerFilters {
+  environment?: RevenueProviderEnvironment | 'all';
   page?: number;
   limit?: number;
   store?: RevenueLedgerStore;
@@ -167,6 +171,7 @@ export async function getRevenueLedgerEntries(
   if (params.page) searchParams.set('page', params.page.toString());
   if (params.limit) searchParams.set('limit', params.limit.toString());
   if (params.store) searchParams.set('store', params.store);
+  if (params.environment) searchParams.set('environment', params.environment);
   if (params.productId) searchParams.set('productId', params.productId);
   if (params.userId) searchParams.set('userId', params.userId);
   if (params.orderId) searchParams.set('orderId', params.orderId);
@@ -224,6 +229,7 @@ export async function getTenjinDispatchIssueCount(params: {
   const response = await getRevenueLedgerEntries({
     page: 1,
     limit: 1,
+    environment: 'all',
     tenjinDispatchStatuses: TENJIN_ISSUE_STATUSES,
     dateFrom: params.dateFrom,
     dateTo: params.dateTo,

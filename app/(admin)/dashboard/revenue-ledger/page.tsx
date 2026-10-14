@@ -40,6 +40,7 @@ import {
   RevenueLedgerSortField,
   RevenueLedgerSortOrder,
   RevenueLedgerStore,
+  RevenueProviderEnvironment,
   RevenueLedgerStoreAdjustedDailyRevenuePoint,
   RevenueLedgerStoreCommissionPeriod,
   RevenueLedgerSummary,
@@ -499,11 +500,23 @@ function getIdentityLines(entry: RevenueLedgerEntry): string[] {
 }
 
 function RevenueLedgerContent() {
-  const [items, setItems] = useState<RevenueLedgerEntry[]>([]);
-  const [summary, setSummary] = useState<RevenueLedgerSummary>(EMPTY_SUMMARY);
-  const [total, setTotal] = useState(0);
+  const [loadedItems, setItems] = useState<RevenueLedgerEntry[]>([]);
+  const [loadedSummary, setSummary] =
+    useState<RevenueLedgerSummary>(EMPTY_SUMMARY);
+  const [loadedTotal, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [environment, setEnvironment] = useState<
+    RevenueProviderEnvironment | 'all'
+  >('production');
+  const [loadedEnvironment, setLoadedEnvironment] = useState<
+    RevenueProviderEnvironment | 'all'
+  >('production');
+  // A pending scope change must not relabel previously loaded test amounts.
+  const matchesEnvironment = loadedEnvironment === environment;
+  const items = matchesEnvironment ? loadedItems : [];
+  const summary = matchesEnvironment ? loadedSummary : EMPTY_SUMMARY;
+  const total = matchesEnvironment ? loadedTotal : 0;
   const [store, setStore] = useState<RevenueLedgerStore | ''>('');
   const [eventTypes, setEventTypes] = useState<RevenueLedgerEventType[]>([]);
   const [directions, setDirections] = useState<RevenueLedgerDirection[]>([]);
@@ -535,6 +548,7 @@ function RevenueLedgerContent() {
       page: page + 1,
       limit: rowsPerPage,
       store: store || undefined,
+      environment,
       eventTypes: eventTypes.length > 0 ? eventTypes : undefined,
       directions: directions.length > 0 ? directions : undefined,
       businessStatuses:
@@ -552,6 +566,7 @@ function RevenueLedgerContent() {
     [
       page,
       rowsPerPage,
+      environment,
       store,
       eventTypes,
       directions,
@@ -579,6 +594,7 @@ function RevenueLedgerContent() {
           return;
         }
 
+        setLoadedEnvironment(filters.environment ?? 'production');
         setItems(response.items);
         setSummary(response.summary || EMPTY_SUMMARY);
         setTotal(response.total || 0);
@@ -640,6 +656,7 @@ function RevenueLedgerContent() {
   }, [refreshNonce, tenjinIssueRange]);
 
   const hasActiveFilters =
+    environment !== 'production' ||
     Boolean(store) ||
     eventTypes.length > 0 ||
     directions.length > 0 ||
@@ -739,6 +756,7 @@ function RevenueLedgerContent() {
   };
 
   const resetFilters = () => {
+    setEnvironment('production');
     setStore('');
     setEventTypes([]);
     setDirections([]);
@@ -756,6 +774,7 @@ function RevenueLedgerContent() {
   };
 
   const showTenjinIssues = () => {
+    setEnvironment('all');
     setStore('');
     setEventTypes([]);
     setDirections([]);
@@ -778,6 +797,16 @@ function RevenueLedgerContent() {
           py: 4,
         }}
       >
+        {environment !== 'production' && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {environment === 'sandbox'
+              ? 'Sandbox test purchases. These amounts are excluded from real revenue.'
+              : environment === 'unknown'
+                ? 'Unclassified purchases. These amounts are excluded from real revenue until verified.'
+                : 'All environments: totals may include test and unclassified purchases.'}
+          </Alert>
+        )}
+
         {tenjinMonitoringError && (
           <Alert severity="warning" sx={{ mb: 3 }}>
             <strong>Tenjin monitoring is unavailable.</strong> Refresh the page
@@ -1171,6 +1200,29 @@ function RevenueLedgerContent() {
             }}
           >
             <FormControl fullWidth size="small">
+              <InputLabel id="ledger-environment-label">Environment</InputLabel>
+              <Select
+                labelId="ledger-environment-label"
+                label="Environment"
+                value={environment}
+                onChange={(event) => {
+                  setEnvironment(
+                    event.target.value as RevenueProviderEnvironment | 'all'
+                  );
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="production">
+                  Production — real revenue
+                </MenuItem>
+                <MenuItem value="sandbox">Sandbox — test purchases</MenuItem>
+                <MenuItem value="unknown">
+                  Unknown — needs classification
+                </MenuItem>
+                <MenuItem value="all">All environments</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl fullWidth size="small">
               <InputLabel id="ledger-store-label">Store</InputLabel>
               <Select
                 labelId="ledger-store-label"
@@ -1471,7 +1523,23 @@ function RevenueLedgerContent() {
                       <TableCell sx={{ minWidth: 180 }}>
                         {formatDateTime(entry.eventTime)}
                       </TableCell>
-                      <TableCell>{formatEnumLabel(entry.store)}</TableCell>
+                      <TableCell>
+                        <Stack spacing={0.5} alignItems="flex-start">
+                          <span>{formatEnumLabel(entry.store)}</span>
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={formatEnumLabel(
+                              entry.providerEnvironment ?? 'unknown'
+                            )}
+                            color={
+                              entry.providerEnvironment === 'sandbox'
+                                ? 'warning'
+                                : 'default'
+                            }
+                          />
+                        </Stack>
+                      </TableCell>
                       <TableCell>{formatLedgerEventTypeLabel(entry)}</TableCell>
                       <TableCell>
                         <Chip

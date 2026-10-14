@@ -56,6 +56,7 @@ const populatedResponse = {
       id: 'ledger-1',
       userId: '11111111-1111-4111-8111-111111111111',
       store: 'google_play',
+      providerEnvironment: 'production',
       eventType: 'initial_subscription',
       direction: 'positive',
       businessStatus: 'recorded',
@@ -173,6 +174,87 @@ describe('RevenueLedgerPage', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('defaults to real revenue and lets operators inspect sandbox purchases separately', async () => {
+    render(<RevenueLedgerPage />);
+    await screen.findByText('pro_monthly');
+    expect(getRevenueLedgerEntries).toHaveBeenLastCalledWith(
+      expect.objectContaining({ environment: 'production' })
+    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Environment' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Sandbox — test purchases' })
+    );
+    await waitFor(() =>
+      expect(getRevenueLedgerEntries).toHaveBeenLastCalledWith(
+        expect.objectContaining({ environment: 'sandbox', page: 1 })
+      )
+    );
+    expect(
+      screen.getByText(
+        'Sandbox test purchases. These amounts are excluded from real revenue.'
+      )
+    ).toBeTruthy();
+  });
+
+  it('never shows sandbox monetary totals while a Production request is pending', async () => {
+    const sandboxResponse = {
+      ...populatedResponse,
+      items: populatedResponse.items.map((item) => ({
+        ...item,
+        providerEnvironment: 'sandbox',
+        grossAmount: '129.99',
+      })),
+      summary: {
+        ...populatedResponse.summary,
+        byCurrency: [
+          {
+            currency: 'USD',
+            positiveGrossAmount: '129.99',
+            negativeGrossAmount: '0.00',
+            netGrossAmount: '129.99',
+            positiveCount: 1,
+            negativeCount: 0,
+          },
+        ],
+        usdRevenue: null,
+        dailyUsdRevenue: [],
+        storeAdjustedRevenue: null,
+        dailyStoreAdjustedRevenue: [],
+      },
+    };
+    (getRevenueLedgerEntries as jest.Mock)
+      .mockResolvedValueOnce(populatedResponse)
+      .mockResolvedValueOnce(sandboxResponse);
+    render(<RevenueLedgerPage />);
+    await screen.findByText('pro_monthly');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Environment' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Sandbox — test purchases' })
+    );
+    await screen.findAllByText('129.99 USD');
+    let resolveProduction: (value: typeof populatedResponse) => void = () => {};
+    (getRevenueLedgerEntries as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveProduction = resolve;
+        })
+    );
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Environment' }));
+    fireEvent.click(
+      await screen.findByRole('option', { name: 'Production — real revenue' })
+    );
+    await waitFor(() =>
+      expect(getRevenueLedgerEntries).toHaveBeenLastCalledWith(
+        expect.objectContaining({ environment: 'production' })
+      )
+    );
+    expect(screen.queryByText('129.99 USD')).toBeNull();
+    await act(async () => {
+      resolveProduction(populatedResponse);
+    });
+    expect(await screen.findByText('pro_monthly')).toBeTruthy();
   });
 
   it('renders ledger rows and currency summary', async () => {
