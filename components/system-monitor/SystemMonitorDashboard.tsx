@@ -342,6 +342,11 @@ export function SystemMonitorDashboard() {
     setLogState(null);
   }, [logService, range, selectedIncident, run]);
 
+  const closeRunDetails = () => {
+    ++runRequest.current;
+    setRun(null);
+    setRunState(null);
+  };
   const selectRun = async (runId: string) => {
     const request = ++runRequest.current;
     setSelectedIncident(null);
@@ -790,50 +795,51 @@ export function SystemMonitorDashboard() {
                 </DialogActions>
               </Dialog>
             )}
-            {runState === 'loading' && (
-              <CircularProgress aria-label="Loading check details" />
-            )}
-            {runState === 'missing' && (
-              <Alert severity="info">
-                Check result no longer exists in retention.
-              </Alert>
-            )}
-            {runState === 'error' && (
-              <Alert severity="error">Check details are unavailable.</Alert>
-            )}
-            {run && (
-              <Paper variant="outlined" sx={{ p: 2, overflowWrap: 'anywhere' }}>
-                <Stack spacing={1}>
-                  <Typography variant="h6">
-                    Check details · {checkName(run.checkId)}
-                  </Typography>
-                  <Status outcome={run.outcome} />
-                  <Typography variant="body2">Run ID: {run.runId}</Typography>
-                  <Typography variant="body2">
-                    Scheduled {time(run.scheduledAt)} · Started{' '}
-                    {time(run.startedAt)} · Ended {time(run.endedAt)}
-                  </Typography>
-                  <Typography variant="body2">
-                    Duration{' '}
-                    {run.durationMs === null ? '—' : `${run.durationMs} ms`} ·
-                    HTTP {run.httpStatus ?? '—'} · Failed step{' '}
-                    {run.failedStep ?? '—'} · Error {run.errorCode ?? '—'}
-                  </Typography>
-                  <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-                    {run.diagnostic || 'No diagnostic message.'}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      ++runRequest.current;
-                      setRun(null);
-                    }}
-                  >
-                    Close check details
-                  </Button>
-                </Stack>
-              </Paper>
-            )}
+            <Dialog
+              open={run !== null || runState !== null}
+              onClose={closeRunDetails}
+              aria-labelledby="monitor-check-dialog-title"
+              fullWidth
+              maxWidth="sm"
+              scroll="paper"
+            >
+              <DialogTitle id="monitor-check-dialog-title">
+                Check details{run ? ` · ${checkName(run.checkId)}` : ''}
+              </DialogTitle>
+              <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
+                {runState === 'loading' && (
+                  <CircularProgress aria-label="Loading check details" />
+                )}
+                {runState === 'missing' && (
+                  <Alert severity="info">Check result no longer exists in retention.</Alert>
+                )}
+                {runState === 'error' && (
+                  <Alert severity="error">Check details are unavailable.</Alert>
+                )}
+                {run && (
+                  <Stack spacing={1}>
+                    <Status outcome={run.outcome} />
+                    <Typography variant="body2">Run ID: {run.runId}</Typography>
+                    <Typography variant="body2">
+                      Scheduled {time(run.scheduledAt)} · Started{' '}
+                      {time(run.startedAt)} · Ended {time(run.endedAt)}
+                    </Typography>
+                    <Typography variant="body2">
+                      Duration{' '}
+                      {run.durationMs === null ? '—' : `${run.durationMs} ms`} ·
+                      HTTP {run.httpStatus ?? '—'} · Failed step{' '}
+                      {run.failedStep ?? '—'} · Error {run.errorCode ?? '—'}
+                    </Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                      {run.diagnostic || 'No diagnostic message.'}
+                    </Typography>
+                  </Stack>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button size="small" onClick={closeRunDetails}>Close check details</Button>
+              </DialogActions>
+            </Dialog>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={2}>
                 <Typography variant="h6">Loki logs</Typography>

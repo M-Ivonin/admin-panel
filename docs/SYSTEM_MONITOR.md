@@ -84,3 +84,8 @@ its existing history) and **App Store catalog** (`backend.catalog.app_store`).
 Each node selects its own exact run and history filter. Both depend on backend
 health and account access. They validate backend catalog responses for each store,
 not store uptime or purchases. The map adapts its branch connectors to both catalogs.
+
+Check History **Inspect** and map-node inspection open check details in the same
+centered, bounded MUI dialog style as Incident details. Loading, expired results
+and request errors stay inside the dialog. Close, Escape or backdrop dismissal
+preserve the history list and discard late detail responses.

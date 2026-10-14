@@ -11,6 +11,7 @@ import {
   monitorApi,
   MonitorApiError,
   MonitorOverview,
+  type MonitorRun,
 } from '@/lib/api/system-monitor';
 
 jest.mock('@/lib/api/system-monitor', () => {
@@ -730,4 +731,38 @@ it('shows each store separately and selects App Store history and details', asyn
   await waitFor(() => expect(api.run).toHaveBeenCalledWith('apple-run'));
   expect(await screen.findByText('Check details · App Store catalog')).toBeInTheDocument();
   await waitFor(() => expect(api.history).toHaveBeenLastCalledWith(expect.objectContaining({ checkId: 'backend.catalog.app_store', offset: 0 })));
+});
+
+it('opens history Inspect in a dialog and closing it preserves the history row', async () => {
+  const result = { ...overview.checks[0].lastRun!, diagnostic: 'Queue observation is healthy.' };
+  api.history.mockResolvedValue({ items: [result], total: 1, offset: 0, limit: 25, buckets: [] });
+  api.run.mockResolvedValue(result);
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Check details · Application API' });
+  expect(await within(dialog).findByText('Queue observation is healthy.')).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close check details' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+});
+
+it('keeps a closed loading check dialog closed when its response arrives', async () => {
+  let finish!: (run: MonitorRun) => void;
+  api.history.mockResolvedValue({ items: [overview.checks[0].lastRun!], total: 1, offset: 0, limit: 25, buckets: [] });
+  api.run.mockReturnValue(new Promise<MonitorRun>((resolve) => { finish = resolve; }));
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Check details' });
+  expect(within(dialog).getByLabelText('Loading check details')).toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close check details' }));
+  finish(overview.checks[0].lastRun!);
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+it.each([404, 500])('shows a check request failure (%s) inside the dialog', async (status) => {
+  api.history.mockResolvedValue({ items: [overview.checks[0].lastRun!], total: 1, offset: 0, limit: 25, buckets: [] });
+  api.run.mockRejectedValue(new MonitorApiError(status));
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Check details' });
+  expect(await within(dialog).findByText(status === 404 ? 'Check result no longer exists in retention.' : 'Check details are unavailable.')).toBeInTheDocument();
 });
