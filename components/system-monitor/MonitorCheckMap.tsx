@@ -20,6 +20,9 @@ const names: Record<string, string> = {
   'aichat.functional': 'AI chat',
   'n8n.health': 'n8n availability',
   'n8n.readiness': 'n8n readiness',
+  'sportmonks.leagues': 'Leagues',
+  'sportmonks.fixtures': 'Daily fixtures',
+  'sportmonks.livescores': 'Live scores',
 };
 const labels: Record<Outcome, string> = {
   pass: 'Pass',
@@ -84,10 +87,16 @@ export function MonitorCheckMap({
     (check): check is MonitorCheck => Boolean(check)
   );
   const n8n = checks.filter((check) => check.checkId.startsWith('n8n.'));
-  const other = checks.filter(
-    (check) => !backend.includes(check) && !n8n.includes(check)
+  const sportmonks = checks.filter((check) =>
+    check.checkId.startsWith('sportmonks.')
   );
-  const node = (check: MonitorCheck) => {
+  const other = checks.filter(
+    (check) =>
+      !backend.includes(check) &&
+      !n8n.includes(check) &&
+      !sportmonks.includes(check)
+  );
+  const node = (check: MonitorCheck, compact = false) => {
     const { outcome, stale } = state(check);
     const label = names[check.checkId] ?? check.checkId;
     const status = check.enabled ? labels[outcome] : 'Disabled';
@@ -113,7 +122,7 @@ export function MonitorCheckMap({
           sx={{
             width: '100%',
             minWidth: 0,
-            minHeight: 72,
+            minHeight: compact ? 60 : 72,
             px: 1.5,
             py: 1,
             gap: 1.25,
@@ -249,7 +258,10 @@ export function MonitorCheckMap({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', lg: '3fr 1fr' },
+            gridTemplateColumns: {
+              xs: '1fr',
+              lg: 'minmax(0, 2.2fr) minmax(260px, 1fr)',
+            },
             gap: 3,
           }}
         >
@@ -309,44 +321,85 @@ export function MonitorCheckMap({
                       pl: { xs: 2, sm: 0 },
                     }}
                   >
-                    {branches.map(node)}
+                    {branches.map((check) => node(check))}
                   </Stack>
                 </Box>
               ) : (
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
-                  {backend.map(node)}
+                  {backend.map((check) => node(check))}
                 </Stack>
               )}
             </Box>
           )}
-          {n8n.length > 0 && (
+          {(n8n.length > 0 || sportmonks.length > 0) && (
             <Box
-              component="section"
-              aria-label="Independent n8n checks"
               sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  lg: '1fr',
+                },
+                gap: 2,
+                alignContent: 'start',
                 minWidth: 0,
-                borderLeft: { lg: '1px solid' },
-                borderColor: 'divider',
-                pl: { lg: 3 },
               }}
             >
-              <Typography variant="overline" color="text.secondary">
-                n8n
-              </Typography>
-              <Stack spacing={1.5} sx={{ mt: 1 }}>
-                {n8n.map(node)}
-              </Stack>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: 'block', mt: 1.5 }}
-              >
-                Availability and readiness are checked independently.
-              </Typography>
+              {n8n.length > 0 && (
+                <Box
+                  component="section"
+                  aria-label="Independent n8n checks"
+                  sx={{
+                    minWidth: 0,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary">
+                    n8n
+                  </Typography>
+                  <Stack spacing={1} sx={{ mt: 1 }}>
+                    {n8n.map((check) => node(check, true))}
+                  </Stack>
+                </Box>
+              )}
+              {sportmonks.length > 0 && (
+                <Box
+                  component="section"
+                  aria-label="SportMonks checks"
+                  sx={{
+                    minWidth: 0,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary">
+                    SportMonks
+                  </Typography>
+                  <Stack spacing={1} sx={{ mt: 1 }}>
+                    {sportmonks.map((check) => node(check, true))}
+                  </Stack>
+                </Box>
+              )}
             </Box>
           )}
         </Box>
-        {other.length > 0 && <Stack spacing={1.5}>{other.map(node)}</Stack>}
+        {other.length > 0 && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns:
+                'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+              gap: 1.5,
+            }}
+          >
+            {other.map((check) => node(check, true))}
+          </Box>
+        )}
         <Typography variant="caption" color="text.secondary">
           Arrows show check dependencies · Dashed outline means no fresh result
         </Typography>

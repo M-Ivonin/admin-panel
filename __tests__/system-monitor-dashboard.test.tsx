@@ -79,6 +79,47 @@ beforeEach(() => {
   });
   api.logs.mockResolvedValue({ items: [], truncated: false });
 });
+it('groups SportMonks endpoints and keeps each endpoint selectable', async () => {
+  const providerChecks = [
+    'sportmonks.leagues',
+    'sportmonks.fixtures',
+    'sportmonks.livescores',
+  ].map((checkId) => ({
+    ...overview.checks[0],
+    checkId,
+    lastRun: {
+      ...overview.checks[0].lastRun!,
+      checkId,
+      runId: `run-${checkId}`,
+    },
+  }));
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [...overview.checks, ...providerChecks],
+  });
+  api.run.mockResolvedValue(providerChecks[2].lastRun);
+  render(<SystemMonitorDashboard />);
+  const group = await screen.findByRole('region', {
+    name: 'SportMonks checks',
+  });
+  expect(
+    within(group).getByRole('button', { name: /Leagues: Pass/ })
+  ).toBeInTheDocument();
+  expect(
+    within(group).getByRole('button', { name: /Daily fixtures: Pass/ })
+  ).toBeInTheDocument();
+  fireEvent.click(
+    within(group).getByRole('button', { name: /Live scores: Pass/ })
+  );
+  await waitFor(() =>
+    expect(api.run).toHaveBeenCalledWith('run-sportmonks.livescores')
+  );
+  await waitFor(() =>
+    expect(api.history).toHaveBeenLastCalledWith(
+      expect.objectContaining({ checkId: 'sportmonks.livescores' })
+    )
+  );
+});
 it('does not fetch monitor records when the current user has no access', async () => {
   api.capabilities.mockResolvedValue({ canRead: false });
   render(<SystemMonitorDashboard />);
