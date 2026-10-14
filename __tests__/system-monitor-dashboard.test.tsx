@@ -28,6 +28,32 @@ jest.mock('@/lib/api/system-monitor', () => {
   };
 });
 configure({ asyncUtilTimeout: 10000 });
+it('keeps backend observations inside the backend group and selectable', async () => {
+  const ids = [
+    'backend.auth.refresh',
+    'backend.predictions.freshness',
+    'backend.jobs',
+    'backend.queues',
+    'backend.api.errors',
+  ];
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [...overview.checks, ...ids.map((checkId) => ({
+      ...overview.checks[0],
+      checkId,
+      lastRun: { ...overview.checks[0].lastRun!, checkId, runId: `run-${checkId}` },
+    }))],
+  });
+  api.run.mockResolvedValue({ ...overview.checks[0].lastRun!, checkId: 'backend.jobs', runId: 'run-backend.jobs' });
+  render(<SystemMonitorDashboard />);
+  const backend = await screen.findByRole('region', { name: 'Backend check dependencies' });
+  for (const name of ['Session refresh', 'Prediction freshness', 'Background jobs', 'Processing queues', 'API request errors']) {
+    expect(within(backend).getByRole('button', { name: new RegExp(`${name}: Pass`) })).toBeInTheDocument();
+  }
+  fireEvent.click(within(backend).getByRole('button', { name: /Background jobs: Pass/ }));
+  await waitFor(() => expect(api.run).toHaveBeenCalledWith('run-backend.jobs'));
+  expect(await screen.findByText('Check details · Background jobs')).toBeInTheDocument();
+});
 jest.setTimeout(30000);
 const api = jest.mocked(monitorApi);
 const overview: MonitorOverview = {

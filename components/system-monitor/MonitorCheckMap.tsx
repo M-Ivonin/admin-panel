@@ -14,6 +14,11 @@ import type { MonitorCheck, Outcome } from '@/lib/api/system-monitor';
 const names: Record<string, string> = {
   'backend.health': 'Application API',
   'backend.auth': 'Account access',
+  'backend.auth.refresh': 'Session refresh',
+  'backend.predictions.freshness': 'Prediction freshness',
+  'backend.jobs': 'Background jobs',
+  'backend.queues': 'Processing queues',
+  'backend.api.errors': 'API request errors',
   'backend.catalog': 'Google Play catalog',
   'backend.catalog.app_store': 'App Store catalog',
   'backend.collections': 'Prediction collections',
@@ -75,17 +80,25 @@ export function MonitorCheckMap({
   const byId = (id: string) => checks.find((check) => check.checkId === id);
   const api = byId('backend.health');
   const auth = byId('backend.auth');
+  const apiChecks = [api, byId('backend.api.errors')].filter(
+    (check): check is MonitorCheck => Boolean(check)
+  );
+  const authChecks = [auth, byId('backend.auth.refresh')].filter(
+    (check): check is MonitorCheck => Boolean(check)
+  );
+  const processing = ['backend.jobs', 'backend.queues'].map(byId).filter(
+    (check): check is MonitorCheck => Boolean(check)
+  );
   const branches = [
     'backend.catalog',
     'backend.catalog.app_store',
     'backend.collections',
+    'backend.predictions.freshness',
     'aichat.functional',
   ]
     .map(byId)
     .filter((check): check is MonitorCheck => Boolean(check));
-  const backend = [api, auth, ...branches].filter(
-    (check): check is MonitorCheck => Boolean(check)
-  );
+  const backend = [...apiChecks, ...authChecks, ...branches, ...processing];
   const n8n = checks.filter((check) => check.checkId.startsWith('n8n.'));
   const sportmonks = checks.filter((check) =>
     check.checkId.startsWith('sportmonks.')
@@ -269,7 +282,13 @@ export function MonitorCheckMap({
             <Box
               component="section"
               aria-label="Backend check dependencies"
-              sx={{ minWidth: 0 }}
+              sx={{
+                minWidth: 0,
+                p: 1.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+              }}
             >
               <Typography variant="overline" color="text.secondary">
                 Backend
@@ -287,7 +306,9 @@ export function MonitorCheckMap({
                     mt: 1,
                   }}
                 >
-                  {node(api)}
+                  <Stack spacing={1.5}>
+                    {apiChecks.map((check) => node(check))}
+                  </Stack>
                   <Box
                     aria-hidden="true"
                     sx={{
@@ -300,7 +321,9 @@ export function MonitorCheckMap({
                     ↓
                   </Box>
                   {connector(false)}
-                  {node(auth)}
+                  <Stack spacing={1.5}>
+                    {authChecks.map((check) => node(check))}
+                  </Stack>
                   <Box
                     aria-hidden="true"
                     sx={{
@@ -326,8 +349,21 @@ export function MonitorCheckMap({
                 </Box>
               ) : (
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
-                  {backend.map((check) => node(check))}
+                  {[...apiChecks, ...authChecks, ...branches].map((check) => node(check))}
                 </Stack>
+              )}
+              {processing.length > 0 && (
+                <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="overline" color="text.secondary">Background processing</Typography>
+                  <Box sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                    gap: 1.5,
+                    mt: 1,
+                  }}>
+                    {processing.map((check) => node(check, true))}
+                  </Box>
+                </Box>
               )}
             </Box>
           )}
@@ -401,7 +437,7 @@ export function MonitorCheckMap({
           </Box>
         )}
         <Typography variant="caption" color="text.secondary">
-          Arrows show check dependencies · Dashed outline means no fresh result
+          Arrows show the application access path · Dashed outline means no fresh result
         </Typography>
       </Stack>
     </Paper>
