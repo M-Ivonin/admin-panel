@@ -21,8 +21,8 @@ production deployment и визуальное соответствие треб�
 
 По состоянию на `2026-03-27` публичная homepage SirBro уже:
 
-- реализована в [`/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
-- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/[lang]/page.tsx>)
+- реализована в [`/admin-panel/components/public/PublicHomepage.tsx`](../components/public/PublicHomepage.tsx)
+- подключена как основной public home route через [`/admin-panel/app/(public)/[lang]/page.tsx`](<../app/(public)/[lang]/page.tsx>)
 - синхронизирована с актуальным Pencil-источником `Q0YlO` из `/Users/serhiimytakii/Downloads/sirbro.pen`
 - задеплоена как текущая production homepage
 
@@ -32,8 +32,8 @@ production deployment и визуальное соответствие треб�
 
 Над этим core-слоем теперь зафиксирован отдельный information architecture layer:
 
-- [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
-- [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
+- [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](SITE_STRUCTURE_AND_SEO_IA.md)
+- [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
 
 Эти документы сохраняют решения по IA и техническому handoff. Статус реализации
 их пунктов проверяется по текущему коду и owning issues.
@@ -49,8 +49,8 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- добавлены `typecheck`, `verify:stage` и `smoke:routes` в [`package.json`](/Users/serhiimytakii/Projects/Levantem/admin-panel/package.json)
-- добавлен общий smoke harness в [`scripts/smoke-routes.mjs`](/Users/serhiimytakii/Projects/Levantem/admin-panel/scripts/smoke-routes.mjs)
+- добавлены `typecheck`, `verify:stage` и `smoke:routes` в [`package.json`](../package.json)
+- добавлен общий smoke harness в [`scripts/smoke-routes.mjs`](../scripts/smoke-routes.mjs)
 - зафиксированы отдельные smoke-профили для `routing`, `seo` и `deeplink`
 
 ### Этап 1. Deep-Link Boundary Lock
@@ -59,9 +59,9 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- deep-link shared logic вынесена в [`modules/deeplink`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/deeplink)
-- deep-link config изолирован через [`modules/config/runtime.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/config/runtime.ts)
-- bypass paths закреплены в [`modules/deeplink/constants.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/deeplink/constants.ts)
+- deep-link shared logic вынесена в [`modules/deeplink`](../modules/deeplink)
+- deep-link config изолирован через [`modules/config/runtime.ts`](../modules/config/runtime.ts)
+- bypass paths закреплены в [`modules/deeplink/constants.ts`](../modules/deeplink/constants.ts)
 - URL behavior `/invite/*`, `/channels/join`, `/.well-known/*`, `/app-ads.txt` сохранен
 
 ### Этап 2. Routing Cleanup и Route Groups
@@ -70,9 +70,9 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- приложение разделено на route groups: [`app/(public)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)>), [`app/(auth)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(auth)>), [`app/(admin)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(admin)>), [`app/(deeplink)`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(deeplink)>)
+- приложение разделено на route groups: [`app/(public)`](<../app/(public)>), [`app/(auth)`](<../app/(auth)>), [`app/(admin)`](<../app/(admin)>), [`app/(deeplink)`](<../app/(deeplink)>)
 - `dashboard` оставлен в одной канонической admin-ветке
-- `/` переведен на server-side redirect через [`proxy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/proxy.ts) и [`app/(public)/page.tsx`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/page.tsx>)
+- `/` переведен на server-side redirect через [`proxy.ts`](../proxy.ts) и [`app/(public)/page.tsx`](<../app/(public)/page.tsx>)
 - public, auth, admin и deeplink получили независимые root layouts
 
 ### Этап 3. Config и HTTP Layer Separation
@@ -81,9 +81,9 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- runtime config вынесен в [`modules/config/contracts.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/config/contracts.ts) и [`modules/config/runtime.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/config/runtime.ts)
-- public HTTP client вынесен в [`modules/http/public-client.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/http/public-client.ts)
-- admin auth HTTP client вынесен в [`modules/http/admin-auth-client.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/http/admin-auth-client.ts)
+- runtime config вынесен в [`modules/config/contracts.ts`](../modules/config/contracts.ts) и [`modules/config/runtime.ts`](../modules/config/runtime.ts)
+- public HTTP client вынесен в [`modules/http/public-client.ts`](../modules/http/public-client.ts)
+- admin auth HTTP client вынесен в [`modules/http/admin-auth-client.ts`](../modules/http/admin-auth-client.ts)
 - public home больше не читает сырые `process.env` напрямую
 
 ### Этап 4. SEO Infrastructure Core
@@ -92,10 +92,10 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- metadata builders вынесены в [`modules/seo/metadata.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/metadata.ts)
-- schema builders вынесены в [`modules/seo/schema.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/schema.ts)
-- registry индексируемых public routes вынесен в [`modules/seo/route-registry.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/route-registry.ts)
-- `sitemap.xml` генерируется через [`app/(public)/sitemap.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts>)
+- metadata builders вынесены в [`modules/seo/metadata.ts`](../modules/seo/metadata.ts)
+- schema builders вынесены в [`modules/seo/schema.ts`](../modules/seo/schema.ts)
+- registry индексируемых public routes вынесен в [`modules/seo/route-registry.ts`](../modules/seo/route-registry.ts)
+- `sitemap.xml` генерируется через [`app/(public)/sitemap.ts`](<../app/(public)/sitemap.ts>)
 - `robots.txt` оставлен в одном route handler source of truth
 
 ### Этап 5. Content Contracts и Repository Layer
@@ -104,10 +104,10 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- базовые content DTO определены в [`modules/content/types.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/types.ts)
-- repository contract определен в [`modules/content/repository.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/repository.ts)
-- status/indexability policy вынесена в [`modules/content/policy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/policy.ts)
-- текущий static-backed adapter добавлен в [`modules/content/static-public-content-repository.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/static-public-content-repository.ts)
+- базовые content DTO определены в [`modules/content/types.ts`](../modules/content/types.ts)
+- repository contract определен в [`modules/content/repository.ts`](../modules/content/repository.ts)
+- status/indexability policy вынесена в [`modules/content/policy.ts`](../modules/content/policy.ts)
+- текущий static-backed adapter добавлен в [`modules/content/static-public-content-repository.ts`](../modules/content/static-public-content-repository.ts)
 - public metadata теперь строятся через repository/content contract
 
 ### Этап 6. Public/Admin Hardening
@@ -127,7 +127,7 @@ production deployment и визуальное соответствие треб�
 
 Что выполнено:
 
-- добавлены regression tests для content policy и SEO registry в [`__tests__`](/Users/serhiimytakii/Projects/Levantem/admin-panel/__tests__)
+- добавлены regression tests для content policy и SEO registry в [`__tests__`](../__tests__)
 - smoke harness усилен проверками на exclusions в `sitemap.xml` и `robots.txt`
 - локализованные embed pages снова получают правильный `html lang`
 - текущая архитектура готова к следующему слою: `trust pages`, `insights`, `entities`, `quizzes`
@@ -236,41 +236,41 @@ routes могут оставаться закрытыми через `notFound()
 
 ### Routing
 
-- locale redirects и bypass paths контролируются через [`proxy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/proxy.ts)
-- deep-link bypass paths задаются в [`modules/deeplink/constants.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/deeplink/constants.ts)
+- locale redirects и bypass paths контролируются через [`proxy.ts`](../proxy.ts)
+- deep-link bypass paths задаются в [`modules/deeplink/constants.ts`](../modules/deeplink/constants.ts)
 
 ### SEO
 
-- registry индексируемых public routes: [`modules/seo/route-registry.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/route-registry.ts)
-- page metadata builders: [`modules/seo/metadata.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/metadata.ts)
-- structured data builders: [`modules/seo/schema.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/seo/schema.ts)
-- sitemap route: [`app/(public)/sitemap.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/sitemap.ts>)
-- robots route: [`app/(public)/robots.txt/route.ts`](</Users/serhiimytakii/Projects/Levantem/admin-panel/app/(public)/robots.txt/route.ts>)
-- approved IA source of truth: [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
-- technical handoff for next public layer: [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
+- registry индексируемых public routes: [`modules/seo/route-registry.ts`](../modules/seo/route-registry.ts)
+- page metadata builders: [`modules/seo/metadata.ts`](../modules/seo/metadata.ts)
+- structured data builders: [`modules/seo/schema.ts`](../modules/seo/schema.ts)
+- sitemap route: [`app/(public)/sitemap.ts`](<../app/(public)/sitemap.ts>)
+- robots route: [`app/(public)/robots.txt/route.ts`](<../app/(public)/robots.txt/route.ts>)
+- approved IA source of truth: [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](SITE_STRUCTURE_AND_SEO_IA.md)
+- technical handoff for next public layer: [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
 
 ### Content Contracts
 
-- content DTO: [`modules/content/types.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/types.ts)
-- repository interface: [`modules/content/repository.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/repository.ts)
-- status/indexability policy: [`modules/content/policy.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/policy.ts)
-- current static repository adapter: [`modules/content/static-public-content-repository.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/content/static-public-content-repository.ts)
+- content DTO: [`modules/content/types.ts`](../modules/content/types.ts)
+- repository interface: [`modules/content/repository.ts`](../modules/content/repository.ts)
+- status/indexability policy: [`modules/content/policy.ts`](../modules/content/policy.ts)
+- current static repository adapter: [`modules/content/static-public-content-repository.ts`](../modules/content/static-public-content-repository.ts)
 
 ## Runtime Boundaries
 
 ### Public Fetching
 
-- только через [`modules/http/public-client.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/http/public-client.ts)
+- только через [`modules/http/public-client.ts`](../modules/http/public-client.ts)
 - без `js-cookie`, `localStorage`, `window.location` auth logic
 
 ### Admin Fetching
 
-- только через [`modules/http/admin-auth-client.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/http/admin-auth-client.ts)
+- только через [`modules/http/admin-auth-client.ts`](../modules/http/admin-auth-client.ts)
 - auth redirect behavior допустим только здесь
 
 ### Deep Link Config
 
-- только через [`modules/config/runtime.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/modules/config/runtime.ts)
+- только через [`modules/config/runtime.ts`](../modules/config/runtime.ts)
 - не смешивается с public content repository
 
 ## Gate Rules

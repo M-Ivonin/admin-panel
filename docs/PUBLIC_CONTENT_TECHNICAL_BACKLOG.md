@@ -19,6 +19,15 @@
 
 ## Текущее состояние
 
+Структурные пункты ниже сверены с кодом 2026-10-15. В
+[`modules/content/repository.ts`](../modules/content/repository.ts) уже есть
+расширенный `PublicContentRouteType` и trust page keys; пути заданы в
+[`public-pages.ts`](../modules/content/public-pages.ts). Trust pages и generic
+hubs используют scaffolds, quizzes имеют собственный repository-backed flow,
+а некоторые generic detail routes возвращают `notFound()`. Поэтому существование
+маршрута или DTO не закрывает весь backlog контента и SEO. Исторические отметки
+о deployment ниже не заменяют проверку текущей production-ревизии.
+
 Важно:
 
 - homepage уже реализована и задеплоена;
@@ -74,15 +83,16 @@
 
 ## Целевой набор route types
 
-### Рекомендуемое расширение `PublicContentRouteType`
+### Исходное предложение расширения `PublicContentRouteType`
 
-Текущий union:
+На этапе первоначального handoff использовался следующий union; это
+исторический пример, а не текущий тип:
 
 ```ts
 type PublicContentRouteType = 'page' | 'insight' | 'entity' | 'quiz';
 ```
 
-Этого уже мало, потому что у разных типов разные:
+Его расширение было нужно, потому что у разных типов разные:
 
 - metadata;
 - schema;
@@ -91,7 +101,10 @@ type PublicContentRouteType = 'page' | 'insight' | 'entity' | 'quiz';
 - list/detail semantics;
 - breadcrumb patterns.
 
-### Рекомендуемый целевой union
+### Реализованный расширенный union
+
+Этот структурный пункт уже выполнен. Код в `modules/content/repository.ts`
+остаётся источником актуального списка; перечень ниже сохраняет форму handoff.
 
 ```ts
 type PublicContentRouteType =
@@ -135,16 +148,17 @@ type PublicContentRouteType =
 /:lang/contact
 ```
 
-#### Что нужно сделать
+#### Выполненная структура и оставшаяся проверка
 
-- расширить `PublicContentPageKey`;
-- расширить `PUBLIC_PAGE_PATHS`;
-- добавить SEO copy source of truth;
-- добавить static-backed entries как первый этап;
-- добавить routes в `route-registry`, если они `index`;
-- создать page files под `app/(public)/[lang]/...`.
+- Уже расширены `PublicContentPageKey` и `PUBLIC_PAGE_PATHS`, добавлены
+  static-backed entries и page files под `app/(public)/[lang]/...`.
+- Trust routes пока используют scaffold presentation. Наличие ключей, copy и
+  metadata не означает завершённую содержательную страницу.
+- Для наполнения и выпуска остаётся сверить содержание, indexability и sitemap
+  по policy/repository, затем выполнить соответствующие smoke-проверки. Не
+  добавлять route в индекс только потому, что существует его page file.
 
-#### Новые `PublicContentPageKey`
+#### Уже реализованные `PublicContentPageKey`
 
 ```ts
 type PublicContentPageKey =

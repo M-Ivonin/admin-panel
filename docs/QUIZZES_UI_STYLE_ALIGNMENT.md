@@ -4,9 +4,9 @@
 
 ## Source Of Truth
 
-- главный визуальный reference: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
-- общий style reference: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/FIGMA_APP_STYLE_REFERENCE.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/FIGMA_APP_STYLE_REFERENCE.md)
-- reusable quiz tokens: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/quizzes/quizStyles.ts`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/quizzes/quizStyles.ts)
+- главный визуальный reference: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](../components/public/PublicHomepage.tsx)
+- общий style reference: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/FIGMA_APP_STYLE_REFERENCE.md`](FIGMA_APP_STYLE_REFERENCE.md)
+- reusable quiz tokens: [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/quizzes/quizStyles.ts`](../components/public/quizzes/quizStyles.ts)
 
 ## Visual Rules
 
@@ -32,7 +32,7 @@
 ## Header Constraint
 
 - quizzes pages не должны использовать отдельный custom nav shell;
-- navigation block на quizzes обязан повторять homepage standard из [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx);
+- navigation block на quizzes обязан повторять homepage standard из [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](../components/public/PublicHomepage.tsx);
 - если меняется header на homepage, shared public header нужно синхронизировать в тот же change-set.
 
 ## Shell Constraint

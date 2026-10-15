@@ -6,7 +6,7 @@
 
 Главный source of truth:
 
-- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx)
+- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/components/public/PublicHomepage.tsx`](../components/public/PublicHomepage.tsx)
 
 Вторичный визуальный reference:
 
@@ -341,10 +341,10 @@ Footer structure:
 
 Current homepage assets referenced by code:
 
-- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/hero-app-shot.jpg`](/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/hero-app-shot.jpg)
-- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-feed.jpg`](/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-feed.jpg)
-- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-chat.jpg`](/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-chat.jpg)
-- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-timeline.jpg`](/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-timeline.jpg)
+- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/hero-app-shot.jpg`](../public/assets/homepage/hero-app-shot.jpg)
+- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-feed.jpg`](../public/assets/homepage/showcase-feed.jpg)
+- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-chat.jpg`](../public/assets/homepage/showcase-chat.jpg)
+- [`/Users/serhiimytakii/Projects/Levantem/admin-panel/public/assets/homepage/showcase-timeline.jpg`](../public/assets/homepage/showcase-timeline.jpg)
 
 ## Rule For Future Updates
 
