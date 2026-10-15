@@ -25,6 +25,10 @@ deleting the backlog.
 - [Prediction evaluations](./PREDICTION_EVALUATION_ADMIN_SCREEN.md)
 - [Revenue Ledger](./REVENUE_LEDGER_ADMIN_SCREEN.md)
 - [Remote diagnostics](./REMOTE_DIAGNOSTICS_ADMIN.md)
+- [System Monitor](./SYSTEM_MONITOR.md)
+- [Support ticket operations](./SUPPORT_TICKET_OPERATIONS.md)
+- [Match ranking](./MATCH_RANKING_ADMIN.md)
+- [Partner markets](./PARTNER_MARKETS_ADMIN_SCREEN.md)
 
 ## Agent guidance
 

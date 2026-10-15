@@ -5,7 +5,19 @@
 Этот документ фиксирует текущую архитектурную базу `admin-panel` после рефактора public/admin/deeplink контуров.  
 Он не описывает дизайн, composition страниц или контентную стратегию. Его задача: закрепить границы модулей и правила, по которым дальше наращивается функционал.
 
-## Current Public Status
+## Текущие границы public-слоя
+
+В текущем коде есть homepage, legal routes, trust/hub scaffolds и отдельный
+repository-backed quiz-слой. Наличие route-файла не означает готовую content
+feature: например, `insights/[slug]/page.tsx` возвращает `notFound()`, а hub и
+trust routes используют `modules/public/scaffold-route.tsx`. Quiz hub, detail
+и result routes читают quiz-контракты через `modules/content/*`.
+
+Текущий adapter остаётся static-backed. Доступность конкретного контента,
+indexability и sitemap определяются repository, policy и SEO registry;
+production deployment и визуальное соответствие требуют отдельной проверки.
+
+## Исторический срез homepage — 2026-03-27
 
 По состоянию на `2026-03-27` публичная homepage SirBro уже:
 
@@ -15,18 +27,21 @@
 - задеплоена как текущая production homepage
 
 Нижеописанная архитектура не является планом для homepage "с нуля".  
-Для homepage речь теперь идет только о поддержке, polish и последующих public SEO/content слоях.
+Этот срез описывает результат того этапа, а не подтверждает текущую production
+ревизию или состояние последующих public SEO/content слоёв.
 
 Над этим core-слоем теперь зафиксирован отдельный information architecture layer:
 
 - [`docs/SITE_STRUCTURE_AND_SEO_IA.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/SITE_STRUCTURE_AND_SEO_IA.md)
 - [`docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md`](/Users/serhiimytakii/Projects/Levantem/admin-panel/docs/PUBLIC_CONTENT_TECHNICAL_BACKLOG.md)
 
-Эти документы не меняют runtime поведение текущего цикла, но задают утвержденную форму следующего public SEO layer.
+Эти документы сохраняют решения по IA и техническому handoff. Статус реализации
+их пунктов проверяется по текущему коду и owning issues.
 
-## Статус Выполнения
+## История выполнения core architecture
 
-Ниже отражено, что уже сделано по архитектурному плану.
+Ниже сохранён результат первоначального архитектурного плана. Это история
+этапов, а не перечень всей текущей public-функциональности.
 
 ### Этап 0. Baseline и Gate Harness
 
@@ -117,9 +132,12 @@
 - локализованные embed pages снова получают правильный `html lang`
 - текущая архитектура готова к следующему слою: `trust pages`, `insights`, `entities`, `quizzes`
 
-## Следующий слой поверх core architecture
+## Public content поверх core architecture
 
-После закрытия `Этапа 1.5` следующий слой считается архитектурно определенным, но еще не реализованным runtime-wise.
+Public content families уже представлены маршрутами и content contracts.
+Степень реализации различается: trust и generic hubs используют scaffolds,
+а quizzes имеют собственные компоненты и repository methods. Generic detail
+routes могут оставаться закрытыми через `notFound()`.
 
 Утвержденные public SEO families:
 
@@ -141,14 +159,15 @@
 - эти слои больше не считаются абстрактными "будущими идеями";
 - реализация следующих этапов должна соответствовать утвержденной IA;
 - сам этот документ по-прежнему не является местом для дизайна или page composition;
-- runtime реализация новых public routes, DTO и repository methods начинается только на следующих implementation phases.
+- новые public routes, DTO и repository methods развиваются в существующих
+  владельцах `modules/content`, `modules/seo` и `modules/public`.
 
-## Что Еще Не Сделано
+## Границы оставшейся работы
 
-Это сознательно оставлено за пределами текущего цикла:
+Наличие scaffolds не закрывает весь technical backlog. Отдельной проверки и
+задачи требуют:
 
-- дизайн и composition страниц
-- trust/insights/entities/quizzes как feature-слои
+- завершение scaffold/detail flows и контента по каждой public family
 - backend-backed content repository вместо текущего static adapter
 - admin authoring UI для управления SEO-контентом
 
@@ -174,13 +193,17 @@
 
 ### 2. Public Contour
 
-Текущие индексируемые public routes:
+Фиксированные индексируемые public routes в SEO registry:
 
 - `/:lang`
 - `/:lang/privacy`
 - `/:lang/terms`
 - `/:lang/disclaimer`
 - `/:lang/cookies`
+
+Дополнительные repository-driven маршруты, включая quizzes, добавляются через
+`listIndexableRoutes()`. Существующий trust/hub/detail route не становится
+индексируемым автоматически: проверьте content policy и sitemap projection.
 
 Правила:
 
