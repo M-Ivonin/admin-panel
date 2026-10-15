@@ -1,1208 +1,199 @@
-# Campaigns Feature Overview
-
-Last reviewed from code: 2026-04-23
-
-This document describes the implemented Campaigns feature by reading the current admin-panel and backend code. It covers the current shipped behavior, data model, runtime flow, and notable implementation nuances.
-
-## 1. What the feature is
-
-The Campaigns feature is a push-only CRM orchestration system with:
-
-- an admin experience for creating and managing campaigns,
-- a backend domain for persisting campaign definitions,
-- a planner that materializes campaign journey steps into delivery rows,
-- an executor that sends push notifications,
-- source-event ingestion for event-based entry and conversion tracking,
-- runtime suppression rules that reduce duplicate or invalid sends.
-
-At a high level, the feature lets the team:
-
-- create or edit campaign drafts,
-- define audience, trigger type, journey timing, and localized push content,
-- reuse shipped or saved scenario templates,
-- send traced test pushes,
-- schedule a campaign for live runtime execution,
-- pause and resume live campaign planning,
-- archive a campaign to stop further planning and sending.
-
-## 2. Current scope and important realities
-
-The current implementation is narrower than the raw type contracts may suggest.
-
-- Channel support is currently `push` only.
-- The editor exposes one explicit tracked-goal selector at campaign level.
-- The editor exposes optional goal reward points for tracked-goal campaigns.
-- The editor exposes only three deeplink targets for new non-null step actions:
-  - `continue_onboarding`
-  - `open_match_center`
-  - `open_rewards_wallet`
-- These deeplink actions remain available for push behavior, but they do not automatically derive or change `goalDefinition`.
-- The broader deeplink enum still exists in shared contracts.
-- If an older draft contains a legacy unsupported non-null deeplink, the editor renders it as a legacy unsupported value so the admin can replace or clear it.
-- The backend accepts only shipped tracked-goal pairs from the goal catalog and validates them independently from step deeplink choices.
-- The builder exposes templates, but it does not currently expose a saved-segment picker or a save-segment action even though the backend and frontend repository already support them.
-- `paused` campaigns can be resumed from the editor. Resuming uses the same live-planning confirmation flow as scheduling.
-
-## 3. High-level architecture
-
-```mermaid
-flowchart LR
-    A["Admin Panel<br/>Overview + Builder"] --> B["Admin Campaigns API"]
-    B --> C["campaigns"]
-    B --> D["campaign_segments"]
-    B --> E["campaign_templates"]
-
-    F["Runtime Scheduler"] --> G["Dispatch Planner"]
-    F --> H["Delivery Executor"]
-
-    G --> C
-    G --> I["campaign_source_events"]
-    G --> J["campaign_deliveries"]
-
-    H --> C
-    H --> J
-    H --> K["PushNotificationService"]
-
-    L["Mobile app and backend event producers"] --> I
-    M["CRM schedulers"] --> I
-    N["Channels favorite match flow"] --> I
-
-    I --> G
-    I --> H
-    J --> H
-    J --> O["Overview metrics and CTR"]
-    C --> O
-```
-
-## 4. Core concept model
-
-There are two different "goal" concepts in this feature:
-
-### 4.1 Human goal text
-
-This is the free-text goal entered by an admin in the builder, for example:
-
-- "Recover onboarding completion"
-- "Drive match center opens"
-
-It is stored as `campaign.goalText` and is primarily a product-facing description.
-
-### 4.2 Backend goal definition
-
-This is the machine-readable success rule selected in the tracked-goal field and stored as `campaign.goalDefinition`.
-
-This backend goal definition is what actually powers:
-
-- goal suppression,
-- stop-on-goal behavior for later journey steps,
-- success attribution logic.
-- optional one-time goal reward points.
-
-If no tracked goal is selected, the editor shows an explicit warning that campaign success, suppression, and stop-on-goal behavior will not be measured. This warning does not block save, test send, or scheduling by itself.
-
-### 4.3 Campaign goal reward
-
-Tracked-goal campaigns can define `rewardPoints`.
-
-- `0` means no campaign reward.
-- A positive value is awarded once when the user reaches that campaign goal for the current journey.
-- The backend writes the credit through the points ledger with idempotency, so duplicate goal events do not create duplicate credits for the same campaign journey.
-- The rewarded amount is snapshotted onto sent deliveries, so later campaign edits do not retroactively change what an already-sent push pays out.
-- For trace-required CTA goals such as match-center or rewards-wallet opens, the reward is tied to the push delivery trace.
-- Send Test uses the same trace-required reward path for test deliveries, so tapping a test push can verify that the mobile reward confirmation appears.
-
-## 5. Admin-panel experience
-
-### 5.1 Routes
-
-The admin-panel exposes three campaign routes:
-
-- `/dashboard/campaigns`
-- `/dashboard/campaigns/new`
-- `/dashboard/campaigns/[campaignId]`
-
-All three are wrapped in `ProtectedRoute`.
-
-### 5.2 Overview screen
-
-The overview page loads `/campaigns/admin/overview` and shows:
-
-- KPI cards,
-- a searchable/filterable campaign list,
-- pagination,
-- a "New Campaign" entry point.
-
-The admin screen uses staged loading for the overview. It first calls
-`/campaigns/admin/overview?includeMetrics=false` so campaign rows can render
-without waiting for delivery aggregates or live audience estimates. KPI cards
-then hydrate from `/campaigns/admin/overview/stats`, and visible row metrics
-hydrate from `/campaigns/admin/overview/item-metrics` as each response arrives.
-
-Each campaign row can download a backend-owned V2 JSON analytics snapshot for
-the currently selected stats period. The export contains the full definition,
-runtime metadata, aggregate performance, UTC daily metrics, safe content
-dimensions, and related source-event counts. It excludes raw deliveries and
-user-level identifiers.
-
-The header’s "Export all JSON" downloads one JSON array of these same V2
-snapshots for every campaign, including archived campaigns, across all pages.
-It uses the selected statistics period and ignores list filters. Requests run
-sequentially; if any request fails, the screen shows the error and no partial
-file is downloaded.
-
-#### KPI cards
-
-The KPI cards show:
-
-- active campaigns,
-- paused campaigns,
-- scheduled campaigns,
-- pushes sent today,
-- delivered rate,
-- average CTR,
-- CTR delta vs previous 7 days,
-- reach currently in progress.
-
-These KPIs come from backend aggregates and are not filtered by the current left-rail filters.
-
-#### Filters
-
-The overview supports:
-
-- search by campaign name, goal text, or owner label,
-- status filters,
-- trigger-type filters,
-- quick views:
-  - `active_now`
-  - `needs_attention`
-  - `recent_drafts`
-
-Important nuance:
-
-- `active_now` and `recent_drafts` are applied at the database query layer.
-- `needs_attention` is filtered before pagination is applied.
-- `total` and `totalPages` now reflect the full filtered universe, not only the currently loaded page.
-
-#### List row behavior
-
-Each list row shows:
-
-- campaign name and goal text,
-- status,
-- trigger type,
-- audience summary,
-- timing summary,
-- progress summary,
-- outcome summary,
-- locale readiness chips,
-- creator/owner label.
-
-Important nuances:
-
-- The audience label uses only the first selected retention stage, not the full audience definition.
-- The audience estimate is a stored snapshot from the last draft save/update, not a live recalculated audience size.
-- KPI cards stay unchanged even when tracked-goal reporting is available on individual rows.
-- The outcome cell still shows CTR for campaigns without a tracked goal after sends begin.
-- When tracked-goal aggregates exist, the outcome cell shows the primary goal-rate value and a secondary `X reached / Y journeys` detail line.
-
-### 5.3 Editor state model
-
-The editor uses a shared reducer-based local state with:
-
-- one canonical `CampaignDraft`,
-- one catalog payload,
-- one audience estimate payload,
-- active builder step,
-- active content step,
-- dialog state,
-- dirty-state tracking,
-- last action result,
-- last persisted draft snapshot.
-
-The create and edit pages use the same editor component.
-
-### 5.4 Editor step flow
-
-The builder is organized into four steps:
-
-1. Audience
-2. Trigger + Journey
-3. Step Content
-4. Review
-
-The draft is not auto-saved continuously. Save is explicit, but some actions persist automatically:
-
-- `Send Test` saves first if needed
-- `Schedule Campaign` saves first if needed
-
-### 5.5 Audience step
-
-The Audience step currently exposes:
-
-- campaign name,
-- campaign goal text,
-- tracked goal selector,
-- goal reward points,
-- optional specific-user filter,
-- retention stages,
-- locales,
-- one optional suppression toggle:
-  - `excludeUsersWithoutPushOpens`
-
-Specific users are loaded from the users admin API and selected by:
-
-- user id,
-- name,
-- email lookup in the picker UI.
-
-The UI explicitly communicates that goal suppression is always on. There is no user-facing toggle for enabling or disabling goal suppression.
-
-Important nuances:
-
-- When no tracked goal is selected, the editor shows a warning instead of blocking save, test send, or scheduling.
-- Retention stages are optional when the audience already targets one or more specific users.
-- The draft contract supports `segmentSource` and `sourceSegmentId`, but the editor does not currently let the admin choose a saved segment directly.
-- In current runtime logic, `segmentSource` and `sourceSegmentId` are metadata/provenance fields. Actual audience resolution uses `criteria` and `suppression`, not segment linkage.
-
-### 5.6 Scenario templates
-
-The left rail in the editor shows scenario templates.
-
-Templates can come from two sources:
-
-- shipped templates seeded in the database,
-- saved templates persisted in the database.
-
-Applying a template replaces most of the draft definition:
-
-- name,
-- goal text,
-- channel,
-- audience,
-- trigger,
-- journey,
-- content.
-
-Saved templates can be deleted from the UI. Shipped templates cannot.
-
-Important nuance:
-
-- The shared contract supports `push`, `in_app`, and `hybrid` channel wire values, but the current backend runtime executes only `push`.
-- When a template is applied, the frontend marks the audience as `template_segment` with `sourceSegmentId = template.id`.
-- This metadata is later used to block "save as template" for template-derived campaigns and to prevent scheduling another live campaign from the same template.
-
-### 5.7 Trigger step
-
-The editor supports three trigger families:
-
-- `state_based`
-- `event_based`
-- `scheduled_recurring`
-
-#### State based
-
-The admin can configure:
-
-- re-entry cooldown in hours
-
-The UI explains that users enter when they match the selected audience and that planner cycles keep checking eligibility.
-
-#### Event based
-
-The admin can configure:
-
-- entry event from a backend-owned catalog,
-- re-entry cooldown in hours,
-- max sends per user for this campaign
-
-The source event catalog shown to new campaigns is restricted. Some supported backend event pairs are intentionally hidden from new selection.
-
-Important nuance:
-
-- Legacy campaigns using hidden but still-supported event pairs can still load in the editor.
-- The editor shows a warning when such a campaign is being edited.
-
-#### Scheduled recurring
-
-The editor supports a restricted RRULE builder:
-
-- start date
-- max occurrences
-- frequency: daily or weekly
-- interval
-- weekdays for weekly rules
-- time
-
-The UI describes this as user-local scheduling.
-
-Important backend nuance:
-
-- New recurring drafts default `maxOccurrences = 1`, which means the schedule runs only once unless the admin explicitly increases the count.
-- When `maxOccurrences > 1`, every matching occurrence starts a fresh journey instance and repeats the full journey from step 1.
-- `startDate` is stored as a local calendar date (`YYYY-MM-DD`) and acts as the schedule anchor for recurring interval math.
-- Legacy recurring campaigns that predate `startDate` still fall back to the runtime anchor timestamp already persisted on the trigger.
-
-### 5.8 Journey builder
-
-The journey builder supports multiple steps.
-
-Each step stores:
-
-- `stepKey`
-- `order`
-- `anchor`
-- `delayMinutes`
-- `sameLocalTimeNextDay`
-- `sendWindowStart`
-- `sendWindowEnd`
-- `exitRule`
-- `frequencyCapHours`
-- `inAppExpirationMinutes`
-- optional `sendGuards`
-
-In practice, some of these are fixed by the current system:
-
-- step 1 must anchor to `trigger`
-- later steps must anchor to `previous_step`
-- backend forces `exitRule = stop_on_goal` for every step
-
-The admin can configure:
-
-- delay minutes,
-- next-day same-local-time behavior,
-- local send window,
-- per-step frequency cap,
-- in-app expiration in minutes,
-- one Send Guard per step.
-
-Important nuance:
-
-- `inAppExpirationMinutes` defaults to `1440` when omitted and must stay between `1` and `10080`. It is stored on each journey step for the future in-app contract; no in-app fetch/render runtime exists in this issue.
-- The editor UI says "minimum gap after any campaign send," and the actual frequency-cap check matches that: it looks at previous live sent deliveries across **all** campaigns for the recipient, not only the current one.
-- Send Guards are send-time only. They do not change planning; the backend still materializes pending deliveries and skips the current live delivery only if the same recipient performed the selected action since the journey started.
-
-### 5.9 Step content
-
-For each step and locale, the admin can configure:
-
-- push title,
-- push body,
-- fallback first name,
-- optional deeplink target,
-- token insertion into title/body.
-
-Supported tokens are:
-
-- `{{first_name}}`
-- `{{favorite_team}}`
-- `{{bonus_points}}`
-
-The live catalog currently exposes only these deeplink actions:
-
-- Continue onboarding
-- Open match center
-- Open rewards wallet
-
-Important nuances:
-
-- Deeplink step actions are edited per step and per locale, but they are no longer the source of the campaign tracked goal.
-- The tracked goal is selected separately at campaign level and applies to overview reporting, suppression, and stop-on-goal runtime behavior.
-- Token picker insertion now happens at the current cursor or selection inside the active title/body field instead of always appending at the end.
-- The editor only allows new non-null selections from the supported set:
-  - Continue onboarding
-  - Open match center
-  - Open rewards wallet
-- If a loaded draft still contains a legacy unsupported non-null deeplink, the editor shows it as legacy unsupported and requires the admin to clear or replace it before saving.
-
-### 5.10 Review, readiness, and UI gates
-
-The editor derives:
-
-- step-level locale readiness,
-- aggregate campaign locale readiness,
-- warnings,
-- validation errors,
-- review models for the summary screen.
-
-Readiness rules in the frontend:
-
-- `missing`: title and body are both empty
-- `warning`: partial content or `{{first_name}}` without fallback
-- `ready`: title/body present and required fallback resolved
-
-Frontend action gates:
-
-- Continue to later builder steps only when the current stage is sufficiently configured.
-- Send Test is enabled when the first step exists and at least one locale of that step is `ready`.
-- Schedule Campaign is enabled only when:
-  - campaign is not archived,
-  - campaign is not already scheduled,
-  - validation has no errors,
-  - every selected audience locale is not `missing`
-- Archive Campaign is enabled when the campaign exists and is not archived.
-- Pause Campaign is enabled when the campaign exists and is active or scheduled.
-
-Important nuances:
-
-- The right-rail readiness chips are shown only for the locales currently targeted by the audience.
-- Scheduling in the UI now mirrors the backend schedule gate.
-  - warning-level locales are allowed,
-  - selected locales with `missing` content still block scheduling,
-  - invalid recurring rules still block scheduling.
-- Unselected locales do not contribute missing-content warnings or scheduling blockers.
-- Deeplink targets now describe post-tap navigation only.
-- Campaign success tracking is configured explicitly through the tracked-goal field, not inferred from step deeplinks.
-- Saving as template is more permissive than scheduling:
-  - template save ignores "step locale missing content" as a blocking UI error,
-  - template-derived campaigns cannot be saved as a new template.
-
-### 5.11 Test-send behavior from the editor
-
-The test-send dialog accepts comma-separated recipient handles.
-
-Handles can be:
-
-- user IDs,
-- emails,
-- analytics device keys.
-
-Important nuances:
-
-- Test send uses only the first journey step.
-- The backend can fall back to the authenticated admin user if no provided handle resolves.
-- The response may include warnings.
-
-## 6. Backend admin API
-
-The backend exposes the admin contract under `campaigns/admin`.
-
-Admin access is currently guarded by:
-
-- authenticated user presence,
-- email allowlist from `admin.emails` config.
-
-### Endpoints
-
-| Method   | Path                                      | Purpose                                             |
-| -------- | ----------------------------------------- | --------------------------------------------------- |
-| `GET`    | `/campaigns/admin/overview`               | Load campaign list, with optional full metrics      |
-| `GET`    | `/campaigns/admin/overview/stats`         | Load overview KPI stats                             |
-| `GET`    | `/campaigns/admin/overview/item-metrics`  | Hydrate metrics for selected visible campaign rows  |
-| `GET`    | `/campaigns/admin/catalog`                | Load editor catalog                                 |
-| `GET`    | `/campaigns/admin/:id/export`             | Export the campaign analytics V2 snapshot           |
-| `GET`    | `/campaigns/admin/:id`                    | Load one persisted campaign draft                   |
-| `POST`   | `/campaigns/admin`                        | Create campaign draft                               |
-| `PUT`    | `/campaigns/admin/:id`                    | Update campaign draft                               |
-| `POST`   | `/campaigns/admin/estimate-audience`      | Estimate audience                                   |
-| `POST`   | `/campaigns/admin/segments`               | Save reusable audience segment                      |
-| `POST`   | `/campaigns/admin/templates`              | Save reusable campaign template                     |
-| `DELETE` | `/campaigns/admin/templates/:id`          | Delete saved template                               |
-| `POST`   | `/campaigns/admin/:id/send-test`          | Insert and execute traced test deliveries           |
-| `POST`   | `/campaigns/admin/:id/schedule`           | Schedule or activate live runtime                   |
-| `POST`   | `/campaigns/admin/:id/archive`            | Archive a campaign                                  |
-| `POST`   | `/campaigns/admin/:id/pause`              | Pause a campaign                                    |
-
-## 7. Persistence model
-
-### 7.1 `campaigns`
-
-The main campaign row stores:
-
-- mutable definition fields:
-  - name
-  - goal text
-  - goal definition
-  - audience
-  - trigger
-  - journey
-  - content
-- runtime snapshot fields:
-  - status
-  - definition version
-  - latest audience estimate
-  - next dispatch at
-  - last dispatch at
-  - last sent count
-  - last total count
-  - created-by metadata
-  - archived at
-
-Important nuances:
-
-- `definitionVersion` increments on every draft update.
-- Queued deliveries keep the campaign version they were planned against.
-- The executor skips deliveries from older versions as `superseded`.
-
-### 7.2 `campaign_deliveries`
-
-This table stores both live and test delivery rows.
-
-It includes:
-
-- kind (`live` or `test`)
-- recipient
-- locale
-- deeplink target
-- timezone
-- journey instance metadata
-- source event linkage
-- planned send time
-- claim state
-- execution status
-- rendered push copy
-- open timestamp
-
-Important uniqueness and ordering guarantees:
-
-- `delivery_trace_id` is unique.
-- `(campaignId, kind, recipientUserId, stepKey, sourceWindowKey)` is unique.
-- later steps are claimed only when no earlier step in the same journey instance is still `pending` or `sending`.
-
-Important nuance:
-
-- Terminal earlier steps do not automatically cancel downstream steps.
-- If step 1 is `sent`, `failed`, or `skipped`, later steps can still become claimable.
-- Goal suppression, not step failure, is what stops later steps automatically.
-
-### 7.3 `campaign_source_events`
-
-This table stores ingress-safe source events used by event-based campaigns and goal attribution.
-
-It stores:
-
-- event key
-- producer key
-- user id
-- event time
-- dedupe key
-- delivery trace id
-- arbitrary properties
-
-Important uniqueness guarantee:
-
-- `(eventKey, producerKey, dedupeKey)` is unique when `dedupeKey` is non-null.
-
-### 7.4 `campaign_segments`
-
-Stores reusable saved audience definitions.
-
-The table exists and the backend supports saving/listing segments, but the live editor currently does not expose a segment picker or "save segment" action.
-
-### 7.5 `campaign_templates`
-
-Stores reusable saved scenario templates.
-
-Saved templates are merged into the editor catalog and shown before shipped templates.
-
-## 8. Draft normalization and validation in the backend
-
-Before a draft is saved, the admin service normalizes and validates:
-
-- audience,
-- trigger,
-- journey,
-- content.
-
-### 8.1 Canonical rules enforced by the backend
-
-The backend rejects drafts when:
-
-- journey has no steps,
-- step keys are duplicated,
-- step order is not sequential,
-- step anchors do not follow the required pattern,
-- event-based trigger uses an unsupported shipped event pair,
-- recurring trigger has no RRULE,
-- recurring trigger uses an invalid RRULE,
-- content keys do not match journey step keys exactly,
-- an event-based trigger uses the same event as the selected tracked goal,
-- `goalDefinition` does not match one of the shipped goal options.
-
-### 8.2 Fixed trigger and journey contract values
-
-Some contract fields are currently stored but not meaningfully branched on by runtime logic:
-
-- `qualificationMode` is always `when_user_matches_audience`
-- `entryMode` is always `first_eligible_event`
-- `timezoneMode` is always `user_local`
-- `exitRule` is forced to `stop_on_goal`
-
-These fields exist for contract shape and future extensibility more than for current branch behavior.
-
-## 9. Audience resolution
-
-The audience resolver is the backend source of truth for who can enter a campaign.
-
-### 9.1 What actually determines eligibility
-
-Actual eligibility is based on:
-
-- retention stages,
-- optional explicit user IDs,
-- locale groups,
-- push reachability: active installation token first, with legacy user FCM token fallback,
-- suppression rules.
-
-`segmentSource` and `sourceSegmentId` do not currently change runtime eligibility by themselves.
-
-### 9.2 Locale grouping
-
-Locale normalization is currently:
-
-- `es*` -> `es`
-- `pt*` -> `pt`
-- empty or any other language -> `en`
-
-Important nuance:
-
-- English is effectively the default bucket for blank or non-ES/PT user language values.
-
-### 9.3 Audience estimate
-
-Audience estimate:
-
-- uses the same base audience query,
-- includes locale and retention-stage breakdowns,
-- includes a warning that final reach can be lower.
-
-Important nuance:
-
-- The estimate does not simulate all send-time suppressions.
-- In particular, goal suppression and some delivery-time checks are not included in the estimated count.
-
-### 9.4 Suppression rules
-
-The current system uses several suppression layers.
-
-#### Explicit suppression: exclude users who never open campaign pushes
-
-If enabled, the resolver requires at least one prior live campaign delivery with `opened_at IS NOT NULL`.
-
-Important nuance:
-
-- When resolving the current campaign audience, the query excludes the current campaign itself from that historical-open check.
-
-#### Re-entry suppression
-
-For state-based and event-based campaigns, if `reentryCooldownHours > 0`, users with a recent live materialized journey row from the same campaign are suppressed. The runtime counts `pending`, `sending`, `sent`, `failed`, and `skipped` rows so a planned-but-not-yet-sent journey also blocks another entry.
-
-Recurring campaigns do not use this branch.
-
-#### Event-based max sends per user
-
-For event-based campaigns, `maxSendsPerUser` can cap how many sent live deliveries from the same campaign one user can receive. Empty or omitted values use the default cap of 3. When the cap is reached, new matching source events are materialized as skipped with `max_sends_per_user` so the same source event does not stay eligible forever.
-
-#### Frequency cap
-
-Per-step `frequencyCapHours` suppresses users who received a sent live delivery from **any** campaign inside the recent cap window. The check is global across all campaigns, matching what the editor UI describes as a "minimum gap after any campaign send."
-
-Note: re-entry suppression (`reentryCooldownHours`) is separate and still scoped to the same campaign only.
-
-#### Send guard
-
-Per-step `sendGuards` suppress a live delivery when the selected user action already happened after the journey started and before the step is sent. For example, a first step with a 30-minute delay and an `opened_app` send guard sends only if the user did not open the app before that delayed step activates. Each step supports one send guard action; the editor does not expose OR rules or extra property conditions. An empty Send guard dropdown value means no guard is configured for that step.
-
-#### Goal suppression
-
-Goal suppression is mandatory and not user-configurable.
-
-It runs:
-
-- during planning,
-- again right before send.
-
-The exact logic depends on the goal attribution mode:
-
-- `global_state_event`
-  - used for onboarding completion
-  - any matching goal event for that user after `journeyStartedAt` suppresses later sends
-- `trace_required_response`
-  - used for match center and rewards wallet goals
-  - only goal events that can be joined back to a prior campaign delivery trace count
-
-## 10. Planning logic
-
-The planner converts campaign definitions into pending delivery rows.
-
-### 10.1 Common behavior
-
-For all trigger types, the planner:
-
-- determines a journey instance key,
-- determines a journey start time,
-- resolves eligible users,
-- materializes only the first journey step,
-- stores one pending delivery row for the current executable step.
-
-Every materialized row stores:
-
-- locale,
-- recipient timezone,
-- journey instance metadata,
-- source window key,
-- step order,
-- planned send time.
-
-### 10.2 State-based campaigns
-
-State-based campaigns are evaluated on planner cadence buckets.
-
-The journey instance key is:
-
-- `state:<campaignId>:<bucketStartUtc>`
-
-The bucket start is rounded down to the configured planner cadence.
-
-Default planner cadence fallback in code:
-
-- 15 minutes
-
-After planning, the campaign remains active and `nextDispatchAt` is advanced by the cadence interval.
-
-### 10.3 Event-based campaigns
-
-Event-based campaigns plan from `campaign_source_events`.
-
-For each due planning pass, the planner:
-
-- loads unplanned source events for the campaign's event/producers pair,
-- ignores events without `userId`,
-- checks if the event's user still matches the campaign audience and suppressions,
-- creates a journey instance key:
-  - `event:<sourceEventId>`
-- materializes only the first journey step from the source event time.
-
-Important nuance:
-
-- A source event is considered planned once any live delivery row references its `sourceEventId`.
-- The same source event is not replanned for the same campaign even if later sends fail or are skipped.
-
-### 10.4 Scheduled recurring campaigns
-
-Recurring campaigns evaluate the campaign RRULE against each recipient's local wall-clock time inside the current planner window.
-
-The journey instance key is:
-
-- `rrule:<occurrenceISOString>`
-
-After planning, the campaign is marked active and `nextDispatchAt` moves to the next backend evaluation tick.
-
-Important nuance:
-
-- recurring runtime now prefers the explicit `startDate` local date as the recurrence anchor and falls back to the older runtime anchor only for legacy campaigns,
-- planner scheduling is delayed until the first configured start date can occur in at least one timezone, instead of polling immediately after schedule time,
-- `maxOccurrences` limits how many recurring journey entries can be materialized for one scheduled series,
-- each allowed recurring occurrence creates a fresh journey instance, so all later journey steps repeat together with the first step,
-- planner windows are cadence-based, but the actual occurrence moment is still per-user local time,
-- overview timing for recurring campaigns now represents evaluation timing, not a guaranteed global send instant.
-
-### 10.5 Per-user delivery materialization
-
-When rows are materialized:
-
-- locale is chosen from `user.language`,
-- recipient timezone is normalized from the user timezone,
-- each step is anchored to the previous computed step send time,
-- the source window key is:
-  - `<journeyInstanceKey>:<stepKey>`
-
-Important nuance:
-
-- Only the first step is planned up front.
-- Later steps are materialized by the executor after the current row reaches a terminal state that still allows journey continuation.
-- Sequencing is still enforced at claim time.
-
-## 11. Journey timing policy
-
-The journey timing service owns:
-
-- delay application,
-- same-local-time-next-day behavior,
-- local send windows,
-- DST-safe time calculations,
-- replan behavior when the executor reaches a row outside its valid local window.
-
-### 11.1 Window behavior
-
-If a candidate local time is:
-
-- before `sendWindowStart`, it is clamped to window start,
-- after `sendWindowEnd`, it moves to the next local day at window start,
-- inside an overnight wrapped window, it stays unchanged.
-
-### 11.2 DST behavior
-
-The implementation explicitly handles DST edge cases:
-
-- spring-forward gaps move to the next valid local minute on that day,
-- fall-back ambiguous local minutes choose the earliest valid UTC instant.
-
-### 11.3 Replanning after a missed window
-
-If the executor claims a row and finds that `now` is outside the allowed local window:
-
-- the current row is requeued with a new `plannedSendAt`,
-- downstream pending steps in the same journey instance are shifted accordingly,
-- no skip rules or push send happen for that execution attempt.
-
-## 12. Delivery execution logic
-
-The executor runs against claimed due delivery rows.
-
-### 12.1 Claim behavior
-
-Rows are claimable only when:
-
-- status is `pending`,
-- `plannedSendAt <= now`,
-- journey instance metadata is present,
-- there is no earlier step in the same journey instance still `pending` or `sending`.
-
-This uses SQL `FOR UPDATE SKIP LOCKED`.
-
-### 12.2 Stale lease recovery
-
-Rows stuck in `sending` beyond the sending lease are moved back to `pending`.
-
-Default sending lease fallback in code:
-
-- 10 minutes
-
-### 12.3 Execution-time skip and failure checks
-
-Before a push is sent, the executor can mark the row as terminal for several reasons:
-
-- `campaign_missing`
-- `campaign_archived`
-- `superseded`
-- `recipient_missing`
-- `runtime_metadata_missing`
-- `audience_no_longer_matches`
-- `reentry_cooldown`
-- `frequency_cap`
-- `goal_already_reached`
-- `send_guard_matched:*`
-
-Important nuance:
-
-- Send-time audience revalidation intentionally disables goal, re-entry, and frequency-cap logic during the generic "still matches audience" check.
-- Those suppressions are evaluated separately afterward.
-- Re-entry is checked again before send against earlier materialized journey instances for the same user and campaign. Same-journey later steps are not suppressed by this check.
-- Send Guards run after goal checks, so stop-on-goal remains stronger. Test sends ignore Send Guards.
-
-### 12.4 Rendering and push payload
-
-When a row passes all checks:
-
-- step content is loaded for the row locale,
-- tokens are rendered from preloaded user context,
-- deeplink metadata is added,
-- the push is sent through `PushNotificationService.sendNotificationToUser`.
-
-The campaign push payload includes:
-
-- `campaignId`
-- `deliveryTraceId`
-- optional `deeplinkTarget`
-- optional `path`
-
-Important nuances:
-
-- `opened_at` is not set by the send itself.
-- `opened_at` is populated later when a traced `app-opened` event arrives.
-
-### 12.5 Token resolution
-
-The token resolver can currently inject:
-
-- first name
-- favorite team
-- total bonus points
-
-Token context is loaded from:
-
-- `users`
-- `user_favorites` joined to `teams_leagues`
-- latest `analytics_devices` locale
-
-Fallback behavior:
-
-- `{{first_name}}` falls back to the localized fallback name or `"there"`
-- `{{favorite_team}}` falls back to `"your team"`
-- `{{bonus_points}}` falls back to `"0"`
-
-## 13. Runtime scheduler
-
-The runtime scheduler runs every minute.
-
-Per tick it does:
-
-1. recover stale sending deliveries
-2. if the current UTC minute matches planner cadence, run planner
-3. run executor
-
-Important nuance:
-
-- Planner cadence is minute-gated inside the every-minute cron.
-- Delivery execution still runs every minute even when planner work is skipped.
-
-## 14. Source-event ingestion and attribution
-
-The campaign runtime depends on several source-event producers.
-
-### 14.1 Mobile-authenticated app-opened
-
-Endpoint:
-
-- `POST /crm-source-events/app-opened`
-
-Behavior:
-
-- records `app_opened`
-- if `delivery_trace_id` is present, marks the matching delivery row as opened
-
-This is what powers campaign open tracking and CTR.
-
-### 14.2 Public onboarding-completed
-
-Endpoint:
-
-- `POST /crm-source-events/onboarding-completed`
-
-Behavior:
-
-- requires public CRM source-events key
-- records `onboarding_completed`
-- dedupe key is normally device-based
-- if a delivery trace is present, dedupe becomes `device + trace`
-
-Important nuance:
-
-- This prevents traced conversions from being swallowed by generic device-level onboarding dedupe.
-
-### 14.3 Authenticated match-center-opened
-
-Endpoint:
-
-- `POST /crm-source-events/match-center-opened`
-
-Behavior:
-
-- requires `delivery_trace_id`
-- records `match_center_opened`
-- dedupe is trace-bound
-
-This is a trace-required campaign goal response.
-
-### 14.4 Authenticated rewards-wallet-opened
-
-Endpoint:
-
-- `POST /crm-source-events/rewards-wallet-opened`
-
-Behavior:
-
-- requires `delivery_trace_id`
-- records `rewards_wallet_opened`
-- dedupe is trace-bound
-
-This is also a trace-required campaign goal response.
-
-### 14.5 CRM scheduler and backend producers
-
-The CRM layer forwards selected event types into `campaign_source_events`, including:
-
-- subscription started
-- subscription renewed
-- in-app purchase completed
-- daily streak reminder
-- weekly quest urgency
-- weekly stats digest
-- unread social activity
-- live challenge starting soon
-- live challenge results
-- lifecycle stage events
-
-The lifecycle scheduler emits:
-
-- `stage_at_risk_wau`
-- `stage_at_risk_mau`
-- `stage_dead_user`
-- `stage_reactivated`
-- `stage_resurrected`
-
-The channels service emits:
-
-- `favorite_match_kickoff`
-
-Important nuance:
-
-- Some lifecycle source events are supported by the backend but intentionally hidden from the new-campaign editor catalog.
-
-## 15. Status lifecycle
-
-### 15.1 Draft creation
-
-Creating a campaign draft:
-
-- validates canonical structure,
-- estimates audience,
-- derives goal definition,
-- stores draft with `status = draft`.
-
-### 15.2 Update
-
-Updating a draft:
-
-- locks the campaign row,
-- re-validates the full definition,
-- refreshes audience estimate,
-- re-derives goal definition,
-- increments `definitionVersion`.
-
-### 15.3 Schedule
-
-Scheduling behavior depends on trigger type.
-
-For state-based and event-based campaigns:
-
-- `getNextPlanningAt` returns `now`
-- scheduling immediately activates the campaign
-- planner and executor may run immediately
-
-For recurring campaigns:
-
-- scheduling may set status to `scheduled` until the first RRULE occurrence
-- if the occurrence is already due, the campaign becomes active immediately
-
-Important nuance:
-
-- "Schedule Campaign" often means "activate the runtime now," not necessarily "queue the first push for some later date."
-
-### 15.4 Archive
-
-Archiving:
-
-- sets `status = archived`
-- sets `archivedAt`
-- clears `nextDispatchAt`
-
-Important nuance:
-
-- This stops new planning.
-- Already queued rows can still be claimed later, but the executor will mark them `skipped` because the campaign is archived.
-
-### 15.5 Paused
-
-Pausing sets `status = paused` and clears the next planner tick. The planner does not pick paused campaigns, and live pending deliveries are not claimed while the campaign is paused.
-
-The editor shows Pause Campaign for active and scheduled campaigns. A paused campaign can be resumed with Resume Campaign, which restarts live planning from the current campaign definition.
-
-## 16. Shipped catalog content
-
-### 16.1 Shipped saved segments
-
-The backend seeds these catalog segments in the database:
-
-| Seed                          | Meaning                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| `seg_new_users_setup_dropoff` | Pre-registration users who started onboarding but did not finish within 30 days |
-| `seg_at_risk_wau`             | Inactive for at least 48 hours, active less than 7 days ago                     |
-| `seg_at_risk_mau`             | Inactive this week, active 7-24 days ago                                        |
-| `seg_dead_user`               | Inactive for 25+ days                                                           |
-| `seg_reactivated`             | First day back after 7-24 inactive days                                         |
-| `seg_resurrected`             | First day back after 25+ inactive days                                          |
-
-### 16.2 Shipped scenario templates
-
-The backend seeds these scenario templates in the database:
-
-| Template                        | Trigger             | Journey | Goal                                      |
-| ------------------------------- | ------------------- | ------- | ----------------------------------------- |
-| Onboarding recovery             | State based         | 3 steps | Recover onboarding completion             |
-| Favorite match kickoff          | Event based         | 1 step  | Drive match center opens                  |
-| Onboarding completed activation | Event based         | 1 step  | Drive first match center open after setup |
-| At-risk WAU retention           | State based         | 1 step  | Bring back at-risk weekly users           |
-| At-risk MAU retention           | Scheduled recurring | 1 step  | Bring back at-risk monthly users          |
-| Dead user winback               | Scheduled recurring | 1 step  | Bring back users inactive for 25+ days    |
-
-## 17. Notable implementation nuances and caveats
-
-These points are especially important when reasoning about current behavior.
-
-### 17.1 Goal tracking is tracked-goal-driven, not text-driven
-
-The free-text goal field is descriptive only. Actual tracked success behavior comes from the explicitly selected `goalDefinition`.
-
-### 17.2 A campaign can currently have only one backend-tracked goal
-
-If different steps/locales imply different supported goals, the editor now blocks the draft locally and the backend still rejects it on draft save.
-
-### 17.3 The editor contract is wider than the live feature surface
-
-The type system includes more deeplinks and segment flows than the current live catalog/UI actually uses.
-
-### 17.4 Saved segments are supported in the backend but not surfaced in the editor
-
-The backend can save and list segments, but the current live editor does not let admins choose or save them from the UI.
-
-### 17.5 Template provenance is metadata, not runtime logic
-
-`template_segment` and `sourceSegmentId` currently matter for UI/management behavior, especially "cannot re-save as template," but not for actual audience resolution.
-
-### 17.6 UI and backend schedule gates are aligned
-
-Both surfaces now allow warning states, while still rejecting missing selected-locale content and invalid recurring rules.
-
-### 17.7 Recurring runtime now matches the user-local wording
-
-The UI speaks in user-local schedule terms, and the backend now evaluates recurring eligibility per user local time before materializing the first journey step.
-
-### 17.8 `needs_attention` quick view is a truthful pre-pagination filter
-
-It is filtered before pagination, so totals and page counts stay accurate.
-
-### 17.9 Later steps are created step-by-step after terminalization
-
-Later steps are no longer pre-materialized. They are inserted after a step finishes unless the campaign became invalid, the row was requeued, or the journey goal was already reached.
-
-### 17.10 Test sends are single-step only
-
-The test flow only inserts and executes the first journey step, not the full journey.
-
-### 17.11 Campaign open tracking is trace-based app-open tracking
-
-CTR depends on traced `app_opened` events that mark `opened_at`, not on a generic push-provider "delivered/opened" callback.
-
-### 17.12 Definition versioning protects runtime from stale queued rows
-
-Updating a live draft does not rewrite already planned rows. Instead, executor-side version checks skip older queued deliveries as `superseded`.
-
-## 18. Practical end-to-end flow
-
-A typical live flow looks like this:
-
-1. Admin creates a draft in the builder.
-2. Backend validates the canonical structure and stores the draft.
-3. Admin optionally saves a template or sends a test.
-4. Admin schedules the campaign.
-5. Backend sets the campaign to active or scheduled, depending on trigger timing.
-6. Runtime planner creates pending delivery rows for eligible users or source events.
-7. Runtime executor claims rows, rechecks eligibility/suppressions, renders tokens, and sends pushes.
-8. The push includes `deliveryTraceId` and optional navigation metadata.
-9. The app or backend producers emit source events back into `campaign_source_events`.
-10. Traced app opens increase CTR/open metrics.
-11. Traced or global goal events suppress later steps in the same journey instance.
-12. Overview metrics and progress update from `campaign_deliveries`.
-
-## 19. Summary
-
-The Campaigns feature is implemented as a full campaign orchestration pipeline, not just an admin form:
-
-- the admin-panel owns campaign definition and operator workflow,
-- the backend owns canonical validation and persistence,
-- the planner owns entry into journey instances,
-- the executor owns safe send-time enforcement,
-- source-event ingestion closes the loop for event triggers, opens, and goal attribution.
-
-The most important current design decision is that campaign success logic is backend-owned and derived from supported deeplink targets, with mandatory suppression applied both during planning and again before send.
+# Campaigns operator contract
+
+Reviewed against local admin-panel and backend sources: 2026-10-15.
+This document preserves operator rules and product decisions. Local code review
+establishes implementation behavior, not deployment or device acceptance.
+
+## Ownership and scope
+
+The admin panel owns campaign definition and operator workflow. The backend
+owns validation, recipient eligibility, planning, delivery, attribution, rewards,
+and metrics. The mobile app supplies supported display, navigation, and response
+events. An accepted draft or test does not prove the complete live journey.
+
+Campaigns support Push, In-App, and Hybrid. Hybrid channel selection happens at
+execution time in the backend. Target Apps constrain compatible locales, events,
+goals, and navigation; a capability available for one app is not automatically
+available for another. Use the backend catalog and compatibility errors rather
+than a copied list of options. Email publications have a separate authoring and
+runtime contract: see [Email Marketing](./EMAIL_MARKETING_ADMIN.md).
+
+The [backend contract](../../tipsterBro-bakend/docs/CAMPAIGNS_ADMIN_BACKEND.md)
+owns runtime invariants, security, export privacy, and verification procedures.
+Current API shapes, catalogs, defaults, and numeric bounds belong in code.
+
+## Goal, action, and reward are separate decisions
+
+- The human-readable campaign goal (`goal` in the editor, `goalText` in storage)
+  describes intent; it does not measure success.
+- The single optional `goalDefinition` selects a backend-supported success event
+  and attribution mode. It drives success reporting, mandatory goal suppression,
+  and stopping later journey steps. Navigation does not infer or change it.
+- Step actions determine what happens after a tap. Selecting a navigation target,
+  trigger event, or Send Guard does not confer Goal capability on that event.
+- Without a tracked goal, the editor warns that success, goal suppression, and
+  stop-on-goal are unavailable. This warning alone does not block save, test, or
+  scheduling. CTR remains available after traced opens.
+- Goal reward points are optional; zero means no reward. A positive reward is
+  credited once for the eligible campaign journey through the points ledger.
+  Goal and reward promises are snapshotted on deliveries; later edits must not
+  change an already-sent offer.
+- Global lifecycle goals and trace-required response goals have different
+  attribution rules. For trace-required goals, a generic action without the
+  matching recipient/delivery trace is insufficient.
+- Reward validity is delivery-owned and bounded. An In-App expiry can shorten
+  the claim window, not extend its global cap. Offer suppression, accepted event
+  ingestion, and a fulfilled points credit are different outcomes.
+- Duplicate callbacks must not generate another credit or confirmation. The app
+  shows a reward celebration only from the backend confirmation; see the
+  [reward confirmation contract](../../tipsterBro-bakend/docs/POINTS_REWARD_CONFIRMATION_CONTRACT.md).
+
+## Authoring and templates
+
+1. Configure the audience, Target Apps, goal, and optional reward.
+2. Choose entry trigger and journey timing.
+3. Review every step's localized content and tap behavior.
+4. Save, send a targeted test, then explicitly confirm live scheduling.
+
+Saving is explicit. Send Test and Schedule save changes first when needed.
+Warnings require operator review even when they are not blocking errors.
+Missing content for any selected locale blocks scheduling; warning-level
+content is allowed. Unselected locales do not create missing-content blockers.
+A missing first-name fallback is a warning, not proof of adequate copy.
+
+Applying a template replaces the campaign definition, including audience,
+trigger, journey, and content. Review the resulting draft before saving or
+running it. The editor exposes deletion for saved templates, not shipped ones.
+It also supports editing catalog templates, which is different from
+creating a new template from a template-derived campaign.
+
+Template provenance is not audience eligibility. It prevents saving a derived
+campaign as a new template and prevents scheduling a second live campaign from
+the same template. Audience criteria and suppressions still determine recipients.
+The backend supports saved segments, but the current editor does not expose a
+saved-segment picker or Save Segment action. These remain surface limitations,
+not promises of scheduled work.
+
+## Audience estimates and delivery safety
+
+Select retention stages or explicit users, plus the intended locales and apps.
+Explicit user targeting does not bypass backend reachability or live guards.
+Pre-registration audiences remain distinct from ordinary registered-user stages.
+The displayed audience estimate is a saved snapshot, not guaranteed delivery
+reach; it does not simulate every goal or send-time check. Locale grouping uses
+ES/PT families and an English default bucket for other or empty user languages,
+subject to Target App compatibility.
+
+Keep these protections distinct:
+
+| Protection | Meaning |
+| --- | --- |
+| Exclude users without push opens | Requires a prior live campaign open; the current campaign is excluded from that historical-open check. |
+| Re-entry cooldown | State/event journey re-entry is campaign-scoped and counts already-materialized journeys, including pending and terminal rows. It does not cancel later steps in the same journey. |
+| Event send limit | Caps live sends for this campaign and user. Omitted uses the backend default (currently three); zero explicitly removes this cap. |
+| Frequency cap | Minimum gap after a live send across campaigns, rather than a per-campaign re-entry rule. |
+| Send Guard | One selected action since journey start can skip that step at execution time. It does not alter planning or automatically stop the journey. |
+| Goal suppression | Mandatory when a tracked goal exists; checked during planning and again before send. A reached goal stops later steps. |
+
+Audience and guards are rechecked before live execution because a pending row
+can become stale. Send Guards run after goal checks. The editor supports one
+guard per step, without OR expressions or property conditions. Tests bypass
+selected live guards and must not be used to infer final audience reach.
+
+## Entry, timing, and journey boundaries
+
+- State-based campaigns admit matching users; continuous and single-wave modes
+  have different entry intent. Review a configured delivery cutoff as part of
+  the launch, since expired live work is finalized rather than left pending.
+- Event-based campaigns enter from the selected backend event/producer pair.
+  Hidden but still-supported legacy selections may load with a warning; this
+  does not make them available for new selection. Entry events cannot be the
+  same event as the selected tracked goal. A consumed source event is not
+  automatically replayed because a delivery failed or was skipped.
+- Recurring campaigns use a local calendar start date and a daily/weekly local
+  schedule. The default occurrence count is one; increasing it repeats the
+  **whole journey**, not just the first message. Legacy definitions without an
+  explicit start date use their persisted runtime anchor.
+- Scheduling can activate runtime immediately for state/event campaigns. A
+  recurring schedule may wait for its future entry time. The overview's next
+  evaluation is not a guaranteed common send instant across recipients.
+- A finite recurring campaign with no reachable future first-step sends is
+  rejected rather than silently accepted as a useful future campaign.
+
+The first step anchors to the trigger; later steps anchor to the previous step.
+Only the executable head is planned initially; follow-up steps advance in order.
+A failed or skipped step does not by itself stop the journey. Goal attainment,
+archive, superseded definitions, and other stop conditions are separate checks.
+
+Delays, next-day-same-local-time, and send windows use the recipient timezone.
+Unsupported or missing timezone input falls back to UTC. Before-window times
+move to window start; after-window times move to the next local window;
+overnight windows are supported. On spring-forward gaps, timing moves to the
+next valid local minute; an ambiguous fall-back minute uses the earliest valid
+UTC instant. If execution misses a window, the occurrence is requeued and
+follow-up timing shifts rather than sending outside the window.
+
+## Editing, pausing, resuming, and archiving
+
+- A saved update increments the definition version. Already-planned rows are
+  not rewritten; older queued definitions are skipped as `superseded`.
+- Pause stops new planning and claiming pending live deliveries. It is not a
+  recall of notifications already sent or work already claimed.
+- Resume uses the same explicit live-planning confirmation as Schedule and the
+  current persisted definition. Review changes before confirming it.
+- Archive stops new work. Queued rows that reach execution are skipped, and
+  archived campaigns do not pay campaign rewards. Archive is not a pause that
+  can later be resumed through scheduling.
+
+## Test sends and live acceptance
+
+Send Test executes only the first journey step. The dialog accepts user IDs,
+emails, or analytics device keys; if none resolve, the backend may fall back to
+the authenticated admin. Inspect warnings and verify the actual recipient.
+Choose the test Target App; Hybrid tests require an explicit Push or In-App
+channel, so one test does not exercise both branches.
+
+Tests use traced deliveries and the canonical rendering/reward path, including
+trace-required response rewards. They can therefore have real notification and
+points effects. They bypass selected live eligibility, cap, and Send Guard
+checks, and do not prove recurrence, follow-up timing, or live suppression.
+A successful API response alone does not prove that the intended app displayed,
+opened, navigated, or confirmed a reward.
+
+Before confirming a launch, review the saved definition, intended recipients,
+selected-locale copy, Target App compatibility, occurrence count/cutoff, and
+reward promise. Verify the intended app's test delivery and response path;
+separately verify live journey behavior in an authorized environment.
+
+## Reporting and interpretation
+
+- Campaign opens/CTR use traced app-open events, not a generic provider open
+  callback. A successful send does not set the open timestamp.
+- Tracked-goal reporting uses eligible journey outcomes; CTR and goal rate are
+  different measures. Neither free-text intent nor a tap proves conversion.
+- Overview KPI cards cover the backend aggregate universe, independently of
+  the current list filters. Row summaries and saved audience estimates are not
+  substitutes for the complete audience definition or current reach.
+- Per-campaign JSON exports use the selected statistics period and exclude
+  user-level identities and raw deliveries. Source events suppressed before a
+  delivery exists cannot be attributed to a definition version by persisted data.
+- Export All uses that period across every page, including archived campaigns,
+  and ignores list filters. It downloads no partial file if a request fails.
+
+## Source owners and maintenance
+
+Use these entry points instead of maintaining endpoint, schema, template, token,
+or source-event inventories here:
+
+- [Editor](../components/campaigns/CampaignEditorPage.tsx) and
+  [action/readiness rules](../modules/campaigns/selectors.ts).
+- [Overview and exports](../components/campaigns/CampaignsOverviewPage.tsx).
+- [Backend authoring and lifecycle](../../tipsterBro-bakend/src/campaigns/services/campaigns-admin.service.ts).
+- [Send decisions](../../tipsterBro-bakend/src/campaigns/services/campaign-delivery-decision.service.ts),
+  [runtime facts](../../tipsterBro-bakend/src/campaigns/services/campaign-fact-evaluation.service.ts), and
+  [local timing](../../tipsterBro-bakend/src/campaigns/services/campaign-journey-timing.service.ts).
+
+Review this contract when editor capabilities, template policy, audience safety,
+entry/timing rules, lifecycle, attribution, reward promises, or reporting scope
+change. Keep unfinished implementation work in owning GitHub Issues; the known
+saved-segment UI limitation above does not establish a delivery commitment.

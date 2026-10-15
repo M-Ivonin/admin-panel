@@ -1,904 +1,200 @@
 # Public Content Technical Backlog
 
-## Назначение
-
-Этот документ переводит целевую SEO-структуру сайта в технический backlog для `admin-panel`.
-Для `Этапа 1.5` он считается официальным technical handoff document к следующему implementation layer.
-
-Он отвечает на четыре вопроса:
-
-1. Какие новые public route types нужно добавить.
-2. Какие content contracts и DTO для них нужны.
-3. Какие слои системы надо расширить.
-4. В каком порядке это внедрять без конфликта с уже сделанным public/admin/deeplink core.
-
-Связанные документы:
-
-- `docs/SITE_STRUCTURE_AND_SEO_IA.md`
-- `docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`
-
-## Текущее состояние
-
-Структурные пункты ниже сверены с кодом 2026-10-15. В
-[`modules/content/repository.ts`](../modules/content/repository.ts) уже есть
-расширенный `PublicContentRouteType` и trust page keys; пути заданы в
-[`public-pages.ts`](../modules/content/public-pages.ts). Trust pages и generic
-hubs используют scaffolds, quizzes имеют собственный repository-backed flow,
-а некоторые generic detail routes возвращают `notFound()`. Поэтому существование
-маршрута или DTO не закрывает весь backlog контента и SEO. Исторические отметки
-о deployment ниже не заменяют проверку текущей production-ревизии.
-
-Важно:
-
-- homepage уже реализована и задеплоена;
-- этот backlog больше не описывает homepage redesign;
-- он нужен только для оставшегося public content / SEO expansion поверх уже shipped public home.
-
-Сейчас в проекте уже есть:
-
-- localized public routing через `/:lang/*`;
-- базовый `PublicContentRepository`;
-- `SeoPageBase`;
-- `route-registry`, `metadata`, `schema`, `sitemap`, `robots`;
-- static repository adapter для `home`, trust pages и legal pages.
-
-Сейчас уже покрыты:
-
-- `home`
-- `about`
-- `methodology`
-- `editorial-policy`
-- `ai-transparency`
-- `faq`
-- `contact`
-- `privacy`
-- `terms`
-- `disclaimer`
-- `cookies`
-
-В следующих этапах backlog фокусируется уже не на homepage и trust layer, а на:
-
-- `insights`
-- `teams`
-- `players`
-- `leagues`
-- `topics`
-- `quizzes`
-- `quiz results`
-
-## Главный технический принцип
-
-Новые public page types нужно добавлять не напрямую через разрозненные `page.tsx`, а через один и тот же pipeline:
-
-1. новый content DTO;
-2. новый repository method;
-3. repository implementation;
-4. metadata decision;
-5. schema decision;
-6. sitemap/indexability decision;
-7. route implementation;
-8. smoke / regression coverage.
-
-Это полностью совпадает с уже зафиксированным правилом из `ADMIN_PANEL_ARCHITECTURE_CORE.md`.
-
-## Целевой набор route types
-
-### Исходное предложение расширения `PublicContentRouteType`
-
-На этапе первоначального handoff использовался следующий union; это
-исторический пример, а не текущий тип:
-
-```ts
-type PublicContentRouteType = 'page' | 'insight' | 'entity' | 'quiz';
-```
-
-Его расширение было нужно, потому что у разных типов разные:
-
-- metadata;
-- schema;
-- indexability rules;
-- sitemap behavior;
-- list/detail semantics;
-- breadcrumb patterns.
-
-### Реализованный расширенный union
-
-Этот структурный пункт уже выполнен. Код в `modules/content/repository.ts`
-остаётся источником актуального списка; перечень ниже сохраняет форму handoff.
-
-```ts
-type PublicContentRouteType =
-  | 'page'
-  | 'insight-hub'
-  | 'insight'
-  | 'team-hub'
-  | 'team'
-  | 'player-hub'
-  | 'player'
-  | 'league-hub'
-  | 'league'
-  | 'topic-hub'
-  | 'topic'
-  | 'quiz-hub'
-  | 'quiz'
-  | 'quiz-result';
-```
-
-### Почему лучше explicit route types, а не generic `entity`
-
-- проще задавать schema builders;
-- проще задавать breadcrumbs;
-- проще задавать sitemap priority и change frequency;
-- проще разделять `index` и `noindex`;
-- проще делать route-specific tests;
-- меньше условной логики в `page.tsx` и repository adapters.
-
-## Route backlog
-
-### 1. Trust Pages
-
-#### URL backlog
-
-```text
-/:lang/about
-/:lang/methodology
-/:lang/editorial-policy
-/:lang/ai-transparency
-/:lang/faq
-/:lang/contact
-```
-
-#### Выполненная структура и оставшаяся проверка
-
-- Уже расширены `PublicContentPageKey` и `PUBLIC_PAGE_PATHS`, добавлены
-  static-backed entries и page files под `app/(public)/[lang]/...`.
-- Trust routes пока используют scaffold presentation. Наличие ключей, copy и
-  metadata не означает завершённую содержательную страницу.
-- Для наполнения и выпуска остаётся сверить содержание, indexability и sitemap
-  по policy/repository, затем выполнить соответствующие smoke-проверки. Не
-  добавлять route в индекс только потому, что существует его page file.
-
-#### Уже реализованные `PublicContentPageKey`
-
-```ts
-type PublicContentPageKey =
-  | 'home'
-  | 'privacy'
-  | 'terms'
-  | 'disclaimer'
-  | 'cookies'
-  | 'about'
-  | 'methodology'
-  | 'editorial-policy'
-  | 'ai-transparency'
-  | 'faq'
-  | 'contact';
-```
-
-### 2. Insights
-
-#### URL backlog
-
-```text
-/:lang/insights
-/:lang/insights/[insight-slug]
-```
-
-#### Route types
-
-- `insight-hub`
-- `insight`
-
-#### Почему выделять hub отдельно
-
-`Insights hub` и `insight article` имеют разную структуру данных:
-
-- hub опирается на секции и списки;
-- article опирается на narrative blocks, sources, authors, entities.
-
-### 3. Entity Hubs
-
-#### URL backlog
-
-```text
-/:lang/teams
-/:lang/players
-/:lang/leagues
-/:lang/topics
-```
-
-#### Route types
-
-- `team-hub`
-- `player-hub`
-- `league-hub`
-- `topic-hub`
-
-### 4. Entity Detail Pages
-
-#### URL backlog
-
-```text
-/:lang/teams/[team-slug]
-/:lang/players/[player-slug]
-/:lang/leagues/[league-slug]
-/:lang/topics/[topic-slug]
-```
-
-#### Route types
-
-- `team`
-- `player`
-- `league`
-- `topic`
-
-### 5. Quizzes
-
-#### URL backlog
-
-```text
-/:lang/quizzes
-/:lang/quizzes/[quiz-slug]
-/:lang/quizzes/[quiz-slug]/result/[result-slug]
-```
-
-#### Route types
-
-- `quiz-hub`
-- `quiz`
-- `quiz-result`
-
-#### Индексация
-
-- `quiz-hub`: условно `index`
-- `quiz`: условно `index`
-- `quiz-result`: по умолчанию `noindex`
-
-## Content contract backlog
-
-## 1. Базовые расширения `SeoPageBase`
-
-Текущий `SeoPageBase` уже полезен, но для следующего слоя его не хватит.
-
-### Что добавить в базу
-
-```ts
-interface SeoPageBase {
-  id: string;
-  locale: Locale;
-  slug: string;
-  status: ContentStatus;
-  indexability: Indexability;
-  title: string;
-  metaTitle: string;
-  metaDescription: string;
-  canonicalPath: string;
-  publishedAt?: string;
-  updatedAt?: string;
-  breadcrumbs: BreadcrumbItem[];
-  excerpt?: string;
-  heroTitle?: string;
-  heroSubtitle?: string;
-}
-```
-
-### Почему
-
-- `excerpt` нужен для cards/listing sections;
-- `heroTitle` и `heroSubtitle` помогают не смешивать SEO title и UI hero copy;
-- это снизит дублирование в hub/detail DTO.
-
-## 2. New shared value objects
-
-### Suggested additions in `modules/content/types.ts`
-
-```ts
-interface FaqItem {
-  question: string;
-  answer: string;
-}
-
-interface ContentImage {
-  url: string;
-  alt: string;
-}
-
-interface RelatedLink {
-  label: string;
-  href: string;
-  type: 'page' | 'insight' | 'team' | 'player' | 'league' | 'topic' | 'quiz';
-}
-
-interface AuthorProfile {
-  name: string;
-  slug?: string;
-  role?: 'author' | 'reviewer';
-}
-
-interface EntityReference {
-  kind: 'team' | 'player' | 'league' | 'topic';
-  name: string;
-  slug: string;
-}
-
-interface RichTextSection {
-  heading?: string;
-  body: string;
-}
-```
-
-### Почему
-
-- `FAQ`, `trust`, `entity` и `insight` типы будут переиспользовать эти блоки;
-- это уменьшит хаос и количество специальных одноразовых структур.
-
-## 3. Trust page contracts
-
-### Suggested DTO
-
-```ts
-interface TrustPage extends SeoPageBase {
-  pageKey:
-    | 'about'
-    | 'methodology'
-    | 'editorial-policy'
-    | 'ai-transparency'
-    | 'faq'
-    | 'contact';
-  intro: RichTextSection;
-  sections: RichTextSection[];
-  faqItems?: FaqItem[];
-}
-```
-
-### Notes
-
-- `faqItems` необязателен, потому что не каждая trust page должна рендерить FAQ block;
-- `contact` может получить отдельный contact payload позже, но сначала лучше не плодить разные contract family без необходимости.
-
-## 4. Insight contracts
-
-### Suggested summary type
-
-```ts
-interface InsightListItem extends SeoPageBase {
-  source?: SourceReference;
-  author?: AuthorProfile;
-  reviewer?: AuthorProfile;
-  entities: EntityReference[];
-  topicSlugs: string[];
-}
-```
-
-### Suggested detail type
-
-```ts
-interface InsightPage extends SeoPageBase {
-  routeType: 'insight';
-  source: SourceReference;
-  author: AuthorProfile;
-  reviewer?: AuthorProfile;
-  summary: RichTextSection[];
-  whyItMatters: RichTextSection[];
-  sirbroInsight: RichTextSection[];
-  longTermOutlook: RichTextSection[];
-  entities: EntityReference[];
-  topicSlugs: string[];
-  relatedInsights: RelatedLink[];
-  relatedEntities: RelatedLink[];
-}
-```
-
-### Suggested hub type
-
-```ts
-interface InsightHubPage extends SeoPageBase {
-  routeType: 'insight-hub';
-  featuredInsights: InsightListItem[];
-  latestInsights: InsightListItem[];
-  topicSections: Array<{
-    slug: string;
-    title: string;
-    items: InsightListItem[];
-  }>;
-  entitySections: Array<{
-    kind: 'team' | 'player' | 'league';
-    title: string;
-    items: RelatedLink[];
-  }>;
-}
-```
-
-## 5. Entity contracts
-
-### Shared entity summary
-
-```ts
-interface EntityListItem extends SeoPageBase {
-  kind: 'team' | 'player' | 'league' | 'topic';
-  displayName: string;
-  excerpt?: string;
-}
-```
-
-### Shared entity detail base
-
-```ts
-interface EntityPageBase extends SeoPageBase {
-  displayName: string;
-  kind: 'team' | 'player' | 'league' | 'topic';
-  overview: RichTextSection[];
-  relatedInsights: InsightListItem[];
-  relatedEntities: EntityReference[];
-  faqItems?: FaqItem[];
-}
-```
-
-### Specific detail contracts
-
-```ts
-interface TeamPage extends EntityPageBase {
-  kind: 'team';
-  league?: EntityReference;
-  keyPlayers: EntityReference[];
-}
-
-interface PlayerPage extends EntityPageBase {
-  kind: 'player';
-  currentTeam?: EntityReference;
-  relatedTopics: EntityReference[];
-}
-
-interface LeaguePage extends EntityPageBase {
-  kind: 'league';
-  featuredTeams: EntityReference[];
-  featuredPlayers: EntityReference[];
-}
-
-interface TopicPage extends EntityPageBase {
-  kind: 'topic';
-  relatedTopics: EntityReference[];
-}
-```
-
-### Hub contracts
-
-```ts
-interface EntityHubPage extends SeoPageBase {
-  kind: 'team' | 'player' | 'league' | 'topic';
-  intro: RichTextSection;
-  featuredItems: EntityListItem[];
-  latestInsights: InsightListItem[];
-}
-```
-
-### Shared entity aliases
-
-```ts
-type EntityKind = 'team' | 'player' | 'league' | 'topic';
-
-type EntityPage = TeamPage | PlayerPage | LeaguePage | TopicPage;
-```
-
-## 6. Quiz contracts
-
-### Suggested hub type
-
-```ts
-interface QuizHubPage extends SeoPageBase {
-  routeType: 'quiz-hub';
-  featuredQuizzes: QuizListItem[];
-  latestQuizzes: QuizListItem[];
-}
-```
-
-### Suggested list/detail types
-
-```ts
-interface QuizListItem extends SeoPageBase {
-  shareTitle?: string;
-}
-
-interface QuizPage extends SeoPageBase {
-  routeType: 'quiz';
-  intro: RichTextSection[];
-  resultSlugs: string[];
-}
-
-interface QuizResultPage extends SeoPageBase {
-  routeType: 'quiz-result';
-  quizSlug: string;
-  resultTitle: string;
-  shareTitle?: string;
-}
-```
-
-## Repository backlog
-
-## 1. Expand repository interface
-
-Текущий интерфейс слишком общий для следующего слоя.
-
-### Suggested split
-
-```ts
-interface PublicContentRepository {
-  getHome(locale: Locale): Promise<SeoPageBase | null>;
-  getPage(
-    pageKey: PublicContentPageKey,
-    locale: Locale
-  ): Promise<TrustPage | SeoPageBase | null>;
-
-  getInsightHub(locale: Locale): Promise<InsightHubPage | null>;
-  getInsight(locale: Locale, slug: string): Promise<InsightPage | null>;
-  listInsights(
-    locale: Locale,
-    pagination?: PublicContentListParams
-  ): Promise<InsightListItem[]>;
-
-  getEntityHub(kind: EntityKind, locale: Locale): Promise<EntityHubPage | null>;
-  getEntity(
-    kind: EntityKind,
-    locale: Locale,
-    slug: string
-  ): Promise<EntityPage | null>;
-  listEntities(
-    kind: EntityKind,
-    locale: Locale,
-    pagination?: PublicContentListParams
-  ): Promise<EntityListItem[]>;
-
-  getQuizHub(locale: Locale): Promise<QuizHubPage | null>;
-  getQuiz(locale: Locale, slug: string): Promise<QuizPage | null>;
-  getQuizResult(
-    locale: Locale,
-    quizSlug: string,
-    resultSlug: string
-  ): Promise<QuizResultPage | null>;
-  listQuizzes(
-    locale: Locale,
-    pagination?: PublicContentListParams
-  ): Promise<QuizListItem[]>;
-
-  listIndexableRoutes(): Promise<
-    Array<Pick<SeoPageBase, 'locale' | 'canonicalPath' | 'updatedAt'>>
-  >;
-}
-```
-
-### Почему лучше явно разделить методы
-
-- меньше условного ветвления внутри `getByRoute`;
-- удобнее типизировать UI layer;
-- проще добавлять специфические tests;
-- проще масштабировать static adapter -> backend adapter.
-
-### Что делать с `getByRoute`
-
-Есть два разумных варианта:
-
-1. удалить после миграции на explicit methods;
-2. оставить как внутренний helper, но не как основной public contract.
-
-Рекомендуемый вариант: оставить временно только для обратной совместимости и постепенно вытеснить explicit methods.
-
-## 2. Introduce route-specific adapters
-
-Сейчас весь контент лежит в `static-public-content-repository.ts`.
-
-Для следующего слоя лучше разложить адаптеры:
-
-```text
-modules/content/static/
-  static-public-page-repository.ts
-  static-trust-page-repository.ts
-  static-insight-repository.ts
-  static-entity-repository.ts
-  static-quiz-repository.ts
-```
-
-И собрать их в один composition root:
-
-```text
-modules/content/public-content-repository.ts
-```
-
-### Почему
-
-- меньше монолитный файл;
-- проще заменять конкретные области на backend-backed implementations;
-- проще читать и тестировать.
-
-## SEO backlog
-
-## 1. Route registry expansion
-
-### `modules/seo/route-registry.ts`
-
-Нужно перейти от registry только для fixed pages к гибридной схеме:
-
-- static public pages from page keys;
-- dynamic trust/indexable content from repository `listIndexableRoutes()`.
-
-### Backlog item
-
-- оставить static registry для truly static pages;
-- использовать repository indexable list как source of truth для dynamic content;
-- задать priority/changeFrequency по route type.
-
-## 2. Metadata builders
-
-### `modules/seo/metadata.ts`
-
-Нужно добавить route-aware builders:
-
-```ts
-buildTrustPageMetadata(page);
-buildInsightHubMetadata(page);
-buildInsightMetadata(page);
-buildEntityHubMetadata(page);
-buildEntityMetadata(page);
-buildQuizHubMetadata(page);
-buildQuizMetadata(page);
-buildQuizResultMetadata(page);
-```
-
-### Почему не хватит одного `buildContentPageMetadata`
-
-- разные `openGraph.type`;
-- разные title templates;
-- разные robots defaults;
-- разные social metadata rules;
-- quiz result pages должны уметь быть `noindex` без ручной логики в route.
-
-## 3. Schema builders
-
-### `modules/seo/schema.ts`
-
-Нужно добавить:
-
-- `buildAboutPageSchema`
-- `buildFAQPageSchema`
-- `buildBreadcrumbListSchema`
-- `buildInsightArticleSchema`
-- `buildCollectionPageSchema`
-- `buildItemListSchema`
-- `buildQuizSchema`
-- `buildPersonSchema` или author/reviewer fragments
-
-### Mapping by route type
-
-- `about`: `Organization` + `AboutPage`
-- `methodology`, `editorial-policy`, `ai-transparency`: `WebPage`
-- `faq`: `FAQPage`
-- `insight`: `Article` или `NewsArticle` + `BreadcrumbList`
-- entity hubs: `CollectionPage` + `ItemList`
-- entity details: `ProfilePage` или `WebPage` + `BreadcrumbList`
-- quiz hub: `CollectionPage`
-- quiz: `Quiz`
-
-## 4. SEO copy source of truth
-
-### `modules/seo/public-page-copy.ts`
-
-Нужно расширить или разбить:
-
-```text
-modules/seo/copy/
-  public-pages.ts
-  trust-pages.ts
-  insights.ts
-  entities.ts
-  quizzes.ts
-```
-
-### Почему
-
-Сейчас copy source рассчитан только на `home + legal`.
-Для следующего слоя нужен не один растущий switch/file, а отдельные copy sources по доменам.
-
-## Policy backlog
-
-## 1. Expand indexability policy
-
-### `modules/content/policy.ts`
-
-Нужно добавить route-specific helpers:
-
-```ts
-isIndexableTrustPage(page);
-isIndexableInsight(page);
-isIndexableEntity(page);
-isIndexableQuiz(page);
-isIndexableQuizResult(page);
-```
-
-### Suggested logic
-
-- trust pages: published + index
-- insights: published + index + required content blocks present
-- entities: published + index + enough related content or enough own content
-- quizzes: published + index + unique metadata + enough content
-- quiz results: default false unless explicitly whitelisted later
-
-## 2. Add quality gate fields
-
-### Suggested additions
-
-```ts
-interface QualitySignals {
-  hasUniqueTitle: boolean;
-  hasUniqueDescription: boolean;
-  hasSource: boolean;
-  hasAnalysisBlock: boolean;
-  hasInternalLinks: boolean;
-  hasNoEmptySections: boolean;
-}
-```
-
-Можно хранить это:
-
-- либо как вычисляемый helper;
-- либо как часть admin/backend pipeline позже.
-
-На первом этапе лучше сделать helper validation, а не тащить это в persisted DTO.
-
-## App routing backlog
-
-Ниже безопасная рекомендуемая структура каталогов.
-
-```text
-app/(public)/[lang]/
-  about/page.tsx
-  methodology/page.tsx
-  editorial-policy/page.tsx
-  ai-transparency/page.tsx
-  faq/page.tsx
-  contact/page.tsx
-
-  insights/page.tsx
-  insights/[slug]/page.tsx
-
-  teams/page.tsx
-  teams/[slug]/page.tsx
-
-  players/page.tsx
-  players/[slug]/page.tsx
-
-  leagues/page.tsx
-  leagues/[slug]/page.tsx
-
-  topics/page.tsx
-  topics/[slug]/page.tsx
-
-  quizzes/page.tsx
-  quizzes/[slug]/page.tsx
-  quizzes/[slug]/result/[resultSlug]/page.tsx
-```
-
-## Testing backlog
-
-## 1. Repository contract tests
-
-Нужно добавить unit tests для:
-
-- trust page resolution;
-- insight resolution;
-- entity hub/detail resolution;
-- quiz noindex defaults;
-- `listIndexableRoutes()` для dynamic content.
-
-## 2. SEO tests
-
-Нужно проверить:
-
-- canonical;
-- alternates;
-- correct robots for `quiz-result`;
-- schema presence by route type;
-- sitemap inclusion only for indexable routes.
-
-## 3. Smoke routes
-
-Нужно расширить smoke-профили:
-
-- `seo` profile на новые indexable pages;
-- negative coverage для `noindex` pages;
-- route existence for all localized public pages.
-
-## Suggested implementation order
-
-## Phase A. Trust stack
-
-### Scope
-
-- new page keys;
-- trust routes;
-- trust DTO;
-- trust metadata/schema;
-- route-registry expansion.
-
-### Why first
-
-- низкий риск;
-- высокий SEO value;
-- не требует сложной entity graph.
-
-## Phase B. Insights foundation
-
-### Scope
-
-- insight DTO;
-- insight hub route;
-- insight detail route;
-- article schema;
-- source/author/reviewer model;
-- quality gate helpers.
-
-## Phase C. Entity foundation
-
-### Scope
-
-- entity hubs;
-- entity detail contracts;
-- entity routing;
-- entity internal linking.
-
-## Phase D. Quizzes
-
-### Scope
-
-- quiz hub;
-- quiz detail;
-- quiz result noindex flow;
-- social metadata.
-
-### Implementation note
-
-Phase D shipped as a static-backed first pass on 2026-03-30.
-
-- `quizzes` now resolves through explicit repository methods and a dedicated `static-quiz-repository.ts` adapter;
-- quiz detail routes are indexable through repository-driven sitemap entries;
-- quiz result routes stay `noindex` and require a deterministic score payload in the URL.
-
-## Minimal file-level backlog
-
-### Must change
-
-- `modules/content/types.ts`
-- `modules/content/repository.ts`
-- `modules/content/public-pages.ts`
-- `modules/content/policy.ts`
-- `modules/content/static-public-content-repository.ts` or split adapters
-- `modules/seo/metadata.ts`
-- `modules/seo/schema.ts`
-- `modules/seo/route-registry.ts`
-
-### Must add
-
-- trust page route files
-- insights route files
-- entity route files
-- quiz route files
-- content fixtures/adapters for new domains
-- tests for repository and SEO behavior
-
-## Recommended decisions to lock now
-
-1. Использовать explicit route types вместо generic `entity`.
-2. Держать `quiz-result` в `noindex` по умолчанию.
-3. Делать отдельные DTO families для `trust`, `insight`, `entity`, `quiz`.
-4. Не превращать `static-public-content-repository.ts` в giant monolith.
-5. Расширять sitemap через repository-driven `listIndexableRoutes()`.
-6. Добавлять каждый новый public page type только вместе с metadata, schema, policy и tests.
-
-## Итог
-
-Технически следующий слой развития `admin-panel` должен выглядеть так:
-
-- сначала `trust pages` как новый расширенный `page` layer;
-- затем `insights` как первый полноценный dynamic SEO content type;
-- затем `entity pages` как evergreen clustering layer;
-- затем `quizzes` как secondary engagement layer.
-
-Ключевой момент: route types и content contracts нужно сделать более explicit уже сейчас, иначе следующий этап быстро упрется в условную логику и перегруженный repository layer.
+## Назначение и источники решений
+
+Оставшиеся требования к public content / SEO expansion в `admin-panel`.
+Homepage redesign и завершённые структурные этапы сюда не входят.
+Backlog сохраняется до переноса незакрытого объёма в owning GitHub Issues.
+
+- [Information architecture](./SITE_STRUCTURE_AND_SEO_IA.md) — утверждённые
+  URL, навигация, состав страниц, перелинковка и цели индексации.
+- [Architecture core](./ADMIN_PANEL_ARCHITECTURE_CORE.md) — границы public,
+  admin, auth, deeplink и обязательные условия добавления page type.
+- Код и tests определяют реализацию; этот документ сохраняет оставшиеся
+  результаты и предложения к контрактам, а не копирует интерфейсы.
+
+Сверка с локальным кодом: 2026-10-15. Scaffold, DTO, прошедший unit test или
+старый deployment note не подтверждают готовность контента, визуальную
+приёмку либо текущую production-ревизию.
+
+## Решения, которые нужно сохранить
+
+- Public content развивается в localized `/:lang/*` и hub/detail model.
+  Trust, Insights и Entities — основные SEO-слои; Quizzes — вторичный слой.
+- Route types должны быть явными: разные families имеют разные metadata,
+  schema, breadcrumbs и indexability. Не возвращаться к generic `entity`.
+- Наличие page file не делает страницу индексируемой. Новый page type
+  выпускается вместе с content contract, repository adapter, metadata/schema
+  решением, policy, sitemap решением и smoke coverage по architecture core.
+- Dynamic indexable content поступает в sitemap через repository
+  `listIndexableRoutes()`; fixed registry остаётся для статических страниц.
+- Quiz results по умолчанию `noindex`; исключение требует отдельного решения
+  о доказанной SEO-ценности. Filters, internal search, weak content и thin
+  pagination не становятся самостоятельными indexable surfaces.
+- Контентные families не должны разрастаться в один static-adapter монолит.
+  Public routes читают нормализованный content contract; будущий admin
+  authoring остаётся отдельным consumer, а не источником истины в `page.tsx`.
+
+## Оставшиеся результаты по content families
+
+### 1. Trust: содержательные страницы вместо scaffolds
+
+Довести About, Methodology, Editorial Policy, AI Transparency, FAQ и Contact
+до состава и целей из IA. Остаются локализованный контент, composition,
+содержательный trust contract и проверка выпуска/indexability.
+
+Сейчас trust routes существуют, но выводят scaffold; repository оставляет
+их `noindex` и исключает из indexable list. Это безопасное текущее поведение,
+а не закрытие целевого trust-слоя. См.
+[scaffold flow](../modules/public/scaffold-route.tsx) и
+[static adapter](../modules/content/static-public-content-repository.ts).
+
+Сохранённое предложение к контракту: intro и narrative sections, опциональные
+FAQ items; FAQ не требуется на каждой trust page. Отдельный contact payload
+можно выделить позже при подтверждённой потребности, без преждевременного
+разделения contract family.
+
+### 2. Insights: hub, статьи и редакционная модель
+
+Hub остаётся scaffold; detail route закрыт через `notFound()`. Нет typed
+insight contracts и explicit repository flow для hub/detail/list.
+См. [hub](<../app/(public)/[lang]/insights/page.tsx>),
+[detail](<../app/(public)/[lang]/insights/[slug]/page.tsx>) и
+[repository contract](../modules/content/repository.ts).
+
+Оставшийся content scope из первоначального handoff:
+
+- Hub: featured/latest insights, topic sections и переходы на команды,
+  игроков и лиги; hub и article требуют разных моделей данных.
+- Article: source и author, опциональный reviewer, published/updated,
+  factual summary, Why it matters, SirBro insight, Long-term outlook.
+- Связи с entities/topics, related insights и related entities; единые
+  breadcrumb patterns и internal linking по IA.
+- Summary/list contract должен передавать entities и topics, с опциональными
+  source/author/reviewer, не требуя полного article payload для каждой card.
+
+Нужно довести контентный adapter, отображение и SEO/quality gates ниже.
+Существующие общие `SourceReference` и `AuthorProfile` не закрывают эту модель.
+
+### 3. Entities: каталоги и detail pages
+
+Teams, Players, Leagues и Topics hubs остаются scaffolds; generic detail
+routes возвращают `notFound()`. Остаются contracts, explicit hub/detail/list
+repository flow, adapters, контент и перелинковка. Точки проверки:
+[route definitions](../modules/public/scaffold-pages.ts),
+[team detail](<../app/(public)/[lang]/teams/[slug]/page.tsx>) и
+[content contracts](../modules/content/types.ts).
+
+Сохранённые требования к содержанию:
+
+- Общие summary: kind, display name и excerpt для cards; hub: intro,
+  featured entities и latest insights.
+- Общий detail: overview, related insights, related entities и опциональный
+  FAQ, с собственным содержанием и контекстом по IA.
+- Team: league context и key players; Player: current team и related topics;
+  League: featured teams и players; Topic: related topics.
+- Ссылки между insights и entity clusters должны работать в обе стороны;
+  пустые directory/detail pages не публикуются ради одного URL.
+
+### 4. Quizzes: только оставшиеся SEO/acceptance условия
+
+Не повторять выполненную первую реализацию как новую фазу: quiz DTO,
+explicit repository methods, отдельный static adapter, hub/detail/result
+routes, metadata wrappers, result `noindex` и repository-driven sitemap
+уже представлены в коде. Точки проверки:
+[quiz adapter](../modules/content/static-quiz-repository.ts),
+[policy](../modules/content/policy.ts),
+[repository tests](../__tests__/public-content-repository.test.ts).
+
+Остаются общие требования к structured data и проверкам ниже. Индексация
+quiz hub/detail допустима только при содержательном copy, уникальных metadata
+и ценности вне sharing. Текущие opt-in flags не заменяют quality acceptance.
+Сохранённое предложение featured/latest подборок для hub требует решения
+при развитии discovery: текущий список quizzes сам по себе не подтверждает
+такое разделение. Не восстанавливать старые proposed quiz DTO поверх
+действующего контракта.
+
+## Общие незакрытые content/SEO условия
+
+### Контракты и источник контента
+
+Это сохранённые **предложения к реализации**, а не утверждённые новые API:
+
+- Развести SEO title и UI hero copy; поддержать excerpt для listings и
+  отдельные hero title/subtitle там, где они нужны. Расширять общую базу
+  только при реальном переиспользовании, а не ради прежнего DTO-примера.
+- Переиспользовать FAQ question/answer, изображения с alt, narrative sections
+  с опциональным heading, типизированные related links и entity references
+  (kind/name/slug). Различать author и reviewer, если нужна роль.
+- Для Insights/Entities добавить явный repository flow вместо generic
+  `getByRoute`/`listByType`. Старый helper можно удалить после миграции либо
+  временно оставить для совместимости; это ещё не выбранная реализация.
+- Разделять adapters и localized SEO copy по content families по мере их
+  появления. Quiz adapter уже отделён; создавать заново его не требуется.
+  Не держать новый контент только внутри route-файлов.
+
+### Metadata, structured data и sitemap
+
+В [metadata](../modules/seo/metadata.ts) есть общий builder и quiz wrappers;
+в [schema](../modules/seo/schema.ts) — Organization, WebSite и homepage FAQ.
+Остальные route-specific schema из handoff ещё не представлены там.
+
+- Для Trust/Insights/Entities довести route-aware title templates,
+  Open Graph type, social metadata и robots defaults; не разносить эти
+  решения по ручным условиям отдельных routes.
+- Сохранённая предлагаемая schema mapping: About — Organization/AboutPage;
+  Methodology/Editorial Policy/AI Transparency — WebPage; FAQ — FAQPage;
+  insight — Article или NewsArticle; entity hubs — CollectionPage/ItemList;
+  entity detail — ProfilePage или WebPage; quiz hub — CollectionPage;
+  quiz — Quiz. Для detail routes нужны BreadcrumbList и уместные
+  author/reviewer fragments. Конкретный тип выбирается по фактическому
+  содержанию перед выпуском, без заявления, что эта mapping уже реализована.
+- Расширять repository-driven sitemap на готовые новые families, задавая
+  priority/changeFrequency по route type. Механизм объединения static и
+  repository entries уже есть в [registry](../modules/seo/route-registry.ts).
+- Сверять canonical, locale alternates, metadata и schema с IA и content
+  contract; scaffold не включать в индекс лишь из-за готового маршрута.
+
+### Quality gates перед индексацией
+
+[Policy](../modules/content/policy.ts) проверяет status/indexability и
+закрывает quiz results, но не реализует содержательные quality gates.
+Сохранённые критерии для следующего слоя:
+
+- Published + explicit index необходимы, но недостаточны для слабого контента.
+- Insights требуют обязательных narrative blocks и источника; entities —
+  достаточно собственного либо связанного содержания; quizzes — уникальных
+  metadata и содержательной страницы.
+- Проверять unique title/description, наличие source и analysis block там,
+  где они требуются, internal links и отсутствие пустых sections.
+- Исходная рекомендация — вычисляемая validation/helper на первом этапе;
+  перенос в persisted DTO/admin/backend pipeline остаётся отдельным выбором.
+  Порог достаточности содержания и исключения нужно определить до opt-in.
+
+## Проверка и порядок оставшейся работы
+
+Рекомендуемый порядок оставшегося content scope: Trust → Insights hub/detail
+→ Entity hubs/details; Quizzes уже имеют отдельную реализацию и требуют
+только своей оставшейся проверки. Это не новый утверждённый delivery plan.
+
+При закрытии каждой family нужны:
+
+- Repository contract coverage для её resolution/listing и динамического
+  indexable list, включая draft/weak/missing content и invalid slugs.
+- SEO проверки canonical/alternates, robots, schema по page type и sitemap
+  только для разрешённых routes; сохранить отрицательные cases quiz results
+  и защищённых admin/auth/deeplink surfaces.
+- Расширенный smoke coverage для новых localized pages и `noindex` routes.
+  Нынешний [SEO smoke profile](../scripts/smoke-routes.mjs) проверяет в основном
+  robots/sitemap/home, а не приёмку всех content families.
+- Architecture gates и smoke-команды из
+  [execution routing](./agents/execution-routing.md) для реализации; отдельно
+  зафиксировать runtime/visual и production acceptance, если заявляется выпуск.
+
+Базовые [policy tests](../__tests__/content-policy.test.ts), repository tests
+и [sitemap tests](../__tests__/seo-route-registry.test.ts) уже есть. Расширять
+их под незакрытое поведение, а не заводить заново перечисленные suites.
+
+Пересматривать backlog при появлении owning issues, новых content families,
+замене adapter, изменении IA или правил индексации. Удалять пункт после
+подтверждения требуемого результата, сохраняя решения в профильной authority.
