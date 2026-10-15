@@ -52,3 +52,35 @@ The CodeMagic workflow index is not a device version. The API excludes device
 keys, installation/advertising identifiers, and push tokens. No schema migration
 or historical version rewrite is needed. Settings in the mobile app continue to
 show the version only.
+
+## Manual access grants
+
+The Users row opens the Manual Pro grant dialog for one recipient. Verify its
+email, ID and backend-reported DEV/PROD environment before confirming. Available
+durations are 24 hours, three days, one calendar month and one calendar year;
+the server sets the start and expiry. Grants start immediately and never renew.
+A current or future unrevoked grant blocks another grant; revoke an incorrect
+grant before replacing it. There is no bulk grant, indefinite duration or UI
+extension of an existing grant.
+
+Every grant or revocation requires a reason and the separate confirmation
+password, in addition to the authenticated administrator session. Passwords are
+cleared on close and after each submission and must never enter browser storage,
+URLs, analytics or logs. A wrong password is a 403 without ending the admin
+session; unavailable password configuration disables writes, while history
+remains readable. Respect the backend's shared grant/revoke attempt limit and
+its retry time instead of retrying automatically.
+
+For an uncertain grant response, retain the same operation ID and parameters,
+read its result or retry that same operation with a newly entered password.
+Do not create a second operation until uncertainty is resolved. Late responses
+for one recipient must not update another user's dialog. Successful writes
+refresh access and immutable grant/revocation history.
+
+Manual grants neither cancel store billing nor change a real purchase. Existing
+store or verified legacy access takes precedence; revoking a manual grant can
+therefore leave the user with Full Access. Display server access separately
+from the manual grant's own expiry. Backend fallback and configuration/rollback
+rules are owned by
+[`UPDATED_HOME_COMMERCE_ENGINE.md`](../../tipsterBro-bakend/docs/UPDATED_HOME_COMMERCE_ENGINE.md).
+Removing the admin button is a safe UI rollback; it does not revoke issued rights.
