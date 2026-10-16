@@ -154,7 +154,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
   it('applies a UTC range and exposes every backend section and trace field', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
     expect(
-      await screen.findByRole('region', { name: 'Overview' })
+      await screen.findByRole('region', { name: 'Home' })
     ).toBeInTheDocument();
 
     expect(screen.getByLabelText('From (UTC)')).toBeInTheDocument();
@@ -221,7 +221,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     });
   });
 
-  it('keeps Overview compact and leaves detailed funnels in their sections', async () => {
+  it('omits the duplicate Overview and keeps navigation and detailed funnels', async () => {
     const response = makeResponse();
     (getUpdatedHomeAnalytics as jest.Mock).mockResolvedValue({
       ...response,
@@ -238,30 +238,20 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       ),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
-    const overview = await screen.findByRole('region', { name: 'Overview' });
+    await screen.findByRole('region', { name: 'Home' });
     expect(
-      within(overview).queryByTestId('updated-home-funnel')
+      screen.queryByRole('region', { name: 'Overview' })
     ).not.toBeInTheDocument();
+    const navigation = screen.getByRole('navigation', {
+      name: 'Updated Home dashboard sections',
+    });
     expect(
-      within(overview).getByRole('link', { name: /Free Pick activation/i })
-    ).toHaveAttribute('href', '#dashboard-2');
-    expect(
-      within(overview).getByRole('link', { name: /Paid Top Picks activation/i })
-    ).toHaveAttribute('href', '#dashboard-6');
-    expect(
-      within(overview).getByRole('link', {
-        name: /Full Access purchase conversion/i,
-      })
-    ).toHaveAttribute('href', '#dashboard-3');
-    expect(
-      within(overview).getByRole('link', {
-        name: /Pass-to-subscription conversion/i,
-      })
-    ).toHaveAttribute('href', '#dashboard-9');
-    expect(within(overview).getAllByRole('link')).toHaveLength(6);
-    expect(
-      within(overview).queryByRole('link', { name: /Home load success/i })
+      within(navigation).queryByRole('link', { name: 'Overview' })
     ).not.toBeInTheDocument();
+    expect(within(navigation).getAllByRole('link')).toHaveLength(12);
+    expect(
+      within(navigation).getByRole('link', { name: 'Home' })
+    ).toHaveAttribute('href', '#dashboard-1');
 
     const freePick = screen.getByRole('region', { name: 'Free Pick' });
     expect(
@@ -605,7 +595,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       dashboards: response.dashboards.filter((dashboard) => dashboard.id !== 7),
     });
     render(<UpdatedHomeAnalyticsDashboard />);
-    await screen.findByRole('region', { name: 'Overview' });
+    await screen.findByRole('region', { name: 'Home' });
     expect(
       screen.queryByText('Partial observation window')
     ).not.toBeInTheDocument();
@@ -623,7 +613,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
 
   it('rejects more than 90 inclusive UTC dates before calling the API', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
-    await screen.findByRole('region', { name: 'Overview' });
+    await screen.findByRole('region', { name: 'Home' });
     fireEvent.change(screen.getByLabelText('From (UTC)'), {
       target: { value: '2026-05-13' },
     });

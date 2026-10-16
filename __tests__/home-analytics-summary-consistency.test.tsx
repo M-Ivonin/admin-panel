@@ -108,7 +108,7 @@ const data: UpdatedHomeAnalyticsResponse = {
   ],
 };
 
-it('shows the same six conversion and activation rates on both summaries and carries the exact time range into the detailed report', async () => {
+it('keeps the six rates on admin Overview and carries its exact time range into the detailed report', async () => {
   const view = render(
     <HomeAnalyticsOverview
       data={{ today: data, daily: [{ date: '2026-10-10', data }] }}
@@ -145,15 +145,14 @@ it('shows the same six conversion and activation rates on both summaries and car
   jest.mocked(getUpdatedHomeAnalytics).mockResolvedValue(data);
   try {
     render(<UpdatedHomeAnalyticsDashboard />);
-    const summary = await screen.findByRole('region', { name: 'Overview' });
-    for (const [name, value] of expected)
-      expect(
-        within(summary).getByRole('link', { name: `${name}: ${value}` })
-      ).toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Home' });
+    expect(
+      screen.queryByRole('region', { name: 'Overview' })
+    ).not.toBeInTheDocument();
     expect(getUpdatedHomeAnalytics).toHaveBeenCalledWith(range);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(getUpdatedHomeAnalytics).toHaveBeenLastCalledWith(range);
-    await screen.findByRole('region', { name: 'Overview' });
+    await screen.findByRole('region', { name: 'Home' });
     expect(screen.getByLabelText('From (UTC)')).toHaveValue('2026-10-10');
     expect(screen.getByLabelText('To (UTC)')).toHaveValue('2026-10-10');
   } finally {
@@ -188,7 +187,7 @@ it('defaults direct Home Analytics navigation to the current UTC day', async () 
   const today = new Date().toISOString().slice(0, 10);
   jest.mocked(getUpdatedHomeAnalytics).mockClear().mockResolvedValue(data);
   render(<UpdatedHomeAnalyticsDashboard />);
-  await screen.findByRole('region', { name: 'Overview' });
+  await screen.findByRole('region', { name: 'Home' });
   expect(getUpdatedHomeAnalytics).toHaveBeenCalledWith({
     from: `${today}T00:00:00.000Z`,
     to: `${today}T23:59:59.999Z`,

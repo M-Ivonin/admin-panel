@@ -16,14 +16,15 @@ responses and JSON exports remain unchanged.
 
 ## Summary KPIs and Overview links
 
-Six summary cards share `lib/home-analytics-summary.ts` with the admin Overview
-headlines and seven daily chart points: Full Access purchase conversion, Free Pick
+The six summary cards live only on admin Overview, using
+`lib/home-analytics-summary.ts` for headlines and seven daily chart points: Full Access purchase conversion, Free Pick
 activation, Paid Top Picks activation, Collections purchase conversion, AI Chat
 unlock conversion, and Pass-to-subscription conversion. Desktop Overview uses
 three compact charts per row, two rows; tablet uses two columns and mobile one.
 Compact cards reduce padding, title spacing and chart height while retaining
 seven dates, percentage ticks, cohort counts and report links.
-Home load success remains in Home quality and is no longer an Overview chart.
+Home Analytics starts with the detailed Home section and has no duplicate Overview
+summary or Overview section link. Home load success remains in Home quality.
 
 Funnel summaries divide final-stage users by the first-stage cohort, independently
 of previous-stage percentages. Every detailed funnel now shows that overall rate

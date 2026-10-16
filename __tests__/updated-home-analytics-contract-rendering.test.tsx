@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { UpdatedHomeAnalyticsDashboard } from '@/components/updated-home-analytics/UpdatedHomeAnalyticsDashboard';
 import { getUpdatedHomeAnalytics } from '@/lib/api/updated-home-analytics';
 
@@ -87,15 +87,7 @@ describe('Updated Home dashboard backend projection rendering', () => {
   it('renders the #344 projection without inventing funnels, formulas, or revenue', async () => {
     render(<UpdatedHomeAnalyticsDashboard />);
 
-    const overview = await screen.findByRole('region', { name: 'Overview' });
-    const freePick = within(overview).getByRole('link', { name: 'Free Pick activation: N/A' });
-    const topPicks = within(overview).getByRole('link', { name: 'Paid Top Picks activation: N/A' });
-    expect(freePick).toHaveAttribute('href', '#dashboard-2');
-    expect(topPicks).toHaveAttribute('href', '#dashboard-6');
-    expect(freePick).toHaveTextContent('Prediction Card opened');
-    expect(topPicks).toHaveTextContent('Full Analysis opened');
-    expect(freePick).not.toHaveTextContent('Full Analysis');
-    expect(within(overview).queryByText(/Free Pick.*Full Analysis/i)).not.toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Home' });
 
     const firstMetric = screen.getAllByTestId('updated-home-metric-row')[0];
     expect(firstMetric).toHaveTextContent('WHAT IT SHOWS');

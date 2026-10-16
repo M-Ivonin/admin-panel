@@ -25,12 +25,6 @@ import {
 } from './presentation';
 
 import {
-  homeAnalyticsSummary,
-  formatHomeAnalyticsRate,
-  type HomeAnalyticsRate,
-} from '@/lib/home-analytics-summary';
-
-import {
   defaultHomeAnalyticsRange,
   homeAnalyticsRequestRange,
   linkedHomeAnalyticsRange,
@@ -163,7 +157,6 @@ export function UpdatedHomeAnalyticsDashboard() {
                 ' No eligible observations in this range.'}
             </Alert>
             <DashboardIndex />
-            <Overview data={data} />
             <Box
               data-testid="updated-home-dashboard-grid"
               sx={{
@@ -300,7 +293,6 @@ function FilterPanel({
 
 function DashboardIndex() {
   const links = [
-    { label: 'Overview', href: '#overview' },
     ...UPDATED_HOME_SECTIONS.map((section) => ({
       label: section.label,
       href: `#dashboard-${section.dashboardIds[0]}`,
@@ -332,103 +324,6 @@ function DashboardIndex() {
           {link.label}
         </Box>
       ))}
-    </Box>
-  );
-}
-
-function Overview({ data }: { data: UpdatedHomeAnalyticsResponse }) {
-  return (
-    <Box
-      component="section"
-      id="overview"
-      role="region"
-      aria-label="Overview"
-      sx={{
-        border: '1px solid #343434',
-        borderRadius: '12px',
-        bgcolor: '#222222',
-        p: { xs: '14px', sm: '20px' },
-      }}
-    >
-      <Typography
-        sx={{ color: '#F5F5F5', fontSize: 18, fontWeight: 700, mb: 2 }}
-      >
-        Overview
-      </Typography>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(3, minmax(0, 1fr))',
-          },
-          gap: 2,
-        }}
-      >
-        {homeAnalyticsSummary(data).map(({ id, title, rate, detail }) => (
-          <OverviewKpi
-            key={id}
-            title={title}
-            rate={rate}
-            detail={detail}
-            href={`#dashboard-${id}`}
-          />
-        ))}
-      </Box>
-    </Box>
-  );
-}
-
-function OverviewKpi({
-  title,
-  rate,
-  detail,
-  href,
-}: {
-  title: string;
-  rate: HomeAnalyticsRate;
-  detail: string;
-  href: string;
-}) {
-  return (
-    <Box
-      component="a"
-      href={href}
-      aria-label={`${title}: ${formatHomeAnalyticsRate(rate)}`}
-      sx={{
-        minWidth: 0,
-        border: '1px solid #3A3A3A',
-        borderRadius: '10px',
-        bgcolor: '#171717',
-        color: 'inherit',
-        p: { xs: '13px', sm: '14px' },
-        textDecoration: 'none',
-        transition: 'border-color 120ms ease, background-color 120ms ease',
-        '&:hover, &:focus-visible': {
-          borderColor: '#6D4AFF',
-          bgcolor: '#1D1B29',
-          outline: 'none',
-        },
-      }}
-    >
-      <Typography sx={{ color: '#A3A3A3', fontSize: 12, fontWeight: 600 }}>
-        {title}
-      </Typography>
-      <Typography
-        sx={{
-          color: rate === null ? '#F0A63A' : '#F5F5F5',
-          fontFamily: mono,
-          fontSize: 24,
-          fontWeight: 700,
-          mt: 0.75,
-        }}
-      >
-        {formatHomeAnalyticsRate(rate)}
-      </Typography>
-      <Typography sx={{ color: '#8B8B8F', fontSize: 11, mt: 0.5 }}>
-        {detail} · Open details
-      </Typography>
     </Box>
   );
 }
