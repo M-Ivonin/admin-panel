@@ -94,7 +94,8 @@ percentages. Cohort counts are shown below each value. Missing stages/counts or
 zero initial cohorts show N/A; observed zero conversions remain 0%. The existing
 Home Analytics endpoint loads independently and shares overview cancellation,
 request timeout, refresh and stale-response protection. No retention is shown for
-a single-day overview. This does not change the detailed Home Analytics report.
+a single-day overview. Both pages share the same summary calculations; detailed funnel stages retain
+their explicitly labelled previous-stage percentages.
 
 Home Analytics charts use the same cohort calculation independently for each day;
 they do not spread a weekly total over daily buckets or average daily rates into
@@ -105,3 +106,9 @@ leave chart gaps; observed zero remains a plotted zero. A failed selected-day
 request shows the report error state. The seven daily reads share the Overview
 abort signal and 30-second timeout. Four compact charts share one desktop row, with two columns on tablet and
 one on mobile for readable axes.
+
+Summary values and daily chart points use the shared Home Analytics summary
+calculation and identical rounding on both pages. Report links carry the selected
+UTC day and exact captured cutoff into Home Analytics, instead of opening its
+default two-week range. The detail page preserves that initial snapshot until a
+manual Refresh applies the visible full-day date bounds.

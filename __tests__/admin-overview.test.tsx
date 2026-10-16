@@ -89,6 +89,7 @@ const homeMetric = (
   })),
 });
 const homeAnalytics = {
+  range: { from: `${today}T00:00:00.000Z`, to: `${today}T23:59:59.999Z` },
   dashboards: [
     {
       id: 1,
@@ -539,16 +540,16 @@ it('adds four Home Analytics metrics after existing widgets using whole-funnel c
   await settled();
   const report = screen.getByRole('region', { name: 'Home Analytics' });
   for (const [title, value] of [
-    ['Full Access purchase conversion', '5.0%'],
-    ['Free Pick activation', '15.0%'],
-    ['Paid Top Picks activation', '25.0%'],
-    ['Home load success', '90.9%'],
+    ['Full Access purchase conversion', '5%'],
+    ['Free Pick activation', '15%'],
+    ['Paid Top Picks activation', '25%'],
+    ['Home load success', '90.91%'],
   ]) {
     const metric = within(report).getByRole('article', { name: title });
     expect(metric).toHaveTextContent(value);
     expect(within(metric).getByRole('link')).toHaveAttribute(
       'href',
-      expect.stringContaining('/dashboard/updated-home-analytics#dashboard-')
+      expect.stringContaining('/dashboard/updated-home-analytics?from=')
     );
   }
   expect(
@@ -621,7 +622,7 @@ it('preserves zero conversion and missing cohorts without inventing retention or
   const report = screen.getByRole('region', { name: 'Home Analytics' });
   expect(
     within(report).getByRole('article', { name: 'Free Pick activation' })
-  ).toHaveTextContent('0.0%');
+  ).toHaveTextContent('0%');
   for (const name of [
     'Full Access purchase conversion',
     'Paid Top Picks activation',
@@ -691,7 +692,7 @@ it('shows seven daily Home Analytics points with gaps, real zeros and a partial 
     const metric = within(report).getByRole('article', {
       name: 'Full Access purchase conversion',
     });
-    expect(metric).toHaveTextContent('5.0%');
+    expect(metric).toHaveTextContent('5%');
     const chart = within(metric).getByRole('img');
     expect(chart).toHaveAccessibleName(
       `Daily Full Access purchase conversion: ${days.map((day, i) => `${day}: ${['1%', '2%', 'unavailable', '4%', '0%', '6%', '5%'][i]}`).join(', ')}`

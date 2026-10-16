@@ -15,18 +15,20 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getUpdatedHomeAnalytics,
   type UpdatedHomeAnalyticsResponse,
-  type UpdatedHomeDashboardBlock,
-  type UpdatedHomeMetricValue,
 } from '@/lib/api/updated-home-analytics';
 import { UpdatedHomeAnalyticsSection } from './UpdatedHomeAnalyticsSection';
 import { downloadUpdatedHomeAnalyticsJson } from './export';
 import {
   dashboardsById,
-  formatMetricValue,
   hasObservedValues,
-  metricValues,
   UPDATED_HOME_SECTIONS,
 } from './presentation';
+
+import {
+  homeAnalyticsSummary,
+  formatHomeAnalyticsRate,
+  type HomeAnalyticsRate,
+} from '@/lib/home-analytics-summary';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 const MAX_RANGE_DAYS = 90;
@@ -41,18 +43,46 @@ function defaultRange(): { from: string; to: string } {
   };
 }
 
+type AnalyticsRange = { from: string; to: string; cutoff?: string };
+
+function linkedRange(): AnalyticsRange | null {
+  const params = new URL(window.location.href).searchParams;
+  const from = params.get('from');
+  const to = params.get('to');
+  if (!from || !to) return null;
+  const start = Date.parse(from);
+  const end = Date.parse(to);
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start > end ||
+    end - start >= MAX_RANGE_DAYS * 86_400_000 ||
+    new Date(start).toISOString() !== from ||
+    new Date(end).toISOString() !== to ||
+    !from.endsWith('T00:00:00.000Z')
+  )
+    return null;
+  return { from: from.slice(0, 10), to: to.slice(0, 10), cutoff: to };
+}
+
 export function UpdatedHomeAnalyticsDashboard() {
   const initial = useMemo(defaultRange, []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [appliedRange, setAppliedRange] = useState(initial);
+  const [appliedRange, setAppliedRange] = useState<AnalyticsRange | null>(null);
+  useEffect(() => {
+    const range = linkedRange() ?? initial;
+    setFrom(range.from);
+    setTo(range.to);
+    setAppliedRange(range);
+  }, [initial]);
   const [data, setData] = useState<UpdatedHomeAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rangeError, setRangeError] = useState<string | null>(null);
   const latestRequestId = useRef(0);
 
-  const load = useCallback(async (range: { from: string; to: string }) => {
+  const load = useCallback(async (range: AnalyticsRange) => {
     const requestId = ++latestRequestId.current;
     setLoading(true);
     setError(null);
@@ -60,7 +90,7 @@ export function UpdatedHomeAnalyticsDashboard() {
     try {
       const response = await getUpdatedHomeAnalytics({
         from: `${range.from}T00:00:00.000Z`,
-        to: `${range.to}T23:59:59.999Z`,
+        to: range.cutoff ?? `${range.to}T23:59:59.999Z`,
       });
       if (requestId === latestRequestId.current) setData(response);
     } catch (caught) {
@@ -73,7 +103,7 @@ export function UpdatedHomeAnalyticsDashboard() {
   }, []);
 
   useEffect(() => {
-    void load(appliedRange);
+    if (appliedRange) void load(appliedRange);
     return () => {
       latestRequestId.current += 1;
     };
@@ -96,12 +126,12 @@ export function UpdatedHomeAnalyticsDashboard() {
     }
     setRangeError(null);
     const nextRange = { from, to };
-    if (from === appliedRange.from && to === appliedRange.to) {
+    if (from === appliedRange?.from && to === appliedRange?.to) {
       void load(nextRange);
       return;
     }
     setAppliedRange(nextRange);
-  }, [appliedRange.from, appliedRange.to, from, load, to]);
+  }, [appliedRange?.from, appliedRange?.to, from, load, to]);
 
   const dashboardMap = useMemo(() => dashboardsById(data), [data]);
 
@@ -165,7 +195,7 @@ export function UpdatedHomeAnalyticsDashboard() {
                 ' No eligible observations in this range.'}
             </Alert>
             <DashboardIndex />
-            <Overview dashboards={dashboardMap} />
+            <Overview data={data} />
             <Box
               data-testid="updated-home-dashboard-grid"
               sx={{
@@ -338,11 +368,7 @@ function DashboardIndex() {
   );
 }
 
-function Overview({
-  dashboards,
-}: {
-  dashboards: Map<number, UpdatedHomeDashboardBlock>;
-}) {
+function Overview({ data }: { data: UpdatedHomeAnalyticsResponse }) {
   return (
     <Box
       component="section"
@@ -372,45 +398,15 @@ function Overview({
           gap: 2,
         }}
       >
-        <OverviewKpi
-          title="Free Pick activation"
-          value={overviewStageValue(
-            dashboards.get(2),
-            'free_pick_activation_funnel',
-            'free_pick_prediction_card_opened'
-          )}
-          detail="Prediction Card opened"
-          href="#dashboard-2"
-        />
-        <OverviewKpi
-          title="Paid Top Picks activation"
-          value={overviewStageValue(
-            dashboards.get(6),
-            'top_picks_activation_funnel',
-            'full_analysis_opened'
-          )}
-          detail="Full Analysis opened"
-          href="#dashboard-6"
-        />
-        <OverviewKpi
-          title="Full Access purchase conversion"
-          value={overviewStageValue(
-            dashboards.get(3),
-            'full_access_funnel',
-            'verified_purchase'
-          )}
-          detail="Verified purchase"
-          href="#dashboard-3"
-        />
-        <OverviewKpi
-          title="Home load success rate"
-          value={overviewMetricValue(
-            dashboards.get(1),
-            'home_load_success_rate'
-          )}
-          detail="Home quality"
-          href="#dashboard-1"
-        />
+        {homeAnalyticsSummary(data).map(({ id, title, rate, detail }) => (
+          <OverviewKpi
+            key={id}
+            title={title}
+            rate={rate}
+            detail={detail}
+            href={`#dashboard-${id}`}
+          />
+        ))}
       </Box>
     </Box>
   );
@@ -418,12 +414,12 @@ function Overview({
 
 function OverviewKpi({
   title,
-  value,
+  rate,
   detail,
   href,
 }: {
   title: string;
-  value?: UpdatedHomeMetricValue;
+  rate: HomeAnalyticsRate;
   detail: string;
   href: string;
 }) {
@@ -431,7 +427,7 @@ function OverviewKpi({
     <Box
       component="a"
       href={href}
-      aria-label={`${title}: ${value ? formatMetricValue(value) : 'N/A'}`}
+      aria-label={`${title}: ${formatHomeAnalyticsRate(rate)}`}
       sx={{
         minWidth: 0,
         border: '1px solid #3A3A3A',
@@ -453,44 +449,20 @@ function OverviewKpi({
       </Typography>
       <Typography
         sx={{
-          color: value?.value === null || !value ? '#F0A63A' : '#F5F5F5',
+          color: rate === null ? '#F0A63A' : '#F5F5F5',
           fontFamily: mono,
           fontSize: 24,
           fontWeight: 700,
           mt: 0.75,
         }}
       >
-        {value ? formatMetricValue(value) : 'N/A'}
+        {formatHomeAnalyticsRate(rate)}
       </Typography>
       <Typography sx={{ color: '#8B8B8F', fontSize: 11, mt: 0.5 }}>
         {detail} · Open details
       </Typography>
     </Box>
   );
-}
-
-function overviewStageValue(
-  dashboard: UpdatedHomeDashboardBlock | undefined,
-  metricKey: string,
-  stage: string
-): UpdatedHomeMetricValue | undefined {
-  return metricValues(dashboard, metricKey).find(
-    (value) => value.dimensions.stage === stage
-  );
-}
-
-function overviewMetricValue(
-  dashboard: UpdatedHomeDashboardBlock | undefined,
-  metricKey: string
-): UpdatedHomeMetricValue | undefined {
-  const values = metricValues(dashboard, metricKey);
-  const first = values[0];
-  if (!first) return undefined;
-  return values.every(
-    (value) => value.value === first.value && value.unit === first.unit
-  )
-    ? first
-    : undefined;
 }
 
 function CoverageFooter() {

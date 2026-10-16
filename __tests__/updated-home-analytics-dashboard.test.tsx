@@ -254,7 +254,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       })
     ).toHaveAttribute('href', '#dashboard-3');
     expect(
-      within(overview).getByRole('link', { name: /Home load success rate/i })
+      within(overview).getByRole('link', { name: /Home load success/i })
     ).toHaveAttribute('href', '#dashboard-1');
 
     const freePick = screen.getByRole('region', { name: 'Free Pick' });

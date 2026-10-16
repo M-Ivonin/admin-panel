@@ -26,6 +26,7 @@ import {
 import type { PredictionEvaluationSummary } from '@/lib/api/prediction-evaluations';
 import type { MonitorOverview } from '@/lib/api/system-monitor';
 import { projectOverviewHealth } from '@/lib/system-monitor-health';
+import { homeAnalyticsHref } from '@/lib/home-analytics-summary';
 import { HomeAnalyticsOverview } from './HomeAnalyticsOverview';
 import { OverviewChart } from './OverviewChart';
 import { formatAppEventLabel } from '@/lib/app-events-labels';
@@ -828,7 +829,7 @@ export function OverviewDashboard() {
       </div>
       <Report
         title="Home Analytics"
-        href="/dashboard/updated-home-analytics"
+        href={homeAnalyticsHref({ from: range.from, to: range.to })}
         state={state.homeAnalytics}
         className={styles.homeReport}
       >
