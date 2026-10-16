@@ -9,6 +9,7 @@ import type {
   PaginatedRevenueLedgerEntriesResponse,
   RevenueLedgerSummary,
 } from './revenue-ledger';
+import type { UpdatedHomeAnalyticsResponse } from './updated-home-analytics';
 import type { MonitorOverview } from './system-monitor';
 
 export interface DailyValue {
@@ -50,6 +51,7 @@ export interface PredictionsOverview {
   daily: Array<{ date: string; summary: PredictionEvaluationSummary | null }>;
 }
 export interface OverviewData {
+  homeAnalytics: UpdatedHomeAnalyticsResponse;
   growth: GrowthOverview;
   marketing: MarketingOverview;
   revenue: RevenueOverview;
@@ -122,6 +124,11 @@ export function overviewRequests(
       signal
     );
   return {
+    homeAnalytics: () =>
+      get<UpdatedHomeAnalyticsResponse>(
+        `/updated-home-analytics/admin/dashboards?${query({ from: range.from, to: range.to })}`,
+        signal
+      ),
     growth: () =>
       get<GrowthOverview>(`/admin-overview/growth?date=${date}`, signal),
     marketing: () =>

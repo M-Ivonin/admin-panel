@@ -75,3 +75,22 @@ show growth and marketing data. No schema migration is required. Until then thos
 panels show their unavailable state.
 
 Validation and reference captures: [UI evidence](./evidence/admin-overview/UI_EVIDENCE_REPORT.md).
+
+## Home Analytics
+
+Below the existing reports, Home Analytics shows four KPIs for the selected UTC
+day and the same captured cutoff (today is partial). Each KPI links to its
+corresponding detailed Home Analytics section:
+
+- Full Access purchase conversion: verified-purchase users / offer-impression users.
+- Free Pick activation: prediction-card-opened users / Home-viewed users.
+- Paid Top Picks activation: Full-Analysis-opened users / paid-preview-impression users.
+- Home load success: successful loads / settled load attempts, summed across
+  the backend's disjoint variant/access-state breakdowns.
+
+Funnel rates use first-to-last cohort counts, rather than the API's previous-step
+percentages. Cohort counts are shown below each value. Missing stages/counts or
+zero initial cohorts show N/A; observed zero conversions remain 0%. The existing
+Home Analytics endpoint loads independently and shares overview cancellation,
+request timeout, refresh and stale-response protection. No retention is shown for
+a single-day overview. This does not change the detailed Home Analytics report.

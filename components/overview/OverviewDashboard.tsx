@@ -26,6 +26,7 @@ import {
 import type { PredictionEvaluationSummary } from '@/lib/api/prediction-evaluations';
 import type { MonitorOverview } from '@/lib/api/system-monitor';
 import { projectOverviewHealth } from '@/lib/system-monitor-health';
+import { HomeAnalyticsOverview } from './HomeAnalyticsOverview';
 import { OverviewChart } from './OverviewChart';
 import { formatAppEventLabel } from '@/lib/app-events-labels';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -37,6 +38,7 @@ const REVENUE_OVERVIEW_READERS = new Set([
 ]);
 
 const initialState = (): OverviewState => ({
+  homeAnalytics: { status: 'loading' },
   growth: { status: 'loading' },
   marketing: { status: 'loading' },
   revenue: { status: 'loading' },
@@ -824,6 +826,16 @@ export function OverviewDashboard() {
           <p className={styles.footnote}>Open the report to investigate.</p>
         </section>
       </div>
+      <Report
+        title="Home Analytics"
+        href="/dashboard/updated-home-analytics"
+        state={state.homeAnalytics}
+        className={styles.homeReport}
+      >
+        {(data) => (
+          <HomeAnalyticsOverview data={data} periodLabel={periodLabel} />
+        )}
+      </Report>
       <footer className={styles.footer}>
         All times UTC · production purchase records · partial-day comparisons
         use the same cutoff.

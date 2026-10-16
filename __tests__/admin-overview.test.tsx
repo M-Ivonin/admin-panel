@@ -72,9 +72,98 @@ const monitor = () => ({
   ],
 });
 
+const homeMetric = (
+  key: string,
+  rows: Array<{
+    stage?: string;
+    numerator: number | null;
+    denominator: number | null;
+    value: number | null;
+  }>
+) => ({
+  definition: { key },
+  values: rows.map(({ stage, ...row }) => ({
+    ...row,
+    dimensions: stage ? { stage } : {},
+    unit: stage && row.denominator === null ? 'users' : 'percent',
+  })),
+});
+const homeAnalytics = {
+  dashboards: [
+    {
+      id: 1,
+      metrics: [
+        homeMetric('home_load_success_rate', [
+          { numerator: 90, denominator: 100, value: 90 },
+          { numerator: 10, denominator: 10, value: 100 },
+        ]),
+      ],
+    },
+    {
+      id: 2,
+      metrics: [
+        homeMetric('free_pick_activation_funnel', [
+          {
+            stage: 'home_viewed',
+            numerator: 200,
+            denominator: null,
+            value: 200,
+          },
+          {
+            stage: 'free_pick_prediction_card_opened',
+            numerator: 30,
+            denominator: 60,
+            value: 50,
+          },
+        ]),
+      ],
+    },
+    {
+      id: 3,
+      metrics: [
+        homeMetric('full_access_funnel', [
+          {
+            stage: 'offer_impression',
+            numerator: 100,
+            denominator: null,
+            value: 100,
+          },
+          {
+            stage: 'verified_purchase',
+            numerator: 5,
+            denominator: 10,
+            value: 50,
+          },
+        ]),
+      ],
+    },
+    {
+      id: 6,
+      metrics: [
+        homeMetric('top_picks_activation_funnel', [
+          {
+            stage: 'preview_impression',
+            numerator: 80,
+            denominator: null,
+            value: 80,
+          },
+          {
+            stage: 'full_analysis_opened',
+            numerator: 20,
+            denominator: 40,
+            value: 50,
+          },
+        ]),
+      ],
+    },
+  ],
+};
+
 function response(url: string): Response {
   if (url.includes('/api/revenue-ledger-access'))
     return json({ hasAccess: true });
+  if (url.includes('/updated-home-analytics/admin/dashboards'))
+    return json(homeAnalytics);
   if (url.includes('/admin-overview/growth')) return json(growth);
   if (url.includes('/admin-overview/marketing')) return json(marketing);
   if (url.includes('/capabilities')) return json({ canRead: true });
@@ -334,25 +423,30 @@ it.each([
   [189999, 'All monitored systems operational'],
   [190000, 'All monitored systems operational'],
   [190001, 'Current system health is unknown'],
-])('preserves overview freshness at a result age of %i ms', async (age, text) => {
-  const now = Date.now();
-  const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
-  const snapshot = monitor();
-  snapshot.checks[0].intervalMs = 120000;
-  snapshot.checks[0].lastRun.endedAt = new Date(now - age).toISOString();
-  global.fetch = jest.fn(async (input) =>
-    String(input).includes('/system-monitor/admin/overview')
-      ? json(snapshot)
-      : response(String(input))
-  );
-  try {
-    show();
-    await settled();
-    expect(screen.getByRole('region', { name: 'System health' })).toHaveTextContent(text);
-  } finally {
-    clock.mockRestore();
+])(
+  'preserves overview freshness at a result age of %i ms',
+  async (age, text) => {
+    const now = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+    const snapshot = monitor();
+    snapshot.checks[0].intervalMs = 120000;
+    snapshot.checks[0].lastRun.endedAt = new Date(now - age).toISOString();
+    global.fetch = jest.fn(async (input) =>
+      String(input).includes('/system-monitor/admin/overview')
+        ? json(snapshot)
+        : response(String(input))
+    );
+    try {
+      show();
+      await settled();
+      expect(
+        screen.getByRole('region', { name: 'System health' })
+      ).toHaveTextContent(text);
+    } finally {
+      clock.mockRestore();
+    }
   }
-});
+);
 
 it('does not present unevaluated accuracy and zero-denominator rates as 0%', async () => {
   global.fetch = jest.fn(async (input) => {
@@ -438,4 +532,121 @@ it('keeps comparison cutoffs tied to the fetched snapshot as the monitor clock a
   } finally {
     jest.useRealTimers();
   }
+});
+
+it('adds four Home Analytics metrics after existing widgets using whole-funnel cohorts and the selected UTC range', async () => {
+  show();
+  await settled();
+  const report = screen.getByRole('region', { name: 'Home Analytics' });
+  for (const [title, value] of [
+    ['Full Access purchase conversion', '5.0%'],
+    ['Free Pick activation', '15.0%'],
+    ['Paid Top Picks activation', '25.0%'],
+    ['Home load success', '90.9%'],
+  ]) {
+    const metric = within(report).getByRole('article', { name: title });
+    expect(metric).toHaveTextContent(value);
+    expect(within(metric).getByRole('link')).toHaveAttribute(
+      'href',
+      expect.stringContaining('/dashboard/updated-home-analytics#dashboard-')
+    );
+  }
+  expect(
+    screen
+      .getByRole('region', { name: 'Needs attention' })
+      .compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Report date (UTC)'), {
+    target: { value: days[5] },
+  });
+  await settled();
+  const calls = jest
+    .mocked(global.fetch)
+    .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))
+    .filter((url) => url.pathname.includes('/updated-home-analytics/'));
+  expect(calls).toHaveLength(2);
+  expect(calls[1].searchParams.get('from')).toBe(`${days[5]}T00:00:00.000Z`);
+  expect(calls[1].searchParams.get('to')).toBe(`${days[5]}T23:59:59.999Z`);
+});
+
+it('preserves zero conversion and missing cohorts without inventing retention or averages', async () => {
+  global.fetch = jest.fn(async (input) =>
+    String(input).includes('/updated-home-analytics/')
+      ? json({
+          dashboards: [
+            {
+              id: 2,
+              metrics: [
+                homeMetric('free_pick_activation_funnel', [
+                  {
+                    stage: 'home_viewed',
+                    numerator: 100,
+                    denominator: null,
+                    value: 100,
+                  },
+                  {
+                    stage: 'free_pick_prediction_card_opened',
+                    numerator: 0,
+                    denominator: 0,
+                    value: null,
+                  },
+                ]),
+              ],
+            },
+            {
+              id: 3,
+              metrics: [
+                homeMetric('full_access_funnel', [
+                  {
+                    stage: 'offer_impression',
+                    numerator: 0,
+                    denominator: null,
+                    value: 0,
+                  },
+                  {
+                    stage: 'verified_purchase',
+                    numerator: 0,
+                    denominator: 0,
+                    value: null,
+                  },
+                ]),
+              ],
+            },
+          ],
+        })
+      : response(String(input))
+  );
+  show();
+  await settled();
+  const report = screen.getByRole('region', { name: 'Home Analytics' });
+  expect(
+    within(report).getByRole('article', { name: 'Free Pick activation' })
+  ).toHaveTextContent('0.0%');
+  for (const name of [
+    'Full Access purchase conversion',
+    'Paid Top Picks activation',
+    'Home load success',
+  ])
+    expect(within(report).getByRole('article', { name })).toHaveTextContent(
+      'N/A'
+    );
+});
+
+it('isolates a failed Home Analytics report while other overview reports remain visible', async () => {
+  global.fetch = jest.fn(async (input) =>
+    String(input).includes('/updated-home-analytics/')
+      ? json({}, 503)
+      : response(String(input))
+  );
+  show();
+  await settled();
+  expect(
+    screen.getByRole('region', { name: 'Home Analytics' })
+  ).toHaveTextContent('Data unavailable');
+  expect(
+    screen.getByRole('region', { name: 'New registrations' })
+  ).toHaveTextContent('128');
+  expect(
+    screen.getByRole('region', { name: 'Key app events' })
+  ).toHaveTextContent('1,248');
 });
