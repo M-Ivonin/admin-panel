@@ -93,10 +93,11 @@ function response(url: string): Response {
     });
   if (url.includes('/app-events/'))
     return json({
-      summary: { businessActionEvents: 1248 },
+      summary: { totalEvents: 1248, businessActionEvents: 612 },
       countsByEvent: [
         { eventKey: 'chat_in_ai_chat', count: 520 },
         { eventKey: 'checkout_started', count: 92 },
+        { eventKey: 'matches_screen_opened', count: 636 },
       ],
     });
   return json({}, 503);
@@ -165,6 +166,65 @@ it('shows all eight reports, complete navigation and each headline metric once',
   expect(
     within(navigation).getByRole('link', { name: 'Overview' })
   ).toHaveAttribute('aria-current', 'page');
+});
+
+it('shows only user events in descending frequency, including screen opens and every event below the first five', async () => {
+  global.fetch = jest.fn(async (input) => {
+    const url = new URL(String(input), 'http://localhost');
+    if (url.pathname.includes('/app-events/')) {
+      const userOnly = url.searchParams.get('sourceType') === 'user';
+      return json({
+        summary: {
+          totalEvents: userOnly ? 622 : 1522,
+          businessActionEvents: userOnly ? 22 : 922,
+        },
+        countsByEvent: [
+          { eventKey: 'checkout_started', count: 2 },
+          { eventKey: 'chat_in_ai_chat', count: 7 },
+          { eventKey: 'matches_screen_opened', count: 500 },
+          { eventKey: 'for_you_feed_opened', count: 100 },
+          { eventKey: 'voted_for_prediction', count: 3 },
+          { eventKey: 'subscription_paywall_opened', count: 10 },
+          { eventKey: 'channel_poll_voted', count: 0 },
+          ...(!userOnly
+            ? [{ eventKey: 'weekly_stats_digest', count: 900 }]
+            : []),
+        ],
+      });
+    }
+    return response(String(input));
+  });
+  show();
+  await settled();
+  const events = screen.getByRole('region', { name: 'Key app events' });
+  expect(within(events).getByText('622')).toBeInTheDocument();
+  const list = within(events).getByRole('list', {
+    name: 'User events by frequency',
+  });
+  expect(
+    within(list)
+      .getAllByRole('listitem')
+      .map((row) => row.textContent)
+  ).toEqual([
+    'Matches screen opened500',
+    'For You feed opened100',
+    'Subscription paywall opened10',
+    'AI chat message sent7',
+    'AI prediction vote confirmed3',
+    'Checkout started2',
+  ]);
+  expect(
+    within(events).queryByText('Weekly stats digest')
+  ).not.toBeInTheDocument();
+  expect(within(events).queryByText('Other actions')).not.toBeInTheDocument();
+  const requests = (global.fetch as jest.Mock).mock.calls
+    .map(([input]) => new URL(String(input), 'http://localhost'))
+    .filter((url) => url.pathname.includes('/app-events/'));
+  expect(requests).toHaveLength(2);
+  expect(requests.map((url) => url.searchParams.get('sourceType'))).toEqual([
+    'user',
+    'user',
+  ]);
 });
 
 it('keeps healthy reports visible when growth fails, without fabricating a zero', async () => {

@@ -26,6 +26,7 @@ import {
 import type { PredictionEvaluationSummary } from '@/lib/api/prediction-evaluations';
 import type { MonitorCheck, MonitorOverview } from '@/lib/api/system-monitor';
 import { OverviewChart } from './OverviewChart';
+import { formatAppEventLabel } from '@/lib/app-events-labels';
 import styles from './OverviewDashboard.module.css';
 
 const initialState = (): OverviewState => ({
@@ -341,14 +342,20 @@ function MonitorStrip({
 
 function Breakdown({
   items,
+  label,
 }: {
-  items: Array<{ label: string; value: number; color?: string }>;
+  items: Array<{ key: string; label: string; value: number; color?: string }>;
+  label?: string;
 }) {
   const max = Math.max(1, ...items.map((item) => item.value));
   return (
-    <div className={styles.breakdown}>
+    <ul
+      className={styles.breakdown}
+      aria-label={label}
+      tabIndex={label ? 0 : undefined}
+    >
       {items.map((item, i) => (
-        <div className={styles.breakdownRow} key={item.label}>
+        <li className={styles.breakdownRow} key={item.key}>
           <span>{item.label}</span>
           <div className={styles.track}>
             <span
@@ -363,9 +370,9 @@ function Breakdown({
             />
           </div>
           <span>{count(item.value)}</span>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -709,32 +716,19 @@ export function OverviewDashboard() {
           state={state.events}
         >
           {(data) => {
-            const categories = [
-              { label: 'AI chat messages', keys: ['chat_in_ai_chat'] },
-              {
-                label: 'Prediction votes',
-                keys: ['ai_chat_prediction_voted', 'voted_for_prediction'],
-              },
-              { label: 'Checkout started', keys: ['checkout_started'] },
-              {
-                label: 'Challenge joins',
-                keys: ['live_challenge_invite_accepted'],
-              },
-            ];
-            const items = categories.map((category) => ({
-              label: category.label,
-              value: data.today.countsByEvent
-                .filter((event) => category.keys.includes(event.eventKey))
-                .reduce((sum, event) => sum + event.count, 0),
-            }));
-            const total = data.today.summary.businessActionEvents;
-            items.push({
-              label: 'Other actions',
-              value: Math.max(
-                0,
-                total - items.reduce((sum, item) => sum + item.value, 0)
-              ),
-            });
+            const items = data.today.countsByEvent
+              .filter((event) => event.count > 0)
+              .sort(
+                (left, right) =>
+                  right.count - left.count ||
+                  left.eventKey.localeCompare(right.eventKey)
+              )
+              .map((event) => ({
+                key: event.eventKey,
+                label: formatAppEventLabel(event.eventKey),
+                value: event.count,
+              }));
+            const total = data.today.summary.totalEvents;
             return (
               <>
                 <div className={styles.eventsHeadline}>
@@ -744,15 +738,21 @@ export function OverviewDashboard() {
                   </div>
                   <Delta
                     current={total}
-                    previous={data.previous.summary.businessActionEvents}
+                    previous={data.previous.summary.totalEvents}
                     partial={range.partial}
                     cutoff={range.to}
                   />
                 </div>
                 <p className={styles.chartLabel}>
-                  Business actions by registered users
+                  User events · most frequent first
                 </p>
-                <Breakdown items={items} />
+                {items.length ? (
+                  <Breakdown items={items} label="User events by frequency" />
+                ) : (
+                  <p className={styles.footnote}>
+                    No user events for this date.
+                  </p>
+                )}
               </>
             );
           }}
@@ -774,8 +774,13 @@ export function OverviewDashboard() {
               <p className={styles.chartLabel}>Completion rate</p>
               <Breakdown
                 items={[
-                  { label: 'Started', value: data.summary.sessionsStarted },
                   {
+                    key: 'started',
+                    label: 'Started',
+                    value: data.summary.sessionsStarted,
+                  },
+                  {
+                    key: 'completed',
                     label: 'Completed',
                     value: data.summary.sessionsCompleted,
                     color: '#30c5e9',

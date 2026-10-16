@@ -69,3 +69,31 @@ must both be deployed before live growth/marketing values can be accepted.
   The other two suites (Match Ranking and Email Marketing) also fail on clean
   baseline source with unchanged assertions/timeouts. See baseline-test-results.json.
   This is not a claim that the full suite is green.
+
+## User-event follow-up
+
+The user's follow-up replaces the four fixed categories and Other actions with
+individual **user events sorted by descending count**. The existing backend
+`sourceType=user` filter excludes generated/system-state events for both periods.
+The headline/comparison now use total user events, including screen opens. Labels
+reuse the detailed App Events formatter, moved without behavior changes.
+
+Fresh final-build captures live in `user-events/`. Healthy/empty desktop, tablet
+and mobile rendering pass with no horizontal overflow or page errors. The event
+list preserves the approved middle-card height (279.6px vs original 280.1px),
+retains all nonzero event types and supports keyboard scrolling. The six-event
+fixture displays 752, 520, 340, 232, 92, 64 in order; the final 64 row is visible
+in `desktop-events-scrolled.png` after End, with scrollTop 45 / clientHeight 130 /
+scrollHeight 176. The empty state is explicit. The remaining panels retain their
+approved order and dimensions. See `user-events/capture-results.json` and screenshots.
+These remain isolated localhost fixtures, not production acceptance.
+
+Regression proof: the new behavior test first failed (22 business actions vs 622
+user events), then all eight overview tests passed. The combined detailed-report
+run had 19/20 passing checks; the unchanged version-health test exceeded its
+original 5-second timeout during concurrent build work. That exact test passed on
+clean baseline and current source when run separately, without changing its
+assertions or timeout. No claim is made that the combined run was fully green.
+Lint has no errors (the same three existing hook warnings); explicit typecheck and
+production build pass. Fresh independent Spec and Standards reviews approve the
+delta. Production acceptance is recorded separately after deployment.

@@ -32,8 +32,13 @@ not a win rate or confidence score. The canonical v9 summary is used when presen
 ROI comes from that same summary. Unsettled results and failed historical reads
 are chart gaps, not zero accuracy.
 
-App Events uses registered-user business actions, excluding screen-open totals.
-The four named groups are followed by the remaining business actions. Onboarding
+App Events requests only `sourceType=user` events, including screen opens and
+user business actions; generated/system-state events are excluded by the canonical
+backend source filter. The headline and comparison count that same user-event
+population. Individual event types are sorted by descending frequency, with event
+key as the tie-breaker. Every nonzero event type remains accessible in the
+scrollable chart; there is no synthetic Other actions group. Event labels share
+the detailed App Events report formatter. Onboarding
 uses the existing started/completed-session report and its completion denominator.
 
 Campaign open rates describe live deliveries sent on the selected date, opened
