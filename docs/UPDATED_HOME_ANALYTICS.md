@@ -30,3 +30,17 @@ initial API read, including a partial selected day. Direct sidebar navigation
 keeps the normal default range. Invalid linked ranges fall back to that default.
 Refreshing manually applies the visible dates as complete UTC-day bounds, so it
 releases the linked snapshot cutoff. Export JSON retains the loaded API range.
+
+## Statistical display rules
+
+Verification latency P50, P95 and the primary value are displayed in seconds;
+percentile column headers explicitly use `(s)`. Backend values and exports remain
+in their original milliseconds.
+
+An empty or unavailable funnel cohort has no full 100% baseline bar. Known stage
+counts, including zero, stay visible independently of whether a previous-stage
+percentage can be calculated. N/A percentages are not fabricated as zero.
+
+The exit-without-interaction explanation describes distinct Home users with a
+terminal checkpoint, matching the backend cohort rather than calling them visits.
+Active Home Time discloses that up to 15 seconds of terminal activity may be lost.

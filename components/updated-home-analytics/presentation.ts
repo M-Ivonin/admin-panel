@@ -63,9 +63,10 @@ const METRIC_EXPLANATIONS: Readonly<Record<string, string>> = {
   module_ctr: 'Share of users who opened a module after seeing it.',
   positions_4_9_reach_rate:
     'Share of Home visitors who reached modules in positions 4 through 9.',
-  active_home_time_ms: 'Typical time users actively spend on Home.',
+  active_home_time_ms:
+    'Typical time users actively spend on Home. Up to 15 seconds of terminal activity may be lost.',
   home_exit_without_interaction_rate:
-    'Share of Home visits that ended without any interaction.',
+    'Share of Home users with a terminal checkpoint reporting zero interactions.',
   free_pick_activation_funnel:
     'Shows how users progress from opening Home to opening the Free Pick prediction card.',
   full_access_funnel:

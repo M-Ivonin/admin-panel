@@ -99,13 +99,19 @@ export function UpdatedHomeFunnel({
               const role = stageRole(stage, value);
               const token = ANALYTICS_ROLE_TOKENS[role];
               const available = value.value !== null;
+              const hasBaseline =
+                baseline && value.numerator !== null && value.numerator > 0;
               const trackWidth = baseline
-                ? 100
+                ? hasBaseline
+                  ? 100
+                  : 0
                 : available
                   ? Math.max(0, Math.min(100, value.value ?? 0))
                   : 0;
               const rate = baseline
-                ? '100% cohort baseline'
+                ? hasBaseline
+                  ? '100% cohort baseline'
+                  : 'N/A'
                 : available
                   ? formatFunnelRate(value.value!, value.unit)
                   : 'N/A';
@@ -131,7 +137,7 @@ export function UpdatedHomeFunnel({
                       overflowWrap: 'anywhere',
                     }}
                   >
-                    {available && value.numerator !== null
+                    {value.numerator !== null
                       ? `${value.numerator} ${baseline ? formatFunnelUnit(value.unit) : 'users'}`
                       : 'N/A'}
                   </Typography>

@@ -430,7 +430,9 @@ function GroupedMetric({
           }}
         >
           {dimensionKeys.map((key) => (
-            <ColumnLabel key={key}>{dimensionColumnLabel(key)}</ColumnLabel>
+            <ColumnLabel key={key}>
+              {dimensionColumnLabel(key, definition.key)}
+            </ColumnLabel>
           ))}
           <ColumnLabel>VALUE</ColumnLabel>
           <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -466,7 +468,14 @@ function GroupedMetric({
                     overflowWrap: 'anywhere',
                   }}
                 >
-                  {formatDimensionValue(value.dimensions[key])}
+                  {definition.key === 'verification_latency_ms' &&
+                  ['p50', 'p95'].includes(key) &&
+                  typeof value.dimensions[key] === 'number'
+                    ? formatMetricValue({
+                        ...value,
+                        value: value.dimensions[key] as number,
+                      })
+                    : formatDimensionValue(value.dimensions[key])}
                 </Typography>
               ))}
               <Stack gap="2px" minWidth={0}>
@@ -626,7 +635,9 @@ function countCollectionValues(values: UpdatedHomeMetricValue[]): {
   );
 }
 
-function dimensionColumnLabel(key: string): string {
+function dimensionColumnLabel(key: string, metricKey: string): string {
+  if (metricKey === 'verification_latency_ms' && ['p50', 'p95'].includes(key))
+    return `${key.toUpperCase()} (s)`;
   return key === 'modulePosition'
     ? 'POSITION'
     : displayLabel(key).toUpperCase();
