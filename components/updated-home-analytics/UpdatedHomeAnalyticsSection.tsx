@@ -182,6 +182,29 @@ function DashboardProjection({
                 );
                 const values =
                   orderedValues.length > 0 ? orderedValues : [undefined];
+                if (
+                  metric.definition.key === 'd1_d7_d30_retention' &&
+                  orderedValues.length > 0
+                ) {
+                  const actions = new Map<string, UpdatedHomeMetricValue[]>();
+                  for (const value of orderedValues) {
+                    const action =
+                      typeof value.dimensions.coreAction === 'string'
+                        ? value.dimensions.coreAction
+                        : 'Unknown action';
+                    const group = actions.get(action) ?? [];
+                    group.push(value);
+                    actions.set(action, group);
+                  }
+                  return [...actions].map(([action, actionValues]) => (
+                    <GroupedMetric
+                      key={`${metric.definition.key}-${action}`}
+                      title={displayLabel(action)}
+                      definition={metric.definition}
+                      values={actionValues}
+                    />
+                  ));
+                }
                 if (shouldGroupMetric(dashboard.id, values.length)) {
                   return (
                     <GroupedMetric
@@ -208,9 +231,11 @@ function DashboardProjection({
 }
 
 function GroupedMetric({
+  title,
   definition,
   values,
 }: {
+  title?: string;
   definition: UpdatedHomeMetricDefinition;
   values: UpdatedHomeMetricValue[];
 }) {
@@ -221,6 +246,7 @@ function GroupedMetric({
   const distinctUsers = /distinct users/i.test(
     `${numeratorDefinition} ${denominatorDefinition ?? ''}`
   );
+  const isRetention = definition.key === 'd1_d7_d30_retention';
   const summary = metricSummary(definition.key, values);
   const summaryToken =
     ANALYTICS_ROLE_TOKENS[
@@ -248,7 +274,9 @@ function GroupedMetric({
         'compositionSignature',
         'compositionModules',
       ].filter((key) => values.some((value) => key in value.dimensions))
-    : Object.keys(values[0]?.dimensions ?? {});
+    : Object.keys(values[0]?.dimensions ?? {}).filter(
+        (key) => !isRetention || key !== 'coreAction'
+      );
   const displayedValues = [...values]
     .filter(
       (value) =>
@@ -258,9 +286,14 @@ function GroupedMetric({
       compareDimensionBreakdowns(left, right, dimensionKeys)
     );
   const breakdownColumns =
-    dimensionKeys.length === 1
-      ? { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' }
-      : `repeat(${dimensionKeys.length}, minmax(120px, 1fr)) 130px 110px`;
+    isRetention && dimensionKeys.length === 2
+      ? {
+          xs: 'minmax(0, 1fr) 70px 70px',
+          sm: 'minmax(0, 1fr) 100px 100px 80px',
+        }
+      : dimensionKeys.length === 1
+        ? { xs: 'minmax(0, 1fr) 95px', sm: 'minmax(0, 1fr) 130px 110px' }
+        : `repeat(${dimensionKeys.length}, minmax(120px, 1fr)) 130px 110px`;
 
   return (
     <Accordion
@@ -277,7 +310,7 @@ function GroupedMetric({
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon sx={{ color: '#A3A3A3' }} />}
-        aria-label={`Show ${displayLabel(definition.key)} breakdown`}
+        aria-label={`Show ${title ?? displayLabel(definition.key)} breakdown`}
         sx={{
           px: { xs: '12px', sm: '16px' },
           py: '8px',
@@ -290,7 +323,9 @@ function GroupedMetric({
             display: 'grid',
             gridTemplateColumns: {
               xs: 'minmax(0, 1fr)',
-              md: '250px 170px minmax(0, 1fr)',
+              md: isRetention
+                ? '250px 240px minmax(0, 1fr)'
+                : '250px 170px minmax(0, 1fr)',
             },
             alignItems: 'center',
             gap: { xs: 1, md: '18px' },
@@ -302,7 +337,7 @@ function GroupedMetric({
             <Typography
               sx={{ color: '#F5F5F5', fontSize: 13, fontWeight: 700 }}
             >
-              {displayLabel(definition.key)}
+              {title ?? displayLabel(definition.key)}
             </Typography>
             <Stack direction="row" gap={1} flexWrap="wrap">
               {distinctUsers ? (
@@ -311,7 +346,8 @@ function GroupedMetric({
                 </Typography>
               ) : null}
               <Typography sx={{ color: '#8B8B8F', fontSize: 10 }}>
-                {values.length} breakdowns
+                {values.length}{' '}
+                {values.length === 1 ? 'breakdown' : 'breakdowns'}
               </Typography>
               {collectionCounts ? (
                 <Typography sx={{ color: '#A3A3A3', fontSize: 10 }}>
@@ -321,22 +357,28 @@ function GroupedMetric({
               ) : null}
             </Stack>
           </Stack>
-          <Stack gap="2px" minWidth={0}>
-            <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
-              {(summary?.label ?? 'Breakdowns').toUpperCase()}
-            </Typography>
-            <Typography
-              data-testid="updated-home-grouped-summary-value"
-              sx={{
-                color: summary ? summaryToken.textColor : '#C8C8CA',
-                fontFamily: mono,
-                fontSize: 18,
-                fontWeight: 700,
-              }}
-            >
-              {summary?.value ?? values.length}
-            </Typography>
-          </Stack>
+          {isRetention ? (
+            <RetentionSummary values={values} />
+          ) : (
+            <Stack gap="2px" minWidth={0}>
+              <Typography
+                sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}
+              >
+                {(summary?.label ?? 'Breakdowns').toUpperCase()}
+              </Typography>
+              <Typography
+                data-testid="updated-home-grouped-summary-value"
+                sx={{
+                  color: summary ? summaryToken.textColor : '#C8C8CA',
+                  fontFamily: mono,
+                  fontSize: 18,
+                  fontWeight: 700,
+                }}
+              >
+                {summary?.value ?? values.length}
+              </Typography>
+            </Stack>
+          )}
           <Stack gap="4px" minWidth={0}>
             <Typography sx={{ color: '#8B8B8F', fontSize: 9, fontWeight: 700 }}>
               WHAT IT SHOWS
@@ -380,7 +422,7 @@ function GroupedMetric({
           sx={{
             display: 'grid',
             gridTemplateColumns: breakdownColumns,
-            minWidth: dimensionKeys.length > 1 ? 620 : 0,
+            minWidth: !isRetention && dimensionKeys.length > 1 ? 620 : 0,
             gap: '12px',
             px: { xs: '12px', sm: '16px' },
             py: '8px',
@@ -406,7 +448,7 @@ function GroupedMetric({
               sx={{
                 display: 'grid',
                 gridTemplateColumns: breakdownColumns,
-                minWidth: dimensionKeys.length > 1 ? 620 : 0,
+                minWidth: !isRetention && dimensionKeys.length > 1 ? 620 : 0,
                 alignItems: 'center',
                 gap: '12px',
                 px: { xs: '12px', sm: '16px' },
@@ -459,6 +501,44 @@ function GroupedMetric({
         })}
       </AccordionDetails>
     </Accordion>
+  );
+}
+
+function RetentionSummary({ values }: { values: UpdatedHomeMetricValue[] }) {
+  return (
+    <Stack gap="6px" minWidth={0}>
+      <Typography sx={{ color: '#8B8B8F', fontSize: 9 }}>
+        Average across cohorts · excludes N/A
+      </Typography>
+      <Stack direction="row" gap={2}>
+        {[1, 7, 30].map((day) => {
+          const observed = values.filter(
+            (value) =>
+              value.dimensions.returnDay === day && value.value !== null
+          );
+          const average =
+            observed.length === 0
+              ? null
+              : observed.reduce((sum, value) => sum + (value.value ?? 0), 0) /
+                observed.length;
+          return (
+            <Stack key={day} gap="2px">
+              <ColumnLabel>{`D${day}`}</ColumnLabel>
+              <Typography
+                sx={{
+                  color: average === null ? '#F0A63A' : '#C4B5FD',
+                  fontFamily: mono,
+                  fontSize: 18,
+                  fontWeight: 700,
+                }}
+              >
+                {average === null ? 'N/A' : `${Number(average.toFixed(2))}%`}
+              </Typography>
+            </Stack>
+          );
+        })}
+      </Stack>
+    </Stack>
   );
 }
 

@@ -511,8 +511,8 @@ function CoverageFooter() {
           Backend projection coverage
         </Typography>
         <Typography sx={{ color: '#A3A3A3', fontSize: 12 }}>
-          13 dashboards · backend values and definitions shown without frontend
-          recomputation.
+          13 dashboards · backend values and definitions. Retention headers show
+          averages across cohorts; breakdowns preserve backend values.
         </Typography>
       </Stack>
       <Typography
