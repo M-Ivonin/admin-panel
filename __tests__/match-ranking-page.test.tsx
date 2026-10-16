@@ -1270,10 +1270,11 @@ describe('MatchRankingPage', () => {
       await screen.findByRole('option', { name: 'South America' })
     );
     fireEvent.mouseDown(within(dialog).getByLabelText('Prominence value'));
+    const prominenceOptions = within(screen.getByRole('listbox'));
     expect(
-      screen.getAllByRole('option').map((option) => option.textContent)
+      prominenceOptions.getAllByRole('option').map((option) => option.textContent)
     ).toEqual(['0', '10', '20']);
-    fireEvent.click(screen.getByRole('option', { name: '20' }));
+    fireEvent.click(prominenceOptions.getByRole('option', { name: '20' }));
     fireEvent.change(within(dialog).getByLabelText(/Reason/), {
       target: { value: 'National audience prominence' },
     });
