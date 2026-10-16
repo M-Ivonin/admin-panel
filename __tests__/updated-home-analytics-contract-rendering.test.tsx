@@ -88,10 +88,13 @@ describe('Updated Home dashboard backend projection rendering', () => {
     render(<UpdatedHomeAnalyticsDashboard />);
 
     const overview = await screen.findByRole('region', { name: 'Overview' });
-    expect(within(overview).getByText('Free Pick → Prediction Card')).toBeInTheDocument();
-    expect(within(overview).getByText('Paid Top Picks: Prediction Card → Full Analysis')).toBeInTheDocument();
-    expect(within(overview).getByText('Prediction Card opened')).toBeInTheDocument();
-    expect(within(overview).getByText('Full Analysis opened')).toBeInTheDocument();
+    const freePick = within(overview).getByRole('link', { name: 'Free Pick activation: N/A' });
+    const topPicks = within(overview).getByRole('link', { name: 'Paid Top Picks activation: N/A' });
+    expect(freePick).toHaveAttribute('href', '#dashboard-2');
+    expect(topPicks).toHaveAttribute('href', '#dashboard-6');
+    expect(freePick).toHaveTextContent('Prediction Card opened');
+    expect(topPicks).toHaveTextContent('Full Analysis opened');
+    expect(freePick).not.toHaveTextContent('Full Analysis');
     expect(within(overview).queryByText(/Free Pick.*Full Analysis/i)).not.toBeInTheDocument();
 
     const firstMetric = screen.getAllByTestId('updated-home-metric-row')[0];
@@ -126,6 +129,7 @@ describe('Updated Home dashboard backend projection rendering', () => {
       'Passes',
       'Purchases',
       'Retention',
+      'AI Chat',
     ]);
     expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
   });

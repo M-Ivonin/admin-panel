@@ -9,6 +9,8 @@ const createJestConfig = nextJest({
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jsdom',
+  // Keep CPU-heavy MUI/jsdom suites from competing for their existing deadlines.
+  maxWorkers: 1,
   testPathIgnorePatterns: [
     '<rootDir>/.next/',
     '<rootDir>/.codex-orchestrator/',

@@ -38,6 +38,13 @@ npm run build
 coverage is available through `npm run smoke:routes` when the affected routes
 can be exercised against the required environment.
 
+Jest runs one worker because MUI/jsdom suites are CPU-heavy. Its Emotion
+cache uses CSSOM rule insertion, as in production, so accessibility queries still
+evaluate real styles without creating a separate stylesheet for every rule.
+Its inserted-rule cache is cleared between tests so unrelated styles do not
+accumulate; each mounted component inserts its real rules again.
+Keep the existing test deadlines and assertions when tuning this environment.
+
 ## Ownership
 
 - `app/(admin)` owns authenticated operator surfaces.
