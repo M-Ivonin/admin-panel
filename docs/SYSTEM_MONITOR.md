@@ -58,8 +58,20 @@ a late response cannot replace the current context.
 
 ## Verification and visual reference
 
+`lib/system-monitor-window.ts` owns the pure request-window policy for history,
+incident lists, linked incident lookup and logs. Every entry point takes an
+explicit current time. Period selections keep their original end; requests clamp
+to the current seven-day retention boundary and current time, returning no window
+when the interval is empty. Log context prefers run end, then incident confirmation,
+then incident opening, with five minutes on each side; absent context uses the
+selected period. Fetching, selection state and Refresh remain in the dashboard.
+Deterministic boundary coverage lives in `__tests__/system-monitor-window.test.ts`;
+dashboard tests retain proof of delayed requests, fixed selection ends, Refresh
+offset resets and expired-request suppression.
+
 Focused behavior tests: `npm test -- --runInBand __tests__/system-monitor-api.test.ts
-__tests__/system-monitor-dashboard.test.tsx __tests__/system-monitor-charts.test.tsx`.
+__tests__/system-monitor-dashboard.test.tsx __tests__/system-monitor-window.test.ts
+__tests__/system-monitor-charts.test.tsx`.
 
 Use `npm run lint` and `npm run typecheck`. Build and browser proof must run in an
 isolated copy when a user-owned Next.js server is using the original `.next`.

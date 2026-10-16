@@ -36,6 +36,12 @@ import { MonitorCharts } from './MonitorCharts';
 import { MonitorCheckMap } from './MonitorCheckMap';
 import { projectDetailedSourceHealth } from '@/lib/system-monitor-health';
 import {
+  incidentLinkWindow,
+  logWindow,
+  periodWindow,
+  retainedWindow,
+} from '@/lib/system-monitor-window';
+import {
   monitorApi,
   MonitorApiError,
   type LogService,
@@ -94,25 +100,6 @@ function incidentDuration(incident: MonitorIncident, now: number): string {
   const hours = Math.floor(minutes / 60);
   return hours < 24 ? `${hours} hr ${minutes % 60} min` : `${Math.floor(hours / 24)} days ${hours % 24} hr`;
 }
-
-
-const retentionMs = 7 * 86400000;
-type TimeWindow = { from: string; to: string };
-function periodWindow(hours: number): TimeWindow {
-  const end = Date.now();
-  return {
-    from: new Date(end - hours * 3600000).toISOString(),
-    to: new Date(end).toISOString(),
-  };
-}
-function retainedWindow(window: TimeWindow): TimeWindow | null {
-  const now = Date.now();
-  const from = Math.max(Date.parse(window.from), now - retentionMs);
-  const to = Math.min(Date.parse(window.to), now);
-  if (from >= to) return null;
-  return { from: new Date(from).toISOString(), to: new Date(to).toISOString() };
-}
-
 const labels: Record<Outcome, string> = {
   pass: 'Pass',
   warn: 'Warning',
@@ -166,7 +153,7 @@ export function SystemMonitorDashboard() {
   const [now, setNow] = useState(Date.now());
   const [checkId, setCheckId] = useState('');
   const [period, setPeriod] = useState(24);
-  const [range, setRange] = useState(() => periodWindow(24));
+  const [range, setRange] = useState(() => periodWindow(24, Date.now()));
   const [history, setHistory] = useState<MonitorHistory | null>(null);
   const [historyError, setHistoryError] = useState(false);
   const [historyExpired, setHistoryExpired] = useState(false);
@@ -251,7 +238,7 @@ export function SystemMonitorDashboard() {
     setHistoryLoading(true);
     setHistoryError(false);
     setHistory(null);
-    const window = retainedWindow(range);
+    const window = retainedWindow(range, Date.now());
     setHistoryExpired(!window);
     if (!window) {
       setHistoryLoading(false);
@@ -281,7 +268,7 @@ export function SystemMonitorDashboard() {
     setIncidentLoading(true);
     setIncidentError(false);
     setIncidents(null);
-    const window = retainedWindow(range);
+    const window = retainedWindow(range, Date.now());
     setIncidentsExpired(!window);
     if (!window) {
       setIncidentLoading(false);
@@ -311,11 +298,9 @@ export function SystemMonitorDashboard() {
     if (!id) return;
     let alive = true;
     setLinkState('loading');
-    const end = Date.now();
-    const to = new Date(end).toISOString();
-    const from = new Date(end - 7 * 86400000).toISOString();
+    const incidentRange = incidentLinkWindow(Date.now());
     monitorApi
-      .incidents({ id, from, to, limit: 1, offset: 0 })
+      .incidents({ id, ...incidentRange, limit: 1, offset: 0 })
       .then((data) => {
         if (!alive) return;
         const match = data.items.find((item) => item.incidentId === id);
@@ -372,18 +357,7 @@ export function SystemMonitorDashboard() {
     const request = ++logRequest.current;
     setLogState('loading');
     setLogs(null);
-    const pivot =
-      run?.endedAt ??
-      selectedIncident?.confirmedAt ??
-      selectedIncident?.openedAt;
-    const window = retainedWindow(
-      pivot
-        ? {
-            from: new Date(Date.parse(pivot) - 5 * 60000).toISOString(),
-            to: new Date(Date.parse(pivot) + 5 * 60000).toISOString(),
-          }
-        : range
-    );
+    const window = logWindow(range, { run, incident: selectedIncident }, Date.now());
     if (!window) {
       setLogState('expired');
       return;
@@ -407,7 +381,7 @@ export function SystemMonitorDashboard() {
     setPeriod(hours);
     setPage(0);
     setIncidentPage(0);
-    setRange(periodWindow(hours));
+    setRange(periodWindow(hours, Date.now()));
   };
   const sourceStale =
     overview && projectDetailedSourceHealth(overview, now).stale;
