@@ -1,0 +1,43 @@
+{
+  "baseline": "b4b34f4d466184a43a43eaa3d31c8c37f379f5b3",
+  "source": "clean tracked source export with the same installed dependencies",
+  "command": "jest --runInBand --runTestsByPath __tests__/match-ranking-page.test.tsx __tests__/email-marketing-page.test.tsx",
+  "failedSuites": 2,
+  "failedTests": 21,
+  "passedTests": 51,
+  "suites": [
+    {
+      "name": "match-ranking-page.test.tsx",
+      "status": "failed",
+      "failedCases": [
+        "MatchRankingPage edits weights with help and saves a draft preserving rollout and stage mappings",
+        "MatchRankingPage shows Legacy references, requires a verified selection and reason, and links an imported league",
+        "MatchRankingPage shows general and tab-specific operator manuals",
+        "MatchRankingPage searches and reviews competition metadata",
+        "MatchRankingPage shows the latest audit after saving a competition without reloading the page",
+        "MatchRankingPage shows audit fetch errors rather than a stale or empty history",
+        "MatchRankingPage shows a preserved non-country code until the operator restores automatic geography",
+        "MatchRankingPage expands priority regions, rejects conflicting overlaps, and reopens saved countries",
+        "MatchRankingPage retains Svalbard and Jan Mayen when reopening and editing a shared country adjustment",
+        "MatchRankingPage requires a nonempty audience and an integer adjustment within the allowed range",
+        "MatchRankingPage edits country-scoped team prominence",
+        "MatchRankingPage previews a selected email using the account context and returns to manual country mode when cleared",
+        "MatchRankingPage fills account geography without inventing a region for JP",
+        "MatchRankingPage fills account geography without inventing a region for null",
+        "MatchRankingPage keeps the latest email search, reports failure, and retries after editing the query",
+        "MatchRankingPage does not display generic ranking as a selected user preview when the server omits the user context",
+        "MatchRankingPage filters preview countries by region and requires a country for regional previews",
+        "MatchRankingPage runs deterministic preview and displays component breakdown and audit"
+      ]
+    },
+    {
+      "name": "email-marketing-page.test.tsx",
+      "status": "failed",
+      "failedCases": [
+        "estimates the selected publication topic and removes stale estimates after edits",
+        "EmailMarketingDashboard workflow submits product updates without partner/prediction fields and permits an optional CTA",
+        "EmailMarketingDashboard workflow submits only offer copy/location and displays partner compliance as read-only projection"
+      ]
+    }
+  ]
+}

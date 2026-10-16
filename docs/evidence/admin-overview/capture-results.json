@@ -1,0 +1,60 @@
+[
+  {
+    "scenario": "healthy",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18
+  },
+  {
+    "scenario": "tablet",
+    "overflow": false
+  },
+  {
+    "scenario": "mobile-navigation",
+    "url": "http://127.0.0.1:3147/dashboard/app-events-analytics",
+    "overflow": false
+  },
+  {
+    "scenario": "partial-error",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18
+  },
+  {
+    "scenario": "empty",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18
+  },
+  {
+    "scenario": "locked",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 15
+  },
+  {
+    "scenario": "monitor-stale",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18
+  },
+  {
+    "scenario": "monitor-fail",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18
+  },
+  {
+    "scenario": "loading",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 17
+  }
+]

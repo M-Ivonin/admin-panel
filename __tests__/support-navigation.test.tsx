@@ -1,9 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import DashboardPage from '@/app/(admin)/dashboard/page';
-
-jest.mock('@/components/auth/ProtectedRoute', () => ({
-  ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
-}));
+import { AdminShell } from '@/components/admin/AdminShell';
 
 jest.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => ({
@@ -13,6 +9,7 @@ jest.mock('@/lib/hooks/useAuth', () => ({
 }));
 
 jest.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard',
   useRouter: () => ({ push: jest.fn() }),
 }));
 
@@ -29,7 +26,11 @@ jest.mock('next/link', () => ({
 
 describe('support dashboard navigation', () => {
   it('links signed-in admins to the canonical support workspace', () => {
-    render(<DashboardPage />);
+    render(
+      <AdminShell>
+        <div>Dashboard content</div>
+      </AdminShell>
+    );
 
     expect(
       screen.getByRole('link', { name: /support tickets/i })

@@ -1,0 +1,468 @@
+[
+  {
+    "name": "HEADER",
+    "y": 14,
+    "height": 57.5,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "",
+        "h": 57.390625,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__controls",
+        "h": 57.5,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      }
+    ]
+  },
+  {
+    "name": "System health",
+    "y": 83.5,
+    "height": 48,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__monitorPrimary",
+        "h": 20,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "12px",
+        "lh": "18px"
+      },
+      {
+        "tag": "SPAN",
+        "cls": "OverviewDashboard-module__ETeQJG__monitorDetail",
+        "h": 27,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__monitorGroups",
+        "h": 16.5,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "11px",
+        "lh": "16.5px"
+      },
+      {
+        "tag": "A",
+        "cls": "",
+        "h": 16.5,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "11px",
+        "lh": "16.5px"
+      }
+    ]
+  },
+  {
+    "name": "New registrations",
+    "y": 145.5,
+    "height": 325.59375,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__headline",
+        "h": 46,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "40px",
+        "lh": "46px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__delta",
+        "h": 24,
+        "mt": "4px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "8px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__chart",
+        "h": 140,
+        "mt": "1px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__footnote",
+        "h": 19,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      }
+    ]
+  },
+  {
+    "name": "New paid subscriptions",
+    "y": 145.5,
+    "height": 325.59375,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__headline",
+        "h": 46,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "40px",
+        "lh": "46px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__delta",
+        "h": 24,
+        "mt": "4px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "8px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__chart",
+        "h": 140,
+        "mt": "1px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__footnote",
+        "h": 19,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      }
+    ]
+  },
+  {
+    "name": "Revenue",
+    "y": 145.5,
+    "height": 325.59375,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__revenueHeadline",
+        "h": 46,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__delta",
+        "h": 24,
+        "mt": "4px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "8px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__chart",
+        "h": 140,
+        "mt": "1px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__legend",
+        "h": 17.5,
+        "mt": "1.5px",
+        "mb": "0px",
+        "fs": "9px",
+        "lh": "13.5px"
+      }
+    ]
+  },
+  {
+    "name": "Prediction performance",
+    "y": 485.09375,
+    "height": 280.09375,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__predictionHeadline",
+        "h": 46,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "8px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__chart",
+        "h": 119,
+        "mt": "1px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__predictionFooter",
+        "h": 16.5,
+        "mt": "6px",
+        "mb": "0px",
+        "fs": "11px",
+        "lh": "16.5px"
+      }
+    ]
+  },
+  {
+    "name": "Key app events",
+    "y": 485.09375,
+    "height": 280.09375,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__eventsHeadline",
+        "h": 46,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "8px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__breakdown",
+        "h": 130.5,
+        "mt": "9px",
+        "mb": "9px",
+        "fs": "16px",
+        "lh": "24px"
+      }
+    ]
+  },
+  {
+    "name": "Onboarding today",
+    "y": 779.1875,
+    "height": 225,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__headline",
+        "h": 39.09375,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "34px",
+        "lh": "39.1px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__chartLabel",
+        "h": 16.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "12px",
+        "lh": "16.8px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__breakdown",
+        "h": 44,
+        "mt": "14px",
+        "mb": "9px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__footnote",
+        "h": 19,
+        "mt": "22.3125px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      }
+    ]
+  },
+  {
+    "name": "Campaigns & email",
+    "y": 779.1875,
+    "height": 225,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 20.796875,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__marketing",
+        "h": 159.75,
+        "mt": "2px",
+        "mb": "0px",
+        "fs": "16px",
+        "lh": "24px"
+      }
+    ]
+  },
+  {
+    "name": "Needs attention",
+    "y": 779.1875,
+    "height": 225,
+    "children": [
+      {
+        "tag": "DIV",
+        "cls": "OverviewDashboard-module__ETeQJG__cardHeader",
+        "h": 23,
+        "mt": "0px",
+        "mb": "6px",
+        "fs": "16px",
+        "lh": "24px"
+      },
+      {
+        "tag": "A",
+        "cls": "OverviewDashboard-module__ETeQJG__attentionRow",
+        "h": 74,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "11px",
+        "lh": "16.5px"
+      },
+      {
+        "tag": "A",
+        "cls": "OverviewDashboard-module__ETeQJG__attentionRow",
+        "h": 75,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "11px",
+        "lh": "16.5px"
+      },
+      {
+        "tag": "P",
+        "cls": "OverviewDashboard-module__ETeQJG__footnote",
+        "h": 19,
+        "mt": "0px",
+        "mb": "0px",
+        "fs": "10px",
+        "lh": "15px"
+      }
+    ]
+  }
+]

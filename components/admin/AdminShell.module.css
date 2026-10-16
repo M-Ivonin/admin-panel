@@ -1,0 +1,219 @@
+.shell {
+  min-height: 100vh;
+  color: #f3f4f7;
+  background: #111416;
+}
+.shell :focus-visible {
+  outline: 2px solid #a493ff;
+  outline-offset: 4px;
+}
+.sidebar {
+  position: fixed;
+  z-index: 30;
+  inset: 0 auto 0 0;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  background: #15181b;
+  border-right: 1px solid #2b3038;
+  overflow-y: auto;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px 22px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.brand img {
+  border-radius: 8px;
+  object-fit: contain;
+}
+.brand small {
+  display: block;
+  color: #abb7ca;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 400;
+  padding-top: 6px;
+}
+.navigation {
+  padding: 0 10px 16px;
+}
+.group {
+  margin-bottom: 18px;
+}
+.groupLabel {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #a8b4c8;
+  padding: 0 9px 9px;
+}
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: #e1e5ee;
+  font-size: 12px;
+  text-decoration: none;
+}
+.navLink svg {
+  flex-shrink: 0;
+}
+.navLink:hover {
+  background: #242330;
+}
+.active {
+  background: #2b2348;
+  color: #f2eeff;
+  border-left-color: #8d72ff;
+}
+.activeArrow {
+  margin-left: auto;
+}
+.account {
+  margin-top: auto;
+  border-top: 1px solid #2b3038;
+  padding: 12px 20px 16px;
+  font-size: 12px;
+}
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.identity > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #6842e7;
+  font-size: 17px;
+}
+.account button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  color: #cad1de;
+  font: inherit;
+  margin-top: 12px;
+  padding: 4px 2px;
+  cursor: pointer;
+}
+.content {
+  margin-left: 236px;
+  min-width: 0;
+}
+.mobileHeader {
+  display: none;
+}
+.skip {
+  position: fixed;
+  top: -60px;
+  left: 250px;
+  background: #5343aa;
+  padding: 10px;
+  z-index: 90;
+}
+.skip:focus {
+  top: 10px;
+}
+.backdrop {
+  display: none;
+}
+@media (min-height: 1050px) {
+  .navLink {
+    min-height: 39px;
+  }
+  .group {
+    margin-bottom: 24px;
+  }
+}
+@media (max-width: 900px) {
+  .sidebar {
+    top: 55px;
+    transform: translateX(-100%);
+    transition: transform 0.18s ease;
+    max-width: 85vw;
+  }
+  .open {
+    transform: translateX(0);
+  }
+  .content {
+    margin-left: 0;
+    padding-top: 55px;
+  }
+  .mobileHeader {
+    display: flex;
+    position: fixed;
+    inset: 0 0 auto;
+    height: 55px;
+    z-index: 40;
+    background: #15181b;
+    border-bottom: 1px solid #2b3038;
+    align-items: center;
+    gap: 15px;
+    padding: 0 16px;
+  }
+  .mobileHeader button {
+    background: none;
+    color: #fff;
+    border: 0;
+    padding: 6px;
+  }
+  .mobileHeader a {
+    flex: 1;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .mobileHeader span {
+    font-weight: 400;
+    color: #aeb6c8;
+    font-size: 12px;
+    margin-left: 5px;
+  }
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 55px 0 0;
+    background: #0008;
+    z-index: 25;
+    border: 0;
+  }
+  .skip {
+    left: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+@media (max-width: 900px) {
+  .sidebar {
+    visibility: hidden;
+  }
+  .sidebar.open {
+    visibility: visible;
+  }
+}

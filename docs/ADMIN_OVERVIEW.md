@@ -1,0 +1,66 @@
+# Admin overview
+
+`/dashboard` is the starting report for the admin application. The persistent
+sidebar also serves the existing dashboard and support routes; on small screens
+it opens from the navigation button and closes on navigation or Escape.
+
+The overview follows the approved design: system status, then three growth/revenue
+panels, two prediction/event panels, and three onboarding/marketing/attention
+panels. Each headline appears inside its report, rather than being repeated in a
+separate KPI row. Report arrows open the existing detailed pages.
+
+## Reading the reports
+
+The selected date and daily chart buckets use UTC. Headlines describe the selected
+day; charts include that day and the preceding six days. The incomplete current
+day is marked. Growth, revenue and event comparisons use yesterday at the same
+cutoff rather than comparing a partial day to a complete day. A zero prior value
+has no percentage comparison.
+
+Registrations and initial paid purchases come from the backend overview read
+model. Initial purchases are production, recorded, positive subscription starts,
+not renewals, passes, sandbox transactions or manual grants. The purchase date is
+the ledger recording date, matching Revenue Ledger's date filter.
+
+Revenue reuses Revenue Ledger's production-only USD summaries. It shows gross
+after refunds before store fees; the second series is the backend estimate after
+store fees. Missing amounts/rates suppress incomplete USD totals. The existing
+Revenue Ledger unlock must succeed before any monetary request is made.
+
+Prediction accuracy is the backend weighted score for fixtures in each UTC day,
+not a win rate or confidence score. The canonical v9 summary is used when present.
+ROI comes from that same summary. Unsettled results and failed historical reads
+are chart gaps, not zero accuracy.
+
+App Events uses registered-user business actions, excluding screen-open totals.
+The four named groups are followed by the remaining business actions. Onboarding
+uses the existing started/completed-session report and its completion denominator.
+
+Campaign open rates describe live deliveries sent on the selected date, opened
+by the cutoff. Email click rates describe the delivered cohort, counting distinct,
+exactly correlated product/full-analysis click deliveries. Incomplete link tracing
+makes clicks/rates unavailable. Test deliveries and control rows are excluded.
+The attention panel counts currently open support tickets and failed deliveries
+for the selected day; the support count is current, not a historical snapshot.
+
+## Access and unavailable data
+
+The existing protected admin layout and backend authorization remain active.
+Monitor capability is checked before reading monitor data. Expired heartbeat,
+missing required checks and overdue results cannot produce an operational status.
+Monitor and open support tickets always describe current conditions even when a
+historical report date is selected.
+
+Reports load independently. An unavailable report does not erase successful
+reports or become a zero. Changing date or refreshing cancels prior requests;
+late replies cannot overwrite the current selection. The comparison cutoff is
+retained with the fetched snapshot; advancing the monitor freshness clock does
+not change report windows or relabel an old snapshot as a completed day. Requests time out after
+30 seconds. Refresh is manual; the freshness clock continues to invalidate old
+monitor status without a fetch.
+
+New read endpoints must be released with the backend before the new summary can
+show growth and marketing data. No schema migration is required. Until then those
+panels show their unavailable state.
+
+Validation and reference captures: [UI evidence](./evidence/admin-overview/UI_EVIDENCE_REPORT.md).

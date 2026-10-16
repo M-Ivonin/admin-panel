@@ -45,3 +45,7 @@ can be exercised against the required environment.
 - `app/(deeplink)` and `modules/deeplink` own mobile-link fallback behavior.
 - `modules/content` owns public content contracts and repositories.
 - Backend APIs and persistence remain owned by `tipsterBro-bakend`.
+
+## Admin overview
+
+The starting dashboard and sidebar are described in [Admin overview](./docs/ADMIN_OVERVIEW.md).

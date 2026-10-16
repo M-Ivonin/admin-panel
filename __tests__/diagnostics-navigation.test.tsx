@@ -1,9 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import DashboardPage from '@/app/(admin)/dashboard/page';
-
-jest.mock('@/components/auth/ProtectedRoute', () => ({
-  ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
-}));
+import { AdminShell } from '@/components/admin/AdminShell';
 
 jest.mock('@/lib/hooks/useAuth', () => ({
   useAuth: () => ({
@@ -13,6 +9,7 @@ jest.mock('@/lib/hooks/useAuth', () => ({
 }));
 
 jest.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard',
   useRouter: () => ({
     push: jest.fn(),
   }),
@@ -31,7 +28,11 @@ jest.mock('next/link', () => ({
 
 describe('diagnostics dashboard navigation', () => {
   it('shows the Remote Diagnostics section for signed-in dashboard admins', async () => {
-    render(<DashboardPage />);
+    render(
+      <AdminShell>
+        <div>Dashboard content</div>
+      </AdminShell>
+    );
 
     expect(await screen.findByText('Remote Diagnostics')).toBeTruthy();
     expect(
