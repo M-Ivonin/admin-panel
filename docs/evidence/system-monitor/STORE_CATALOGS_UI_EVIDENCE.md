@@ -1,5 +1,12 @@
 # Separate store catalogs — 2026-10-13
 
+This is the historical local proof captured before the 2026-10-14 scheduling
+change. Both production catalog checks now use ten-minute intervals. Independent
+Spec and Standards review approved the cumulative release on 2026-10-14; the
+pending-review and publication statements below describe the original snapshot.
+Fresh release checks passed 73 monitor tests, 27 backend HTTP tests and 20 admin
+dashboard tests, plus the affected builds/typechecks and admin lint (zero errors).
+
 Reference: approved dependency map and request to split Google Play and App Store
 with English labels, preserving the existing admin theme and interactions.
 
