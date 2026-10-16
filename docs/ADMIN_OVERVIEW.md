@@ -22,6 +22,12 @@ model. Initial purchases are production, recorded, positive subscription starts,
 not renewals, passes, sandbox transactions or manual grants. The purchase date is
 the ledger recording date, matching Revenue Ledger's date filter.
 
+The overview Revenue panel is visible only to `mykhailo@levantem.ai` and
+`sergii.mytakii@levantem.ai`, using the current session identity. Other accounts
+receive no revenue access-check or monetary-report requests from the overview;
+registrations and subscriptions share the full top row equally. This is homepage
+visibility; the detailed Revenue Ledger retains its existing access rules.
+
 Revenue reuses Revenue Ledger's production-only USD summaries. It shows gross
 after refunds before store fees; the second series is the backend estimate after
 store fees. Missing amounts/rates suppress incomplete USD totals. The existing

@@ -97,3 +97,29 @@ assertions or timeout. No claim is made that the combined run was fully green.
 Lint has no errors (the same three existing hook warnings); explicit typecheck and
 production build pass. Fresh independent Spec and Standards reviews approve the
 delta. Production acceptance is recorded separately after deployment.
+
+## Revenue visibility follow-up
+
+The user limits the homepage Revenue panel to Mykhailo and Sergii. Confirmed
+account emails are `mykhailo@levantem.ai` and `sergii.mytakii@levantem.ai`.
+The existing financial unlock remains; detailed Revenue Ledger permissions are
+outside this homepage-visibility change.
+
+Fresh final-build captures are in `revenue-visibility/`. Both allowed identities
+render Revenue; the locked allowed-account case still offers unlock. The denied
+identity renders seven reports and makes zero Revenue Ledger access checks and
+zero monetary report requests, even with the fixture unlock set to true.
+Desktop top-row widths are 619px + 619px across 1252px with the existing 14px gap;
+tablet widths are 363px + 363px across 740px. Mobile cards each fill the 358px row
+and stack vertically. All captured viewports have zero horizontal overflow and
+zero browser page errors. Screenshots were inspected against the approved layout
+with this user-requested two-card variant. See capture-results.json and the
+corresponding desktop/tablet/mobile-revenue-hidden.png files.
+
+The three denied-account regression cases failed before implementation and pass
+afterward. All 13 overview checks pass, including both allowed accounts, three
+denied accounts, stale stored identity vs current token, and the prior financial
+unlock gate. Lint has no errors (same three existing warnings), production build
+and explicit typecheck pass; independent Spec and Standards reviews approve.
+These captures use disposable local sessions/API fixtures, not impersonated live
+accounts. Live production acceptance is recorded separately after release.

@@ -118,12 +118,12 @@ async function settled() {
 }
 beforeEach(() => {
   Object.assign(window.location, { hostname: 'localhost' });
-  document.cookie = `accessToken=e30.${btoa(JSON.stringify({ sub: 'admin', email: 'admin@test.invalid', name: 'Administrator' }))}.render-only`;
+  document.cookie = `accessToken=e30.${btoa(JSON.stringify({ sub: 'admin', email: 'sergii.mytakii@levantem.ai', name: 'Administrator' }))}.render-only`;
   localStorage.setItem(
     'user',
     JSON.stringify({
       id: 'admin',
-      email: 'admin@test.invalid',
+      email: 'sergii.mytakii@levantem.ai',
       name: 'Administrator',
     })
   );
@@ -244,6 +244,45 @@ it('keeps healthy reports visible when growth fails, without fabricating a zero'
     screen.getByRole('region', { name: 'Key app events' })
   ).toHaveTextContent('1,248');
 });
+
+it.each([
+  'dmytro.vybornov@levantem.ai',
+  'tetiana.datko@levantem.ai',
+  'other@test.invalid',
+])(
+  'hides Revenue for %s and never requests financial data even when the ledger is unlocked',
+  async (email) => {
+    // A stale stored identity must not override the current token's account.
+    document.cookie = `accessToken=e30.${btoa(JSON.stringify({ sub: 'another-admin', email, name: 'Another admin' }))}.render-only`;
+    show();
+    await settled();
+    expect(
+      screen.queryByRole('region', { name: 'Revenue' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'New registrations' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'New paid subscriptions' })
+    ).toBeInTheDocument();
+    const requests = jest
+      .mocked(global.fetch)
+      .mock.calls.map(([input]) => String(input));
+    expect(requests.some((url) => url.includes('revenue-ledger'))).toBe(false);
+  }
+);
+
+it.each(['sergii.mytakii@levantem.ai', 'mykhailo@levantem.ai'])(
+  'shows Revenue for the approved account %s',
+  async (email) => {
+    document.cookie = `accessToken=e30.${btoa(JSON.stringify({ sub: 'approved-admin', email, name: 'Approved admin' }))}.render-only`;
+    show();
+    await settled();
+    expect(screen.getByRole('region', { name: 'Revenue' })).toHaveTextContent(
+      '$428.60'
+    );
+  }
+);
 
 it('respects revenue and monitor access gates before requesting protected data', async () => {
   global.fetch = jest.fn(async (input) => {

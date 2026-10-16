@@ -27,7 +27,13 @@ import type { PredictionEvaluationSummary } from '@/lib/api/prediction-evaluatio
 import type { MonitorCheck, MonitorOverview } from '@/lib/api/system-monitor';
 import { OverviewChart } from './OverviewChart';
 import { formatAppEventLabel } from '@/lib/app-events-labels';
+import { useAuth } from '@/lib/hooks/useAuth';
 import styles from './OverviewDashboard.module.css';
+
+const REVENUE_OVERVIEW_READERS = new Set([
+  'mykhailo@levantem.ai',
+  'sergii.mytakii@levantem.ai',
+]);
 
 const initialState = (): OverviewState => ({
   growth: { status: 'loading' },
@@ -56,11 +62,15 @@ const duration = (seconds: number) => {
   return `${Math.floor(rounded / 60)}m ${rounded % 60}s`;
 };
 
-function useOverview(date: string, revision: number) {
+function useOverview(date: string, revision: number, email?: string) {
+  const showRevenue = REVENUE_OVERVIEW_READERS.has(
+    email?.trim().toLowerCase() ?? ''
+  );
   const [state, setState] = useState<OverviewState>(initialState);
   const [updated, setUpdated] = useState<Date | null>(null);
   const [range, setRange] = useState(() => overviewWindow(date));
   useEffect(() => {
+    if (!email) return;
     const controller = new AbortController();
     let active = true;
     const timeout = setTimeout(() => controller.abort(), 30_000);
@@ -86,7 +96,9 @@ function useOverview(date: string, revision: number) {
       if (active) setState((previous) => ({ ...previous, [key]: value }));
     }
     void Promise.allSettled(
-      (Object.keys(requests) as OverviewSection[]).map(load)
+      (Object.keys(requests) as OverviewSection[])
+        .filter((key) => showRevenue || key !== 'revenue')
+        .map(load)
     ).then(() => {
       clearTimeout(timeout);
       if (active) setUpdated(new Date());
@@ -96,8 +108,8 @@ function useOverview(date: string, revision: number) {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [date, revision]);
-  return { state, updated, range };
+  }, [date, revision, email, showRevenue]);
+  return { state, updated, range, showRevenue };
 }
 
 function Report<T>({
@@ -438,10 +450,15 @@ function Marketing({ data }: { data: OverviewData['marketing'] }) {
 }
 
 export function OverviewDashboard() {
+  const { user } = useAuth();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [revision, setRevision] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const { state, updated, range } = useOverview(date, revision);
+  const { state, updated, range, showRevenue } = useOverview(
+    date,
+    revision,
+    user?.email
+  );
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
@@ -454,8 +471,9 @@ export function OverviewDashboard() {
         day: 'numeric',
         timeZone: 'UTC',
       });
-  const loading = Object.values(state).some(
-    (section) => section.status === 'loading'
+  const loading = Object.entries(state).some(
+    ([key, section]) =>
+      (showRevenue || key !== 'revenue') && section.status === 'loading'
   );
   const oldest = new Date(now - 83 * 86_400_000).toISOString().slice(0, 10);
   const today = new Date(now).toISOString().slice(0, 10);
@@ -510,7 +528,9 @@ export function OverviewDashboard() {
         </div>
       </header>
       <MonitorStrip state={state.monitor} now={now} />
-      <div className={styles.topGrid}>
+      <div
+        className={`${styles.topGrid} ${!showRevenue ? styles.topGridWithoutRevenue : ''}`}
+      >
         <Report
           title="New registrations"
           href="/dashboard/users"
@@ -558,108 +578,112 @@ export function OverviewDashboard() {
             </>
           )}
         </Report>
-        <Report
-          title="Revenue"
-          href="/dashboard/revenue-ledger"
-          state={state.revenue}
-        >
-          {(data) => {
-            const complete = (summary: typeof data.today) =>
-              Boolean(
-                summary.usdRevenue &&
-                  !summary.usdRevenue.missingCurrencies.length &&
-                  summary.missingAmountCount === 0
+        {showRevenue && (
+          <Report
+            title="Revenue"
+            href="/dashboard/revenue-ledger"
+            state={state.revenue}
+          >
+            {(data) => {
+              const complete = (summary: typeof data.today) =>
+                Boolean(
+                  summary.usdRevenue &&
+                    !summary.usdRevenue.missingCurrencies.length &&
+                    summary.missingAmountCount === 0
+                );
+              const dailyMap = new Map(
+                (data.week.dailyUsdRevenue ?? []).map((point) => [
+                  point.date,
+                  point,
+                ])
               );
-            const dailyMap = new Map(
-              (data.week.dailyUsdRevenue ?? []).map((point) => [
-                point.date,
-                point,
-              ])
-            );
-            const adjustedMap = new Map(
-              (data.week.dailyStoreAdjustedRevenue ?? []).map((point) => [
-                point.date,
-                point,
-              ])
-            );
-            const daily: DailyValue[] = range.days.map((day) => ({
-              date: day,
-              value:
-                complete(data.week) && data.week.dailyUsdRevenue
-                  ? Number(dailyMap.get(day)?.netGrossAmountUsd ?? 0)
-                  : null,
-            }));
-            const secondary: DailyValue[] | undefined =
-              complete(data.week) &&
-              data.week.storeAdjustedRevenue &&
-              !data.week.storeAdjustedRevenue.missingCurrencies.length &&
-              data.week.dailyStoreAdjustedRevenue
-                ? range.days.map((day) => ({
-                    date: day,
-                    value: Number(
-                      adjustedMap.get(day)?.estimatedNetAmountUsd ?? 0
-                    ),
-                  }))
-                : undefined;
-            const amount = complete(data.today)
-              ? data.today.usdRevenue!.netGrossAmountUsd
-              : null;
-            return (
-              <>
-                <div className={styles.revenueHeadline}>
-                  <div className={styles.headline}>
-                    {money(amount)}
-                    <span>{periodLabel} · USD</span>
+              const adjustedMap = new Map(
+                (data.week.dailyStoreAdjustedRevenue ?? []).map((point) => [
+                  point.date,
+                  point,
+                ])
+              );
+              const daily: DailyValue[] = range.days.map((day) => ({
+                date: day,
+                value:
+                  complete(data.week) && data.week.dailyUsdRevenue
+                    ? Number(dailyMap.get(day)?.netGrossAmountUsd ?? 0)
+                    : null,
+              }));
+              const secondary: DailyValue[] | undefined =
+                complete(data.week) &&
+                data.week.storeAdjustedRevenue &&
+                !data.week.storeAdjustedRevenue.missingCurrencies.length &&
+                data.week.dailyStoreAdjustedRevenue
+                  ? range.days.map((day) => ({
+                      date: day,
+                      value: Number(
+                        adjustedMap.get(day)?.estimatedNetAmountUsd ?? 0
+                      ),
+                    }))
+                  : undefined;
+              const amount = complete(data.today)
+                ? data.today.usdRevenue!.netGrossAmountUsd
+                : null;
+              return (
+                <>
+                  <div className={styles.revenueHeadline}>
+                    <div className={styles.headline}>
+                      {money(amount)}
+                      <span>{periodLabel} · USD</span>
+                    </div>
+                    <div className={styles.weekTotal}>
+                      <span>7-day total</span>
+                      <strong>
+                        {money(
+                          complete(data.week)
+                            ? data.week.usdRevenue!.netGrossAmountUsd
+                            : null
+                        )}
+                      </strong>
+                    </div>
                   </div>
-                  <div className={styles.weekTotal}>
-                    <span>7-day total</span>
-                    <strong>
-                      {money(
-                        complete(data.week)
-                          ? data.week.usdRevenue!.netGrossAmountUsd
-                          : null
-                      )}
-                    </strong>
-                  </div>
-                </div>
-                <Delta
-                  current={amount === null ? null : Number(amount)}
-                  previous={
-                    complete(data.previous)
-                      ? Number(data.previous.usdRevenue!.netGrossAmountUsd)
-                      : null
-                  }
-                  partial={range.partial}
-                  cutoff={range.to}
-                />
-                <p className={styles.chartLabel}>After refunds · before fees</p>
-                <OverviewChart
-                  label="Daily revenue in USD, last 7 days"
-                  points={daily}
-                  secondary={secondary}
-                  unit="$"
-                />
-                <div className={styles.legend}>
-                  <span>
-                    <i />
-                    Gross after refunds
-                  </span>
-                  {secondary && (
-                    <span>
-                      <i className={styles.dashed} />
-                      Est. after store fees
-                    </span>
-                  )}
-                </div>
-                {amount === null && (
-                  <p className={styles.footnote}>
-                    USD total unavailable: missing amounts or exchange rates.
+                  <Delta
+                    current={amount === null ? null : Number(amount)}
+                    previous={
+                      complete(data.previous)
+                        ? Number(data.previous.usdRevenue!.netGrossAmountUsd)
+                        : null
+                    }
+                    partial={range.partial}
+                    cutoff={range.to}
+                  />
+                  <p className={styles.chartLabel}>
+                    After refunds · before fees
                   </p>
-                )}
-              </>
-            );
-          }}
-        </Report>
+                  <OverviewChart
+                    label="Daily revenue in USD, last 7 days"
+                    points={daily}
+                    secondary={secondary}
+                    unit="$"
+                  />
+                  <div className={styles.legend}>
+                    <span>
+                      <i />
+                      Gross after refunds
+                    </span>
+                    {secondary && (
+                      <span>
+                        <i className={styles.dashed} />
+                        Est. after store fees
+                      </span>
+                    )}
+                  </div>
+                  {amount === null && (
+                    <p className={styles.footnote}>
+                      USD total unavailable: missing amounts or exchange rates.
+                    </p>
+                  )}
+                </>
+              );
+            }}
+          </Report>
+        )}
       </div>
       <div className={styles.middleGrid}>
         <Report

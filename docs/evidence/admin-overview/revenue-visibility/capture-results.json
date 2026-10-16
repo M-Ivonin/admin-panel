@@ -1,0 +1,125 @@
+[
+  {
+    "scenario": "healthy",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18,
+    "revenueAccessChecks": 1
+  },
+  {
+    "scenario": "all-user-events",
+    "scrollTop": 45,
+    "clientHeight": 130,
+    "scrollHeight": 176,
+    "lastEvent": "Live Match Challenge invite accepted64"
+  },
+  {
+    "scenario": "tablet",
+    "overflow": false
+  },
+  {
+    "scenario": "mobile-navigation",
+    "url": "http://127.0.0.1:3147/dashboard/app-events-analytics",
+    "overflow": false
+  },
+  {
+    "scenario": "revenue-hidden",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 15,
+    "revenueAccessChecks": 0
+  },
+  {
+    "scenario": "revenue-hidden-desktop",
+    "layout": {
+      "first": {
+        "x": 260,
+        "y": 145.5,
+        "width": 619,
+        "right": 879
+      },
+      "second": {
+        "x": 893,
+        "y": 145.5,
+        "width": 619,
+        "right": 1512
+      },
+      "row": {
+        "x": 260,
+        "y": 145.5,
+        "width": 1252,
+        "right": 1512
+      },
+      "childCount": 2
+    },
+    "overflow": false
+  },
+  {
+    "scenario": "revenue-hidden-tablet",
+    "layout": {
+      "first": {
+        "x": 260,
+        "y": 171,
+        "width": 363,
+        "right": 623
+      },
+      "second": {
+        "x": 637,
+        "y": 171,
+        "width": 363,
+        "right": 1000
+      },
+      "row": {
+        "x": 260,
+        "y": 171,
+        "width": 740,
+        "right": 1000
+      },
+      "childCount": 2
+    },
+    "overflow": false
+  },
+  {
+    "scenario": "revenue-hidden-mobile",
+    "layout": {
+      "first": {
+        "x": 16,
+        "y": 371.6875,
+        "width": 358,
+        "right": 374
+      },
+      "second": {
+        "x": 16,
+        "y": 715.828125,
+        "width": 358,
+        "right": 374
+      },
+      "row": {
+        "x": 16,
+        "y": 371.6875,
+        "width": 358,
+        "right": 374
+      },
+      "childCount": 2
+    },
+    "overflow": false
+  },
+  {
+    "scenario": "revenue-mykhailo",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 18,
+    "revenueAccessChecks": 1
+  },
+  {
+    "scenario": "locked",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 15,
+    "revenueAccessChecks": 1
+  }
+]

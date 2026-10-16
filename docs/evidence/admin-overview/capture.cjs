@@ -21,14 +21,16 @@ const scenarios = process.env.OVERVIEW_SCENARIOS?.split(',') || ['healthy','part
  try {
  for (const scenario of scenarios) {
    const context=await browser.newContext({viewport:{width:1536,height:1024},deviceScaleFactor:1});
-   const payload=Buffer.from(JSON.stringify({sub:'render-proof',email:'admin@test.invalid',name:'Administrator'})).toString('base64url');
+   const email=scenario==='revenue-hidden'?'dmytro.vybornov@levantem.ai':scenario==='revenue-mykhailo'?'mykhailo@levantem.ai':'sergii.mytakii@levantem.ai';
+   const payload=Buffer.from(JSON.stringify({sub:'render-proof',email,name:'Administrator'})).toString('base64url');
    await context.addCookies([{name:'accessToken',value:`e30.${payload}.render-proof`,domain:'127.0.0.1',path:'/'}]);
-   await context.addInitScript(()=>localStorage.setItem('user',JSON.stringify({id:'render-proof',email:'admin@test.invalid',name:'Administrator'})));
+   await context.addInitScript((email)=>localStorage.setItem('user',JSON.stringify({id:'render-proof',email,name:'Administrator'})),email);
    const page=await context.newPage();
    await page.clock.install({time:new Date('2026-10-16T14:30:00Z')});
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    const requests=[];
-   await page.route('**/api/revenue-ledger-access',route=>route.fulfill({json:{hasAccess:scenario!=='locked',passwordConfigured:true}}));
+   let revenueAccessChecks=0;
+   await page.route('**/api/revenue-ledger-access',route=>{revenueAccessChecks++;return route.fulfill({json:{hasAccess:scenario!=='locked',passwordConfigured:true}});});
    await page.route('**/v1/**',async route=>{
      const url=new URL(route.request().url());requests.push(url.pathname+url.search);
      if(scenario==='loading') return;
@@ -63,7 +65,7 @@ const scenarios = process.env.OVERVIEW_SCENARIOS?.split(',') || ['healthy','part
    await page.screenshot({path:path.join(out,`desktop-${scenario}.png`),fullPage:true,animations:'disabled'});
    if(scenario==='healthy')fs.writeFileSync(path.join(out,'layout.json'),JSON.stringify(await page.evaluate(()=>Array.from(document.querySelectorAll('main>header,main>section,main>div>section')).map(e=>({name:e.getAttribute('aria-label')||e.tagName,y:e.getBoundingClientRect().y,height:e.getBoundingClientRect().height,children:Array.from(e.children).map(c=>({tag:c.tagName,cls:c.className,h:c.getBoundingClientRect().height,mt:getComputedStyle(c).marginTop,mb:getComputedStyle(c).marginBottom,fs:getComputedStyle(c).fontSize,lh:getComputedStyle(c).lineHeight}))}))),null,2));
    let overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
-   results.push({scenario,viewport:'1536x1024',overflow,errors:[...errors],requests:requests.length});
+   results.push({scenario,viewport:'1536x1024',overflow,errors:[...errors],requests:requests.length,revenueAccessChecks});
    if(scenario==='healthy'){
      const eventList=page.getByRole('list',{name:'User events by frequency'});
      await eventList.press('End');
@@ -79,6 +81,18 @@ const scenarios = process.env.OVERVIEW_SCENARIOS?.split(',') || ['healthy','part
      await page.getByRole('button',{name:'Open navigation'}).click();await page.screenshot({path:path.join(out,'mobile-navigation.png'),fullPage:true});
      await page.getByRole('link',{name:'App Events',exact:true}).click();await page.waitForURL('**/dashboard/app-events-analytics');
      results.push({scenario:'mobile-navigation',url:page.url(),overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)});
+   }
+   if(scenario==='revenue-hidden'){
+     if(await page.getByRole('region',{name:'Revenue',exact:true}).count()||revenueAccessChecks||requests.some(url=>url.includes('/revenue-ledger/')))throw new Error('Hidden Revenue must not render or make financial requests');
+     for(const [name,viewport] of [['desktop',{width:1536,height:1024}],['tablet',{width:1024,height:900}],['mobile',{width:390,height:844}]]){
+       await page.setViewportSize(viewport);
+       const layout=await page.evaluate(()=>{const first=document.querySelector('section[aria-label="New registrations"]');const second=document.querySelector('section[aria-label="New paid subscriptions"]');const rect=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,right:r.right};};return {first:rect(first),second:rect(second),row:rect(first.parentElement),childCount:first.parentElement.children.length};});
+       if(layout.childCount!==2||Math.abs(layout.first.width-layout.second.width)>1)throw new Error('Hidden Revenue must leave exactly two equal cards');
+       if(viewport.width>700&&(Math.abs(layout.first.y-layout.second.y)>1||Math.abs(layout.second.right-layout.row.right)>1))throw new Error('The two cards must fill the top row');
+       if(viewport.width<=700&&(Math.abs(layout.first.width-layout.row.width)>1||layout.second.y<=layout.first.y))throw new Error('Mobile cards must stack at full width');
+       await page.screenshot({path:path.join(out,`${name}-revenue-hidden.png`),fullPage:true});
+       results.push({scenario:`revenue-hidden-${name}`,layout,overflow:await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)});
+     }
    }
    await context.close();
  }
