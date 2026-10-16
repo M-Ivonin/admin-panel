@@ -79,7 +79,8 @@ Validation and reference captures: [UI evidence](./evidence/admin-overview/UI_EV
 ## Home Analytics
 
 Below the existing reports, Home Analytics shows four KPIs for the selected UTC
-day and the same captured cutoff (today is partial). Each KPI links to its
+day and the same captured cutoff (today is partial), with daily line charts for
+that day and the preceding six UTC days. Each KPI links to its
 corresponding detailed Home Analytics section:
 
 - Full Access purchase conversion: verified-purchase users / offer-impression users.
@@ -94,3 +95,13 @@ zero initial cohorts show N/A; observed zero conversions remain 0%. The existing
 Home Analytics endpoint loads independently and shares overview cancellation,
 request timeout, refresh and stale-response protection. No retention is shown for
 a single-day overview. This does not change the detailed Home Analytics report.
+
+Home Analytics charts use the same cohort calculation independently for each day;
+they do not spread a weekly total over daily buckets or average daily rates into
+the headline. Previous days use completed UTC-day bounds, while the selected day
+uses the captured report cutoff. The last point has a light outline when partial,
+and the block labels the partial day. Missing cohorts and failed historical reads
+leave chart gaps; observed zero remains a plotted zero. A failed selected-day
+request shows the report error state. The seven daily reads share the Overview
+abort signal and 30-second timeout. Four compact charts share one desktop row, with two columns on tablet and
+one on mobile for readable axes.

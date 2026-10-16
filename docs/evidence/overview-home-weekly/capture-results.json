@@ -1,0 +1,79 @@
+[
+  {
+    "scenario": "four-compact-charts",
+    "cards": [
+      {
+        "x": 277,
+        "y": 724.28125,
+        "width": 294,
+        "height": 268.1875
+      },
+      {
+        "x": 585,
+        "y": 724.28125,
+        "width": 294,
+        "height": 268.1875
+      },
+      {
+        "x": 893,
+        "y": 724.28125,
+        "width": 294,
+        "height": 268.1875
+      },
+      {
+        "x": 1201,
+        "y": 724.28125,
+        "width": 294,
+        "height": 268.1875
+      }
+    ]
+  },
+  {
+    "scenario": "healthy",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 25,
+    "revenueAccessChecks": 1
+  },
+  {
+    "scenario": "all-user-events",
+    "scrollTop": 45,
+    "clientHeight": 130,
+    "scrollHeight": 176,
+    "lastEvent": "Live Match Challenge invite accepted64"
+  },
+  {
+    "scenario": "tablet",
+    "overflow": false
+  },
+  {
+    "scenario": "mobile-navigation",
+    "url": "http://127.0.0.1:3105/dashboard/app-events-analytics",
+    "overflow": false
+  },
+  {
+    "scenario": "empty",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 25,
+    "revenueAccessChecks": 1
+  },
+  {
+    "scenario": "partial-error",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 25,
+    "revenueAccessChecks": 1
+  },
+  {
+    "scenario": "gaps",
+    "viewport": "1536x1024",
+    "overflow": false,
+    "errors": [],
+    "requests": 25,
+    "revenueAccessChecks": 1
+  }
+]

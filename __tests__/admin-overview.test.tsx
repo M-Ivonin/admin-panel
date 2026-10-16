@@ -564,9 +564,9 @@ it('adds four Home Analytics metrics after existing widgets using whole-funnel c
     .mocked(global.fetch)
     .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))
     .filter((url) => url.pathname.includes('/updated-home-analytics/'));
-  expect(calls).toHaveLength(2);
-  expect(calls[1].searchParams.get('from')).toBe(`${days[5]}T00:00:00.000Z`);
-  expect(calls[1].searchParams.get('to')).toBe(`${days[5]}T23:59:59.999Z`);
+  expect(calls).toHaveLength(14);
+  expect(calls[13].searchParams.get('from')).toBe(`${days[5]}T00:00:00.000Z`);
+  expect(calls[13].searchParams.get('to')).toBe(`${days[5]}T23:59:59.999Z`);
 });
 
 it('preserves zero conversion and missing cohorts without inventing retention or averages', async () => {
@@ -649,4 +649,67 @@ it('isolates a failed Home Analytics report while other overview reports remain 
   expect(
     screen.getByRole('region', { name: 'Key app events' })
   ).toHaveTextContent('1,248');
+});
+
+it('shows seven daily Home Analytics points with gaps, real zeros and a partial current day', async () => {
+  jest.useFakeTimers().setSystemTime(new Date(`${today}T14:30:00.000Z`));
+  try {
+    global.fetch = jest.fn(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (!url.pathname.includes('/updated-home-analytics/'))
+        return response(String(input));
+      const day = url.searchParams.get('from')!.slice(0, 10);
+      const index = days.indexOf(day);
+      if (index === 2) return json({}, 503);
+      return json({
+        dashboards: [
+          {
+            id: 3,
+            metrics: [
+              homeMetric('full_access_funnel', [
+                {
+                  stage: 'offer_impression',
+                  numerator: 100,
+                  denominator: null,
+                  value: 100,
+                },
+                {
+                  stage: 'verified_purchase',
+                  numerator: [1, 2, 3, 4, 0, 6, 5][index],
+                  denominator: 10,
+                  value: 50,
+                },
+              ]),
+            ],
+          },
+        ],
+      });
+    });
+    show();
+    await settled();
+    const report = screen.getByRole('region', { name: 'Home Analytics' });
+    const metric = within(report).getByRole('article', {
+      name: 'Full Access purchase conversion',
+    });
+    expect(metric).toHaveTextContent('5.0%');
+    const chart = within(metric).getByRole('img');
+    expect(chart).toHaveAccessibleName(
+      `Daily Full Access purchase conversion: ${days.map((day, i) => `${day}: ${['1%', '2%', 'unavailable', '4%', '0%', '6%', '5%'][i]}`).join(', ')}`
+    );
+    expect(report).toHaveTextContent('Today is partial');
+    expect(report).toHaveTextContent('Some days are unavailable');
+    expect(within(report).getAllByRole('img')).toHaveLength(4);
+    const calls = jest
+      .mocked(global.fetch)
+      .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))
+      .filter((url) => url.pathname.includes('/updated-home-analytics/'));
+    expect(calls).toHaveLength(7);
+    expect(calls.map((url) => url.searchParams.get('from'))).toEqual(
+      days.map((day) => `${day}T00:00:00.000Z`)
+    );
+    expect(calls[0].searchParams.get('to')).toBe(`${days[0]}T23:59:59.999Z`);
+    expect(calls[6].searchParams.get('to')).toBe(`${today}T14:30:00.000Z`);
+  } finally {
+    jest.useRealTimers();
+  }
 });

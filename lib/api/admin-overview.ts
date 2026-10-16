@@ -50,8 +50,12 @@ export interface PredictionsOverview {
   today: PredictionEvaluationSummary;
   daily: Array<{ date: string; summary: PredictionEvaluationSummary | null }>;
 }
+export interface HomeAnalyticsOverviewData {
+  today: UpdatedHomeAnalyticsResponse;
+  daily: Array<{ date: string; data: UpdatedHomeAnalyticsResponse | null }>;
+}
 export interface OverviewData {
-  homeAnalytics: UpdatedHomeAnalyticsResponse;
+  homeAnalytics: HomeAnalyticsOverviewData;
   growth: GrowthOverview;
   marketing: MarketingOverview;
   revenue: RevenueOverview;
@@ -124,11 +128,25 @@ export function overviewRequests(
       signal
     );
   return {
-    homeAnalytics: () =>
-      get<UpdatedHomeAnalyticsResponse>(
-        `/updated-home-analytics/admin/dashboards?${query({ from: range.from, to: range.to })}`,
-        signal
-      ),
+    homeAnalytics: async () => {
+      const settled = await Promise.allSettled(
+        range.days.map((day) =>
+          get<UpdatedHomeAnalyticsResponse>(
+            `/updated-home-analytics/admin/dashboards?${query({ from: `${day}T00:00:00.000Z`, to: day === date ? range.to : `${day}T23:59:59.999Z` })}`,
+            signal
+          )
+        )
+      );
+      const current = settled[6];
+      if (current.status === 'rejected') throw current.reason;
+      return {
+        today: current.value,
+        daily: settled.map((result, i) => ({
+          date: range.days[i],
+          data: result.status === 'fulfilled' ? result.value : null,
+        })),
+      };
+    },
     growth: () =>
       get<GrowthOverview>(`/admin-overview/growth?date=${date}`, signal),
     marketing: () =>

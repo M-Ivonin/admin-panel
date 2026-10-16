@@ -11,6 +11,7 @@ export function OverviewChart({
   kind = 'line',
   unit = '',
   partial = false,
+  emptyLabel = 'No evaluated data',
 }: {
   label: string;
   points: DailyValue[];
@@ -19,6 +20,7 @@ export function OverviewChart({
   kind?: 'line' | 'bar';
   unit?: '' | '$' | '%';
   partial?: boolean;
+  emptyLabel?: string;
 }) {
   const id = useId().replace(/:/g, '');
   const values = [...points, ...(secondary ?? [])].flatMap((point) =>
@@ -197,6 +199,11 @@ export function OverviewChart({
                   cy={y(point.value)}
                   r="4"
                   fill={color}
+                  stroke={
+                    partial && index === points.length - 1 ? '#e6e0ff' : 'none'
+                  }
+                  strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
                 >
                   <title>
                     {point.date}: {point.value}
@@ -218,7 +225,7 @@ export function OverviewChart({
         </div>
       </div>
       {values.length === 0 && (
-        <span className={styles.chartEmpty}>No evaluated data</span>
+        <span className={styles.chartEmpty}>{emptyLabel}</span>
       )}
     </div>
   );

@@ -833,7 +833,11 @@ export function OverviewDashboard() {
         className={styles.homeReport}
       >
         {(data) => (
-          <HomeAnalyticsOverview data={data} periodLabel={periodLabel} />
+          <HomeAnalyticsOverview
+            data={data}
+            periodLabel={periodLabel}
+            partial={range.partial}
+          />
         )}
       </Report>
       <footer className={styles.footer}>

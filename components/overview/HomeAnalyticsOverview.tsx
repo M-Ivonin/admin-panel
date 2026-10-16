@@ -1,3 +1,5 @@
+import type { HomeAnalyticsOverviewData } from '@/lib/api/admin-overview';
+import { OverviewChart } from './OverviewChart';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import type {
@@ -40,19 +42,13 @@ function loadRate(values: UpdatedHomeMetricValue[]): Rate {
   return denominator > 0 ? { numerator, denominator } : null;
 }
 
-export function HomeAnalyticsOverview({
-  data,
-  periodLabel,
-}: {
-  data: UpdatedHomeAnalyticsResponse;
-  periodLabel: string;
-}) {
+function overviewMetrics(data: UpdatedHomeAnalyticsResponse) {
   const values = (id: number, key: string) =>
     metricValues(
       data.dashboards.find((dashboard) => dashboard.id === id),
       key
     );
-  const metrics = [
+  return [
     {
       title: 'Full Access purchase conversion',
       id: 3,
@@ -94,10 +90,26 @@ export function HomeAnalyticsOverview({
       unit: 'attempts',
     },
   ];
+}
+
+export function HomeAnalyticsOverview({
+  data,
+  periodLabel,
+  partial,
+}: {
+  data: HomeAnalyticsOverviewData;
+  periodLabel: string;
+  partial: boolean;
+}) {
+  const metrics = overviewMetrics(data.today);
+  const daily = data.daily.map((day) => ({
+    date: day.date,
+    metrics: day.data ? overviewMetrics(day.data) : null,
+  }));
   return (
     <>
       <p className={styles.chartLabel}>
-        {periodLabel} · UTC · whole-funnel conversion
+        {periodLabel} · UTC · daily trends over the last 7 days
       </p>
       <div className={styles.homeMetrics}>
         {metrics.map(({ title, id, rate, detail, unit }) => (
@@ -114,6 +126,25 @@ export function HomeAnalyticsOverview({
                 : 'N/A'}
             </div>
             <p className={styles.homeMetricDetail}>{detail}</p>
+            <OverviewChart
+              label={`Daily ${title}`}
+              points={daily.map((day) => {
+                const rate = day.metrics?.find(
+                  (metric) => metric.id === id
+                )?.rate;
+                return {
+                  date: day.date,
+                  value: rate
+                    ? Number(
+                        ((100 * rate.numerator) / rate.denominator).toFixed(2)
+                      )
+                    : null,
+                };
+              })}
+              unit="%"
+              partial={partial}
+              emptyLabel="No eligible observations"
+            />
             <p className={styles.footnote}>
               {rate
                 ? `${rate.numerator.toLocaleString('en-US')} / ${rate.denominator.toLocaleString('en-US')} ${unit}`
@@ -122,6 +153,17 @@ export function HomeAnalyticsOverview({
           </article>
         ))}
       </div>
+      {partial && (
+        <p className={styles.footnote}>
+          {periodLabel === 'today' ? 'Today' : 'Selected day'} is partial · data
+          through the report cutoff.
+        </p>
+      )}
+      {data.daily.some((day) => day.data === null) && (
+        <p className={styles.footnote}>
+          Some days are unavailable. Chart gaps are not zero conversion.
+        </p>
+      )}
     </>
   );
 }
