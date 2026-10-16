@@ -258,9 +258,17 @@ it('selects a map node and loads its exact result and history', async () => {
   );
 });
 it('shows an expired incident link honestly', async () => {
+  jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-16T12:00:00.000Z'));
   Object.assign(window.location, { search: '?incident=expired' });
   render(<SystemMonitorDashboard />);
   expect(await screen.findByText(/Incident not found/)).toBeInTheDocument();
+  expect(api.incidents).toHaveBeenCalledWith({
+    id: 'expired',
+    from: '2026-10-09T12:00:00.000Z',
+    to: '2026-10-16T12:00:00.000Z',
+    limit: 1,
+    offset: 0,
+  });
 });
 it('keeps a Loki outage separate from monitor results', async () => {
   api.logs.mockRejectedValue(new MonitorApiError(503));
