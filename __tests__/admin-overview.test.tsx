@@ -535,7 +535,7 @@ it('keeps comparison cutoffs tied to the fetched snapshot as the monitor clock a
   }
 });
 
-it('adds four Home Analytics metrics after existing widgets using whole-funnel cohorts and the selected UTC range', async () => {
+it('adds six Home Analytics metrics after existing widgets using whole-funnel cohorts and the selected UTC range', async () => {
   show();
   await settled();
   const report = screen.getByRole('region', { name: 'Home Analytics' });
@@ -543,7 +543,9 @@ it('adds four Home Analytics metrics after existing widgets using whole-funnel c
     ['Full Access purchase conversion', '5%'],
     ['Free Pick activation', '15%'],
     ['Paid Top Picks activation', '25%'],
-    ['Home load success', '90.91%'],
+    ['Collections purchase conversion', 'N/A'],
+    ['AI Chat unlock conversion', 'N/A'],
+    ['Pass-to-subscription conversion', 'N/A'],
   ]) {
     const metric = within(report).getByRole('article', { name: title });
     expect(metric).toHaveTextContent(value);
@@ -626,7 +628,9 @@ it('preserves zero conversion and missing cohorts without inventing retention or
   for (const name of [
     'Full Access purchase conversion',
     'Paid Top Picks activation',
-    'Home load success',
+    'Collections purchase conversion',
+    'AI Chat unlock conversion',
+    'Pass-to-subscription conversion',
   ])
     expect(within(report).getByRole('article', { name })).toHaveTextContent(
       'N/A'
@@ -699,7 +703,7 @@ it('shows seven daily Home Analytics points with gaps, real zeros and a partial 
     );
     expect(report).toHaveTextContent('Today is partial');
     expect(report).toHaveTextContent('Some days are unavailable');
-    expect(within(report).getAllByRole('img')).toHaveLength(4);
+    expect(within(report).getAllByRole('img')).toHaveLength(6);
     const calls = jest
       .mocked(global.fetch)
       .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))

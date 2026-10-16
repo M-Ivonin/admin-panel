@@ -805,23 +805,23 @@
 }
 .homeMetrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 8px;
 }
 .homeMetric {
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #303944;
   border-radius: 7px;
   background: #171b20;
 }
 .homeMetric h3 {
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 6px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
-  min-height: 37px;
+  min-height: 0;
 }
 .homeMetric h3 a {
   display: flex;
@@ -837,25 +837,28 @@
 }
 .homeMetric .headline {
   color: #b69aff;
-  font-size: 28px;
+  font-size: 24px;
 }
 .homeMetricDetail {
   color: #bdc8dd;
   font-size: 10px;
   line-height: 1.4;
-  min-height: 28px;
-  margin: 8px 0 6px;
+  min-height: 24px;
+  margin: 4px 0;
 }
 .homeMetric .chart {
-  height: 100px;
-  gap: 6px;
+  height: 76px;
+  gap: 4px;
 }
 .homeMetric .plot svg {
-  height: 79px;
+  height: 55px;
 }
 .homeMetric .yAxis {
   width: 28px;
+  height: 55px;
+  padding: 0;
   font-size: 9px;
+  line-height: 1;
 }
 .homeMetric .xAxis {
   font-size: 9px;
@@ -871,6 +874,6 @@
   }
   .homeMetric h3 {
     min-height: 0;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
 }

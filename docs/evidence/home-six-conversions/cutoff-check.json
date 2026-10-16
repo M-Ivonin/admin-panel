@@ -1,0 +1,129 @@
+{
+  "overviewValues": [
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-3",
+      "title": "Full Access purchase conversion",
+      "value": "100%"
+    },
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-2",
+      "title": "Free Pick activation",
+      "value": "N/A"
+    },
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-6",
+      "title": "Paid Top Picks activation",
+      "value": "N/A"
+    },
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-5",
+      "title": "Collections purchase conversion",
+      "value": "100%"
+    },
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-13",
+      "title": "AI Chat unlock conversion",
+      "value": "N/A"
+    },
+    {
+      "href": "/dashboard/updated-home-analytics?from=2026-10-12T00%3A00%3A00.000Z&to=2026-10-12T23%3A59%3A59.999Z#dashboard-9",
+      "title": "Pass-to-subscription conversion",
+      "value": "N/A"
+    }
+  ],
+  "detailValues": [
+    "Full Access purchase conversion100%Offer impression → verified purchase · Open details",
+    "Free Pick activationN/AHome viewed → Prediction Card opened · Open details",
+    "Paid Top Picks activationN/APaid preview impression → Full Analysis opened · Open details",
+    "Collections purchase conversion100%Collection page viewed → verified purchase · 7-day attribution · Open details",
+    "AI Chat unlock conversionN/ALocked screen viewed → verified purchase · Open details",
+    "Pass-to-subscription conversionN/AExpired pass → monthly subscription · complete 30-day cohorts · Open details"
+  ],
+  "desktopLayout": [
+    {
+      "height": 203.59375,
+      "title": "Full Access purchase conversion",
+      "width": 388.328125,
+      "x": 277,
+      "y": 216.09375
+    },
+    {
+      "height": 203.59375,
+      "title": "Free Pick activation",
+      "width": 388.3359375,
+      "x": 679.328125,
+      "y": 216.09375
+    },
+    {
+      "height": 203.59375,
+      "title": "Paid Top Picks activation",
+      "width": 388.3359375,
+      "x": 1081.6640625,
+      "y": 216.09375
+    },
+    {
+      "height": 203.59375,
+      "title": "Collections purchase conversion",
+      "width": 388.328125,
+      "x": 277,
+      "y": 433.6875
+    },
+    {
+      "height": 203.59375,
+      "title": "AI Chat unlock conversion",
+      "width": 388.3359375,
+      "x": 679.328125,
+      "y": 433.6875
+    },
+    {
+      "height": 203.59375,
+      "title": "Pass-to-subscription conversion",
+      "width": 388.3359375,
+      "x": 1081.6640625,
+      "y": 433.6875
+    }
+  ],
+  "mobileResult": {
+    "cards": [
+      {
+        "height": 203.59375,
+        "title": "Full Access purchase conversion",
+        "width": 322,
+        "x": 34
+      },
+      {
+        "height": 203.59375,
+        "title": "Free Pick activation",
+        "width": 322,
+        "x": 34
+      },
+      {
+        "height": 203.59375,
+        "title": "Paid Top Picks activation",
+        "width": 322,
+        "x": 34
+      },
+      {
+        "height": 207.59375,
+        "title": "Collections purchase conversion",
+        "width": 322,
+        "x": 34
+      },
+      {
+        "height": 203.59375,
+        "title": "AI Chat unlock conversion",
+        "width": 322,
+        "x": 34
+      },
+      {
+        "height": 207.59375,
+        "title": "Pass-to-subscription conversion",
+        "width": 322,
+        "x": 34
+      }
+    ],
+    "overflow": false
+  },
+  "cutoffBefore": "UTC · 2026-10-16 to 2026-10-16 · updated-home-dashboards-v1.1. Data through 2026-10-16 17:51:37.442 UTC.",
+  "cutoffAfter": "UTC · 2026-10-16 to 2026-10-16 · updated-home-dashboards-v1.1. Data through 2026-10-16 17:51:37.442 UTC."
+}

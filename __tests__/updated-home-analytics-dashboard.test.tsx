@@ -254,8 +254,14 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       })
     ).toHaveAttribute('href', '#dashboard-3');
     expect(
-      within(overview).getByRole('link', { name: /Home load success/i })
-    ).toHaveAttribute('href', '#dashboard-1');
+      within(overview).getByRole('link', {
+        name: /Pass-to-subscription conversion/i,
+      })
+    ).toHaveAttribute('href', '#dashboard-9');
+    expect(within(overview).getAllByRole('link')).toHaveLength(6);
+    expect(
+      within(overview).queryByRole('link', { name: /Home load success/i })
+    ).not.toBeInTheDocument();
 
     const freePick = screen.getByRole('region', { name: 'Free Pick' });
     expect(

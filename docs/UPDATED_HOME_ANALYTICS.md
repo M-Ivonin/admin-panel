@@ -16,20 +16,31 @@ responses and JSON exports remain unchanged.
 
 ## Summary KPIs and Overview links
 
-The four summary cards use the same `lib/home-analytics-summary.ts` calculation
-as the admin Overview headlines and daily charts. Funnel summaries divide the
-final-stage user count by the first-stage cohort count; Home load success divides
-summed successes by summed settled attempts across the backend breakdowns. Both
-surfaces use the same rounding (up to two decimal places). Missing cohorts remain
-N/A; observed zero remains 0%. Detailed funnel stages still show previous-stage
-rates and are explicitly labelled as such.
+Six summary cards share `lib/home-analytics-summary.ts` with the admin Overview
+headlines and seven daily chart points: Full Access purchase conversion, Free Pick
+activation, Paid Top Picks activation, Collections purchase conversion, AI Chat
+unlock conversion, and Pass-to-subscription conversion. Desktop Overview uses
+three compact charts per row, two rows; tablet uses two columns and mobile one.
+Compact cards reduce padding, title spacing and chart height while retaining
+seven dates, percentage ticks, cohort counts and report links.
+Home load success remains in Home quality and is no longer an Overview chart.
 
-Overview report links carry exact UTC `from` and `to` timestamps. Valid linked
-ranges initialize the date filters and preserve the exact `to` cutoff for the
-initial API read, including a partial selected day. Direct sidebar navigation
-keeps the normal default range. Invalid linked ranges fall back to that default.
-Refreshing manually applies the visible dates as complete UTC-day bounds, so it
-releases the linked snapshot cutoff. Export JSON retains the loaded API range.
+Funnel summaries divide final-stage users by the first-stage cohort, independently
+of previous-stage percentages. Every detailed funnel now shows that overall rate
+and its numerator/denominator above the stage breakdown, explicitly identifying
+stage rates as previous-stage rates. Known zero final users with a nonempty first
+cohort yield 0% even if the preceding stage is empty. Unknown final counts and
+empty first cohorts remain N/A. Pass conversion pools backend converted/expired
+pass counts across product/country groups, not an arithmetic mean of percentages
+or a claim of distinct users. Its link targets the existing Passes section.
+
+Both pages default to the current UTC day. Overview report links carry exact UTC
+`from` and `to` timestamps, preserving the partial-day cutoff on first load and on
+Refresh when the visible dates have not changed. Changing dates applies complete
+UTC days. The report displays its exact cutoff; exports retain the loaded range.
+Historical Overview dates should be opened through the metric/report link so the
+same date and cutoff are used. Chart points are daily rates, not a seven-day
+headline aggregate. Valid ranges are limited to 90 days.
 
 ## Statistical display rules
 

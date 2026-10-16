@@ -28,6 +28,10 @@ import {
   metricValues,
 } from './presentation';
 import { UpdatedHomeFunnel } from './UpdatedHomeFunnel';
+import {
+  aggregateRate,
+  formatHomeAnalyticsRate,
+} from '@/lib/home-analytics-summary';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 
@@ -579,6 +583,12 @@ function metricSummary(
   if (values.some((value) => typeof value.dimensions.moduleName === 'string')) {
     return null;
   }
+  if (metricKey === 'pass_to_monthly_conversion_rate') {
+    return {
+      label: 'Overall conversion',
+      value: formatHomeAnalyticsRate(aggregateRate(values)),
+    };
+  }
   if (metricKey === 'active_home_time_ms') {
     const mean = values.find((value) => value.dimensions.statistic === 'mean');
     return { label: 'Mean', value: formatMetricValue(mean) };
@@ -611,7 +621,7 @@ const HOME_SUMMARY_METRICS = new Set([
 ]);
 
 function shouldGroupMetric(dashboardId: number, valueCount: number): boolean {
-  return valueCount > 1 && [1, 4, 5, 9, 11].includes(dashboardId);
+  return valueCount > 1 && [1, 4, 5, 9, 10, 11].includes(dashboardId);
 }
 
 function formatDimensionValue(value: unknown): string {

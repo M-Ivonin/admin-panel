@@ -9,7 +9,7 @@ export type HomeAnalyticsRate = {
   denominator: number;
 } | null;
 
-function funnelRate(
+export function funnelRate(
   values: UpdatedHomeMetricValue[],
   first: string,
   last: string
@@ -24,7 +24,9 @@ function funnelRate(
     : null;
 }
 
-function loadRate(values: UpdatedHomeMetricValue[]): HomeAnalyticsRate {
+export function aggregateRate(
+  values: UpdatedHomeMetricValue[]
+): HomeAnalyticsRate {
   if (
     !values.length ||
     values.some(
@@ -81,11 +83,33 @@ export function homeAnalyticsSummary(data: UpdatedHomeAnalyticsResponse) {
       unit: 'users',
     },
     {
-      title: 'Home load success',
-      id: 1,
-      rate: loadRate(values(1, 'home_load_success_rate')),
-      detail: 'Successful loads / settled load attempts',
-      unit: 'attempts',
+      title: 'Collections purchase conversion',
+      id: 5,
+      rate: funnelRate(
+        values(5, 'collection_purchase_funnel'),
+        'collection_page_viewed',
+        'purchase_succeeded'
+      ),
+      detail: 'Collection page viewed → verified purchase · 7-day attribution',
+      unit: 'users',
+    },
+    {
+      title: 'AI Chat unlock conversion',
+      id: 13,
+      rate: funnelRate(
+        values(13, 'ai_chat_unlock_funnel'),
+        'locked_screen_viewed',
+        'purchase_succeeded'
+      ),
+      detail: 'Locked screen viewed → verified purchase',
+      unit: 'users',
+    },
+    {
+      title: 'Pass-to-subscription conversion',
+      id: 9,
+      rate: aggregateRate(values(10, 'pass_to_monthly_conversion_rate')),
+      detail: 'Expired pass → monthly subscription · complete 30-day cohorts',
+      unit: 'expired passes',
     },
   ];
 }

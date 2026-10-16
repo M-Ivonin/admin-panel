@@ -1,6 +1,10 @@
 'use client';
 
 import { Alert, Box, Stack, Typography } from '@mui/material';
+import {
+  funnelRate,
+  formatHomeAnalyticsRate,
+} from '@/lib/home-analytics-summary';
 import type { UpdatedHomeMetricValue } from '@/lib/api/updated-home-analytics';
 import {
   ANALYTICS_ROLE_TOKENS,
@@ -27,6 +31,12 @@ export function UpdatedHomeFunnel({
   handoffLabel,
 }: UpdatedHomeFunnelProps) {
   const ordinalsValid = hasValidStageOrdinals(values);
+  const first = values[0]?.dimensions.stage;
+  const last = values[values.length - 1]?.dimensions.stage;
+  const overall =
+    ordinalsValid && typeof first === 'string' && typeof last === 'string'
+      ? funnelRate(values, first, last)
+      : null;
 
   return (
     <Box
@@ -65,6 +75,20 @@ export function UpdatedHomeFunnel({
         </Stack>
         <Typography sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 11 }}>
           {meta}
+        </Typography>
+      </Stack>
+
+      <Stack gap="3px" sx={{ mb: 2 }}>
+        <Typography sx={{ color: '#B9A8FF', fontFamily: mono, fontSize: 14 }}>
+          Overall conversion: {formatHomeAnalyticsRate(overall)}
+        </Typography>
+        <Typography sx={{ color: '#A3A3A3', fontSize: 11 }}>
+          {overall
+            ? `${overall.numerator} / ${overall.denominator} users · first → last stage`
+            : 'No eligible observations for first → last stage'}
+        </Typography>
+        <Typography sx={{ color: '#8B8B8F', fontSize: 11 }}>
+          Step percentages below compare with the previous stage.
         </Typography>
       </Stack>
 

@@ -36,7 +36,6 @@ const MAX_RANGE_DAYS = 90;
 function defaultRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to);
-  from.setUTCDate(from.getUTCDate() - 14);
   return {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10),
@@ -125,13 +124,19 @@ export function UpdatedHomeAnalyticsDashboard() {
       return;
     }
     setRangeError(null);
-    const nextRange = { from, to };
+    const nextRange = {
+      from,
+      to,
+      ...(from === appliedRange?.from && to === appliedRange?.to
+        ? { cutoff: appliedRange?.cutoff }
+        : {}),
+    };
     if (from === appliedRange?.from && to === appliedRange?.to) {
       void load(nextRange);
       return;
     }
     setAppliedRange(nextRange);
-  }, [appliedRange?.from, appliedRange?.to, from, load, to]);
+  }, [appliedRange, from, load, to]);
 
   const dashboardMap = useMemo(() => dashboardsById(data), [data]);
 
@@ -190,7 +195,8 @@ export function UpdatedHomeAnalyticsDashboard() {
           <>
             <Alert severity={hasObservedValues(data) ? 'info' : 'warning'}>
               UTC · {data.range.from.slice(0, 10)} to{' '}
-              {data.range.to.slice(0, 10)} · {data.definitionVersion}.
+              {data.range.to.slice(0, 10)} · {data.definitionVersion}. Data
+              through {data.range.to.replace('T', ' ').replace('Z', '')} UTC.
               {!hasObservedValues(data) &&
                 ' No eligible observations in this range.'}
             </Alert>
@@ -393,7 +399,7 @@ function Overview({ data }: { data: UpdatedHomeAnalyticsResponse }) {
           gridTemplateColumns: {
             xs: 'minmax(0, 1fr)',
             md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(4, minmax(0, 1fr))',
+            lg: 'repeat(3, minmax(0, 1fr))',
           },
           gap: 2,
         }}
