@@ -198,6 +198,34 @@ it('never leaves an old success green after its freshness deadline', async () =>
   ).toBeInTheDocument();
   expect(screen.getByText('0 of 1 checks passing')).toBeInTheDocument();
 });
+
+it.each([
+  [249999, 'Application API: Pass, Fresh'],
+  [250000, 'Application API: Pass, Fresh'],
+  [250001, 'Application API: Unknown, Stale'],
+])('preserves detailed freshness at a result age of %i ms', async (age, label) => {
+  const now = Date.now();
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+  api.overview.mockResolvedValue({
+    ...overview,
+    generatedAt: new Date(now).toISOString(),
+    workerHeartbeatAt: new Date(now).toISOString(),
+    checks: [{
+      ...overview.checks[0],
+      intervalMs: 120000,
+      lastRun: {
+        ...overview.checks[0].lastRun!,
+        endedAt: new Date(now - age).toISOString(),
+      },
+    }],
+  });
+  try {
+    render(<SystemMonitorDashboard />);
+    expect(await screen.findByRole('button', { name: new RegExp(label) })).toBeInTheDocument();
+  } finally {
+    clock.mockRestore();
+  }
+});
 it('selects a map node and loads its exact result and history', async () => {
   const catalog = {
     ...overview.checks[0],

@@ -330,6 +330,30 @@ it('shows unknown system health for an expired heartbeat instead of green status
   ).not.toBeInTheDocument();
 });
 
+it.each([
+  [189999, 'All monitored systems operational'],
+  [190000, 'All monitored systems operational'],
+  [190001, 'Current system health is unknown'],
+])('preserves overview freshness at a result age of %i ms', async (age, text) => {
+  const now = Date.now();
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+  const snapshot = monitor();
+  snapshot.checks[0].intervalMs = 120000;
+  snapshot.checks[0].lastRun.endedAt = new Date(now - age).toISOString();
+  global.fetch = jest.fn(async (input) =>
+    String(input).includes('/system-monitor/admin/overview')
+      ? json(snapshot)
+      : response(String(input))
+  );
+  try {
+    show();
+    await settled();
+    expect(screen.getByRole('region', { name: 'System health' })).toHaveTextContent(text);
+  } finally {
+    clock.mockRestore();
+  }
+});
+
 it('does not present unevaluated accuracy and zero-denominator rates as 0%', async () => {
   global.fetch = jest.fn(async (input) => {
     const url = String(input);

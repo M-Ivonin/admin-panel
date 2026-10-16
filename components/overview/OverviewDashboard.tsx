@@ -24,7 +24,8 @@ import {
   type SectionState,
 } from '@/lib/api/admin-overview';
 import type { PredictionEvaluationSummary } from '@/lib/api/prediction-evaluations';
-import type { MonitorCheck, MonitorOverview } from '@/lib/api/system-monitor';
+import type { MonitorOverview } from '@/lib/api/system-monitor';
+import { projectOverviewHealth } from '@/lib/system-monitor-health';
 import { OverviewChart } from './OverviewChart';
 import { formatAppEventLabel } from '@/lib/app-events-labels';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -248,16 +249,6 @@ function Growth({
   );
 }
 
-function currentStatus(check: MonitorCheck, now: number) {
-  if (!check.enabled || !check.lastRun) return 'unknown';
-  const ended = Date.parse(check.lastRun.endedAt ?? '');
-  if (
-    !Number.isFinite(ended) ||
-    now - ended > check.intervalMs + check.deadlineMs + 60_000
-  )
-    return 'unknown';
-  return check.status;
-}
 function MonitorStrip({
   state,
   now,
@@ -275,28 +266,8 @@ function MonitorStrip({
   let detail = '';
   let groups: Array<{ label: string; status: string }> = [];
   if (state.status === 'ready') {
-    const overview = state.data;
-    const checks = overview.checks.filter((check) => check.required);
-    const snapshotTime = Date.parse(overview.generatedAt);
-    const heartbeat = Date.parse(overview.workerHeartbeatAt ?? '');
-    const stale =
-      !Number.isFinite(snapshotTime) ||
-      !Number.isFinite(heartbeat) ||
-      now - snapshotTime > 300_000 ||
-      now - heartbeat > 300_000;
-    const outcomes = checks.map((check) => currentStatus(check, now));
-    severity =
-      stale || checks.length === 0
-        ? 'unknown'
-        : outcomes.includes('fail')
-          ? 'fail'
-          : outcomes.includes('warn')
-            ? 'warn'
-            : outcomes.some((status) =>
-                  ['unknown', 'unavailable', 'interrupted'].includes(status)
-                )
-              ? 'unknown'
-              : 'pass';
+    const health = projectOverviewHealth(state.data, now);
+    severity = health.severity;
     text =
       severity === 'pass'
         ? 'All monitored systems operational'
@@ -305,27 +276,14 @@ function MonitorStrip({
           : severity === 'warn'
             ? 'Monitored systems need attention'
             : 'Current system health is unknown';
-    detail = stale
+    detail = health.stale
       ? 'Monitor data is stale'
-      : `${outcomes.filter((status) => status === 'pass').length} / ${checks.length} checks passing`;
+      : `${health.passing} / ${health.required} checks passing`;
     groups = [
-      { label: 'Backend', prefix: 'backend.' },
-      { label: 'n8n', prefix: 'n8n.' },
-      { label: 'Data providers', prefix: 'sportmonks.' },
-    ].map(({ label, prefix }) => {
-      const subset = overview.checks.filter(
-        (check) => check.required && check.checkId.startsWith(prefix)
-      );
-      const status =
-        stale || !subset.length
-          ? 'unknown'
-          : subset.every((check) => currentStatus(check, now) === 'pass')
-            ? 'pass'
-            : subset.some((check) => currentStatus(check, now) === 'fail')
-              ? 'fail'
-              : 'warn';
-      return { label, status };
-    });
+      { label: 'Backend', status: health.groups.backend },
+      { label: 'n8n', status: health.groups.n8n },
+      { label: 'Data providers', status: health.groups.sportmonks },
+    ];
   }
   return (
     <section

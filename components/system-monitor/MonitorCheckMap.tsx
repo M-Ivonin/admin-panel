@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import type { MonitorCheck, Outcome } from '@/lib/api/system-monitor';
+import { projectDetailedCheckHealth } from '@/lib/system-monitor-health';
 
 const names: Record<string, string> = {
   'backend.health': 'Application API',
@@ -50,21 +51,6 @@ export function MonitorCheckMap({
   onSelect: (check: MonitorCheck) => void;
 }) {
   const theme = useTheme();
-  const state = (check: MonitorCheck) => {
-    const stale =
-      check.enabled &&
-      (sourceUnavailable ||
-        !check.lastRun?.endedAt ||
-        now - Date.parse(check.lastRun.endedAt) >
-          check.intervalMs * 2 + check.deadlineMs);
-    const outcome: Outcome = !check.enabled
-      ? 'unavailable'
-      : sourceUnavailable ||
-          (stale && !['unavailable', 'interrupted'].includes(check.status))
-        ? 'unknown'
-        : check.status;
-    return { outcome, stale };
-  };
   const color = (outcome: Outcome) =>
     outcome === 'pass'
       ? theme.palette.success.main
@@ -74,7 +60,8 @@ export function MonitorCheckMap({
           ? theme.palette.warning.main
           : theme.palette.text.disabled;
   const passing = checks.filter(
-    (check) => state(check).outcome === 'pass'
+    (check) =>
+      projectDetailedCheckHealth(check, now, sourceUnavailable).outcome === 'pass'
   ).length;
   const required = checks.filter((check) => check.required).length;
   const byId = (id: string) => checks.find((check) => check.checkId === id);
@@ -110,7 +97,11 @@ export function MonitorCheckMap({
       !sportmonks.includes(check)
   );
   const node = (check: MonitorCheck, compact = false) => {
-    const { outcome, stale } = state(check);
+    const { outcome, stale } = projectDetailedCheckHealth(
+      check,
+      now,
+      sourceUnavailable
+    );
     const label = names[check.checkId] ?? check.checkId;
     const status = check.enabled ? labels[outcome] : 'Disabled';
     const freshness = !check.enabled ? 'Disabled' : stale ? 'Stale' : 'Fresh';

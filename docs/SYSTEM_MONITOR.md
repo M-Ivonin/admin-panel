@@ -89,3 +89,15 @@ Check History **Inspect** and map-node inspection open check details in the same
 centered, bounded MUI dialog style as Incident details. Loading, expired results
 and request errors stay inside the dialog. Close, Escape or backdrop dismissal
 preserve the history list and discard late detail responses.
+
+## Health projection ownership
+
+`lib/system-monitor-health.ts` owns the pure health projections used by the
+Overview strip, detailed check map and detailed source freshness indicator.
+Their existing policies remain distinct: Overview allows one interval plus the
+deadline and 60 seconds of grace; the detailed map allows two intervals plus
+the deadline. Source snapshots and heartbeats expire after five minutes.
+Disabled checks and interrupted/unavailable outcomes retain their existing
+presentation. Deterministic boundary coverage lives in
+`__tests__/system-monitor-health.test.ts`; the Overview and System Monitor
+component tests verify that callers update when a result expires.

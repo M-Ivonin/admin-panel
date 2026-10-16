@@ -34,6 +34,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { MonitorCharts } from './MonitorCharts';
 import { MonitorCheckMap } from './MonitorCheckMap';
+import { projectDetailedSourceHealth } from '@/lib/system-monitor-health';
 import {
   monitorApi,
   MonitorApiError,
@@ -409,10 +410,7 @@ export function SystemMonitorDashboard() {
     setRange(periodWindow(hours));
   };
   const sourceStale =
-    overview &&
-    (now - Date.parse(overview.generatedAt) > 5 * 60000 ||
-      !overview.workerHeartbeatAt ||
-      now - Date.parse(overview.workerHeartbeatAt) > 5 * 60000);
+    overview && projectDetailedSourceHealth(overview, now).stale;
   const grafanaUrl = safeGrafana(logs?.grafanaUrl);
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
