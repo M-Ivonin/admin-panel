@@ -30,47 +30,28 @@ import {
   type HomeAnalyticsRate,
 } from '@/lib/home-analytics-summary';
 
+import {
+  defaultHomeAnalyticsRange,
+  homeAnalyticsRequestRange,
+  linkedHomeAnalyticsRange,
+  transitionHomeAnalyticsRange,
+  type HomeAnalyticsRange,
+} from '@/lib/home-analytics-range';
+
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
-const MAX_RANGE_DAYS = 90;
-
-function defaultRange(): { from: string; to: string } {
-  const to = new Date();
-  const from = new Date(to);
-  return {
-    from: from.toISOString().slice(0, 10),
-    to: to.toISOString().slice(0, 10),
-  };
-}
-
-type AnalyticsRange = { from: string; to: string; cutoff?: string };
-
-function linkedRange(): AnalyticsRange | null {
-  const params = new URL(window.location.href).searchParams;
-  const from = params.get('from');
-  const to = params.get('to');
-  if (!from || !to) return null;
-  const start = Date.parse(from);
-  const end = Date.parse(to);
-  if (
-    !Number.isFinite(start) ||
-    !Number.isFinite(end) ||
-    start > end ||
-    end - start >= MAX_RANGE_DAYS * 86_400_000 ||
-    new Date(start).toISOString() !== from ||
-    new Date(end).toISOString() !== to ||
-    !from.endsWith('T00:00:00.000Z')
-  )
-    return null;
-  return { from: from.slice(0, 10), to: to.slice(0, 10), cutoff: to };
-}
 
 export function UpdatedHomeAnalyticsDashboard() {
-  const initial = useMemo(defaultRange, []);
+  const initial = useMemo(() => defaultHomeAnalyticsRange(new Date()), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [appliedRange, setAppliedRange] = useState<AnalyticsRange | null>(null);
+  const [appliedRange, setAppliedRange] = useState<HomeAnalyticsRange | null>(null);
   useEffect(() => {
-    const range = linkedRange() ?? initial;
+    const params = new URL(window.location.href).searchParams;
+    const range =
+      linkedHomeAnalyticsRange({
+        from: params.get('from'),
+        to: params.get('to'),
+      }) ?? initial;
     setFrom(range.from);
     setTo(range.to);
     setAppliedRange(range);
@@ -81,16 +62,15 @@ export function UpdatedHomeAnalyticsDashboard() {
   const [rangeError, setRangeError] = useState<string | null>(null);
   const latestRequestId = useRef(0);
 
-  const load = useCallback(async (range: AnalyticsRange) => {
+  const load = useCallback(async (range: HomeAnalyticsRange) => {
     const requestId = ++latestRequestId.current;
     setLoading(true);
     setError(null);
     setData(null);
     try {
-      const response = await getUpdatedHomeAnalytics({
-        from: `${range.from}T00:00:00.000Z`,
-        to: range.cutoff ?? `${range.to}T23:59:59.999Z`,
-      });
+      const response = await getUpdatedHomeAnalytics(
+        homeAnalyticsRequestRange(range)
+      );
       if (requestId === latestRequestId.current) setData(response);
     } catch (caught) {
       if (requestId === latestRequestId.current) {
@@ -109,29 +89,11 @@ export function UpdatedHomeAnalyticsDashboard() {
   }, [appliedRange, load]);
 
   const refresh = useCallback(() => {
-    const fromTime = Date.parse(`${from}T00:00:00.000Z`);
-    const toTime = Date.parse(`${to}T00:00:00.000Z`);
-    if (
-      !Number.isFinite(fromTime) ||
-      !Number.isFinite(toTime) ||
-      fromTime > toTime
-    ) {
-      setRangeError('Choose a valid UTC date range.');
-      return;
-    }
-    if ((toTime - fromTime) / 86_400_000 >= MAX_RANGE_DAYS) {
-      setRangeError(`Maximum range is ${MAX_RANGE_DAYS} days.`);
-      return;
-    }
-    setRangeError(null);
-    const nextRange = {
-      from,
-      to,
-      ...(from === appliedRange?.from && to === appliedRange?.to
-        ? { cutoff: appliedRange?.cutoff }
-        : {}),
-    };
-    if (from === appliedRange?.from && to === appliedRange?.to) {
+    const result = transitionHomeAnalyticsRange(appliedRange, { from, to });
+    setRangeError(result.error);
+    if (!result.range) return;
+    const nextRange = result.range;
+    if (nextRange === appliedRange) {
       void load(nextRange);
       return;
     }
