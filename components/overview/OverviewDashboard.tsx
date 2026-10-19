@@ -829,7 +829,7 @@ export function OverviewDashboard() {
       </div>
       <Report
         title="Home Analytics"
-        href={homeAnalyticsHref({ from: range.from, to: range.to })}
+        href={homeAnalyticsHref({ from: range.weekFrom, to: range.to })}
         state={state.homeAnalytics}
         className={styles.homeReport}
       >

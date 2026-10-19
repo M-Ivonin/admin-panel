@@ -42,6 +42,13 @@ export interface UpdatedHomeMetricValue {
 
 export interface UpdatedHomeDashboardBlock {
   id: number;
+  conversionWindow?: {
+    asOf: string;
+    cohortDays: number;
+    observationDays: number;
+    from: string;
+    to: string;
+  };
   retentionWindow?: {
     asOf: string;
     cohortDays: number;

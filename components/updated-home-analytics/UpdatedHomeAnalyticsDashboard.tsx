@@ -38,7 +38,9 @@ export function UpdatedHomeAnalyticsDashboard() {
   const initial = useMemo(() => defaultHomeAnalyticsRange(new Date()), []);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [appliedRange, setAppliedRange] = useState<HomeAnalyticsRange | null>(null);
+  const [appliedRange, setAppliedRange] = useState<HomeAnalyticsRange | null>(
+    null
+  );
   useEffect(() => {
     const params = new URL(window.location.href).searchParams;
     const range =
@@ -81,6 +83,16 @@ export function UpdatedHomeAnalyticsDashboard() {
       latestRequestId.current += 1;
     };
   }, [appliedRange, load]);
+
+  useEffect(() => {
+    if (!data || loading || error) return;
+    const hash = new URL(window.location.href).hash;
+    if (/^#dashboard-\d+$/.test(hash)) {
+      document
+        .getElementById(hash.slice(1))
+        ?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [data, loading, error]);
 
   const refresh = useCallback(() => {
     const result = transitionHomeAnalyticsRange(appliedRange, { from, to });

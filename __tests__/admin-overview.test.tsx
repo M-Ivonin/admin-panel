@@ -163,8 +163,13 @@ const homeAnalytics = {
 function response(url: string): Response {
   if (url.includes('/api/revenue-ledger-access'))
     return json({ hasAccess: true });
-  if (url.includes('/updated-home-analytics/admin/dashboards'))
-    return json(homeAnalytics);
+  if (url.includes('/updated-home-analytics/admin/dashboards')) {
+    const params = new URL(url, 'http://localhost').searchParams;
+    return json({
+      ...homeAnalytics,
+      range: { from: params.get('from'), to: params.get('to') },
+    });
+  }
   if (url.includes('/admin-overview/growth')) return json(growth);
   if (url.includes('/admin-overview/marketing')) return json(marketing);
   if (url.includes('/capabilities')) return json({ canRead: true });
@@ -567,15 +572,16 @@ it('adds six Home Analytics metrics after existing widgets using whole-funnel co
     .mocked(global.fetch)
     .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))
     .filter((url) => url.pathname.includes('/updated-home-analytics/'));
-  expect(calls).toHaveLength(14);
-  expect(calls[13].searchParams.get('from')).toBe(`${days[5]}T00:00:00.000Z`);
-  expect(calls[13].searchParams.get('to')).toBe(`${days[5]}T23:59:59.999Z`);
+  expect(calls).toHaveLength(16);
+  expect(calls[15].searchParams.get('from')).toBe(`${days[5]}T00:00:00.000Z`);
+  expect(calls[15].searchParams.get('to')).toBe(`${days[5]}T23:59:59.999Z`);
 });
 
 it('preserves zero conversion and missing cohorts without inventing retention or averages', async () => {
   global.fetch = jest.fn(async (input) =>
     String(input).includes('/updated-home-analytics/')
       ? json({
+          range: homeAnalytics.range,
           dashboards: [
             {
               id: 2,
@@ -667,6 +673,10 @@ it('shows seven daily Home Analytics points with gaps, real zeros and a partial 
       const index = days.indexOf(day);
       if (index === 2) return json({}, 503);
       return json({
+        range: {
+          from: url.searchParams.get('from'),
+          to: url.searchParams.get('to'),
+        },
         dashboards: [
           {
             id: 3,
@@ -680,7 +690,11 @@ it('shows seven daily Home Analytics points with gaps, real zeros and a partial 
                 },
                 {
                   stage: 'verified_purchase',
-                  numerator: [1, 2, 3, 4, 0, 6, 5][index],
+                  numerator:
+                    url.searchParams.get('to') === `${today}T14:30:00.000Z` &&
+                    index === 0
+                      ? 5
+                      : [1, 2, 3, 4, 0, 6, 5][index],
                   denominator: 10,
                   value: 50,
                 },
@@ -703,17 +717,19 @@ it('shows seven daily Home Analytics points with gaps, real zeros and a partial 
     );
     expect(report).toHaveTextContent('Today is partial');
     expect(report).toHaveTextContent('Some days are unavailable');
-    expect(within(report).getAllByRole('img')).toHaveLength(6);
+    expect(within(report).getAllByRole('img')).toHaveLength(5);
     const calls = jest
       .mocked(global.fetch)
       .mock.calls.map(([input]) => new URL(String(input), 'http://localhost'))
       .filter((url) => url.pathname.includes('/updated-home-analytics/'));
-    expect(calls).toHaveLength(7);
-    expect(calls.map((url) => url.searchParams.get('from'))).toEqual(
+    expect(calls).toHaveLength(8);
+    expect(calls.slice(1).map((url) => url.searchParams.get('from'))).toEqual(
       days.map((day) => `${day}T00:00:00.000Z`)
     );
-    expect(calls[0].searchParams.get('to')).toBe(`${days[0]}T23:59:59.999Z`);
-    expect(calls[6].searchParams.get('to')).toBe(`${today}T14:30:00.000Z`);
+    expect(calls[0].searchParams.get('from')).toBe(`${days[0]}T00:00:00.000Z`);
+    expect(calls[0].searchParams.get('to')).toBe(`${today}T14:30:00.000Z`);
+    expect(calls[1].searchParams.get('to')).toBe(`${days[0]}T23:59:59.999Z`);
+    expect(calls[7].searchParams.get('to')).toBe(`${today}T14:30:00.000Z`);
   } finally {
     jest.useRealTimers();
   }

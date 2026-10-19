@@ -78,8 +78,12 @@ export function UpdatedHomeAnalyticsSection({
         </Alert>
       ) : (
         <Stack gap={2}>
-          {availableDashboards.map((dashboard) => (
-            <DashboardProjection key={dashboard.id} dashboard={dashboard} />
+          {availableDashboards.map((dashboard, index) => (
+            <DashboardProjection
+              key={dashboard.id}
+              dashboard={dashboard}
+              anchorId={index === 0 ? undefined : `dashboard-${dashboard.id}`}
+            />
           ))}
         </Stack>
       )}
@@ -89,8 +93,10 @@ export function UpdatedHomeAnalyticsSection({
 
 function DashboardProjection({
   dashboard,
+  anchorId,
 }: {
   dashboard: UpdatedHomeDashboardBlock;
+  anchorId?: string;
 }) {
   const hasMetricValues = dashboard.metrics.some(
     (metric) => metric.values.length > 0
@@ -109,7 +115,7 @@ function DashboardProjection({
   );
 
   return (
-    <Box sx={{ minWidth: 0 }}>
+    <Box id={anchorId} sx={{ minWidth: 0, scrollMarginTop: 24 }}>
       <Stack direction="row" alignItems="center" gap="12px" sx={{ mb: 1.5 }}>
         <Box
           data-testid="updated-home-dashboard-number"
@@ -134,6 +140,24 @@ function DashboardProjection({
         </Typography>
       </Stack>
 
+      {dashboard.conversionWindow ? (
+        <Stack gap="4px" sx={{ mb: 2 }}>
+          <Typography sx={{ color: '#C8C8CA', fontSize: 12 }}>
+            Pass-to-subscription: latest {dashboard.conversionWindow.cohortDays}{' '}
+            completed UTC expiry-day cohorts · independent of the page date
+            filter.
+          </Typography>
+          <Typography sx={{ color: '#A3A3A3', fontSize: 11 }}>
+            Passes expired: {dashboard.conversionWindow.from} –{' '}
+            {dashboard.conversionWindow.to} UTC · full{' '}
+            {dashboard.conversionWindow.observationDays}-day follow-up.
+          </Typography>
+          <Typography sx={{ color: '#A3A3A3', fontSize: 11 }}>
+            Data through {dashboard.conversionWindow.asOf.slice(0, 10)} 00:00
+            UTC. Experiment metrics below use the selected page range.
+          </Typography>
+        </Stack>
+      ) : null}
       {dashboard.retentionWindow ? (
         <Stack gap="4px" sx={{ mb: 2 }}>
           <Typography sx={{ color: '#C8C8CA', fontSize: 12 }}>

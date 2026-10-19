@@ -51,7 +51,7 @@ export interface PredictionsOverview {
   daily: Array<{ date: string; summary: PredictionEvaluationSummary | null }>;
 }
 export interface HomeAnalyticsOverviewData {
-  today: UpdatedHomeAnalyticsResponse;
+  week: UpdatedHomeAnalyticsResponse;
   daily: Array<{ date: string; data: UpdatedHomeAnalyticsResponse | null }>;
 }
 export interface OverviewData {
@@ -129,19 +129,22 @@ export function overviewRequests(
     );
   return {
     homeAnalytics: async () => {
-      const settled = await Promise.allSettled(
-        range.days.map((day) =>
+      const [week, ...daily] = await Promise.allSettled([
+        get<UpdatedHomeAnalyticsResponse>(
+          `/updated-home-analytics/admin/dashboards?${query({ from: range.weekFrom, to: range.to })}`,
+          signal
+        ),
+        ...range.days.map((day) =>
           get<UpdatedHomeAnalyticsResponse>(
             `/updated-home-analytics/admin/dashboards?${query({ from: `${day}T00:00:00.000Z`, to: day === date ? range.to : `${day}T23:59:59.999Z` })}`,
             signal
           )
-        )
-      );
-      const current = settled[6];
-      if (current.status === 'rejected') throw current.reason;
+        ),
+      ]);
+      if (week.status === 'rejected') throw week.reason;
       return {
-        today: current.value,
-        daily: settled.map((result, i) => ({
+        week: week.value,
+        daily: daily.map((result, i) => ({
           date: range.days[i],
           data: result.status === 'fulfilled' ? result.value : null,
         })),

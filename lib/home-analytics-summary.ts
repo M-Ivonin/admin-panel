@@ -106,7 +106,7 @@ export function homeAnalyticsSummary(data: UpdatedHomeAnalyticsResponse) {
     },
     {
       title: 'Pass-to-subscription conversion',
-      id: 9,
+      id: 10,
       rate: aggregateRate(values(10, 'pass_to_monthly_conversion_rate')),
       detail: 'Expired pass → monthly subscription · complete 30-day cohorts',
       unit: 'expired passes',

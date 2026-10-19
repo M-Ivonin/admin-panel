@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  within,
+  waitFor,
+} from '@testing-library/react';
+import { overviewRequests, overviewWindow } from '@/lib/api/admin-overview';
 import { HomeAnalyticsOverview } from '@/components/overview/HomeAnalyticsOverview';
 import { UpdatedHomeAnalyticsDashboard } from '@/components/updated-home-analytics/UpdatedHomeAnalyticsDashboard';
 import {
@@ -101,17 +108,29 @@ const data: UpdatedHomeAnalyticsResponse = {
       { stage: 'locked_screen_viewed', numerator: 50, denominator: null },
       { stage: 'purchase_succeeded', numerator: 3, denominator: 6 },
     ]),
-    dashboard(10, 'pass_to_monthly_conversion_rate', [
-      { numerator: 1, denominator: 2 },
-      { numerator: 0, denominator: 8 },
+    dashboard(9, 'pass_24h_repeat_purchase_rate', [
+      { numerator: 0, denominator: 1 },
     ]),
+    {
+      ...dashboard(10, 'pass_to_monthly_conversion_rate', [
+        { numerator: 1, denominator: 2 },
+        { numerator: 0, denominator: 8 },
+      ]),
+      conversionWindow: {
+        asOf: '2026-10-10T00:00:00.000Z',
+        cohortDays: 30,
+        observationDays: 30,
+        from: '2026-08-11',
+        to: '2026-09-09',
+      },
+    },
   ],
 };
 
 it('keeps the six rates on admin Overview and carries its exact time range into the detailed report', async () => {
   const view = render(
     <HomeAnalyticsOverview
-      data={{ today: data, daily: [{ date: '2026-10-10', data }] }}
+      data={{ week: data, daily: [{ date: '2026-10-10', data }] }}
       periodLabel="Oct 10"
       partial={false}
     />
@@ -181,6 +200,13 @@ it('shows pooled pass conversion rather than an average of country/product rates
   const passes = await screen.findByRole('region', { name: 'Passes' });
   expect(within(passes).getByText('10%')).toBeInTheDocument();
   expect(within(passes).getByText('OVERALL CONVERSION')).toBeInTheDocument();
+  expect(passes.querySelector('#dashboard-10')).toBeInTheDocument();
+  expect(
+    within(passes).getByText(/Passes expired: 2026-08-11 – 2026-09-09 UTC/)
+  ).toBeVisible();
+  expect(
+    within(passes).getByText(/independent of the page date filter/)
+  ).toBeVisible();
 });
 
 it('defaults direct Home Analytics navigation to the current UTC day', async () => {
@@ -192,4 +218,122 @@ it('defaults direct Home Analytics navigation to the current UTC day', async () 
     from: `${today}T00:00:00.000Z`,
     to: `${today}T23:59:59.999Z`,
   });
+});
+
+it('uses distinct-user weekly totals for headlines, daily points for charts, and links to pass conversion', async () => {
+  const weekRange = { from: '2026-10-04T00:00:00.000Z', to: range.to };
+  const daily = {
+    ...data,
+    dashboards: data.dashboards.map((block) =>
+      block.id === 6
+        ? dashboard(6, 'top_picks_activation_funnel', [
+            { stage: 'preview_impression', numerator: 1, denominator: null },
+            { stage: 'full_analysis_opened', numerator: 1, denominator: 1 },
+          ])
+        : block
+    ),
+  };
+  const week = {
+    ...daily,
+    range: weekRange,
+    dashboards: daily.dashboards.map((block) =>
+      block.id === 6
+        ? dashboard(6, 'top_picks_activation_funnel', [
+            { stage: 'preview_impression', numerator: 2, denominator: null },
+            { stage: 'full_analysis_opened', numerator: 1, denominator: 1 },
+          ])
+        : block
+    ),
+  };
+  Object.assign(window.location, { hostname: 'localhost' });
+  const originalFetch = global.fetch;
+  const requests: string[] = [];
+  global.fetch = jest.fn(async (input) => {
+    const url = String(input);
+    requests.push(url);
+    const from = new URL(url).searchParams.get('from');
+    const to = new URL(url).searchParams.get('to');
+    return {
+      ok: true,
+      json: async () =>
+        from === weekRange.from && to === weekRange.to ? week : daily,
+    } as Response;
+  });
+  try {
+    const result = await overviewRequests(
+      overviewWindow('2026-10-10', new Date(range.to)),
+      new AbortController().signal
+    ).homeAnalytics();
+    render(
+      <HomeAnalyticsOverview
+        data={result}
+        periodLabel="Oct 10"
+        partial={true}
+      />
+    );
+    const card = screen.getByRole('article', {
+      name: 'Paid Top Picks activation',
+    });
+    expect(within(card).getByText('50%')).toBeInTheDocument();
+    expect(within(card).getByText('1 / 2 users')).toBeInTheDocument();
+    expect(within(card).getByRole('img')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('2026-10-10: 100%')
+    );
+    const href = new URL(
+      within(card).getByRole('link').getAttribute('href')!,
+      'http://localhost'
+    );
+    expect(href.searchParams.get('from')).toBe(weekRange.from);
+    expect(href.searchParams.get('to')).toBe(weekRange.to);
+    const pass = screen.getByRole('article', {
+      name: 'Pass-to-subscription conversion',
+    });
+    expect(within(pass).getByRole('link')).toHaveAttribute(
+      'href',
+      expect.stringContaining('#dashboard-10')
+    );
+    expect(within(pass).queryByRole('img')).not.toBeInTheDocument();
+    expect(
+      within(pass).getByText(/Passes expired: 2026-08-11 – 2026-09-09 UTC/)
+    ).toBeVisible();
+    expect(requests).toHaveLength(8);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+it('scrolls a linked pass conversion block into view after its backend data arrives', async () => {
+  const previousHref = window.location.href;
+  const previousScroll = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    'scrollIntoView'
+  );
+  const scroll = jest.fn();
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: scroll,
+  });
+  window.location.href =
+    'http://localhost/dashboard/updated-home-analytics#dashboard-10';
+  jest.mocked(getUpdatedHomeAnalytics).mockResolvedValue(data);
+  try {
+    render(<UpdatedHomeAnalyticsDashboard />);
+    await screen.findByRole('region', { name: 'Passes' });
+    await waitFor(() =>
+      expect(scroll).toHaveBeenCalledWith({ block: 'start' })
+    );
+    expect(scroll.mock.instances[0]).toBe(
+      document.getElementById('dashboard-10')
+    );
+  } finally {
+    window.location.href = previousHref;
+    if (previousScroll)
+      Object.defineProperty(
+        Element.prototype,
+        'scrollIntoView',
+        previousScroll
+      );
+    else delete (Element.prototype as Partial<Element>).scrollIntoView;
+  }
 });
