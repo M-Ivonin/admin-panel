@@ -209,13 +209,15 @@ it('shows pooled pass conversion rather than an average of country/product rates
   ).toBeVisible();
 });
 
-it('defaults direct Home Analytics navigation to the current UTC day', async () => {
-  const today = new Date().toISOString().slice(0, 10);
+it('defaults direct Home Analytics navigation to the last seven UTC dates', async () => {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const firstDay = new Date(now.getTime() - 6 * 86_400_000).toISOString().slice(0, 10);
   jest.mocked(getUpdatedHomeAnalytics).mockClear().mockResolvedValue(data);
   render(<UpdatedHomeAnalyticsDashboard />);
   await screen.findByRole('region', { name: 'Home' });
   expect(getUpdatedHomeAnalytics).toHaveBeenCalledWith({
-    from: `${today}T00:00:00.000Z`,
+    from: `${firstDay}T00:00:00.000Z`,
     to: `${today}T23:59:59.999Z`,
   });
 });

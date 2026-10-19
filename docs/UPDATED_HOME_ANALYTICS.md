@@ -35,7 +35,9 @@ empty first cohorts remain N/A. Pass conversion pools backend converted/expired
 pass counts across product/country groups, not an arithmetic mean of percentages
 or a claim of distinct users. Its link targets the existing Passes section.
 
-Both pages default to the current UTC day. Overview report links carry exact UTC
+Home Analytics defaults to the latest seven UTC dates, including today.
+Overview keeps its current-day selection and uses that day plus the preceding six
+UTC dates for Home Analytics headlines. Overview report links carry exact UTC
 `from` and `to` timestamps, preserving the partial-day cutoff on first load and on
 Refresh when the visible dates have not changed. Changing dates applies complete
 UTC days. The report displays its exact cutoff; exports retain the loaded range.
@@ -56,3 +58,13 @@ percentage can be calculated. N/A percentages are not fabricated as zero.
 The exit-without-interaction explanation describes distinct Home users with a
 terminal checkpoint, matching the backend cohort rather than calling them visits.
 Active Home Time discloses that up to 15 seconds of terminal activity may be lost.
+
+Default-range verification (2026-10-19): focused range/dashboard/summary tests
+passed (43 tests), as did lint (three existing unrelated warnings), production
+build and typecheck. A fresh local production build at desktop 1440×1000 showed
+October 13–19 on direct navigation and requested the same seven inclusive UTC
+dates. Opening an explicit October 10 link preserved both dates and the exact
+14:30:12.345 UTC cutoff. Browser proof used a synthetic localhost auth cookie
+and an intercepted analytics response; it verifies local behavior, not PROD.
+The rendered date controls matched the requested range and existing UI styling,
+with no clipping or overlap in the affected area.

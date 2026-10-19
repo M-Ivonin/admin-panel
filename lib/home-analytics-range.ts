@@ -7,7 +7,8 @@ export type HomeAnalyticsRange = DateSelection & { cutoff?: string };
 
 export function defaultHomeAnalyticsRange(now: Date): HomeAnalyticsRange {
   const today = now.toISOString().slice(0, 10);
-  return { from: today, to: today };
+  const firstDay = new Date(now.getTime() - 6 * DAY_MS).toISOString().slice(0, 10);
+  return { from: firstDay, to: today };
 }
 
 export function linkedHomeAnalyticsRange(params: {

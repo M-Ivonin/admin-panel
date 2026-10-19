@@ -10,11 +10,11 @@ const linkedTimestamps = {
   to: '2026-10-10T14:30:12.345Z',
 };
 
-it('uses the current UTC date for the default full-day request', () => {
+it('defaults to seven inclusive UTC dates, including today', () => {
   const range = defaultHomeAnalyticsRange(new Date('2026-10-10T23:30:00-03:00'));
-  expect(range).toEqual({ from: '2026-10-11', to: '2026-10-11' });
+  expect(range).toEqual({ from: '2026-10-05', to: '2026-10-11' });
   expect(homeAnalyticsRequestRange(range)).toEqual({
-    from: '2026-10-11T00:00:00.000Z',
+    from: '2026-10-05T00:00:00.000Z',
     to: '2026-10-11T23:59:59.999Z',
   });
 });
