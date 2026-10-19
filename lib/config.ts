@@ -15,8 +15,8 @@ import {
  * @returns App configuration object
  * @throws Error if required environment variables are missing
  */
-export function getAppConfig(): DeepLinkConfig {
-  return getDeepLinkConfig();
+export function getAppConfig(hostname?: string): DeepLinkConfig {
+  return getDeepLinkConfig(hostname);
 }
 
 /**

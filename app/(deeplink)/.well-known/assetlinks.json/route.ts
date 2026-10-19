@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getAppConfig } from '@/lib/config';
 
-export async function GET() {
+/** Publishes Android associations only for the requested product domain. */
+export async function GET(request: Request) {
   try {
-    const config = getAppConfig();
+    const config = getAppConfig(
+      request.headers.get('host') || new URL(request.url).hostname
+    );
 
     const fingerprints = [
       '7e:5f:36:fb:27:5c:49:e2:68:58:a4:14:4d:84:c4:b2:47:2b:3f:ad:9d:30:37:71:89:cd:38:79:c8:57:9e:67',

@@ -74,10 +74,20 @@ export function getAdminAppConfig(): AdminAppConfig {
   };
 }
 
-export function getDeepLinkConfig(): DeepLinkConfig {
-  const iosBundle = process.env.IOS_BUNDLE_ID || 'ai.levantem.sirbro';
+/** Resolves association identities for the requested product domain. */
+export function getDeepLinkConfig(hostname?: string): DeepLinkConfig {
+  const host = new URL(
+    `https://${hostname || process.env.APP_HOST || 'sirbro.com'}`
+  ).hostname;
+  const product = host === 'tipsterbro.com' || host.endsWith('.tipsterbro.com')
+    ? 'tipsterbro'
+    : host === 'sirbro.com' || host.endsWith('.sirbro.com')
+      ? 'sirbro'
+      : null;
+  const productId = product ? `ai.levantem.${product}` : null;
+  const iosBundle = productId || process.env.IOS_BUNDLE_ID || 'ai.levantem.sirbro';
   const androidPackageName =
-    process.env.ANDROID_PACKAGE_NAME || 'ai.levantem.sirbro';
+    productId || process.env.ANDROID_PACKAGE_NAME || 'ai.levantem.sirbro';
 
   return {
     appCustomScheme: process.env.APP_CUSTOM_SCHEME || 'sirbro',
@@ -86,17 +96,15 @@ export function getDeepLinkConfig(): DeepLinkConfig {
       process.env.IOS_APP_STORE_URL ||
       'https://apps.apple.com/us/app/sirbro/id6753070536',
     iosBundle,
-    iosBundles: parseCsvEnv(process.env.IOS_BUNDLE_IDS, [
-      iosBundle,
-      'ai.levantem.tipsterbro',
-    ]),
+    iosBundles: productId
+      ? [productId]
+      : parseCsvEnv(process.env.IOS_BUNDLE_IDS, [iosBundle]),
     iosTeamId: process.env.IOS_TEAM_ID || 'PLACEHOLDER_TEAM_ID',
     androidPlayUrl: process.env.ANDROID_PLAY_URL || '',
     androidPackageName,
-    androidPackageNames: parseCsvEnv(process.env.ANDROID_PACKAGE_NAMES, [
-      androidPackageName,
-      'ai.levantem.tipsterbro',
-    ]),
+    androidPackageNames: productId
+      ? [productId]
+      : parseCsvEnv(process.env.ANDROID_PACKAGE_NAMES, [androidPackageName]),
   };
 }
 

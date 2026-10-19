@@ -191,6 +191,15 @@ routes могут оставаться закрытыми через `notFound()
 - они не импортируют `modules/content/*`;
 - их URL contract и fallback behavior считаются защищенными.
 
+Файлы Android/iOS association выбирают приложение по домену HTTP-запроса:
+`sirbro.com` и его поддомены публикуют только `ai.levantem.sirbro`,
+`tipsterbro.com` и его поддомены — только `ai.levantem.tipsterbro`.
+Общие переменные `ANDROID_PACKAGE_NAMES` и `IOS_BUNDLE_IDS` не могут
+добавить второе приложение на эти домены. Для остальных хостов сохраняется
+конфигурация окружения; без списков используется один настроенный идентификатор.
+DNS/HTTPS, сертификаты Play App Signing и опубликованные мобильные сборки
+проверяются отдельно: изменение association-файла не меняет manifest установленного приложения.
+
 ### 2. Public Contour
 
 Фиксированные индексируемые public routes в SEO registry:

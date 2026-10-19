@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getAppConfig } from '@/lib/config';
 
-export async function GET() {
+/** Publishes iOS associations only for the requested product domain. */
+export async function GET(request: Request) {
   try {
-    const config = getAppConfig();
+    const config = getAppConfig(
+      request.headers.get('host') || new URL(request.url).hostname
+    );
 
     // Use placeholder if iOS Team ID is not set
     const teamId = config.iosTeamId;
