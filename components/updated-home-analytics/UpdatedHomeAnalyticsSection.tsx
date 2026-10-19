@@ -134,6 +134,27 @@ function DashboardProjection({
         </Typography>
       </Stack>
 
+      {dashboard.retentionWindow ? (
+        <Stack gap="4px" sx={{ mb: 2 }}>
+          <Typography sx={{ color: '#C8C8CA', fontSize: 12 }}>
+            Latest {dashboard.retentionWindow.cohortDays} completed UTC
+            registration-day cohorts for each return day · independent of the
+            page date filter.
+          </Typography>
+          <Typography sx={{ color: '#A3A3A3', fontSize: 11 }}>
+            Data through {dashboard.retentionWindow.asOf.slice(0, 10)} 00:00 UTC
+            · repeats of the same action after registration.
+          </Typography>
+          {dashboard.retentionWindow.cohorts.map((cohort) => (
+            <Typography
+              key={cohort.returnDay}
+              sx={{ color: '#A3A3A3', fontSize: 11 }}
+            >
+              {`D${cohort.returnDay} registrations: ${cohort.from} – ${cohort.to}`}
+            </Typography>
+          ))}
+        </Stack>
+      ) : null}
       {!hasMetricValues ? (
         <Alert severity="info">No eligible observations in this range.</Alert>
       ) : (
@@ -190,8 +211,19 @@ function DashboardProjection({
                   metric.definition.key === 'd1_d7_d30_retention' &&
                   orderedValues.length > 0
                 ) {
+                  const eligibleValues = orderedValues.filter(
+                    (value) => typeof value.dimensions.coreAction === 'string'
+                  );
+                  if (eligibleValues.length === 0) {
+                    return (
+                      <Alert key={metric.definition.key} severity="info">
+                        No eligible registered cohorts with a completed
+                        observation window.
+                      </Alert>
+                    );
+                  }
                   const actions = new Map<string, UpdatedHomeMetricValue[]>();
-                  for (const value of orderedValues) {
+                  for (const value of eligibleValues) {
                     const action =
                       typeof value.dimensions.coreAction === 'string'
                         ? value.dimensions.coreAction

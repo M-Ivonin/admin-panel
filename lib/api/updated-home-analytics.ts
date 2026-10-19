@@ -42,6 +42,11 @@ export interface UpdatedHomeMetricValue {
 
 export interface UpdatedHomeDashboardBlock {
   id: number;
+  retentionWindow?: {
+    asOf: string;
+    cohortDays: number;
+    cohorts: Array<{ returnDay: number; from: string; to: string }>;
+  };
   name: string;
   definitionVersion: string;
   observationCompleteness: UpdatedHomeCompleteness;

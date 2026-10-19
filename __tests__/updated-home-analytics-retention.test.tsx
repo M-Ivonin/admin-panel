@@ -80,3 +80,44 @@ it('groups retention by action with separate cohort means and an expandable orig
   expect(within(breakdown).getByText('0%')).toBeVisible();
   expect(within(breakdown).queryByText('CORE ACTION')).not.toBeInTheDocument();
 });
+
+it('shows independent completed-cohort periods and an honest empty state', () => {
+  render(
+    <UpdatedHomeAnalyticsSection
+      label="Retention"
+      dashboards={[
+        {
+          ...dashboard,
+          retentionWindow: {
+            asOf: '2026-10-19T00:00:00.000Z',
+            cohortDays: 30,
+            cohorts: [
+              { returnDay: 1, from: '2026-09-18', to: '2026-10-17' },
+              { returnDay: 7, from: '2026-09-12', to: '2026-10-11' },
+              { returnDay: 30, from: '2026-08-20', to: '2026-09-18' },
+            ],
+          },
+          metrics: [
+            {
+              ...dashboard.metrics[0],
+              values: [
+                {
+                  ...observation('', '', 1, null),
+                  dimensions: {},
+                },
+              ],
+            },
+          ],
+        },
+      ]}
+    />
+  );
+  expect(
+    screen.getByText(/independent of the page date filter/i)
+  ).toBeVisible();
+  expect(
+    screen.getByText('D30 registrations: 2026-08-20 – 2026-09-18')
+  ).toBeVisible();
+  expect(screen.getByText(/No eligible registered cohorts/i)).toBeVisible();
+  expect(screen.queryByText('Unknown action')).not.toBeInTheDocument();
+});
