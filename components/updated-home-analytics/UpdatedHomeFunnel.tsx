@@ -1,17 +1,10 @@
 'use client';
 
 import { Alert, Box, Stack, Typography } from '@mui/material';
-import {
-  funnelRate,
-  formatHomeAnalyticsRate,
-} from '@/lib/home-analytics-summary';
+import { formatHomeAnalyticsRate } from '@/lib/home-analytics-summary';
+import { homeAnalyticsFunnel } from '@/lib/home-analytics-funnel';
 import type { UpdatedHomeMetricValue } from '@/lib/api/updated-home-analytics';
-import {
-  ANALYTICS_ROLE_TOKENS,
-  displayLabel,
-  hasValidStageOrdinals,
-  stageRole,
-} from './presentation';
+import { ANALYTICS_ROLE_TOKENS, displayLabel, stageRole } from './presentation';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 
@@ -30,13 +23,7 @@ export function UpdatedHomeFunnel({
   phaseLabel,
   handoffLabel,
 }: UpdatedHomeFunnelProps) {
-  const ordinalsValid = hasValidStageOrdinals(values);
-  const first = values[0]?.dimensions.stage;
-  const last = values[values.length - 1]?.dimensions.stage;
-  const overall =
-    ordinalsValid && typeof first === 'string' && typeof last === 'string'
-      ? funnelRate(values, first, last)
-      : null;
+  const { ordinalsValid, overall, stages } = homeAnalyticsFunnel(values);
 
   return (
     <Box
@@ -114,102 +101,95 @@ export function UpdatedHomeFunnel({
               minWidth: values.length > 4 ? values.length * 150 : 0,
             }}
           >
-            {values.map((value, index) => {
-              const stage =
-                typeof value.dimensions.stage === 'string'
-                  ? value.dimensions.stage
-                  : 'unknown_stage';
-              const baseline = index === 0;
-              const role = stageRole(stage, value);
-              const token = ANALYTICS_ROLE_TOKENS[role];
-              const available = value.value !== null;
-              const hasBaseline =
-                baseline && value.numerator !== null && value.numerator > 0;
-              const trackWidth = baseline
-                ? hasBaseline
-                  ? 100
-                  : 0
-                : available
-                  ? Math.max(0, Math.min(100, value.value ?? 0))
-                  : 0;
-              const rate = baseline
-                ? hasBaseline
-                  ? '100% cohort baseline'
-                  : 'N/A'
-                : available
-                  ? formatFunnelRate(value.value!, value.unit)
-                  : 'N/A';
+            {stages.map(
+              ({
+                value,
+                stage,
+                baseline,
+                available,
+                trackWidth,
+                rate: stageRate,
+              }) => {
+                const role = stageRole(stage, value);
+                const token = ANALYTICS_ROLE_TOKENS[role];
+                const rate =
+                  stageRate.kind === 'baseline'
+                    ? '100% cohort baseline'
+                    : stageRate.kind === 'value'
+                      ? formatFunnelRate(stageRate.value, value.unit)
+                      : 'N/A';
 
-              return (
-                <Stack
-                  key={`${String(value.dimensions.stageOrdinal)}-${stage}`}
-                  data-testid="updated-home-funnel-stage"
-                  data-stage={stage}
-                  data-stage-ordinal={String(
-                    value.dimensions.stageOrdinal ?? ''
-                  )}
-                  data-presentation-role={role}
-                  gap="7px"
-                  minWidth={0}
-                >
-                  <Typography
-                    sx={{
-                      color: available ? '#F5F5F5' : '#F0A63A',
-                      fontFamily: mono,
-                      fontSize: 18,
-                      fontWeight: 700,
-                      overflowWrap: 'anywhere',
-                    }}
+                return (
+                  <Stack
+                    key={`${String(value.dimensions.stageOrdinal)}-${stage}`}
+                    data-testid="updated-home-funnel-stage"
+                    data-stage={stage}
+                    data-stage-ordinal={String(
+                      value.dimensions.stageOrdinal ?? ''
+                    )}
+                    data-presentation-role={role}
+                    gap="7px"
+                    minWidth={0}
                   >
-                    {value.numerator !== null
-                      ? `${value.numerator} ${baseline ? formatFunnelUnit(value.unit) : 'users'}`
-                      : 'N/A'}
-                  </Typography>
-                  <Typography
-                    sx={{ color: '#A3A3A3', fontSize: 11, minHeight: 32 }}
-                  >
-                    {displayLabel(stage)}
-                  </Typography>
-                  <Box
-                    aria-label={`${displayLabel(stage)} ${rate}`}
-                    sx={{
-                      height: 7,
-                      borderRadius: 4,
-                      bgcolor: '#414141',
-                      overflow: 'visible',
-                    }}
-                  >
-                    <Box
+                    <Typography
                       sx={{
-                        width: `${trackWidth}%`,
-                        height: '100%',
-                        minWidth: trackWidth > 0 ? 3 : 0,
-                        borderRadius: 4,
-                        bgcolor: token.color,
-                        boxShadow: token.outline
-                          ? `0 0 0 1px ${token.outline}`
-                          : 'none',
+                        color: available ? '#F5F5F5' : '#F0A63A',
+                        fontFamily: mono,
+                        fontSize: 18,
+                        fontWeight: 700,
+                        overflowWrap: 'anywhere',
                       }}
-                    />
-                  </Box>
-                  <Typography
-                    sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 10 }}
-                  >
-                    {rate}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: available ? '#B8B8BA' : '#F0A63A',
-                      fontSize: 9,
-                    }}
-                  >
-                    {available
-                      ? token.cue
-                      : `N/A · ${stripNaPrefix(value.naReason ?? token.cue)}`}
-                  </Typography>
-                </Stack>
-              );
-            })}
+                    >
+                      {value.numerator !== null
+                        ? `${value.numerator} ${baseline ? formatFunnelUnit(value.unit) : 'users'}`
+                        : 'N/A'}
+                    </Typography>
+                    <Typography
+                      sx={{ color: '#A3A3A3', fontSize: 11, minHeight: 32 }}
+                    >
+                      {displayLabel(stage)}
+                    </Typography>
+                    <Box
+                      aria-label={`${displayLabel(stage)} ${rate}`}
+                      sx={{
+                        height: 7,
+                        borderRadius: 4,
+                        bgcolor: '#414141',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: `${trackWidth}%`,
+                          height: '100%',
+                          minWidth: trackWidth > 0 ? 3 : 0,
+                          borderRadius: 4,
+                          bgcolor: token.color,
+                          boxShadow: token.outline
+                            ? `0 0 0 1px ${token.outline}`
+                            : 'none',
+                        }}
+                      />
+                    </Box>
+                    <Typography
+                      sx={{ color: '#8B8B8F', fontFamily: mono, fontSize: 10 }}
+                    >
+                      {rate}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: available ? '#B8B8BA' : '#F0A63A',
+                        fontSize: 9,
+                      }}
+                    >
+                      {available
+                        ? token.cue
+                        : `N/A · ${stripNaPrefix(value.naReason ?? token.cue)}`}
+                    </Typography>
+                  </Stack>
+                );
+              }
+            )}
           </Box>
         </Box>
       )}

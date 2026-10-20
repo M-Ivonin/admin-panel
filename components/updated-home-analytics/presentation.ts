@@ -255,14 +255,6 @@ export function metricValues(
   );
 }
 
-export function hasValidStageOrdinals(
-  values: UpdatedHomeMetricValue[]
-): boolean {
-  return values.every(
-    (value, index) => value.dimensions.stageOrdinal === index + 1
-  );
-}
-
 export function stageRole(
   stage: string,
   value: UpdatedHomeMetricValue
