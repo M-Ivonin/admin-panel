@@ -32,6 +32,12 @@ import {
   aggregateRate,
   formatHomeAnalyticsRate,
 } from '@/lib/home-analytics-summary';
+import {
+  projectRetention,
+  RETENTION_RETURN_DAYS,
+  type RetentionActionGroup,
+  type RetentionMeans,
+} from '@/lib/home-analytics-retention';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 
@@ -235,10 +241,8 @@ function DashboardProjection({
                   metric.definition.key === 'd1_d7_d30_retention' &&
                   orderedValues.length > 0
                 ) {
-                  const eligibleValues = orderedValues.filter(
-                    (value) => typeof value.dimensions.coreAction === 'string'
-                  );
-                  if (eligibleValues.length === 0) {
+                  const retentionGroups = projectRetention(orderedValues);
+                  if (retentionGroups.length === 0) {
                     return (
                       <Alert key={metric.definition.key} severity="info">
                         No eligible registered cohorts with a completed
@@ -246,22 +250,13 @@ function DashboardProjection({
                       </Alert>
                     );
                   }
-                  const actions = new Map<string, UpdatedHomeMetricValue[]>();
-                  for (const value of eligibleValues) {
-                    const action =
-                      typeof value.dimensions.coreAction === 'string'
-                        ? value.dimensions.coreAction
-                        : 'Unknown action';
-                    const group = actions.get(action) ?? [];
-                    group.push(value);
-                    actions.set(action, group);
-                  }
-                  return [...actions].map(([action, actionValues]) => (
+                  return retentionGroups.map((retention) => (
                     <GroupedMetric
-                      key={`${metric.definition.key}-${action}`}
-                      title={displayLabel(action)}
+                      key={`${metric.definition.key}-${retention.action}`}
+                      title={displayLabel(retention.action)}
                       definition={metric.definition}
-                      values={actionValues}
+                      values={retention.rows}
+                      retention={retention}
                     />
                   ));
                 }
@@ -294,10 +289,12 @@ function GroupedMetric({
   title,
   definition,
   values,
+  retention,
 }: {
   title?: string;
   definition: UpdatedHomeMetricDefinition;
   values: UpdatedHomeMetricValue[];
+  retention?: RetentionActionGroup;
 }) {
   const numeratorDefinition =
     values[0]?.formula.numerator ?? definition.numerator;
@@ -306,7 +303,7 @@ function GroupedMetric({
   const distinctUsers = /distinct users/i.test(
     `${numeratorDefinition} ${denominatorDefinition ?? ''}`
   );
-  const isRetention = definition.key === 'd1_d7_d30_retention';
+  const isRetention = retention !== undefined;
   const summary = metricSummary(definition.key, values);
   const summaryToken =
     ANALYTICS_ROLE_TOKENS[
@@ -324,27 +321,29 @@ function GroupedMetric({
   const isModuleBreakdown = values.every(
     (value) => typeof value.dimensions.moduleName === 'string'
   );
-  const dimensionKeys = isModuleBreakdown
-    ? [
-        'moduleName',
-        'modulePosition',
-        'moduleVariant',
-        'accessState',
-        'layoutPolicyVersion',
-        'compositionSignature',
-        'compositionModules',
-      ].filter((key) => values.some((value) => key in value.dimensions))
-    : Object.keys(values[0]?.dimensions ?? {}).filter(
-        (key) => !isRetention || key !== 'coreAction'
+  const dimensionKeys =
+    retention?.dimensionKeys ??
+    (isModuleBreakdown
+      ? [
+          'moduleName',
+          'modulePosition',
+          'moduleVariant',
+          'accessState',
+          'layoutPolicyVersion',
+          'compositionSignature',
+          'compositionModules',
+        ].filter((key) => values.some((value) => key in value.dimensions))
+      : Object.keys(values[0]?.dimensions ?? {}));
+  const displayedValues =
+    retention?.rows ??
+    [...values]
+      .filter(
+        (value) =>
+          !isCollectionBreakdown || showZeroCollections || value.value !== 0
+      )
+      .sort((left, right) =>
+        compareDimensionBreakdowns(left, right, dimensionKeys)
       );
-  const displayedValues = [...values]
-    .filter(
-      (value) =>
-        !isCollectionBreakdown || showZeroCollections || value.value !== 0
-    )
-    .sort((left, right) =>
-      compareDimensionBreakdowns(left, right, dimensionKeys)
-    );
   const breakdownColumns =
     isRetention && dimensionKeys.length === 2
       ? {
@@ -417,8 +416,8 @@ function GroupedMetric({
               ) : null}
             </Stack>
           </Stack>
-          {isRetention ? (
-            <RetentionSummary values={values} />
+          {retention ? (
+            <RetentionSummary means={retention.means} />
           ) : (
             <Stack gap="2px" minWidth={0}>
               <Typography
@@ -573,23 +572,15 @@ function GroupedMetric({
   );
 }
 
-function RetentionSummary({ values }: { values: UpdatedHomeMetricValue[] }) {
+function RetentionSummary({ means }: { means: RetentionMeans }) {
   return (
     <Stack gap="6px" minWidth={0}>
       <Typography sx={{ color: '#8B8B8F', fontSize: 9 }}>
         Average across cohorts · excludes N/A
       </Typography>
       <Stack direction="row" gap={2}>
-        {[1, 7, 30].map((day) => {
-          const observed = values.filter(
-            (value) =>
-              value.dimensions.returnDay === day && value.value !== null
-          );
-          const average =
-            observed.length === 0
-              ? null
-              : observed.reduce((sum, value) => sum + (value.value ?? 0), 0) /
-                observed.length;
+        {RETENTION_RETURN_DAYS.map((day) => {
+          const average = means[day];
           return (
             <Stack key={day} gap="2px">
               <ColumnLabel>{`D${day}`}</ColumnLabel>
