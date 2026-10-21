@@ -121,3 +121,73 @@ it('shows independent completed-cohort periods and an honest empty state', () =>
   expect(screen.getByText(/No eligible registered cohorts/i)).toBeVisible();
   expect(screen.queryByText('Unknown action')).not.toBeInTheDocument();
 });
+
+it('orders original cohort rows by date then numeric return day without weighting the header', () => {
+  const values = [
+    observation('collection_page_viewed', '2026-10-02', 30, 30),
+    {
+      ...observation('collection_page_viewed', '2026-10-01', 7, 80),
+      denominator: 1000,
+    },
+    {
+      ...observation('collection_page_viewed', '2026-10-01', 1, 20),
+      denominator: 10,
+    },
+    observation('collection_page_viewed', '2026-10-02', 1, 60),
+    observation('collection_page_viewed', '2026-10-01', 30, null),
+  ];
+  render(
+    <UpdatedHomeAnalyticsSection
+      label="Retention"
+      dashboards={[
+        { ...dashboard, metrics: [{ ...dashboard.metrics[0], values }] },
+      ]}
+    />
+  );
+  const header = screen.getByRole('button', {
+    name: 'Show Collection page viewed breakdown',
+  });
+  expect(header).toHaveTextContent('D140%');
+  expect(header).toHaveTextContent('D780%');
+  expect(header).toHaveTextContent('D3030%');
+  fireEvent.click(header);
+  expect(
+    screen
+      .getAllByTestId('updated-home-metric-value-row')
+      .map((row) => Array.from(row.children).map((cell) => cell.textContent))
+  ).toEqual([
+    ['2026-10-01', '1', '20%', 'percent'],
+    ['2026-10-01', '7', '80%', 'percent'],
+    ['2026-10-01', '30', 'N/ANo data', 'percent'],
+    ['2026-10-02', '1', '60%', 'percent'],
+    ['2026-10-02', '30', '30%', 'percent'],
+  ]);
+});
+
+it('retains an unavailable action with separate N/A day headers and original rows', () => {
+  render(
+    <UpdatedHomeAnalyticsSection
+      label="Retention"
+      dashboards={[
+        {
+          ...dashboard,
+          metrics: [
+            {
+              ...dashboard.metrics[0],
+              values: [
+                observation('collection_page_viewed', '2026-10-01', 1, null),
+              ],
+            },
+          ],
+        },
+      ]}
+    />
+  );
+  const header = screen.getByRole('button', {
+    name: 'Show Collection page viewed breakdown',
+  });
+  expect(header).toHaveTextContent('D1N/AD7N/AD30N/A');
+  fireEvent.click(header);
+  expect(screen.getByText('No data')).toBeVisible();
+  expect(screen.getByText('2026-10-01')).toBeVisible();
+});
