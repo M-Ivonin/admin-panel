@@ -70,6 +70,67 @@ it('shows an empty cohort without a 100% baseline and retains known zero counts'
     screen.getAllByTestId('updated-home-funnel-stage')[2]
   ).toHaveTextContent('N/A');
 });
+it('shows observed zero overall conversion while the previous-stage rate is unavailable', () => {
+  render(
+    <UpdatedHomeFunnel
+      title="Top Picks"
+      meta="Previous-stage rates"
+      values={[
+        value(
+          100,
+          100,
+          { stage: 'preview_impression', stageOrdinal: 1 },
+          'users'
+        ),
+        value(0, 0, { stage: 'preview_click', stageOrdinal: 2 }),
+        value(0, null, { stage: 'full_analysis_opened', stageOrdinal: 3 }),
+      ]}
+    />
+  );
+  expect(screen.getByText('Overall conversion: 0%')).toBeInTheDocument();
+  expect(
+    screen.getByText('0 / 100 users · first → last stage')
+  ).toBeInTheDocument();
+  const stages = screen.getAllByTestId('updated-home-funnel-stage');
+  expect(within(stages[1]).getByText('0%')).toBeInTheDocument();
+  expect(within(stages[2]).getByText('0 users')).toBeInTheDocument();
+  expect(
+    within(stages[2]).getByText('N/A · No prior cohort.')
+  ).toBeInTheDocument();
+});
+it('keeps invalid response order and unclamped rate labels while clamping tracks', () => {
+  render(
+    <UpdatedHomeFunnel
+      title="Full Access"
+      meta="Previous-stage rates"
+      values={[
+        value(
+          100,
+          100,
+          { stage: 'offer_impression', stageOrdinal: 2 },
+          'users'
+        ),
+        value(120, 120.5, { stage: 'offer_click', stageOrdinal: 1 }),
+        value(0, -5, { stage: 'verified_purchase', stageOrdinal: 3 }),
+      ]}
+    />
+  );
+  expect(screen.getByText('Overall conversion: N/A')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Backend stage order is invalid'
+  );
+  expect(
+    screen
+      .getAllByTestId('updated-home-funnel-stage')
+      .map((stage) => stage.dataset.stage)
+  ).toEqual(['offer_impression', 'offer_click', 'verified_purchase']);
+  expect(
+    screen.getByLabelText('Offer click 120.5%').firstElementChild
+  ).toHaveStyle({ width: '100%' });
+  expect(
+    screen.getByLabelText('Verified purchase -5%').firstElementChild
+  ).toHaveStyle({ width: '0%' });
+});
 it('renders latency percentiles in seconds alongside the main latency value', () => {
   render(
     <UpdatedHomeAnalyticsSection
