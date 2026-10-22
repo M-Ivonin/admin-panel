@@ -287,7 +287,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
                     numerator: 'distinct users with module impression',
                     denominator: 'distinct users with settled Home view',
                   },
-                  dimensions: { moduleName: 'feed', modulePosition: 7 },
+                  dimensions: { modulePosition: 10, moduleName: 'feed' },
                   numerator: 1,
                   denominator: 6,
                   value: 16.67,
@@ -359,7 +359,7 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
     expect(rows.map((row) => row.textContent)).toEqual([
       expect.stringContaining('Access status116.67%percent'),
       expect.stringContaining('Feed616.67%percent'),
-      expect.stringContaining('Feed716.67%percent'),
+      expect.stringContaining('Feed1016.67%percent'),
     ]);
     expect(within(metric).queryByText(/Module Name:/)).not.toBeInTheDocument();
     expect(
@@ -524,6 +524,8 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       within(metric).getAllByTestId('updated-home-metric-value-row')
     ).toHaveLength(2);
     expect(within(metric).queryByText('League:1')).not.toBeInTheDocument();
+    expect(within(metric).getByText('La Liga Picks')).toBeInTheDocument();
+    expect(within(metric).getByText('N/A')).toBeInTheDocument();
 
     fireEvent.click(
       within(metric).getByRole('button', {
@@ -539,6 +541,10 @@ describe('UpdatedHomeAnalyticsDashboard', () => {
       within(metric).getAllByTestId('updated-home-metric-value-row')
     ).toHaveLength(3);
     expect(within(metric).getByText('League:1')).toBeInTheDocument();
+    expect(
+      within(metric).getByText('1 converting · 1 with 0% · 1 N/A')
+    ).toBeInTheDocument();
+    expect(within(metric).getByText('La Liga Picks')).toBeInTheDocument();
     expect(
       within(metric).getByRole('button', { name: 'Hide 0% collections' })
     ).toBeInTheDocument();
