@@ -690,6 +690,13 @@ export default function UsersPage() {
                             >
                               {user.email || '-'}
                             </Typography>
+                            <Button
+                              component={Link}
+                              size="small"
+                              href={`/dashboard/app-events-analytics?tab=time&userId=${encodeURIComponent(user.id)}`}
+                            >
+                              Time in app
+                            </Button>
                             {user.telegram_username && (
                               <Typography variant="caption" color="primary">
                                 @{user.telegram_username}

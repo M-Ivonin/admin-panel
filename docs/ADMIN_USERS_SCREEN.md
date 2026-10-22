@@ -84,3 +84,21 @@ from the manual grant's own expiry. Backend fallback and configuration/rollback
 rules are owned by
 [`UPDATED_HOME_COMMERCE_ENGINE.md`](../../tipsterBro-bakend/docs/UPDATED_HOME_COMMERCE_ENGINE.md).
 Removing the admin button is a safe UI rollback; it does not revoke issued rights.
+
+## Time in app
+
+Each user row links to **App Events → Time in app**, scoped to that canonical
+account. The report owns independent UTC date controls and does not share the
+App Events event/category filters. Its daily totals always cover all eligible
+accounts; the user selection scopes only the detail table.
+
+The report uses imported Firebase/BigQuery engagement. Known simulator hardware
+is always omitted from every time-report view. Shared manual email/installation
+exclusions are removed by default. Include manual exclusions restores only those
+manual rules for investigation. Exclusions apply to this report,
+including its imported history; they do not delete or filter Firebase itself.
+Anonymous and unmatched-ID time is separate from the identified-account average.
+Simultaneous use of multiple installations is summed, not deduplicated.
+Source refresh, missing/preliminary days, configuration failures and freshness
+are surfaced explicitly. See backend `docs/USER_ENGAGEMENT_REPORT.md` for import,
+access, storage and activation requirements.
