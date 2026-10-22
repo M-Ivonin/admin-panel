@@ -87,7 +87,7 @@ Removing the admin button is a safe UI rollback; it does not revoke issued right
 
 ## Time in app
 
-Each user row links to **App Events → Time in app**, scoped to that canonical
+Each user row links to **Time in app** (`/dashboard/time-in-app`), scoped to that canonical
 account. The report owns independent UTC date controls and does not share the
 App Events event/category filters. Its daily totals always cover all eligible
 accounts; the user selection scopes only the detail table.

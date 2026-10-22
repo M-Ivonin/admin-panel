@@ -238,7 +238,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
             action={
               <Button
                 component={Link}
-                href="/dashboard/app-events-analytics?tab=time"
+                href="/dashboard/time-in-app"
               >
                 All users
               </Button>

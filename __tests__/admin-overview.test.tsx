@@ -257,7 +257,14 @@ it('shows all eight reports, complete navigation and each headline metric once',
   const navigation = screen.getByRole('navigation', {
     name: 'Admin navigation',
   });
-  expect(within(navigation).getAllByRole('link')).toHaveLength(17);
+  const navigationLinks = within(navigation).getAllByRole('link');
+  expect(navigationLinks).toHaveLength(18);
+  const appEventsLink = within(navigation).getByRole('link', { name: 'App Events' });
+  const timeInAppLink = within(navigation).getByRole('link', { name: 'Time in app' });
+  expect(timeInAppLink).toHaveAttribute('href', '/dashboard/time-in-app');
+  expect(navigationLinks.indexOf(timeInAppLink)).toBe(
+    navigationLinks.indexOf(appEventsLink) + 1
+  );
   expect(
     within(navigation).getByRole('link', { name: 'Overview' })
   ).toHaveAttribute('aria-current', 'page');

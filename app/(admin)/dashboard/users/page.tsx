@@ -693,7 +693,7 @@ export default function UsersPage() {
                             <Button
                               component={Link}
                               size="small"
-                              href={`/dashboard/app-events-analytics?tab=time&userId=${encodeURIComponent(user.id)}`}
+                              href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
                             >
                               Time in app
                             </Button>

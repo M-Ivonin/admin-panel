@@ -12,6 +12,7 @@ import {
   ChevronRight,
   CircleHelp,
   ClipboardList,
+  Clock,
   CreditCard,
   Flag,
   Gauge,
@@ -40,6 +41,11 @@ const groups = [
         label: 'App Events',
         href: '/dashboard/app-events-analytics',
         icon: BarChart3,
+      },
+      {
+        label: 'Time in app',
+        href: '/dashboard/time-in-app',
+        icon: Clock,
       },
       {
         label: 'Onboarding',
