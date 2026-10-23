@@ -1,4 +1,5 @@
 import {
+  act,
   render,
   screen,
   fireEvent,
@@ -122,4 +123,72 @@ it('shows read failures without rendering stale totals', async () => {
   render(<TimeInAppReport />);
   expect(await screen.findByText('Access denied')).toBeInTheDocument();
   expect(screen.queryByText('Account One')).not.toBeInTheDocument();
+});
+it('clears the exclusion form after saving and shows refreshed exclusion rules', async () => {
+  const saved = {
+    id: 'rule',
+    kind: 'email' as const,
+    value: 'test@example.com',
+    userId: null,
+  };
+  jest
+    .mocked(getEngagementReport)
+    .mockResolvedValueOnce(report)
+    .mockResolvedValue({ ...report, exclusions: [saved] });
+  render(<TimeInAppReport />);
+  await screen.findByText('Account One');
+  fireEvent.click(screen.getByRole('button', { name: 'Exclusions' }));
+  const dialog = screen.getByRole('dialog', { name: 'Analytics exclusions' });
+  fireEvent.change(within(dialog).getByLabelText('Account email'), {
+    target: { value: 'test@example.com' },
+  });
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Add exclusion' })
+  );
+  expect(
+    await within(dialog).findByText('email: test@example.com')
+  ).toBeInTheDocument();
+  expect(within(dialog).getByLabelText('Account email')).toHaveValue('');
+  expect(within(dialog).getByText('Exclusion saved.')).toBeInTheDocument();
+});
+it('closes installation details when a fast mutation reload replaces the report', async () => {
+  jest
+    .mocked(getEngagementReport)
+    .mockImplementation(async () => ({ ...report }));
+  render(<TimeInAppReport />);
+  await screen.findByText('Account One');
+  fireEvent.click(screen.getByRole('button', { name: 'View installations' }));
+  expect(
+    screen.getByRole('dialog', { name: /Installations · Account One/ })
+  ).toBeInTheDocument();
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exclude account by email' })
+    );
+  });
+  expect(
+    screen.queryByRole('button', { name: 'Exclude account by email' })
+  ).not.toBeInTheDocument();
+});
+it('returns to the first user page when a fast mutation reload replaces the report', async () => {
+  const users = Array.from({ length: 21 }, (_, index) => ({
+    ...report.users[0],
+    userId: `user-${index}`,
+    name: `Account ${index}`,
+  }));
+  jest
+    .mocked(getEngagementReport)
+    .mockImplementation(async () => ({ ...report, users }));
+  render(<TimeInAppReport />);
+  await screen.findByText('Account 0');
+  fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
+  expect(screen.getByText('Account 20')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'View installations' }));
+  await act(async () => {
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Exclude account by email' })
+    );
+  });
+  expect(screen.getByText('Account 0')).toBeInTheDocument();
+  expect(screen.queryByText('Account 20')).not.toBeInTheDocument();
 });

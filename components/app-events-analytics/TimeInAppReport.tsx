@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -27,15 +27,11 @@ import {
   Typography,
 } from '@mui/material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
-import {
-  addEngagementExclusion,
+import type {
   EngagementAccount,
   EngagementExclusion,
-  EngagementReport,
-  getEngagementReport,
-  removeEngagementExclusion,
-  syncEngagement,
 } from '@/lib/api/user-engagement';
+import { useEngagementReport } from './useEngagementReport';
 
 /** Formats elapsed engagement with minutes and seconds, including values over an hour. */
 export function formatEngagement(ms: number | null): string {
@@ -53,82 +49,42 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
     new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
   );
   const [includeExcluded, setIncludeExcluded] = useState(false);
-  const [data, setData] = useState<EngagementReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const {
+    data,
+    loading,
+    busy,
+    error,
+    notice,
+    valid,
+    refresh,
+    importReport,
+    addExclusion,
+    excludeAccount,
+    excludeInstallation,
+    removeExclusion,
+  } = useEngagementReport({ from, to, includeExcluded, userId });
   const [day, setDay] = useState(to);
   const [page, setPage] = useState(0);
   const [account, setAccount] = useState<EngagementAccount | null>(null);
   const [settings, setSettings] = useState(false);
   const [kind, setKind] = useState<EngagementExclusion['kind']>('email');
   const [value, setValue] = useState('');
-  const revision = useRef(0);
-  const mounted = useRef(true);
-  const valid =
-    /^\d{4}-\d{2}-\d{2}$/.test(from) &&
-    /^\d{4}-\d{2}-\d{2}$/.test(to) &&
-    from <= to &&
-    Date.parse(to) - Date.parse(from) < 90 * 86_400_000;
-
-  const load = useCallback(async () => {
-    const id = ++revision.current;
-    setLoading(true);
-    setError(null);
-    setData(null);
+  useEffect(() => {
     setAccount(null);
     setPage(0);
-    if (!valid) {
-      setError('Choose a valid range of up to 90 days.');
-      setLoading(false);
-      return;
-    }
-    try {
-      const result = await getEngagementReport({
-        from,
-        to,
-        includeExcluded,
-        userId,
-      });
-      if (!mounted.current || revision.current !== id) return;
-      setData(result);
-      setDay((current) =>
-        result.days.some((d) => d.day === current) ? current : to
-      );
-    } catch (e) {
-      if (mounted.current && revision.current === id)
-        setError(
-          e instanceof Error ? e.message : 'Could not load time in app.'
-        );
-    } finally {
-      if (mounted.current && revision.current === id) setLoading(false);
-    }
-  }, [from, to, includeExcluded, userId, valid]);
+  }, [data]);
   useEffect(() => {
-    mounted.current = true;
-    void load();
-    return () => {
-      mounted.current = false;
-    };
-  }, [load]);
-
-  /** Applies one explicit admin action, then reloads the projection using saved exclusions. */
-  async function mutate(action: () => Promise<unknown>, success: string) {
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      await action();
-      setNotice(success);
-      setValue('');
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Action failed.');
-    } finally {
-      setBusy(false);
+    if (data) {
+      setDay((current) =>
+        data.days.some((d) => d.day === current) ? current : to
+      );
     }
-  }
+  }, [data, to]);
+
+  useEffect(() => {
+    if (notice) setValue('');
+  }, [notice]);
+
   const rows = data?.users.filter((u) => u.day === day) ?? [];
   const selected = data?.days.find((d) => d.day === day);
   const stamp = data?.days
@@ -193,7 +149,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => void load()}
+              onClick={() => void refresh()}
               disabled={busy || loading}
             >
               Refresh view
@@ -201,19 +157,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
             <Button
               variant="contained"
               disabled={busy || loading || !valid || !data?.configured}
-              onClick={() =>
-                void mutate(async () => {
-                  const result = await syncEngagement(from, to);
-                  if (result.busy)
-                    throw new Error(
-                      'An import is already running. Refresh the view shortly.'
-                    );
-                  if (!result.importedDays)
-                    throw new Error(
-                      'No exported days are available in this range yet.'
-                    );
-                }, 'BigQuery import completed.')
-              }
+              onClick={() => void importReport()}
             >
               {busy ? 'Working…' : 'Import from BigQuery'}
             </Button>
@@ -459,10 +403,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
                 variant="outlined"
                 disabled={busy}
                 onClick={() =>
-                  void mutate(
-                    () => addEngagementExclusion('email', account.email!),
-                    'Account excluded from the report.'
-                  )
+                  void excludeAccount(account.email!)
                 }
               >
                 Exclude account by email
@@ -485,14 +426,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
                   <Button
                     disabled={busy || i.installationId === '[unavailable]'}
                     onClick={() =>
-                      void mutate(
-                        () =>
-                          addEngagementExclusion(
-                            'installation',
-                            i.installationId
-                          ),
-                        'Installation excluded from the report.'
-                      )
+                      void excludeInstallation(i.installationId)
                     }
                   >
                     Exclude installation
@@ -548,10 +482,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
                 sx={{ minWidth: { sm: 140 }, flexShrink: 0 }}
                 disabled={busy || !value.trim()}
                 onClick={() =>
-                  void mutate(
-                    () => addEngagementExclusion(kind, value),
-                    'Exclusion saved.'
-                  )
+                  void addExclusion(kind, value)
                 }
               >
                 Add exclusion
@@ -571,10 +502,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
                 <Button
                   disabled={busy}
                   onClick={() =>
-                    void mutate(
-                      () => removeEngagementExclusion(e.id),
-                      'Exclusion removed.'
-                    )
+                    void removeExclusion(e.id)
                   }
                 >
                   Remove
@@ -610,14 +538,7 @@ export function TimeInAppReport({ userId }: { userId?: string }) {
                   size="small"
                   disabled={busy || i.installationId === '[unavailable]'}
                   onClick={() =>
-                    void mutate(
-                      () =>
-                        addEngagementExclusion(
-                          'installation',
-                          i.installationId
-                        ),
-                      'Installation excluded from the report.'
-                    )
+                    void excludeInstallation(i.installationId)
                   }
                 >
                   Exclude
