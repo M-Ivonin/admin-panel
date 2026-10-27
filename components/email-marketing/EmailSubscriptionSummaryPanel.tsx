@@ -293,7 +293,7 @@ export function EmailSubscriptionSummaryPanel({
                     <TableRow key={row.attemptNumber}>
                       <TableCell component="th" scope="row">
                         {row.attemptNumber === 1
-                          ? 'First · 3 minutes'
+                          ? 'First · 1 minute'
                           : row.attemptNumber === 2
                             ? 'Second · +7 days'
                             : 'Third · +30 days'}
