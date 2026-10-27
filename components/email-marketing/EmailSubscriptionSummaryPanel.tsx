@@ -258,7 +258,10 @@ export function EmailSubscriptionSummaryPanel({
               <Table
                 size="small"
                 aria-label="Email consent reminder funnel"
-                sx={{ minWidth: 1100 }}
+                sx={{
+                  minWidth: 1100,
+                  '& th, & td': { px: 1.5, py: 1.25 },
+                }}
               >
                 <TableHead>
                   <TableRow>
