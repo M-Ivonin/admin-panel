@@ -178,3 +178,8 @@ rows with delivery, complaint and unsubscribe rates. Country is the last known
 country snapshotted at audience formation, independent of the offer market
 label. Missing country (including older deliveries) displays `Unknown`; the
 admin does not infer or recompute geographic totals.
+
+
+## Consent reminder funnel
+
+Email subscriptions also shows the backend `promptFunnel` projection: first invitation at three minutes, second at +7 days and third at +30 days. Rows count unique accounts for each actual invitation, with shown, dismissed, clicked, browser-opened, open-failed, preferences-loaded, topics-selected, confirmation-requested and confirmed stages. Confirmed/shown percent comes from the backend; an empty denominator is displayed as a dash. Counts are all-time since tracking began, and later DOI confirmations update their original invitation. Older backends show an explicit unavailable message rather than invented zeros. This is token attribution, not a claim of causal uplift. No historical prompt data is fabricated.

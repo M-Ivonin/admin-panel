@@ -360,7 +360,21 @@ export interface SendGridTemplateReference {
 }
 
 export type EmailSubscriptionCounts = { confirmed: number; pending: number };
+export type EmailConsentPromptFunnel = {
+  attemptNumber: number;
+  viewed: number;
+  dismissed: number;
+  opened: number;
+  browserOpened: number;
+  launchFailed: number;
+  manageOpened: number;
+  selected: number;
+  confirmationRequested: number;
+  confirmed: number;
+  confirmationRate: number | null;
+};
 export type EmailSubscriptionSummary = {
+  promptFunnel?: EmailConsentPromptFunnel[];
   totals: {
     predictions: EmailSubscriptionCounts;
     productUpdates: EmailSubscriptionCounts;

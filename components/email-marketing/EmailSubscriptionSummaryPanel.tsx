@@ -243,6 +243,94 @@ export function EmailSubscriptionSummaryPanel({
           ) : null}
         </TableContainer>
       ) : null}
+      {!loading && !error && summary ? (
+        <Box sx={{ px: 2, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Email consent reminders
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            All time since tracking started. Unique accounts per reminder.
+            Confirmations are linked through the preference and confirmation
+            tokens, including confirmations made later.
+          </Typography>
+          {summary.promptFunnel ? (
+            <TableContainer>
+              <Table
+                size="small"
+                aria-label="Email consent reminder funnel"
+                sx={{ minWidth: 1100 }}
+              >
+                <TableHead>
+                  <TableRow>
+                    {[
+                      'Reminder',
+                      'Shown',
+                      'Dismissed',
+                      'Clicked',
+                      'Browser opened',
+                      'Open failed',
+                      'Preferences loaded',
+                      'Topics selected',
+                      'Confirmation requested',
+                      'Confirmed',
+                      'Confirmed / shown',
+                    ].map((label) => (
+                      <TableCell
+                        key={label}
+                        align={label === 'Reminder' ? 'left' : 'center'}
+                        sx={{ fontWeight: 600 }}
+                      >
+                        {label}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {summary.promptFunnel.map((row) => (
+                    <TableRow key={row.attemptNumber}>
+                      <TableCell component="th" scope="row">
+                        {row.attemptNumber === 1
+                          ? 'First · 3 minutes'
+                          : row.attemptNumber === 2
+                            ? 'Second · +7 days'
+                            : 'Third · +30 days'}
+                      </TableCell>
+                      {[
+                        row.viewed,
+                        row.dismissed,
+                        row.opened,
+                        row.browserOpened,
+                        row.launchFailed,
+                        row.manageOpened,
+                        row.selected,
+                        row.confirmationRequested,
+                        row.confirmed,
+                      ].map((count, index) => (
+                        <TableCell
+                          key={index}
+                          align="center"
+                          sx={{ fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {count.toLocaleString('en')}
+                        </TableCell>
+                      ))}
+                      <TableCell align="center">
+                        {row.confirmationRate === null
+                          ? '—'
+                          : `${row.confirmationRate.toLocaleString('en', { maximumFractionDigits: 2 })}%`}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Reminder tracking is not available on this backend yet.
+            </Typography>
+          )}
+        </Box>
+      ) : null}
     </Card>
   );
 }
