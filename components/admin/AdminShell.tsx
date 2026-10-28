@@ -73,6 +73,7 @@ const groups = [
     label: 'Growth',
     items: [
       { label: 'Users', href: '/dashboard/users', icon: Users },
+      { label: 'Policy outcomes', href: '/dashboard/user-experiments', icon: BarChart3 },
       {
         label: 'Revenue Ledger',
         href: '/dashboard/revenue-ledger',
