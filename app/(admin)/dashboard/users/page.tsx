@@ -693,6 +693,13 @@ export default function UsersPage() {
                             <Button
                               component={Link}
                               size="small"
+                              href={`/dashboard/users/${encodeURIComponent(user.id)}/portrait`}
+                            >
+                              Portrait
+                            </Button>
+                            <Button
+                              component={Link}
+                              size="small"
                               href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
                             >
                               Time in app

@@ -10,6 +10,7 @@ import {
   addSupportPrivateNote,
   changeSupportTicketStatus,
   deleteSupportTicket,
+  recordPortraitProcessingObjection,
   getSupportTicketAttachment,
   getSupportTicket,
   replyToSupportTicketUser,
@@ -47,6 +48,7 @@ jest.mock('@/lib/api/support', () => {
     changeSupportTicketPriority: jest.fn(),
     changeSupportTicketStatus: jest.fn(),
     deleteSupportTicket: jest.fn(),
+    recordPortraitProcessingObjection: jest.fn(),
     getSupportTicketAttachment: jest.fn(),
     getSupportTicket: jest.fn(),
     reconcileSupportTicketDeliveries: jest.fn(),
@@ -222,7 +224,9 @@ describe('SupportTicketDetail', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Delete ticket' })
     );
-    expect(screen.getByRole('dialog', { name: 'Delete ticket?' })).toBeVisible();
+    expect(
+      screen.getByRole('dialog', { name: 'Delete ticket?' })
+    ).toBeVisible();
     expect(deleteSupportTicket).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -400,4 +404,30 @@ describe('SupportTicketDetail', () => {
       expect(getSupportTicket).toHaveBeenCalledTimes(3);
     });
   });
+});
+
+it('requires explicit verified-request confirmation and binds the objection to the ticket account', async () => {
+  jest.mocked(getSupportTicket).mockResolvedValue(ticket);
+  jest.mocked(recordPortraitProcessingObjection).mockResolvedValue({});
+  render(<SupportTicketDetail ticketId={ticket.id} />);
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: 'Record portrait-processing objection',
+    })
+  );
+  expect(recordPortraitProcessingObjection).not.toHaveBeenCalled();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Confirm verified request' })
+  );
+  await waitFor(() =>
+    expect(recordPortraitProcessingObjection).toHaveBeenCalledWith(
+      ticket.id,
+      ticket.user.id
+    )
+  );
+  expect(
+    await screen.findByText(
+      'Portrait processing restricted; derived portraits removed.'
+    )
+  ).toBeInTheDocument();
 });

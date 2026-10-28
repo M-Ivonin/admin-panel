@@ -130,6 +130,8 @@ describe('UsersPage', () => {
     });
     render(<UsersPage />);
     const row = (await screen.findByText('Two devices')).closest('tr')!;
+    expect(within(row).getByRole('link', { name: 'Portrait' })).toHaveAttribute('href','/dashboard/users/two_devices/portrait');
+    expect(within(row).getByRole('link', { name: 'Time in app' })).toHaveAttribute('href','/dashboard/time-in-app?userId=two_devices');
     expect(within(row).getByText('1.1.318 (318)')).toBeVisible();
     expect(within(row).getByText('Android')).toBeVisible();
     expect(within(row).queryByText('1.1.400 (402)')).not.toBeInTheDocument();

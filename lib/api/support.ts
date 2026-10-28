@@ -303,3 +303,14 @@ export function retrySupportDelivery(deliveryId: string) {
     'POST'
   );
 }
+
+export function recordPortraitProcessingObjection(
+  ticketId: string,
+  userId: string
+) {
+  return command(
+    ticketPath(ticketId, '/portrait-processing-objection'),
+    'POST',
+    { user_id: userId, confirmed: true }
+  );
+}

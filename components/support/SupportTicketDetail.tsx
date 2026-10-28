@@ -33,6 +33,7 @@ import {
   changeSupportTicketPriority,
   changeSupportTicketStatus,
   deleteSupportTicket,
+  recordPortraitProcessingObjection,
   getSupportTicketAttachment,
   getSupportTicket,
   reconcileSupportTicketDeliveries,
@@ -105,6 +106,7 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
   const [status, setStatus] = useState<SupportStatus>('open');
   const [privateNote, setPrivateNote] = useState('');
   const [userReply, setUserReply] = useState('');
+  const [objectionDialogOpen, setObjectionDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const readBack = useCallback(
@@ -295,6 +297,15 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
                   label="User"
                   value={`${ticket.user.email ?? 'No email'} · ${ticket.user.id}`}
                 />
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  disabled={Boolean(busy)}
+                  onClick={() => setObjectionDialogOpen(true)}
+                  sx={{ my: 2 }}
+                >
+                  Record portrait-processing objection
+                </Button>
                 <KeyValue
                   label="Assigned team"
                   value={ticket.assigned_team ?? 'Unassigned'}
@@ -780,6 +791,48 @@ export function SupportTicketDetail({ ticketId }: { ticketId: string }) {
           </Box>
         </Stack>
       </Box>
+      <Dialog
+        open={objectionDialogOpen}
+        onClose={() => {
+          if (!busy) setObjectionDialogOpen(false);
+        }}
+      >
+        <DialogTitle>
+          Confirm verified portrait-processing objection?
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Use this only after verifying that this support request asks to stop
+            portrait processing for account {ticket.user.id}. This removes
+            derived portraits and prevents rebuilding. Channel preferences and
+            financial records keep their existing rules. There is no re-enable
+            action here.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            disabled={Boolean(busy)}
+            onClick={() => setObjectionDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            color="warning"
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void runCommand(
+                'portrait-objection',
+                'Portrait processing restricted; derived portraits removed.',
+                () =>
+                  recordPortraitProcessingObjection(ticketId, ticket.user.id),
+                () => setObjectionDialogOpen(false)
+              )
+            }
+          >
+            Confirm verified request
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={deleteDialogOpen}
         onClose={() => {

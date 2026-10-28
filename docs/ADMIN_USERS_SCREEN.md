@@ -102,3 +102,24 @@ Simultaneous use of multiple installations is summed, not deduplicated.
 Source refresh, missing/preliminary days, configuration failures and freshness
 are surfaced explicitly. See backend `docs/USER_ENGAGEMENT_REPORT.md` for import,
 access, storage and activation requirements.
+
+## Saved portrait
+
+Each Users row links to `/dashboard/users/:userId/portrait`. Time in app and Chat
+keep their existing destinations. The protected portrait renders the backend's
+saved 7/30-day features; it does not calculate activity, attribution or access.
+Snapshot identity, feature/schema version, as-of, timezone certainty, windows,
+watermarks, coverage and freshness remain visible. Daily gaps and unavailable
+session/foreground evidence show Unknown, distinct from measured zero. Heatmap
+hours describe recorded actions. Historical selection preserves the saved
+current-state cutoff instead of pretending it is today's state. Event details
+contain safe references only. Decision history is explicitly not enabled.
+
+The Support Ticket detail screen offers **Record portrait-processing objection**.
+An administrator must verify that the displayed account's existing request asks
+to stop processing, then confirm the dialog. Backend enforces ticket/account
+identity and persists suppression with purge; this action does not update channel
+preferences or financial records and offers no speculative re-enable control.
+
+The local source-backed acceptance procedure and desktop/narrow screenshots are
+in `docs/evaluation/2026-10-28-491-portrait.md`.
