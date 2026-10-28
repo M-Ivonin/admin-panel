@@ -113,7 +113,14 @@ watermarks, coverage and freshness remain visible. Daily gaps and unavailable
 session/foreground evidence show Unknown, distinct from measured zero. Heatmap
 hours describe recorded actions. Historical selection preserves the saved
 current-state cutoff instead of pretending it is today's state. Event details
-contain safe references only. Decision history is explicitly not enabled.
+contain safe references only. Saved shadow decisions are loaded separately under
+the same admin authorization. Each record shows its own pinned snapshot/window,
+current-owner cutoff, controlled reasons, model/validator outcome and exact
+material/template/version evidence. Refresh and frozen replay only read saved
+evidence; they never evaluate a new model decision or perform a user action.
+All communication and price capabilities remain disabled pending their separate
+integration proof. No saved history is a distinct empty state, not a prompt to
+start analysis. See `docs/evaluation/2026-10-28-shadow-decisions-492.md`.
 
 The Support Ticket detail screen offers **Record portrait-processing objection**.
 An administrator must verify that the displayed account's existing request asks

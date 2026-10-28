@@ -171,3 +171,116 @@ export async function getUserPortrait(
   }
   return response.json();
 }
+
+export interface PortraitShadowSelection {
+  candidateId: string;
+  reasonCode: string;
+  templateId: string;
+  locale: string;
+  channel: 'none';
+  dispatchAt: string;
+  expiresAt: string;
+  materialVersion: string;
+}
+export interface PortraitShadowDecision {
+  id: string;
+  snapshotId: string;
+  createdAt: string;
+  completedAt: string | null;
+  status: 'pending' | 'completed';
+  triggerKey: string;
+  mode: 'shadow';
+  dispatchEnabled: false;
+  source: 'baseline' | 'model';
+  baseline: PortraitShadowSelection;
+  selection: PortraitShadowSelection;
+  selectedCandidate: {
+    kind: string;
+    opportunityId: string;
+    proposedChannel: string;
+    disposition: string;
+    destination: string | null;
+    copy: { title: string; body: string } | null;
+  };
+  input: {
+    snapshot: {
+      id: string;
+      asOf: string;
+      schemaVersion: number;
+      featureVersion: string;
+    };
+    evaluatedAt: string;
+    targetApp: string;
+    versions: Record<string, string>;
+    facts: { selectedWindow: { days: number; from: string; to: string } };
+    current: {
+      capturedAt: string;
+      access: { authorization: string };
+      pendingCommerce: boolean;
+      activeInApp: boolean | null;
+      preferences: { effectivePredictions: string; revision: string };
+    };
+    exclusions: string[];
+    capabilities: Record<string, string>;
+  };
+  validator: { accepted: boolean; reasons: string[] };
+  model: {
+    status: string;
+    model: string;
+    responseId: string | null;
+    latencyMs: number;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    store: false;
+    retention: string;
+  };
+}
+export interface PortraitDecisionHistory {
+  mode: 'shadow';
+  dispatchEnabled: false;
+  status: 'available' | 'restricted';
+  capabilities: Record<string, string>;
+  items: PortraitShadowDecision[];
+}
+export interface PortraitDecisionReplay {
+  status: 'replayed' | 'version_unavailable';
+  decisionId?: string;
+  snapshotId?: string;
+  inputDigest?: string;
+  baseline?: PortraitShadowSelection;
+  savedSelection?: PortraitShadowSelection;
+  validator?: { accepted: boolean };
+  modelCalled: false;
+  dispatchEnabled: false;
+}
+
+/** Reads existing decision evidence without evaluating, publishing or sending. */
+export async function getUserPortraitDecisionHistory(
+  userId: string
+): Promise<PortraitDecisionHistory> {
+  return readDecisionEvidence<PortraitDecisionHistory>(userId, '');
+}
+
+/** Replays the frozen validator/rule comparison with no new provider request. */
+export async function replayUserPortraitDecision(
+  userId: string,
+  decisionId: string
+): Promise<PortraitDecisionReplay> {
+  return readDecisionEvidence<PortraitDecisionReplay>(
+    userId,
+    `/${encodeURIComponent(decisionId)}/replay`
+  );
+}
+
+async function readDecisionEvidence<T>(
+  userId: string,
+  suffix: string
+): Promise<T> {
+  const response = await adminAuthFetch({
+    path: `/app-events/admin/engagement/portraits/${encodeURIComponent(userId)}/decisions${suffix}`,
+    method: 'GET',
+  });
+  if (!response.ok)
+    throw new Error(`Could not load decision evidence (${response.status}).`);
+  return response.json();
+}
