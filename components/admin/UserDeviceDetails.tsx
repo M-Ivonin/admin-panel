@@ -15,6 +15,7 @@ import {
   TableContainer,
   Typography,
   Stack,
+  Tooltip,
 } from '@mui/material';
 import type { UserDevice } from '@/lib/api/users';
 
@@ -64,24 +65,33 @@ export function UserDeviceDetails({
   const version = latest.appVersion ?? 'Unknown version';
   return (
     <>
-      <Stack spacing={0.5} sx={{ mt: 0.5, minWidth: 160 }}>
-        <Typography variant="body2">
-          {version}
-          {latest.buildNumber ? ` (${latest.buildNumber})` : ''}
+      <Stack spacing={0.25} sx={{ mt: 0.5, minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          <span>
+            {version}
+            {latest.buildNumber ? ` (${latest.buildNumber})` : ''}
+          </span>
+          {' · '}
+          <span>{platformLabel(latest.platform)}</span>
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {platformLabel(latest.platform)}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Last seen: {lastSeenLabel(latest.lastSeenAt)} UTC
-        </Typography>
-        <Button
-          size="small"
-          sx={{ alignSelf: 'flex-start' }}
-          onClick={() => setOpen(true)}
+        <Tooltip
+          describeChild
+          title={`Last seen: ${lastSeenLabel(latest.lastSeenAt)} UTC`}
         >
-          Devices ({devices.length})
-        </Button>
+          <Button
+            size="small"
+            sx={{
+              alignSelf: 'flex-start',
+              minWidth: 0,
+              p: 0,
+              fontSize: 11,
+              lineHeight: 1.6,
+            }}
+            onClick={() => setOpen(true)}
+          >
+            Devices ({devices.length})
+          </Button>
+        </Tooltip>
       </Stack>
       <Dialog
         open={open}

@@ -19,7 +19,6 @@ import {
   TableRow,
   TablePagination,
   TableSortLabel,
-  Paper,
   TextField,
   Button,
   IconButton,
@@ -29,8 +28,14 @@ import {
   Box,
   Typography,
   Alert,
+  Tooltip,
 } from '@mui/material';
-import { Refresh, Search, Chat } from '@mui/icons-material';
+import {
+  Refresh,
+  Search,
+  Chat,
+  WorkspacePremiumOutlined,
+} from '@mui/icons-material';
 import { UserDeviceDetails } from '@/components/admin/UserDeviceDetails';
 import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
 import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
@@ -387,19 +392,31 @@ export default function UsersPage() {
         <Typography component="h1" variant="h4" fontWeight={700}>
           Users
         </Typography>
-        <Typography color="text.secondary">{total} total</Typography>
+        <Typography variant="body2" color="text.secondary">
+          {total.toLocaleString()} users · Browse accounts, activity and access
+        </Typography>
 
         {/* Main content */}
         <Box
           sx={{
             width: '100%',
             mx: 'auto',
-            py: 3,
+            mt: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: '12px',
+            bgcolor: 'background.paper',
+            overflow: 'hidden',
+            '& .MuiChip-root': {
+              height: 24,
+              fontSize: 11,
+              borderRadius: '6px',
+            },
           }}
         >
           {/* Retention Stage Filter Chips */}
           {retentionCounts && (
-            <Paper sx={{ p: 2, mb: 3 }}>
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Chip
                   label={`All (${total})`}
@@ -428,18 +445,18 @@ export default function UsersPage() {
                   );
                 })}
               </Box>
-            </Paper>
+            </Box>
           )}
 
           {/* Search and actions */}
-          <Paper sx={{ p: 2, mb: 3 }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', sm: 'row' },
-                gap: 2,
+                gap: 1.5,
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                flexWrap: 'wrap',
               }}
             >
               <TextField
@@ -447,7 +464,12 @@ export default function UsersPage() {
                 placeholder="Search by name, email, username..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                sx={{ width: { xs: '100%', sm: 384 } }}
+                sx={{
+                  flex: 1,
+                  minWidth: { xs: 0, sm: 250 },
+                  width: { xs: '100%', sm: 'auto' },
+                }}
+                inputProps={{ 'aria-label': 'Search users' }}
                 slotProps={{
                   input: {
                     startAdornment: (
@@ -461,6 +483,7 @@ export default function UsersPage() {
               <TextField
                 size="small"
                 placeholder="Filter by partner ID..."
+                inputProps={{ 'aria-label': 'Filter by partner ID' }}
                 value={partnerFilter}
                 onChange={(e) => {
                   setPartnerFilter(e.target.value);
@@ -469,6 +492,7 @@ export default function UsersPage() {
                 sx={{ width: { xs: '100%', sm: 220 } }}
               />
               <IconButton
+                aria-label="Refresh users"
                 onClick={fetchUsers}
                 disabled={isLoading}
                 color="primary"
@@ -483,7 +507,7 @@ export default function UsersPage() {
                 />
               </IconButton>
             </Box>
-          </Paper>
+          </Box>
 
           {/* Error state */}
           {error && (
@@ -494,32 +518,46 @@ export default function UsersPage() {
 
           {/* Loading state */}
           {isLoading && (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Box sx={{ p: 4, textAlign: 'center' }}>
               <CircularProgress />
               <Typography sx={{ mt: 2 }} color="text.secondary">
                 Loading users...
               </Typography>
-            </Paper>
+            </Box>
           )}
 
           {/* Users table */}
           {!isLoading && !error && (
-            <Paper>
-              <TableContainer>
+            <Box>
+              <TableContainer
+                tabIndex={0}
+                role="region"
+                aria-label="Users table, scroll horizontally for more columns"
+              >
                 <Table
                   size="small"
+                  aria-label="Users"
                   sx={{
                     tableLayout: 'fixed',
-                    minWidth: 1400,
+                    minWidth: 1240,
                     '& .MuiTableCell-root': {
-                      px: 1,
-                      py: 1.5,
-                      overflowWrap: 'anywhere',
+                      px: 1.25,
+                      py: 1,
+                      fontSize: 12,
+                      verticalAlign: 'middle',
+                      borderColor: 'divider',
+                      '& .MuiTypography-body2': { fontSize: 12 },
+                      '& .MuiTypography-caption': { fontSize: 11 },
                     },
                     '& .MuiTableCell-head': {
                       overflowWrap: 'normal',
                       fontSize: '0.75rem',
-                      px: 0.75,
+                      px: 1.25,
+                      py: 1.5,
+                      color: 'text.secondary',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      bgcolor: 'background.default',
                     },
                     '& .MuiTableSortLabel-root': { maxWidth: '100%' },
                     '& .MuiTableSortLabel-root:not(.Mui-active) .MuiTableSortLabel-icon':
@@ -531,24 +569,30 @@ export default function UsersPage() {
                       mr: 0,
                     },
                     '& .MuiChip-root': { maxWidth: '100%' },
+                    '& .MuiTableCell-root:last-child': {
+                      position: { md: 'sticky' },
+                      right: 0,
+                      bgcolor: 'background.paper',
+                      boxShadow: { md: '-1px 0 0 #333333' },
+                    },
+                    '& .MuiTableCell-head:last-child': {
+                      bgcolor: 'background.default',
+                    },
+                    '& .MuiTableRow-root:last-child td': { borderBottom: 0 },
+                    '& .MuiButton-root': {
+                      minWidth: 0,
+                      fontSize: 11,
+                      p: 0,
+                      lineHeight: 1.6,
+                    },
                   }}
                 >
                   <colgroup>
-                    {[
-                      '14%',
-                      '9%',
-                      '12%',
-                      '10%',
-                      '6%',
-                      '7%',
-                      '9%',
-                      '9%',
-                      '7%',
-                      '6%',
-                      112,
-                    ].map((width, index) => (
-                      <col key={index} style={{ width }} />
-                    ))}
+                    {[220, 120, 155, 108, 68, 90, 110, 115, 85, 90, 76].map(
+                      (width, index) => (
+                        <col key={index} style={{ width }} />
+                      )
+                    )}
                   </colgroup>
                   <TableHead>
                     <TableRow>
@@ -682,32 +726,46 @@ export default function UsersPage() {
                       <TableRow key={user.id} hover>
                         <TableCell>
                           <Box>
-                            <Typography variant="body2" fontWeight="medium">
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              noWrap
+                              title={getUserDisplayName(user)}
+                            >
                               {getUserDisplayName(user)}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                               display="block"
+                              noWrap
+                              title={user.email || undefined}
                             >
                               {user.email || '-'}
                             </Typography>
-                            <Button
-                              component={Link}
-                              size="small"
-                              href={`/dashboard/users/${encodeURIComponent(user.id)}/portrait`}
-                            >
-                              Portrait
-                            </Button>
-                            <Button
-                              component={Link}
-                              size="small"
-                              href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
-                            >
-                              Time in app
-                            </Button>
+                            <Box sx={{ display: 'flex', gap: 1.5, mt: 0.25 }}>
+                              <Button
+                                component={Link}
+                                size="small"
+                                href={`/dashboard/users/${encodeURIComponent(user.id)}/portrait`}
+                              >
+                                Portrait
+                              </Button>
+                              <Button
+                                component={Link}
+                                size="small"
+                                href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
+                              >
+                                Time in app
+                              </Button>
+                            </Box>
                             {user.telegram_username && (
-                              <Typography variant="caption" color="primary">
+                              <Typography
+                                variant="caption"
+                                color="primary"
+                                display="block"
+                                noWrap
+                              >
                                 @{user.telegram_username}
                               </Typography>
                             )}
@@ -797,12 +855,20 @@ export default function UsersPage() {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ fontVariantNumeric: 'tabular-nums' }}
+                          >
                             {formatDate(user.registered_at)}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ fontVariantNumeric: 'tabular-nums' }}
+                          >
                             {formatDateTime(user.last_active_at)}
                           </Typography>
                         </TableCell>
@@ -834,37 +900,39 @@ export default function UsersPage() {
                           <Box
                             sx={{
                               display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-start',
-                              gap: 1,
+                              alignItems: 'center',
+                              gap: 0.5,
                               '& .MuiButton-root': { whiteSpace: 'nowrap' },
                             }}
                           >
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => setGrantUser(user)}
-                            >
-                              Grant Pro
-                            </Button>
-                            <Link
-                              href={`/dashboard/bot-chat?userId=${user.id}`}
-                            >
-                              <Button
-                                variant="outlined"
+                            <Tooltip title="Grant Pro">
+                              <IconButton
                                 size="small"
-                                startIcon={<Chat />}
+                                aria-label="Grant Pro"
+                                onClick={() => setGrantUser(user)}
                               >
-                                Chat
-                              </Button>
-                            </Link>
+                                <WorkspacePremiumOutlined
+                                  sx={{ fontSize: 18 }}
+                                />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Chat">
+                              <IconButton
+                                component={Link}
+                                href={`/dashboard/bot-chat?userId=${user.id}`}
+                                size="small"
+                                aria-label="Chat"
+                              >
+                                <Chat sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
                           </Box>
                         </TableCell>
                       </TableRow>
                     ))}
                     {users.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={11} align="left" sx={{ p: 3 }}>
                           <Typography color="text.secondary">
                             {debouncedSearch || selectedRetentionStage
                               ? 'No users found matching your filters'
@@ -878,6 +946,11 @@ export default function UsersPage() {
               </TableContainer>
               <TablePagination
                 component="div"
+                sx={{
+                  borderTop: 1,
+                  borderColor: 'divider',
+                  '& .MuiTablePagination-toolbar': { px: 2, flexWrap: 'wrap' },
+                }}
                 count={total}
                 page={page}
                 onPageChange={handleChangePage}
@@ -885,7 +958,7 @@ export default function UsersPage() {
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={PAGE_SIZE_OPTIONS}
               />
-            </Paper>
+            </Box>
           )}
         </Box>
       </PersonalizationLayout>
