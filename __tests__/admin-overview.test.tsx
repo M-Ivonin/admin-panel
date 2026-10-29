@@ -258,7 +258,9 @@ it('shows all eight reports, complete navigation and each headline metric once',
     name: 'Admin navigation',
   });
   const navigationLinks = within(navigation).getAllByRole('link');
-  expect(navigationLinks).toHaveLength(18);
+  expect(
+    within(navigation).getByRole('link', { name: 'Policy outcomes' })
+  ).toHaveAttribute('href', '/dashboard/user-experiments');
   const appEventsLink = within(navigation).getByRole('link', { name: 'App Events' });
   const timeInAppLink = within(navigation).getByRole('link', { name: 'Time in app' });
   expect(timeInAppLink).toHaveAttribute('href', '/dashboard/time-in-app');

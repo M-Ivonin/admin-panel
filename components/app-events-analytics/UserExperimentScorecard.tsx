@@ -188,7 +188,10 @@ export function UserExperimentScorecard() {
                   maxWidth: 'calc(100vw - 32px)',
                 }}
               >
-                {item.id} · {questions[item.definition.question]}
+                {item.id} ·{' '}
+                {item.definition.technicalProtocol
+                  ? 'Nonrandomized technical AI · no comparison · no winner'
+                  : questions[item.definition.question]}
               </MenuItem>
             ))}
           </Select>
@@ -296,7 +299,13 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
   ];
   return (
     <>
-      <Section title={questions[r.experiment.question]}>
+      <Section
+        title={
+          r.experiment.technicalProtocol
+            ? 'Nonrandomized technical AI · no comparison · no winner'
+            : questions[r.experiment.question]
+        }
+      >
         <Stack
           direction="row"
           spacing={1}

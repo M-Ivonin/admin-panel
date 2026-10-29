@@ -441,20 +441,19 @@ describe('PredictionEvaluationsPage', () => {
     expect(screen.queryByText('21 fixture groups found')).toBeNull();
   });
 
-  it('loads with the last 7 days period selected by default', async () => {
-    render(<PredictionEvaluationsPage />);
-
-    await screen.findByText('Alpha FC vs Beta FC');
-
-    const firstCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls[0][0];
-
-    expect(screen.getByText('Last 7 days')).toBeTruthy();
-    expect(firstCall.dateFrom).toBeTruthy();
-    expect(firstCall.dateTo).toBeTruthy();
-    expect(
-      new Date(firstCall.dateTo).getTime() -
-        new Date(firstCall.dateFrom).getTime(),
-    ).toBe(7 * 24 * 60 * 60 * 1000);
+  it('loads with the last 7 calendar days selected by default across the autumn DST boundary', async () => {
+    const reference = new Date(2026, 9, 29, 12, 0, 0);
+    jest.useFakeTimers().setSystemTime(reference);
+    try {
+      render(<PredictionEvaluationsPage />);
+      await screen.findByText('Alpha FC vs Beta FC');
+      const firstCall = (getPredictionEvaluationGroups as jest.Mock).mock.calls[0][0];
+      expect(screen.getByText('Last 7 days')).toBeTruthy();
+      expect(firstCall.dateTo).toBe(reference.toISOString());
+      expect(firstCall.dateFrom).toBe(new Date(2026, 9, 22, 12, 0, 0).toISOString());
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('applies quick period presets and keeps manual dates in custom range mode', async () => {

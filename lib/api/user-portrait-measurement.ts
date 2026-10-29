@@ -8,6 +8,7 @@ export interface ExperimentItem {
   id: string;
   definition: {
     question: ComparisonQuestion;
+    technicalProtocol?: 'single_account_ai.v1';
     targetApp: string;
     protocolVersion: string;
   };
@@ -92,6 +93,7 @@ export interface ExperimentScorecard {
   experiment: {
     id: string;
     question: ComparisonQuestion;
+    technicalProtocol?: 'single_account_ai.v1';
     targetApp: string;
     protocolVersion: string;
     policyVersion: string;

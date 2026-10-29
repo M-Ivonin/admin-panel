@@ -226,3 +226,33 @@ it('identifies incumbent Campaign exposure without inventing an AI decision', as
   expect(screen.queryByText(/Decision null/)).not.toBeInTheDocument();
   expect(screen.getByText(/incumbent-campaign/)).toBeInTheDocument();
 });
+
+it('labels a technical AI report without presenting a randomized comparison', async () => {
+  const technical = report('technical-only');
+  technical.experiment.question = 'ai_vs_baseline';
+  technical.experiment.technicalProtocol = 'single_account_ai.v1';
+  technical.quality.reasons = ['technical_nonrandomized_no_comparison'];
+  jest
+    .mocked(listPortraitExperiments)
+    .mockResolvedValue({
+      items: [
+        {
+          id: 'technical-only',
+          definition: {
+            question: 'ai_vs_baseline',
+            technicalProtocol: 'single_account_ai.v1',
+            targetApp: 'SirBro',
+            protocolVersion: 'v1',
+          },
+          assignedAccounts: 1,
+        },
+      ],
+    });
+  jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(technical);
+  render(<UserExperimentScorecard />);
+  expect(
+    await screen.findByRole('heading', {
+      name: 'Nonrandomized technical AI · no comparison · no winner',
+    })
+  ).toBeInTheDocument();
+});
