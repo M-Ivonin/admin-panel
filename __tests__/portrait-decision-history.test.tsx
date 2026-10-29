@@ -146,6 +146,41 @@ it('shows the saved model choice with its own snapshot/window and replays only f
     'decision-one'
   );
 });
+it.each([
+  ['none', 'none'],
+  ['in_app', 'in app'],
+  ['push', 'push'],
+  ['email', 'email'],
+] as const)(
+  'shows the saved %s channel without inferring exposure status',
+  async (channel, recordedLabel) => {
+    jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+      ...history,
+      items: history.items.map((item) => ({
+        ...item,
+        selection: { ...item.selection, channel },
+      })),
+    });
+    render(
+      <PortraitDecisionHistory
+        userId="account-one"
+        viewedSnapshotId="current-snapshot"
+      />
+    );
+    expect(
+      await screen.findByText(
+        `Recorded channel: ${recordedLabel} · Proposed surface: in app.`
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Reading saved decisions and replaying frozen validation do not call a model or execute an action.'
+    );
+    expect(
+      screen.queryByText(/exposure disabled|push and email remain disabled/i)
+    ).not.toBeInTheDocument();
+    expect(replayUserPortraitDecision).not.toHaveBeenCalled();
+  }
+);
 it('discards a late foreign account history and displays honest empty evidence', async () => {
   let resolve!: (value: History) => void;
   jest

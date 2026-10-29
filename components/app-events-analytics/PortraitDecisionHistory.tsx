@@ -87,9 +87,8 @@ export function PortraitDecisionHistory({
   return (
     <Stack spacing={2}>
       <Alert severity="info">
-        Shadow evaluation only. No user message, display, delivery, purchase or
-        access grant is produced. Numeric prices, new lifecycle preferences,
-        push and email remain disabled until their separate proof.
+        Reading saved decisions and replaying frozen validation do not call a
+        model or execute an action.
       </Alert>
       <Typography
         variant="body2"
@@ -203,7 +202,7 @@ function Decision({
         Reason: {label(item.selection.reasonCode)} · {stamp(item.createdAt)}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Recorded channel: none · exposure disabled. Proposed surface:{' '}
+        Recorded channel: {label(item.selection.channel)} · Proposed surface:{' '}
         {label(candidate.proposedChannel)}.
       </Typography>
       {!item.validator.accepted ? (

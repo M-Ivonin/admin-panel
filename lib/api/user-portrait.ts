@@ -193,7 +193,7 @@ export interface PortraitShadowSelection {
   reasonCode: string;
   templateId: string;
   locale: string;
-  channel: 'none';
+  channel: 'none' | 'in_app' | 'push' | 'email';
   dispatchAt: string;
   expiresAt: string;
   materialVersion: string;
