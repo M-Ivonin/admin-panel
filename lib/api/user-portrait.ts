@@ -198,7 +198,22 @@ export interface PortraitShadowSelection {
   expiresAt: string;
   materialVersion: string;
 }
+export interface PortraitDecisionDelivery {
+  id: string;
+  channel: string;
+  status: string;
+  sentAt: string | null;
+  openedAt: string | null;
+  pushOpenedAt: string | null;
+  providerAcceptedAt: string | null;
+  providerFinalEventAt: string | null;
+  emailSubmissionState: string | null;
+  renderedTitle: string | null;
+  renderedBody: string | null;
+}
 export interface PortraitShadowDecision {
+  /** Read-time live delivery evidence; absent on older servers, never inferred from selection. */
+  deliveries?: PortraitDecisionDelivery[];
   id: string;
   snapshotId: string;
   createdAt: string;
@@ -258,6 +273,20 @@ export interface PortraitDecisionHistory {
   capabilities: Record<string, string>;
   items: PortraitShadowDecision[];
 }
+export interface PortraitDecisionExport extends PortraitDecisionHistory {
+  userId: string;
+  exportedAt: string;
+  scope: 'all_retained_decisions';
+  total: number;
+}
+
+/** Exports every retained saved decision and current delivery evidence for this account. */
+export async function exportUserPortraitDecisions(
+  userId: string
+): Promise<PortraitDecisionExport> {
+  return readDecisionEvidence<PortraitDecisionExport>(userId, '/export');
+}
+
 export interface PortraitDecisionReplay {
   status: 'replayed' | 'version_unavailable';
   decisionId?: string;

@@ -17,6 +17,8 @@ import {
 } from '@mui/material';
 import {
   getUserPortraitDecisionHistory,
+  exportUserPortraitDecisions,
+  type PortraitDecisionDelivery,
   replayUserPortraitDecision,
   type PortraitDecisionHistory as History,
   type PortraitDecisionReplay,
@@ -46,6 +48,8 @@ export function PortraitDecisionHistory({
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportNote, setExportNote] = useState<string | null>(null);
   const [replay, setReplay] = useState<PortraitDecisionReplay | null>(null);
   const epoch = useRef(0);
   useEffect(() => {
@@ -54,6 +58,8 @@ export function PortraitDecisionHistory({
     setError(null);
     setReplay(null);
     setBusy(null);
+    setExporting(false);
+    setExportNote(null);
     setLoading(true);
     void getUserPortraitDecisionHistory(userId)
       .then((value) => {
@@ -73,6 +79,40 @@ export function PortraitDecisionHistory({
     };
   }, [userId, revision]);
 
+  const downloadAll = async () => {
+    const current = epoch.current;
+    setExporting(true);
+    setExportNote(null);
+    setError(null);
+    try {
+      const data = await exportUserPortraitDecisions(userId);
+      if (current !== epoch.current) return;
+      if (data.status !== 'available' || data.userId !== userId)
+        throw new Error('Export is unavailable for this account.');
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      );
+      const link = document.createElement('a');
+      try {
+        link.href = url;
+        link.download = `user-decisions-${encodeURIComponent(userId)}-${data.exportedAt.slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+      } finally {
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+      setExportNote(`Downloaded ${data.total} saved decisions.`);
+    } catch (e) {
+      if (current === epoch.current)
+        setError(
+          e instanceof Error ? e.message : 'Could not export saved decisions.'
+        );
+    } finally {
+      if (current === epoch.current) setExporting(false);
+    }
+  };
+
   const runReplay = async (id: string) => {
     const current = epoch.current;
     setBusy(id);
@@ -90,10 +130,10 @@ export function PortraitDecisionHistory({
   };
   return (
     <Stack spacing={2}>
-      <Alert severity="info">
-        Reading saved decisions and replaying frozen validation do not call a
-        model or execute an action.
-      </Alert>
+      <Typography variant="body2" color="text.secondary">
+        Saved recommendations, proposed messages and actual sending records.
+        Opening this history does not call AI or send anything.
+      </Typography>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         gap={2}
@@ -101,16 +141,25 @@ export function PortraitDecisionHistory({
         justifyContent="space-between"
       >
         <Typography variant="body2" fontWeight={600}>
-          Latest 20 saved evaluations for this account
+          Latest 20 saved decisions · JSON includes all retained decisions for
+          this user
         </Typography>
-        <Button
-          variant="outlined"
-          disabled={loading || Boolean(busy)}
-          onClick={() => setRevision((v) => v + 1)}
-          sx={{ alignSelf: 'flex-start' }}
-        >
-          Refresh saved decisions
-        </Button>
+        <Stack direction="row" gap={1} flexWrap="wrap" useFlexGap>
+          <Button
+            variant="contained"
+            disabled={loading || exporting || history?.status !== 'available'}
+            onClick={() => void downloadAll()}
+          >
+            {exporting ? 'Preparing JSON…' : 'Download all decisions (JSON)'}
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={loading || Boolean(busy) || exporting}
+            onClick={() => setRevision((v) => v + 1)}
+          >
+            Refresh saved decisions
+          </Button>
+        </Stack>
       </Stack>
       {viewedSnapshotId ? (
         <Box component="details">
@@ -140,6 +189,11 @@ export function PortraitDecisionHistory({
         </Stack>
       ) : null}
       {error ? <Alert severity="error">{error}</Alert> : null}
+      {exportNote ? (
+        <Typography role="status" variant="body2" color="text.secondary">
+          {exportNote}
+        </Typography>
+      ) : null}
       {history?.status === 'restricted' ? (
         <Alert severity="warning">
           Decision evidence is unavailable following the verified processing
@@ -148,8 +202,7 @@ export function PortraitDecisionHistory({
       ) : null}
       {history?.status === 'available' && !history.items.length ? (
         <Typography color="text.secondary">
-          No saved shadow decisions yet. Opening this view does not start
-          analysis.
+          No saved decisions yet. Opening this view does not start analysis.
         </Typography>
       ) : null}
       {history?.items.map((item) => (
@@ -203,123 +256,158 @@ function Decision({
       <Stack
         direction="row"
         gap={1}
-        alignItems="center"
+        justifyContent="space-between"
+        alignItems="flex-start"
         flexWrap="wrap"
         useFlexGap
       >
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{ textTransform: 'capitalize' }}
-        >
-          {label(candidate.kind)}
-        </Typography>
+        <Box>
+          <Typography variant="h6" fontWeight={700}>
+            {decisionTitle(item)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {stamp(item.createdAt)}
+          </Typography>
+        </Box>
         <Chip
           size="small"
-          color={item.source === 'model' ? 'primary' : 'default'}
           variant="outlined"
-          sx={{ textTransform: 'capitalize' }}
-          label={
-            item.source === 'model'
-              ? 'Validated model selection'
-              : 'Rule baseline'
+          color={
+            item.status === 'completed' && item.source === 'model'
+              ? 'primary'
+              : 'default'
           }
-        />
-        <Chip
-          size="small"
-          color="primary"
-          variant="outlined"
-          sx={{ textTransform: 'capitalize' }}
           label={
             item.status === 'pending'
-              ? 'Pending evaluation'
-              : label(candidate.disposition)
+              ? 'Evaluation in progress'
+              : item.source === 'model'
+                ? 'Selected by AI'
+                : 'Selected by rules'
           }
         />
       </Stack>
-      <Typography variant="body2" sx={{ mt: 1 }}>
-        Reason: {label(item.selection.reasonCode)} · {stamp(item.createdAt)}
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Recorded channel: {label(item.selection.channel)} · Proposed surface:{' '}
-        {label(candidate.proposedChannel)}.
-      </Typography>
-      {!item.validator.accepted ? (
-        <Alert severity="warning" sx={{ mt: 1 }}>
-          Model/material validation used the safe baseline:{' '}
-          {item.validator.reasons.map(label).join(', ')}.
-        </Alert>
-      ) : null}
-      <Box
-        sx={{
-          mt: 2,
-          p: 1.5,
-          borderRadius: '8px',
-          bgcolor: 'rgba(41,182,246,0.07)',
-          color: 'info.light',
-        }}
-      >
-        <Typography variant="body2">
-          Shadow evaluation · No execution enabled by this read API
-        </Typography>
-      </Box>
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
-            md: candidate.copy ? '1fr 1fr' : '1fr',
+            md: 'minmax(0, 1fr) minmax(0, 1fr)',
           },
-          gap: 1.5,
+          gap: 2,
           mt: 2,
         }}
       >
-        {candidate.copy ? (
-          <Box
-            sx={{
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: '8px',
-              p: 1.5,
-              minWidth: 0,
-            }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              Content
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Why this decision
+          </Typography>
+          <Typography variant="body2">
+            {reasonText(item.selection.reasonCode)}
+          </Typography>
+          {item.source === 'baseline' && item.status === 'completed' ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {item.model.status === 'not_requested'
+                ? 'AI was not called; the saved choice follows rules.'
+                : 'AI did not return a usable selection; the saved choice follows rules.'}
             </Typography>
-            <Typography fontWeight={600} sx={{ mt: 0.5 }}>
+          ) : null}
+          {item.status === 'pending' ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Evaluation is not complete; this is a provisional choice.
+            </Typography>
+          ) : null}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Proposed channel: {channelName(candidate.proposedChannel)}.
+          </Typography>
+        </Box>
+        <Box
+          sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 2, minWidth: 0 }}
+        >
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Was it sent?
+          </Typography>
+          {item.deliveries === undefined ? (
+            <>
+              <Chip
+                size="small"
+                label="Sending status unavailable"
+                variant="outlined"
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                This history response does not include delivery records. A
+                proposed channel is not proof of sending.
+              </Typography>
+            </>
+          ) : item.deliveries.length ? (
+            <Stack spacing={1.5}>
+              {item.deliveries.map((delivery) => {
+                const result = deliveryDescription(delivery);
+                return (
+                  <Box key={delivery.id}>
+                    <Chip
+                      size="small"
+                      label={result.title}
+                      color={result.color}
+                      variant="outlined"
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.75 }}
+                    >
+                      {channelName(delivery.channel)} · {result.detail}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Stack>
+          ) : (
+            <>
+              <Chip size="small" label="No sending record" variant="outlined" />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                No live delivery is linked to this decision. The recommendation
+                alone does not confirm contact.
+              </Typography>
+            </>
+          )}
+        </Box>
+      </Box>
+      <Box
+        sx={{
+          mt: 2,
+          p: 2,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 2,
+          minWidth: 0,
+        }}
+      >
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+          Proposed message
+        </Typography>
+        {candidate.copy ? (
+          <>
+            <Typography fontWeight={600} sx={{ overflowWrap: 'anywhere' }}>
               {candidate.copy.title}
             </Typography>
             <Typography
               variant="body2"
-              sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+              sx={{
+                mt: 1,
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere',
+                maxHeight: 240,
+                overflowY: 'auto',
+              }}
             >
               {candidate.copy.body}
             </Typography>
-          </Box>
-        ) : null}
-        <Box
-          sx={{
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: '8px',
-            p: 1.5,
-            minWidth: 0,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            Model
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5 }}>
-            Model: {item.model.model} · {label(item.model.status)} ·{' '}
-            {item.model.latencyMs} ms.
-          </Typography>
+          </>
+        ) : (
           <Typography variant="body2" color="text.secondary">
-            Tokens: {item.model.inputTokens ?? 'unknown'} input /{' '}
-            {item.model.outputTokens ?? 'unknown'} output.
+            No message proposed.
           </Typography>
-        </Box>
+        )}
       </Box>
       <Box
         component="details"
@@ -333,8 +421,36 @@ function Decision({
         }}
       >
         <Typography component="summary" variant="body2" color="primary.main">
-          Exact decision evidence
+          Technical details
         </Typography>
+        <Typography variant="body2" sx={{ mt: 1.5 }}>
+          Model: {item.model.model} · {label(item.model.status)} ·{' '}
+          {item.model.latencyMs} ms.
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Tokens: {item.model.inputTokens ?? 'unknown'} input /{' '}
+          {item.model.outputTokens ?? 'unknown'} output.
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Saved reason code: {item.selection.reasonCode}. Validation:{' '}
+          {item.validator.accepted
+            ? 'accepted'
+            : item.validator.reasons.map(label).join(', ')}
+          .
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Recorded channel: {label(item.selection.channel)} · disposition:{' '}
+          {label(candidate.disposition)}. Evaluation mode: {item.mode}; the read
+          API does not execute actions.
+        </Typography>
+        {item.deliveries?.length ? (
+          <Box
+            component="pre"
+            sx={{ fontSize: 12, overflowX: 'auto', maxHeight: 240, mt: 1.5 }}
+          >
+            {JSON.stringify(item.deliveries, null, 2)}
+          </Box>
+        ) : null}
         <TableContainer sx={{ mt: 1 }}>
           <Table
             size="small"
@@ -412,16 +528,153 @@ function Decision({
             </TableBody>
           </Table>
         </TableContainer>
+        <Button
+          variant="outlined"
+          size="small"
+          disabled={busy || item.status === 'pending'}
+          onClick={onReplay}
+          sx={{ mt: 1 }}
+        >
+          Replay frozen validation
+        </Button>
       </Box>
-      <Button
-        variant="outlined"
-        size="small"
-        disabled={busy || item.status === 'pending'}
-        onClick={onReplay}
-        sx={{ mt: 1 }}
-      >
-        Replay frozen validation
-      </Button>
     </Box>
   );
+}
+
+function decisionTitle(item: PortraitShadowDecision) {
+  const candidate = item.selectedCandidate;
+  if (candidate.disposition === 'defer' || candidate.kind === 'defer')
+    return 'Wait before contacting the user';
+  if (candidate.disposition === 'no_action' || candidate.kind === 'no_action')
+    return 'Do not contact the user';
+  return (
+    (
+      {
+        news: 'Recommend a news item',
+        owned_access: 'Recommend using existing access',
+        commercial: 'Recommend an access offer',
+      } as Record<string, string>
+    )[candidate.kind] ?? 'Recommend a message'
+  );
+}
+function reasonText(code: string) {
+  return (
+    (
+      {
+        relevant_news: "A news item matched the user's recorded interests.",
+        owned_value: 'The user already has access to this content or feature.',
+        premium_intent:
+          'Recorded product activity indicates interest in premium content.',
+        policy_exclusion:
+          'Contact was excluded by the applicable communication rules.',
+        no_opportunity: 'No eligible recommendation was available at the time.',
+        stale_snapshot:
+          'The saved portrait was too old for a new recommendation.',
+        sparse_history:
+          'There was not enough recorded activity for a recommendation.',
+        pending_checkout: 'A checkout was still in progress.',
+        already_consumed: 'The relevant content had already been consumed.',
+        model_silence: 'The AI selected no contact.',
+      } as Record<string, string>
+    )[code] ??
+    'No plain-language explanation is available for this saved reason. The original code is in Technical details.'
+  );
+}
+function channelName(channel: string) {
+  return (
+    (
+      {
+        in_app: 'In-app message',
+        push: 'Push notification',
+        email: 'Email',
+        none: 'No channel',
+      } as Record<string, string>
+    )[channel] ?? label(channel)
+  );
+}
+function deliveryDescription(d: PortraitDecisionDelivery): {
+  title: string;
+  detail: string;
+  color: 'default' | 'success' | 'warning' | 'error';
+} {
+  if (d.openedAt || d.pushOpenedAt)
+    return {
+      title: 'Opened by user',
+      detail: `Opening recorded ${stamp(d.openedAt ?? d.pushOpenedAt)}.`,
+      color: 'success',
+    };
+  if (
+    d.emailSubmissionState === 'bounced' ||
+    d.emailSubmissionState === 'dropped'
+  )
+    return {
+      title:
+        d.emailSubmissionState === 'bounced'
+          ? 'Email bounced'
+          : 'Email dropped',
+      detail: 'The provider reported that delivery did not complete.',
+      color: 'error',
+    };
+  if (d.emailSubmissionState === 'delivered')
+    return {
+      title: 'Delivery confirmed',
+      detail: `Provider confirmation ${stamp(d.providerFinalEventAt)}; reading is not confirmed.`,
+      color: 'success',
+    };
+  if (d.emailSubmissionState === 'ambiguous')
+    return {
+      title: 'Sending unconfirmed',
+      detail: 'The send attempt has an uncertain outcome.',
+      color: 'warning',
+    };
+  if (d.status === 'shown' || d.status === 'dismissed')
+    return {
+      title: d.status === 'shown' ? 'Shown in app' : 'Dismissed in app',
+      detail:
+        'The app recorded this display outcome; it does not prove the message was read.',
+      color: 'success',
+    };
+  if (d.status === 'failed' || d.emailSubmissionState === 'permanent_failure')
+    return {
+      title: 'Send failed',
+      detail: 'The delivery record reports a failed attempt.',
+      color: 'error',
+    };
+  if (d.status === 'skipped')
+    return {
+      title: 'Not sent — skipped',
+      detail: 'The delivery was skipped by the sending rules.',
+      color: 'default',
+    };
+  if (d.status === 'available')
+    return {
+      title: 'Available in app',
+      detail: 'Ready for display; showing it to the user is not yet confirmed.',
+      color: 'default',
+    };
+  if (d.sentAt || d.status === 'sent')
+    return {
+      title: 'Sent',
+      detail: `${d.sentAt ? `Sent ${stamp(d.sentAt)}. ` : ''}Recipient receipt and viewing are not confirmed.`,
+      color: 'success',
+    };
+  if (d.providerAcceptedAt || d.emailSubmissionState === 'accepted')
+    return {
+      title: 'Accepted by provider',
+      detail: `${d.providerAcceptedAt ? stamp(d.providerAcceptedAt) + '. ' : ''}Recipient delivery is not confirmed.`,
+      color: 'default',
+    };
+  if (d.status === 'pending')
+    return {
+      title: 'Queued',
+      detail: 'Waiting for the delivery worker.',
+      color: 'default',
+    };
+  return {
+    title: 'Sending unconfirmed',
+    detail:
+      'A delivery attempt exists, but there is no confirmed sending outcome.',
+    color: 'warning',
+  };
 }
