@@ -465,3 +465,115 @@ it.each([false, true])(
     ).toHaveTextContent('2');
   }
 );
+
+it('keeps the main outcome metrics visible when Overview is collapsed, with breakdown on expansion', async () => {
+  const result = report('collapsed-summary');
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: result.experiment.id,
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
+        },
+        assignedAccounts: 2,
+      },
+    ],
+  });
+  jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+  render(<UserExperimentScorecard />);
+  await screen.findByText('Assigned accounts');
+  const overview = screen
+    .getByText('Overview', { selector: 'summary *' })
+    .closest('details')!;
+  fireEvent.click(overview.querySelector('summary')!);
+  expect(overview).not.toHaveAttribute('open');
+  for (const name of [
+    'Assigned accounts',
+    'Confirmed purchases',
+    'Estimated 60-day revenue',
+  ]) {
+    expect(within(overview).getByText(name)).toBeVisible();
+  }
+  expect(within(overview).getByText(/unavailable, not zero/)).toBeVisible();
+  expect(
+    screen.getByText('Observation is still in progress')
+  ).not.toBeVisible();
+  fireEvent.click(overview.querySelector('summary')!);
+  expect(
+    screen.getByRole('heading', { name: 'Cohort breakdown' })
+  ).toBeVisible();
+  expect(screen.getAllByText('Assigned accounts')).toHaveLength(1);
+});
+
+it('groups methodology into named cards and labeled metric rules without losing source definitions', async () => {
+  const result = report('readable-methodology');
+  result.registry = [
+    {
+      key: 'usefulActions',
+      meaning: 'Recorded qualifying actions',
+      denominator: 'All assigned accounts',
+      origin: 'Assignment',
+      window: '60 days',
+      source: 'Canonical action registry',
+    },
+  ];
+  result.quality.reasons = [
+    'telemetry_is_observed_not_complete',
+    'future_quality_flag',
+  ];
+  jest
+    .mocked(listPortraitExperiments)
+    .mockResolvedValue({
+      items: [
+        {
+          id: result.experiment.id,
+          definition: {
+            question: 'policy_vs_current',
+            targetApp: 'SirBro',
+            protocolVersion: 'v1',
+          },
+          assignedAccounts: 2,
+        },
+      ],
+    });
+  jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+  render(<UserExperimentScorecard />);
+  await screen.findByText('Assigned accounts');
+  fireEvent.click(
+    screen.getByText('Data quality & methodology').closest('summary')!
+  );
+  for (const title of [
+    'Data coverage',
+    'Report setup',
+    'Revenue calculation',
+    'Store commission',
+    'Transaction conversion evidence',
+    'Comparison setup',
+    'Metric definitions',
+  ]) {
+    expect(screen.getByRole('heading', { name: title })).toBeVisible();
+  }
+  expect(
+    screen.getByText(
+      'Only recorded activity is counted; missing activity remains unknown.'
+    )
+  ).toBeVisible();
+  expect(screen.getByText('future quality flag')).toBeVisible();
+  const rule = screen.getByRole('heading', {
+    name: 'Useful actions',
+  }).parentElement!;
+  for (const value of [
+    'Who is counted',
+    'All assigned accounts',
+    'Measurement starts',
+    'Assignment',
+    'Period',
+    '60 days',
+    'Data source',
+    'Canonical action registry',
+  ]) {
+    expect(within(rule).getByText(value)).toBeVisible();
+  }
+});

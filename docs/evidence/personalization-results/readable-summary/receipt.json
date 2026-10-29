@@ -1,0 +1,29 @@
+{
+  "fixture": true,
+  "viewports": [
+    "1536x1100",
+    "390x844"
+  ],
+  "captures": [
+    "overview-expanded-desktop",
+    "overview-collapsed-desktop",
+    "methodology-top-desktop",
+    "methodology-all-desktop",
+    "metric-definitions-desktop",
+    "overview-collapsed-mobile",
+    "methodology-top-mobile",
+    "metric-definitions-mobile",
+    "overview-incomplete-mobile",
+    "methodology-paid-desktop"
+  ],
+  "requests": [
+    "/v1/app-events/admin/engagement/experiments",
+    "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+    "/v1/app-events/admin/engagement/experiments",
+    "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+    "/v1/app-events/admin/engagement/experiments",
+    "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard"
+  ],
+  "errors": [],
+  "registryEntries": 11
+}

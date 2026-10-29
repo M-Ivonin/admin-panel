@@ -1,5 +1,8 @@
 # Personalization Results — four-section report
 
+Latest refinement: [collapsed Overview metrics and readable methodology](readable-summary/README.md).
+The evidence below records the initial layout and subsequent JSON-export correction.
+
 The owner approved the generated four-accordion concept in this chat, then requested
 implementation: one vertical page, no internal tabs, only Overview initially open,
 less repetition, every existing detail reachable, and source-checked revenue logic.
