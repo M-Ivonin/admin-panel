@@ -89,3 +89,35 @@ Final independent targeted Spec and Standards repair reviews both approved with
 no remaining findings. Each independently reran all 12 focused tests and confirmed
 the backend availability/maturity distinction. The initial approvals for section
 structure, detail preservation and revenue semantics remain valid.
+
+## Follow-up: downloadable trace JSON
+
+The owner explicitly rejected inline technical JSON in Accounts. The trace dump is
+now replaced with a compact decision/delivery history: account and capture time,
+recorded mode/selection/reason/channel/model status when present, delivery states,
+and count of linked verified transactions. Missing delivery/transaction links are
+stated without inferring no purchases or no impressions. Raw decision, assignment,
+ledger IDs and full reference objects remain in **Download JSON**, alongside the
+experiment ID and report/source timestamps. The account table is unchanged.
+
+Direct proof for this local presentation/export correction:
+
+- The regression first failed because the raw technical evidence was still inline.
+  All **12 focused scorecard tests** now pass, including JSON content round-trip.
+- Full `npm run lint` has zero errors (four existing unrelated warnings);
+  `npm run build` and `npm run typecheck` pass.
+- Real production app in isolated Chrome at desktop 1536×1000 and mobile390×844,
+  using synthetic admin authentication and intercepted DTO fixtures. No production
+  requests. A deliberately large reference payload is absent from the DOM; the
+  browser download parses to exactly the original traces plus report context.
+- [Desktop Accounts](json-export/desktop.png) and [mobile Accounts](json-export/mobile.png)
+  were inspected against the user's requested compact replacement. Button placement,
+  summary fields and responsive wrapping pass; no document horizontal overflow or
+  page errors. Wide account tables retain their existing local horizontal scroll.
+- [Receipt](json-export/receipt.json): real download, unchanged four-section default,
+  two GET fixture requests, no errors. Temporary downloaded JSON is not committed.
+
+This is a direct local correction through the existing view and the repository's
+established Blob/download pattern. No API, revenue logic, domain contract, new
+module or external write was introduced. Verification is focused on the changed
+caller seam; earlier full-suite evidence remains historical above.

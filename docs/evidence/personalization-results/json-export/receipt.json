@@ -1,0 +1,21 @@
+{
+  "viewports": [
+    "1536x1000",
+    "390x844"
+  ],
+  "fixture": true,
+  "downloadFilename": "personalization-portrait-prod-qa-ai-20261029-v1-evidence.json",
+  "downloadRoundTrip": true,
+  "noInlineJson": true,
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard"
+    }
+  ]
+}

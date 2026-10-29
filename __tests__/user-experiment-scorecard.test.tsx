@@ -215,11 +215,58 @@ it('identifies incumbent Campaign exposure without inventing an AI decision', as
   ];
   jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
   render(<UserExperimentScorecard />);
+  await screen.findByText('Assigned accounts');
+  fireEvent.click(screen.getByText('Accounts', { selector: 'summary *' }));
   expect(
-    await screen.findByText(/Product Campaign · assignment assignment-current/)
-  ).toBeInTheDocument();
+    screen.queryByText(/controlled-source-digest/)
+  ).not.toBeInTheDocument();
   expect(screen.queryByText(/Decision null/)).not.toBeInTheDocument();
-  expect(screen.getByText(/incumbent-campaign/)).toBeInTheDocument();
+  expect(screen.getByText('Product Campaign')).toBeVisible();
+  expect(screen.getByText(/1 delivery record: shown/)).toBeVisible();
+  const originalCreate = Object.getOwnPropertyDescriptor(
+    URL,
+    'createObjectURL'
+  );
+  const originalRevoke = Object.getOwnPropertyDescriptor(
+    URL,
+    'revokeObjectURL'
+  );
+  const createObjectURL = jest.fn<string, [Blob]>(() => 'blob:trace-evidence');
+  const revokeObjectURL = jest.fn();
+  Object.defineProperties(URL, {
+    createObjectURL: { configurable: true, value: createObjectURL },
+    revokeObjectURL: { configurable: true, value: revokeObjectURL },
+  });
+  const click = jest
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(() => {});
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    const contents = await act(
+      async () =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.readAsText(blob);
+        })
+    );
+    expect(JSON.parse(contents)).toEqual({
+      experimentId: result.experiment.id,
+      reportingCutoff: result.reportingCutoff,
+      sourceReadAt: result.sourceReadAt,
+      traces: result.traces,
+    });
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:trace-evidence');
+  } finally {
+    click.mockRestore();
+    if (originalCreate)
+      Object.defineProperty(URL, 'createObjectURL', originalCreate);
+    else Reflect.deleteProperty(URL, 'createObjectURL');
+    if (originalRevoke)
+      Object.defineProperty(URL, 'revokeObjectURL', originalRevoke);
+    else Reflect.deleteProperty(URL, 'revokeObjectURL');
+  }
 });
 
 it('labels a technical AI report without presenting a randomized comparison', async () => {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DownloadIcon from '@mui/icons-material/Download';
 import {
   Alert,
   Box,
@@ -46,6 +47,12 @@ const stamp = (value: string) =>
     dateStyle: 'medium',
     timeStyle: 'short',
   }) + ' UTC';
+function referenceText(value: unknown, key: string): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const field = (value as Record<string, unknown>)[key];
+  return typeof field === 'string' ? field : undefined;
+}
+
 function Section({
   title,
   children,
@@ -679,56 +686,136 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
               </TableBody>
             </Table>
           </TableContainer>
-          <Box component="div" sx={{ mt: 2 }}>
-            <Typography component="h3" sx={{ fontSize: 16, fontWeight: 600 }}>
-              Source → Delivery → verified transaction evidence
-            </Typography>
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              {r.traces.map((t) => (
-                <Box
-                  key={
-                    t.decisionId ?? `${t.assignmentId}:${t.deliveries[0]?.id}`
-                  }
-                  sx={{ overflowWrap: 'anywhere' }}
-                >
-                  <Typography variant="body2">
-                    {t.origin === 'product_campaign'
-                      ? 'Product Campaign'
-                      : `Decision ${t.decisionId}`}{' '}
-                    · assignment {t.assignmentId} · {stamp(t.capturedAt)}
-                  </Typography>
+          <Box sx={{ mt: 3 }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1.5}
+              justifyContent="space-between"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+            >
+              <Typography component="h3" variant="subtitle1" fontWeight={600}>
+                Decision & delivery history
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadIcon />}
+                disabled={!r.traces.length}
+                onClick={() => {
+                  const url = URL.createObjectURL(
+                    new Blob(
+                      [
+                        JSON.stringify(
+                          {
+                            experimentId: r.experiment.id,
+                            reportingCutoff: r.reportingCutoff,
+                            sourceReadAt: r.sourceReadAt,
+                            traces: r.traces,
+                          },
+                          null,
+                          2
+                        ),
+                      ],
+                      { type: 'application/json;charset=utf-8' }
+                    )
+                  );
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `personalization-${r.experiment.id.replace(/[^a-zA-Z0-9_-]/g, '_')}-evidence.json`;
+                  link.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download JSON
+              </Button>
+            </Stack>
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
+              {!r.traces.length ? (
+                <Typography variant="body2" color="text.secondary">
+                  No linked decisions or deliveries.
+                </Typography>
+              ) : null}
+              {r.traces.map((t) => {
+                const mode = referenceText(t.references, 'mode');
+                const source = referenceText(t.references, 'source');
+                const reason = referenceText(
+                  t.references.selection,
+                  'reasonCode'
+                );
+                const channel = referenceText(
+                  t.references.selection,
+                  'channel'
+                );
+                const model = referenceText(t.references.model, 'status');
+                const deliveryStates = [
+                  ...new Set(t.deliveries.map((d) => d.status)),
+                ]
+                  .map(label)
+                  .join(', ');
+                return (
                   <Box
-                    component="pre"
+                    key={
+                      t.decisionId ?? `${t.assignmentId}:${t.deliveries[0]?.id}`
+                    }
                     sx={{
-                      m: 0,
-                      mt: 1,
-                      p: 1,
-                      whiteSpace: 'pre-wrap',
+                      p: 2,
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: '8px',
                       overflowWrap: 'anywhere',
-                      fontSize: 12,
                     }}
                   >
-                    {JSON.stringify(t.references, null, 2)}
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      gap={1}
+                      justifyContent="space-between"
+                    >
+                      <Typography variant="body2" fontWeight={600}>
+                        {t.origin === 'product_campaign'
+                          ? 'Product Campaign'
+                          : 'Personalization decision'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {stamp(t.capturedAt)}
+                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <Link href={`/dashboard/users/${t.userId}/portrait`}>
+                        Account {t.userId.slice(0, 8)}
+                      </Link>
+                      {mode ? ` · Mode: ${label(mode)}` : ''}
+                      {source
+                        ? ` · Selection: ${source === 'baseline' ? 'Rule baseline' : label(source)}`
+                        : ''}
+                    </Typography>
+                    {reason || channel || model ? (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 0.5 }}
+                      >
+                        {[
+                          reason ? `Reason: ${label(reason)}` : null,
+                          channel ? `Channel: ${label(channel)}` : null,
+                          model ? `Model: ${label(model)}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Typography>
+                    ) : null}
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {t.deliveries.length
+                        ? `${t.deliveries.length} delivery record${t.deliveries.length === 1 ? '' : 's'}: ${deliveryStates}`
+                        : 'No linked delivery'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t.transactions.length
+                        ? `Verified transaction links: ${t.transactions.length}`
+                        : 'No linked verified transactions'}
+                    </Typography>
                   </Box>
-                  <Typography variant="body2">
-                    {t.deliveries.length
-                      ? t.deliveries
-                          .map((d) => `${d.id}: ${d.status}`)
-                          .join(' · ')
-                      : 'No linked Delivery. A decision is not an impression.'}
-                  </Typography>
-                  <Typography variant="body2">
-                    {t.transactions.length
-                      ? t.transactions
-                          .map(
-                            (x) =>
-                              `Verified ledger ${x.ledgerId} · attempt ${x.transactionAttemptId} · ${label(x.provenance)}`
-                          )
-                          .join(' · ')
-                      : 'No captured transaction context. Cohort revenue does not require attribution.'}
-                  </Typography>
-                </Box>
-              ))}
+                );
+              })}
             </Stack>
           </Box>
         </Section>
