@@ -20,7 +20,6 @@ import {
   TablePagination,
   TableSortLabel,
   TextField,
-  Button,
   IconButton,
   Chip,
   CircularProgress,
@@ -35,6 +34,8 @@ import {
   Search,
   Chat,
   WorkspacePremiumOutlined,
+  PersonOutline,
+  AccessTime,
 } from '@mui/icons-material';
 import { UserDeviceDetails } from '@/components/admin/UserDeviceDetails';
 import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
@@ -539,7 +540,7 @@ export default function UsersPage() {
                   aria-label="Users"
                   sx={{
                     tableLayout: 'fixed',
-                    minWidth: 1240,
+                    minWidth: 1320,
                     '& .MuiTableCell-root': {
                       px: 1.25,
                       py: 1,
@@ -570,25 +571,20 @@ export default function UsersPage() {
                     },
                     '& .MuiChip-root': { maxWidth: '100%' },
                     '& .MuiTableCell-root:last-child': {
-                      position: { md: 'sticky' },
+                      position: 'sticky',
                       right: 0,
                       bgcolor: 'background.paper',
-                      boxShadow: { md: '-1px 0 0 #333333' },
+                      boxShadow: '-1px 0 0 #333333',
+                      zIndex: 1,
                     },
                     '& .MuiTableCell-head:last-child': {
                       bgcolor: 'background.default',
                     },
                     '& .MuiTableRow-root:last-child td': { borderBottom: 0 },
-                    '& .MuiButton-root': {
-                      minWidth: 0,
-                      fontSize: 11,
-                      p: 0,
-                      lineHeight: 1.6,
-                    },
                   }}
                 >
                   <colgroup>
-                    {[220, 120, 155, 108, 68, 90, 110, 115, 85, 90, 76].map(
+                    {[220, 120, 155, 108, 68, 90, 110, 115, 85, 90, 148].map(
                       (width, index) => (
                         <col key={index} style={{ width }} />
                       )
@@ -743,22 +739,6 @@ export default function UsersPage() {
                             >
                               {user.email || '-'}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1.5, mt: 0.25 }}>
-                              <Button
-                                component={Link}
-                                size="small"
-                                href={`/dashboard/users/${encodeURIComponent(user.id)}/portrait`}
-                              >
-                                Portrait
-                              </Button>
-                              <Button
-                                component={Link}
-                                size="small"
-                                href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
-                              >
-                                Time in app
-                              </Button>
-                            </Box>
                             {user.telegram_username && (
                               <Typography
                                 variant="caption"
@@ -902,9 +882,28 @@ export default function UsersPage() {
                               display: 'flex',
                               alignItems: 'center',
                               gap: 0.5,
-                              '& .MuiButton-root': { whiteSpace: 'nowrap' },
                             }}
                           >
+                            <Tooltip title="Portrait">
+                              <IconButton
+                                component={Link}
+                                href={`/dashboard/users/${encodeURIComponent(user.id)}/portrait`}
+                                size="small"
+                                aria-label="Portrait"
+                              >
+                                <PersonOutline sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Time in app">
+                              <IconButton
+                                component={Link}
+                                href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
+                                size="small"
+                                aria-label="Time in app"
+                              >
+                                <AccessTime sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="Grant Pro">
                               <IconButton
                                 size="small"
@@ -919,7 +918,7 @@ export default function UsersPage() {
                             <Tooltip title="Chat">
                               <IconButton
                                 component={Link}
-                                href={`/dashboard/bot-chat?userId=${user.id}`}
+                                href={`/dashboard/bot-chat?userId=${encodeURIComponent(user.id)}`}
                                 size="small"
                                 aria-label="Chat"
                               >
