@@ -103,21 +103,19 @@ it('reads saved cohorts without creating an assignment and explains an empty res
   expect(getPortraitExperimentScorecard).not.toHaveBeenCalled();
 });
 it('keeps missing financial inputs unknown, the original denominator visible and the estimate explicitly qualified', async () => {
-  jest
-    .mocked(listPortraitExperiments)
-    .mockResolvedValue({
-      items: [
-        {
-          id: 'saved-cohort',
-          definition: {
-            question: 'policy_vs_current',
-            targetApp: 'SirBro',
-            protocolVersion: 'v1',
-          },
-          assignedAccounts: 1,
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'saved-cohort',
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
         },
-      ],
-    });
+        assignedAccounts: 1,
+      },
+    ],
+  });
   jest
     .mocked(getPortraitExperimentScorecard)
     .mockResolvedValue(report('saved-cohort'));
@@ -137,21 +135,19 @@ it('keeps missing financial inputs unknown, the original denominator visible and
   expect(screen.getByText(/not reconciled Store proceeds/)).toBeInTheDocument();
 });
 it('clears the old report while refreshing a fixed UTC event cutoff', async () => {
-  jest
-    .mocked(listPortraitExperiments)
-    .mockResolvedValue({
-      items: [
-        {
-          id: 'saved-cohort',
-          definition: {
-            question: 'policy_vs_current',
-            targetApp: 'SirBro',
-            protocolVersion: 'v1',
-          },
-          assignedAccounts: 1,
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'saved-cohort',
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
         },
-      ],
-    });
+        assignedAccounts: 1,
+      },
+    ],
+  });
   let resolve!: (value: ExperimentScorecard) => void;
   jest
     .mocked(getPortraitExperimentScorecard)
@@ -179,4 +175,54 @@ it('clears the old report while refreshing a fixed UTC event cutoff', async () =
   );
   await act(async () => resolve(report('saved-cohort')));
   expect(screen.getByText('Eligible assigned accounts')).toBeInTheDocument();
+});
+it('identifies incumbent Campaign exposure without inventing an AI decision', async () => {
+  jest
+    .mocked(listPortraitExperiments)
+    .mockResolvedValue({
+      items: [
+        {
+          id: 'saved-cohort',
+          definition: {
+            question: 'policy_vs_current',
+            targetApp: 'SirBro',
+            protocolVersion: 'v1',
+          },
+          assignedAccounts: 2,
+        },
+      ],
+    });
+  const result = report('saved-cohort');
+  result.traces = [
+    {
+      origin: 'product_campaign',
+      decisionId: null,
+      assignmentId: 'assignment-current',
+      userId: 'controlled-account',
+      capturedAt: '2026-10-28T12:00:00Z',
+      references: {
+        origin: 'product_campaign',
+        campaignId: 'incumbent-campaign',
+        campaignVersion: 2,
+        definitionDigest: 'controlled-source-digest',
+      },
+      deliveries: [
+        {
+          id: 'incumbent-delivery',
+          status: 'shown',
+          openedAt: null,
+          pushOpenedAt: null,
+          providerAcceptedAt: null,
+        },
+      ],
+      transactions: [],
+    },
+  ];
+  jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+  render(<UserExperimentScorecard />);
+  expect(
+    await screen.findByText(/Product Campaign · assignment assignment-current/)
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Decision null/)).not.toBeInTheDocument();
+  expect(screen.getByText(/incumbent-campaign/)).toBeInTheDocument();
 });

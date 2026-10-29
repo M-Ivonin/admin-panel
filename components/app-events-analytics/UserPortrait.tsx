@@ -25,6 +25,7 @@ import {
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import type {
   PortraitActivity,
+  PortraitSnapshot,
   PortraitTimelineFact,
   PortraitWindow,
 } from '@/lib/api/user-portrait';
@@ -504,10 +505,11 @@ export function UserPortrait({ userId }: { userId: string }) {
                   detail={
                     ready.snapshot.geo.country
                       ? `${ready.snapshot.geo.country} · ${ready.snapshot.geo.source ?? 'source unknown'}; not Store territory`
-                      : 'Geo unknown; storefront not established'
+                      : 'Physical geography unknown; separate from Store context'
                   }
                 />
               </Box>
+              <PortraitStorefrontEvidence snapshot={ready.snapshot} />
               {ready.snapshot.current.access.primaryEntitlement ? (
                 <Typography variant="body2" sx={{ mt: 2 }}>
                   Current entitlement:{' '}
@@ -940,3 +942,69 @@ const chatLabels: Record<string, string> = {
   privateMessages: 'Private user messages',
   publicMessages: 'Public user messages',
 };
+
+/** Shows saved quote-scoped Store context without inferring it from geography. */
+export function PortraitStorefrontEvidence({
+  snapshot,
+}: {
+  snapshot: PortraitSnapshot;
+}) {
+  const scopes = new Map<
+    string,
+    NonNullable<PortraitSnapshot['pricing']>['quotes'][number]
+  >();
+  for (const quote of snapshot.pricing?.quotes ?? []) {
+    if (
+      quote.storefront.source !== 'native_storefront' ||
+      !Number.isFinite(Date.parse(quote.storefront.capturedAt)) ||
+      !Number.isFinite(Date.parse(quote.validUntil))
+    )
+      continue;
+    const key = `${quote.store}:${quote.storefront.territory}:${quote.platform}`;
+    const previous = scopes.get(key);
+    if (
+      !previous ||
+      quote.storefront.capturedAt > previous.storefront.capturedAt
+    )
+      scopes.set(key, quote);
+  }
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Native Store context
+      </Typography>
+      {scopes.size ? (
+        <Stack spacing={1}>
+          {[...scopes.entries()].map(([key, quote]) => {
+            const validAtSnapshot =
+              Date.parse(snapshot.asOf) < Date.parse(quote.validUntil);
+            const staleNow = Date.now() >= Date.parse(quote.validUntil);
+            return (
+              <Box key={key}>
+                <Typography variant="body2">
+                  {quote.store === 'google_play' ? 'Google Play' : 'App Store'}{' '}
+                  · {quote.storefront.territory} ·{' '}
+                  {quote.platform === 'android' ? 'Android' : 'iOS'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {validAtSnapshot ? 'Valid at snapshot' : 'Stale at snapshot'}
+                  {staleNow ? ' · stale now' : ''} · native Store observation{' '}
+                  {stamp(quote.storefront.capturedAt)} · quote valid until{' '}
+                  {stamp(quote.validUntil)}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Stack>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          Storefront unknown — no eligible native quote in this snapshot.
+        </Typography>
+      )}
+      <Typography variant="caption" color="text.secondary">
+        Saved quote-scoped evidence, separate from physical geography. This view
+        does not refresh Store terms.
+      </Typography>
+    </Box>
+  );
+}

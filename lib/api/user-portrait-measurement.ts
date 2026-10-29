@@ -156,7 +156,8 @@ export interface ExperimentScorecard {
     meaning: string;
   }>;
   traces: Array<{
-    decisionId: string;
+    origin?: 'portrait_decision' | 'product_campaign';
+    decisionId: string | null;
     assignmentId: string;
     userId: string;
     capturedAt: string;

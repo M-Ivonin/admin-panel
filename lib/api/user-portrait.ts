@@ -87,6 +87,22 @@ export interface PortraitSnapshot {
     detectedAt: string | null;
   };
   storefront: { status: string };
+  pricing?: {
+    policyVersion: string;
+    capturedAt: string;
+    status: 'available' | 'unavailable';
+    quotes: Array<{
+      store: 'google_play' | 'app_store';
+      platform: 'android' | 'ios';
+      capturedAt: string;
+      validUntil: string;
+      storefront: {
+        territory: string;
+        source: 'native_storefront';
+        capturedAt: string;
+      };
+    }>;
+  };
   sourceWatermarks: Array<{
     source: string;
     occurredAt: string | null;

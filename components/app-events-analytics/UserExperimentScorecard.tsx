@@ -635,14 +635,19 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
         </TableContainer>
         <Box component="details" sx={{ mt: 2 }}>
           <Typography component="summary" sx={{ cursor: 'pointer' }}>
-            Decision → Delivery → verified transaction evidence
+            Source → Delivery → verified transaction evidence
           </Typography>
           <Stack spacing={2} sx={{ mt: 2 }}>
             {r.traces.map((t) => (
-              <Box key={t.decisionId} sx={{ overflowWrap: 'anywhere' }}>
+              <Box
+                key={t.decisionId ?? `${t.assignmentId}:${t.deliveries[0]?.id}`}
+                sx={{ overflowWrap: 'anywhere' }}
+              >
                 <Typography variant="body2">
-                  Decision {t.decisionId} · assignment {t.assignmentId} ·{' '}
-                  {stamp(t.capturedAt)}
+                  {t.origin === 'product_campaign'
+                    ? 'Product Campaign'
+                    : `Decision ${t.decisionId}`}{' '}
+                  · assignment {t.assignmentId} · {stamp(t.capturedAt)}
                 </Typography>
                 <Box
                   component="pre"
