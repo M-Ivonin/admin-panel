@@ -48,3 +48,17 @@ Product/service Campaign definitions, their `frequencyCapHours`, and their exist
 shared account budget rules are unchanged. Their contacts are not counted as
 personalized messages for this setting. The separately approved, validated single-account
 technical pilot can retain its existing `frequencyLimitsDisabled` exemption.
+
+## AI usage limits
+
+The same Settings form and revision-protected API manage `aiCallsPerUser24h`
+(default **4**, rolling 24 hours) and `aiCallsPerDay` (default **200**, all users,
+UTC calendar day). Both accept whole call counts from 1 to 1,000,000. The backend
+reads these persisted limits during atomic model admission, so saves apply to new
+evaluations without a restart. An interval-only save preserves both AI quotas.
+Migration `1793188810000` must precede the updated backend and UI.
+
+These quotas govern AI attempts, independently of the six-hour contact interval.
+Failed/timed-out attempts count; quota-denied decisions do not. Exhaustion selects
+the existing rule baseline or no action and never bypasses communication guards.
+Changing settings does not enable a stopped pilot or reset its usage history.

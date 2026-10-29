@@ -113,6 +113,8 @@ export function removeEngagementExclusion(
 
 export interface PersonalizationSettings {
   minimumContactIntervalHours: number;
+  aiCallsPerUser24h: number;
+  aiCallsPerDay: number;
   revision: number;
   updatedAt: string;
   updatedBy: string | null;
@@ -124,10 +126,15 @@ export function getPersonalizationSettings(): Promise<PersonalizationSettings> {
 
 export function savePersonalizationSettings(
   minimumContactIntervalHours: number,
-  expectedRevision: number
+  expectedRevision: number,
+  aiLimits?: Pick<
+    PersonalizationSettings,
+    'aiCallsPerUser24h' | 'aiCallsPerDay'
+  >
 ): Promise<PersonalizationSettings> {
   return request(`${base}/personalization-settings`, 'PATCH', {
     minimumContactIntervalHours,
     expectedRevision,
+    ...aiLimits,
   });
 }

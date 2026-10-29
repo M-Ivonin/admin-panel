@@ -17,10 +17,12 @@ import {
   type PersonalizationSettings,
 } from '@/lib/api/user-engagement';
 
-/** Shows the persisted frequency and saves only an explicit operator change. */
+/** Edits shared contact frequency and AI quotas with revision-protected saves. */
 export function PersonalizationSettingsForm() {
   const [saved, setSaved] = useState<PersonalizationSettings | null>(null);
   const [hours, setHours] = useState('');
+  const [aiPerUser, setAiPerUser] = useState('');
+  const [aiPerDay, setAiPerDay] = useState('');
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -32,6 +34,8 @@ export function PersonalizationSettingsForm() {
       const value = await getPersonalizationSettings();
       setSaved(value);
       setHours(String(value.minimumContactIntervalHours));
+      setAiPerUser(String(value.aiCallsPerUser24h));
+      setAiPerDay(String(value.aiCallsPerDay));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load settings.');
     } finally {
@@ -42,20 +46,33 @@ export function PersonalizationSettingsForm() {
     void read();
   }, [read]);
   const value = Number(hours);
-  const valid =
+  const perUser = Number(aiPerUser);
+  const perDay = Number(aiPerDay);
+  const aiLimitValid = (raw: string) =>
+    raw.trim() !== '' &&
+    Number.isInteger(Number(raw)) &&
+    Number(raw) >= 1 &&
+    Number(raw) <= 1000000;
+  const hoursValid =
     hours.trim() !== '' &&
     Number.isInteger(value) &&
     value >= 1 &&
     value <= 168;
+  const valid = hoursValid && aiLimitValid(aiPerUser) && aiLimitValid(aiPerDay);
   async function save() {
     if (!saved || !valid) return;
     setBusy(true);
     setError(null);
     setSuccess(false);
     try {
-      const result = await savePersonalizationSettings(value, saved.revision);
+      const result = await savePersonalizationSettings(value, saved.revision, {
+        aiCallsPerUser24h: perUser,
+        aiCallsPerDay: perDay,
+      });
       setSaved(result);
       setHours(String(result.minimumContactIntervalHours));
+      setAiPerUser(String(result.aiCallsPerUser24h));
+      setAiPerDay(String(result.aiCallsPerDay));
       setSuccess(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save settings.');
@@ -70,7 +87,7 @@ export function PersonalizationSettingsForm() {
           Settings
         </Typography>
         <Typography color="text.secondary">
-          Personalized message frequency
+          Personalized message frequency and AI usage
         </Typography>
       </Box>
       {error ? (
@@ -86,9 +103,7 @@ export function PersonalizationSettingsForm() {
         </Alert>
       ) : null}
       {success ? (
-        <Alert severity="success">
-          Settings saved. New personalized contacts use this interval.
-        </Alert>
+        <Alert severity="success">Personalization settings saved.</Alert>
       ) : null}
       {busy && !saved ? (
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -117,7 +132,7 @@ export function PersonalizationSettingsForm() {
                 setHours(event.target.value);
                 setSuccess(false);
               }}
-              error={!valid}
+              error={!hoursValid}
               helperText="Whole hours from 1 to 168 (7 days)."
               slotProps={{ htmlInput: { min: 1, max: 168, step: 1 } }}
               sx={{ maxWidth: 300 }}
@@ -127,6 +142,51 @@ export function PersonalizationSettingsForm() {
               frequency rules. Consent, duplicate checks and quiet windows still
               apply.
             </Alert>
+            <Box>
+              <Typography component="h2" variant="h6" fontWeight={700}>
+                AI usage limits
+              </Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
+                Limit AI decisions independently of message frequency. Defaults:
+                4 calls per user over 24 hours and 200 calls per server day.
+              </Typography>
+            </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="AI calls per user (24 hours)"
+                type="number"
+                value={aiPerUser}
+                disabled={busy}
+                onChange={(event) => {
+                  setAiPerUser(event.target.value);
+                  setSuccess(false);
+                }}
+                error={!aiLimitValid(aiPerUser)}
+                helperText="Rolling 24-hour window for each user."
+                slotProps={{ htmlInput: { min: 1, max: 1000000, step: 1 } }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                label="AI calls per server day"
+                type="number"
+                value={aiPerDay}
+                disabled={busy}
+                onChange={(event) => {
+                  setAiPerDay(event.target.value);
+                  setSuccess(false);
+                }}
+                error={!aiLimitValid(aiPerDay)}
+                helperText="Across all users, resets at 00:00 UTC."
+                slotProps={{ htmlInput: { min: 1, max: 1000000, step: 1 } }}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+            <Typography color="text.secondary" variant="body2">
+              Whole call limits from 1 to 1,000,000. Exhausted AI quotas use the
+              rule baseline or no action; they do not authorize extra messages.
+              Failed or timed-out attempts still count. Saved limits apply to
+              new evaluations without restarting the backend.
+            </Typography>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
@@ -135,7 +195,11 @@ export function PersonalizationSettingsForm() {
               <Button
                 variant="contained"
                 disabled={
-                  busy || !valid || value === saved.minimumContactIntervalHours
+                  busy ||
+                  !valid ||
+                  (value === saved.minimumContactIntervalHours &&
+                    perUser === saved.aiCallsPerUser24h &&
+                    perDay === saved.aiCallsPerDay)
                 }
                 onClick={() => void save()}
               >
