@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import {
   Alert,
   Box,
@@ -48,7 +48,8 @@ const label = (value: string) => value.replace(/_/g, ' ');
 export function UserPortrait({ userId }: { userId: string }) {
   const [days, setDays] = useState<7 | 30>(7),
     [snapshotId, setSnapshotId] = useState<string>(),
-    [offset, setOffset] = useState(0);
+    [offset, setOffset] = useState(0),
+    [timelineOpen, setTimelineOpen] = useState(false);
   const { data, loading, error, refresh } = useUserPortrait(
     userId,
     days,
@@ -189,12 +190,7 @@ export function UserPortrait({ userId }: { userId: string }) {
                 <Section title="Frequent instrumented actions">
                   <ActivityTable rows={ready.selectedWindow.actions} />
                 </Section>
-                <Section
-                  title="Instrumented screens"
-                  subtitle={`Screen source: ${ready.selectedWindow.screenSource}. No claim of complete screen or button coverage.`}
-                >
-                  <ActivityTable rows={ready.selectedWindow.screens} />
-                </Section>
+                <PortraitScreens window={ready.selectedWindow} />
               </Box>
               <Section
                 title="Product functions and checkout"
@@ -317,7 +313,9 @@ export function UserPortrait({ userId }: { userId: string }) {
                 )}
               </Section>
               <Section
-                title="Access, Store context and platform evidence"
+                title="Access and app details"
+                collapsible
+                summary={`${label(ready.snapshot.current.access.authorization)} · ${ready.snapshot.current.access.primaryEntitlement ? label(ready.snapshot.current.access.primaryEntitlement.productKey) : 'No paid plan recorded'} · ${[...new Set(ready.snapshot.platforms.map((item) => item.platform))].join(' / ') || 'Platform unknown'}`}
                 subtitle={`Captured ${stamp(ready.snapshot.current.capturedAt)}. This state is separate from the selected historical activity period.`}
               >
                 <Box
@@ -378,14 +376,26 @@ export function UserPortrait({ userId }: { userId: string }) {
                   Observed platforms and builds
                 </Typography>
                 {ready.snapshot.platforms.length ? (
-                  <Stack spacing={0.5}>
+                  <Stack
+                    spacing={1}
+                    sx={{ maxHeight: 320, overflowY: 'auto', pr: 1 }}
+                  >
                     {ready.snapshot.platforms.map((platform, i) => (
                       <Typography key={i} variant="body2">
-                        {platform.platform} · version{' '}
-                        {platform.version ?? 'unknown'} · build{' '}
-                        {platform.build ?? 'unknown'} · {platform.source} ·{' '}
-                        {platform.observations} records · last{' '}
-                        {stamp(platform.lastAt)}
+                        <Box component="span" sx={{ fontWeight: 600 }}>
+                          {platform.platform} ·{' '}
+                          {platform.version ?? 'Version unknown'}
+                        </Box>
+                        {platform.build ? ` · build ${platform.build}` : ''}
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          {platform.observations} recorded events · last{' '}
+                          {stamp(platform.lastAt)} · {platform.source}
+                        </Typography>
                       </Typography>
                     ))}
                   </Stack>
@@ -407,10 +417,19 @@ export function UserPortrait({ userId }: { userId: string }) {
                 </Typography>
               </Section>
               <Section
-                title="Safe event, contact and commerce timeline"
-                subtitle={`${ready.timeline.total} retained source facts in the selected window. Delivery rows are not all direct contacts or proof of an impression. Ledger amounts are historical verified transactions, not eligible Store quotes.`}
+                title="Activity timeline"
+                collapsible
+                open={timelineOpen}
+                onToggle={setTimelineOpen}
+                summary={`${number(ready.timeline.total)} recorded events · ${ready.selectedDays}-day period · ${number(ready.selectedWindow.observedActions)} product actions`}
+                subtitle={
+                  'Recorded product events, messages, deliveries and payments. A sent delivery does not prove a view; historical payments are not current Store prices.'
+                }
               >
-                <Stack spacing={1.5}>
+                <Stack
+                  spacing={1.5}
+                  sx={{ maxHeight: 520, overflowY: 'auto', pr: 1 }}
+                >
                   {ready.timeline.items.length ? (
                     ready.timeline.items.map((event, i) => (
                       <TimelineRow
@@ -438,7 +457,9 @@ export function UserPortrait({ userId }: { userId: string }) {
                     Previous events
                   </Button>
                   <Typography variant="caption">
-                    Offset {ready.timeline.offset} · page size 50
+                    {ready.timeline.total ? ready.timeline.offset + 1 : 0}–
+                    {ready.timeline.offset + ready.timeline.items.length} of{' '}
+                    {number(ready.timeline.total)} events
                   </Typography>
                   <Button
                     disabled={ready.timeline.nextOffset === null}
@@ -509,20 +530,52 @@ function Section({
   title,
   subtitle,
   children,
+  collapsible = false,
+  summary,
+  open,
+  onToggle,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
+  collapsible?: boolean;
+  summary?: string;
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
 }) {
   return (
-    <Paper component="section" sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
-      <Typography
-        variant="h6"
-        fontWeight={700}
-        sx={{ mb: subtitle ? 0.75 : 2 }}
-      >
-        {title}
-      </Typography>
+    <Paper
+      component={collapsible ? 'details' : 'section'}
+      open={open}
+      onToggle={
+        onToggle
+          ? (event: SyntheticEvent) =>
+              onToggle((event.currentTarget as HTMLDetailsElement).open)
+          : undefined
+      }
+      sx={{ p: { xs: 2, md: 3 }, minWidth: 0, '&[open] > summary': { mb: 2 } }}
+    >
+      {collapsible ? (
+        <Box
+          component="summary"
+          sx={{ cursor: 'pointer', '&::marker': { color: 'text.secondary' } }}
+        >
+          <Typography component="span" variant="h6" fontWeight={700}>
+            {title}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {summary}
+          </Typography>
+        </Box>
+      ) : (
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          sx={{ mb: subtitle ? 0.75 : 2 }}
+        >
+          {title}
+        </Typography>
+      )}
       {subtitle ? (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {subtitle}
@@ -602,6 +655,58 @@ function ActivityTable({ rows }: { rows: PortraitActivity[] }) {
     <Typography color="text.secondary">
       No instrumented observations available.
     </Typography>
+  );
+}
+/** Screen-opening event counts stay separate from named-screen telemetry. */
+export function PortraitScreens({ window }: { window: PortraitWindow }) {
+  const openingEvents = new Set([
+    'home_viewed',
+    'collection_page_viewed',
+    'parlay_page_viewed',
+    'top_picks_list_viewed',
+    'full_analysis_opened',
+    'article_viewed',
+  ]);
+  const recordedOpenings = window.actions.filter((row) =>
+    openingEvents.has(row.name)
+  );
+  return (
+    <Section
+      title="Instrumented screens"
+      subtitle={
+        window.screens.length
+          ? `Named screen observations · ${window.screenSource}`
+          : 'Screen names are unavailable in this snapshot. This does not mean the user visited no screens.'
+      }
+    >
+      {window.screens.length ? (
+        <ActivityTable rows={window.screens} />
+      ) : (
+        <>
+          {recordedOpenings.length ? (
+            <>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Recorded screen-opening events
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1.5 }}
+              >
+                Separately recorded opens and views, not a complete screen-visit
+                count.
+              </Typography>
+              <ActivityTable rows={recordedOpenings} />
+            </>
+          ) : (
+            <Typography color="text.secondary">
+              No named screens or screen-opening events recorded in the selected
+              period.
+            </Typography>
+          )}
+        </>
+      )}
+    </Section>
   );
 }
 function Heatmap({ value }: { value: PortraitWindow }) {

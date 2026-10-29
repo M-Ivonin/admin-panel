@@ -1,7 +1,7 @@
 'use client';
 
 import { FileText, CalendarDays, CalendarCheck, Users } from 'lucide-react';
-import { Alert, Box, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import type { PortraitResponse } from '@/lib/api/user-portrait';
 
 type ReadyPortrait = Extract<PortraitResponse, { status: 'ready' }>;
@@ -60,7 +60,7 @@ export function PortraitOverview({
             <Chip
               label={`${window.coverage.status.charAt(0).toUpperCase()}${window.coverage.status.slice(1)} coverage`}
               size="small"
-              color={window.coverage.status === 'ready' ? 'default' : 'warning'}
+              color="default"
               variant="outlined"
             />
             {data.freshness.stale ? (
@@ -104,14 +104,11 @@ export function PortraitOverview({
             {snapshot.timezone.certainty.replace(/_/g, ' ')}
           </Typography>
         </Stack>
-        <Alert
-          severity={window.coverage.status === 'ready' ? 'info' : 'warning'}
-          sx={{ mt: 2, py: 0 }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
           {data.freshness.stale ? 'Stale snapshot · ' : ''}
           {window.coverage.importedDays} of {window.coverage.expectedDays} dates
           have saved BigQuery imports. Unknown values are not zero.
-        </Alert>
+        </Typography>
         <Box component="details" sx={{ mt: 1.5 }}>
           <Typography
             component="summary"
@@ -487,52 +484,125 @@ export function PortraitOverview({
             component="section"
             sx={{ ...surface, order: { xs: 5, lg: 0 } }}
           >
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 1.5 }}>
-              Observed content use
-            </Typography>
-            <Stack spacing={1.5}>
-              {snapshot.observedInterests.length ? (
-                snapshot.observedInterests.map((item) => (
-                  <Box key={item.reference}>
-                    <Typography variant="body2">
-                      {item.reference.split(':')[0]} · {number(item.actions)}{' '}
-                      actions · last recorded {stamp(item.lastAt)}
-                    </Typography>
-                    <Box component="details">
-                      <Typography
-                        component="summary"
-                        variant="caption"
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        Evidence reference
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{ overflowWrap: 'anywhere' }}
-                      >
-                        {item.reference}
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No supported content-interest references. Explicit choices are
-                  not inferred from geo or inactivity.
+            <Box component="details" sx={{ '&[open] > summary': { mb: 2 } }}>
+              <Box
+                component="summary"
+                sx={{
+                  cursor: 'pointer',
+                  '&::marker': { color: 'text.secondary' },
+                }}
+              >
+                <Typography component="span" variant="h6" fontWeight={700}>
+                  Content interactions
                 </Typography>
-              )}
-            </Stack>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              display="block"
-              sx={{ mt: 1.5 }}
-            >
-              Observed use does not establish motivation.
-            </Typography>
+                <Stack
+                  direction="row"
+                  gap={1}
+                  flexWrap="wrap"
+                  useFlexGap
+                  sx={{ mt: 1 }}
+                >
+                  {Object.entries(
+                    snapshot.observedInterests.reduce<Record<string, number>>(
+                      (groups, item) => {
+                        const kind = contentKind(item.reference);
+                        groups[kind] = (groups[kind] ?? 0) + 1;
+                        return groups;
+                      },
+                      {}
+                    )
+                  ).map(([kind, count]) => (
+                    <Chip
+                      key={kind}
+                      size="small"
+                      variant="outlined"
+                      label={`${kind}: ${count}`}
+                    />
+                  ))}
+                  {!snapshot.observedInterests.length ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No content interactions recorded
+                    </Typography>
+                  ) : null}
+                </Stack>
+                <Typography
+                  component="span"
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: 'block', mt: 1 }}
+                >
+                  Up to 20 most active content items · snapshot history
+                </Typography>
+              </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1.5 }}
+              >
+                Recorded events linked to each item, such as opens, clicks and
+                saves. These are not unique views or explicit preferences.
+                Content names are unavailable in this snapshot.
+              </Typography>
+              <Stack
+                spacing={1.5}
+                sx={{ maxHeight: 360, overflowY: 'auto', pr: 1 }}
+              >
+                {snapshot.observedInterests.map((item) => (
+                  <Box
+                    key={item.reference}
+                    sx={{ borderBottom: 1, borderColor: 'divider', pb: 1.5 }}
+                  >
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      gap={1}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        title={item.reference}
+                      >
+                        {contentKind(item.reference).replace(/s$/, '')}
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          {item.reference.slice(
+                            item.reference.indexOf(':') + 1,
+                            item.reference.indexOf(':') + 9
+                          )}
+                        </Typography>
+                      </Typography>
+                      <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                        {number(item.actions)} events
+                      </Typography>
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      Last interaction {stamp(item.lastAt)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
           </Paper>
         </Stack>
       </Box>
     </Stack>
+  );
+}
+
+function contentKind(reference: string) {
+  const key = reference.split(':')[0];
+  return (
+    (
+      {
+        predictionId: 'Predictions',
+        collectionId: 'Collections',
+        teamId: 'Teams',
+        leagueId: 'Leagues',
+      } as Record<string, string>
+    )[key] ?? 'Other content'
   );
 }
