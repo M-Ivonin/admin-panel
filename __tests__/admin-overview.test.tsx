@@ -259,8 +259,8 @@ it('shows all eight reports, complete navigation and each headline metric once',
   });
   const navigationLinks = within(navigation).getAllByRole('link');
   expect(
-    within(navigation).getByRole('link', { name: 'Policy outcomes' })
-  ).toHaveAttribute('href', '/dashboard/user-experiments');
+    within(navigation).getByRole('link', { name: 'Personalization' })
+  ).toHaveAttribute('href', '/dashboard/users');
   const appEventsLink = within(navigation).getByRole('link', { name: 'App Events' });
   const timeInAppLink = within(navigation).getByRole('link', { name: 'Time in app' });
   expect(timeInAppLink).toHaveAttribute('href', '/dashboard/time-in-app');

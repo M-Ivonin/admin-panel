@@ -7,8 +7,12 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
   Typography,
 } from '@mui/material';
 import {
@@ -90,22 +94,43 @@ export function PortraitDecisionHistory({
         Reading saved decisions and replaying frozen validation do not call a
         model or execute an action.
       </Alert>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ overflowWrap: 'anywhere' }}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        gap={2}
+        alignItems={{ sm: 'center' }}
+        justifyContent="space-between"
       >
-        Portrait currently viewed: {viewedSnapshotId}. Each historic decision
-        below keeps its own snapshot, seven-day window and current-owner cutoff.
-      </Typography>
-      <Button
-        variant="outlined"
-        disabled={loading || Boolean(busy)}
-        onClick={() => setRevision((v) => v + 1)}
-        sx={{ alignSelf: 'flex-start' }}
-      >
-        Refresh saved decisions
-      </Button>
+        <Typography variant="body2" fontWeight={600}>
+          Latest 20 saved evaluations for this account
+        </Typography>
+        <Button
+          variant="outlined"
+          disabled={loading || Boolean(busy)}
+          onClick={() => setRevision((v) => v + 1)}
+          sx={{ alignSelf: 'flex-start' }}
+        >
+          Refresh saved decisions
+        </Button>
+      </Stack>
+      <Box component="details">
+        <Typography
+          component="summary"
+          variant="caption"
+          color="text.secondary"
+          sx={{ cursor: 'pointer' }}
+        >
+          Viewed portrait context
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ overflowWrap: 'anywhere' }}
+        >
+          Portrait currently viewed: {viewedSnapshotId}. Each historic decision
+          below keeps its own snapshot, seven-day window and current-owner
+          cutoff.
+        </Typography>
+      </Box>
       {loading ? (
         <Stack direction="row" spacing={1} alignItems="center" role="status">
           <CircularProgress size={18} />
@@ -167,8 +192,9 @@ function Decision({
       sx={{
         border: 1,
         borderColor: 'divider',
-        borderRadius: 1,
-        p: { xs: 1.5, md: 2 },
+        borderRadius: '12px',
+        bgcolor: 'background.paper',
+        p: { xs: 2, md: 2.5 },
         minWidth: 0,
       }}
     >
@@ -179,18 +205,29 @@ function Decision({
         flexWrap="wrap"
         useFlexGap
       >
-        <Typography fontWeight={700}>{label(candidate.kind)}</Typography>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          sx={{ textTransform: 'capitalize' }}
+        >
+          {label(candidate.kind)}
+        </Typography>
         <Chip
           size="small"
+          color={item.source === 'model' ? 'primary' : 'default'}
+          variant="outlined"
+          sx={{ textTransform: 'capitalize' }}
           label={
             item.source === 'model'
               ? 'Validated model selection'
               : 'Rule baseline'
           }
-          variant="outlined"
         />
         <Chip
           size="small"
+          color="primary"
+          variant="outlined"
+          sx={{ textTransform: 'capitalize' }}
           label={
             item.status === 'pending'
               ? 'Pending evaluation'
@@ -211,94 +248,171 @@ function Decision({
           {item.validator.reasons.map(label).join(', ')}.
         </Alert>
       ) : null}
-      {candidate.copy ? (
-        <Box sx={{ mt: 2 }}>
-          <Typography fontWeight={600}>{candidate.copy.title}</Typography>
-          <Typography
-            variant="body2"
-            sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+      <Box
+        sx={{
+          mt: 2,
+          p: 1.5,
+          borderRadius: '8px',
+          bgcolor: 'rgba(41,182,246,0.07)',
+          color: 'info.light',
+        }}
+      >
+        <Typography variant="body2">
+          Shadow evaluation · No execution enabled by this read API
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            md: candidate.copy ? '1fr 1fr' : '1fr',
+          },
+          gap: 1.5,
+          mt: 2,
+        }}
+      >
+        {candidate.copy ? (
+          <Box
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: '8px',
+              p: 1.5,
+              minWidth: 0,
+            }}
           >
-            {candidate.copy.body}
+            <Typography variant="caption" color="text.secondary">
+              Content
+            </Typography>
+            <Typography fontWeight={600} sx={{ mt: 0.5 }}>
+              {candidate.copy.title}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+            >
+              {candidate.copy.body}
+            </Typography>
+          </Box>
+        ) : null}
+        <Box
+          sx={{
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: '8px',
+            p: 1.5,
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary">
+            Model
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            Model: {item.model.model} · {label(item.model.status)} ·{' '}
+            {item.model.latencyMs} ms.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Tokens: {item.model.inputTokens ?? 'unknown'} input /{' '}
+            {item.model.outputTokens ?? 'unknown'} output.
           </Typography>
         </Box>
-      ) : null}
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-        Model: {item.model.model} · {label(item.model.status)} ·{' '}
-        {item.model.latencyMs} ms. Tokens: {item.model.inputTokens ?? 'unknown'}{' '}
-        input / {item.model.outputTokens ?? 'unknown'} output.
-      </Typography>
+      </Box>
       <Box
         component="details"
-        sx={{ mt: 2, '& summary': { cursor: 'pointer' } }}
+        sx={{
+          mt: 2,
+          p: 1.5,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: '8px',
+          '& summary': { cursor: 'pointer' },
+        }}
       >
         <Typography component="summary" variant="body2" color="primary.main">
           Exact decision evidence
         </Typography>
-        <Stack spacing={1} sx={{ mt: 1, overflowWrap: 'anywhere' }}>
-          <Typography variant="caption">
-            Decision: {item.id} · trigger: {item.triggerKey}
-          </Typography>
-          <Typography variant="caption">
-            Pinned snapshot: {item.snapshotId} · facts as of{' '}
-            {stamp(item.input.snapshot.asOf)} ·{' '}
-            {item.input.snapshot.featureVersion} · schema{' '}
-            {item.input.snapshot.schemaVersion}
-          </Typography>
-          <Typography variant="caption">
-            Decision window: {window.days} days, {stamp(window.from)} —{' '}
-            {stamp(window.to)} (exclusive).
-          </Typography>
-          <Typography variant="caption">
-            Current owner checks: {stamp(item.input.current.capturedAt)} ·
-            access {item.input.current.access.authorization} · pending checkout{' '}
-            {String(item.input.current.pendingCommerce)} · app-active evidence{' '}
-            {item.input.current.activeInApp === null
-              ? 'unknown'
-              : String(item.input.current.activeInApp)}
-            .
-          </Typography>
-          <Typography variant="caption">
-            Existing email preference evidence:{' '}
-            {item.input.current.preferences.effectivePredictions}; revision{' '}
-            {item.input.current.preferences.revision}. This does not enable a
-            new channel.
-          </Typography>
-          <Typography variant="caption">
-            Opportunity: {candidate.opportunityId} · material{' '}
-            {item.selection.materialVersion} · template{' '}
-            {item.selection.templateId} · locale {item.selection.locale}
-          </Typography>
-          <Typography variant="caption">
-            Evaluation window: {stamp(item.selection.dispatchAt)} —{' '}
-            {stamp(item.selection.expiresAt)}. This is decision validity, not a
-            new News expiry.
-          </Typography>
-          <Typography variant="caption">
-            Destination reference: {candidate.destination ?? 'none'}
-          </Typography>
-          <Typography variant="caption">
-            Versions:{' '}
-            {Object.entries(item.input.versions)
-              .map(([key, value]) => `${key}: ${value}`)
-              .join(' · ')}
-          </Typography>
-          <Typography variant="caption">
-            Provider response: {item.model.responseId ?? 'none'} · store=false ·{' '}
-            {label(item.model.retention)}
-          </Typography>
-          <Divider />
-          <Typography variant="caption">
-            Rule comparison: {item.baseline.candidateId} ·{' '}
-            {label(item.baseline.reasonCode)}. Same candidate/template/window
-            contract as the model.
-          </Typography>
-          <Typography variant="caption">
-            Exclusions:{' '}
-            {item.input.exclusions.map(label).join(' · ') || 'none recorded'}
-          </Typography>
-        </Stack>
+        <TableContainer sx={{ mt: 1 }}>
+          <Table
+            size="small"
+            aria-label="Saved decision evidence"
+            sx={{
+              tableLayout: 'fixed',
+              '& td': {
+                overflowWrap: 'anywhere',
+                verticalAlign: 'top',
+                fontSize: 12,
+                py: 1,
+              },
+            }}
+          >
+            <TableBody>
+              {[
+                ['Decision', `${item.id} · trigger: ${item.triggerKey}`],
+                [
+                  'Pinned snapshot',
+                  `${item.snapshotId} · facts as of ${stamp(item.input.snapshot.asOf)} · ${item.input.snapshot.featureVersion} · schema ${item.input.snapshot.schemaVersion}`,
+                ],
+                [
+                  'Decision window',
+                  `${window.days} days, ${stamp(window.from)} — ${stamp(window.to)} (exclusive)`,
+                ],
+                [
+                  'Current owner checks',
+                  `${stamp(item.input.current.capturedAt)} · access ${item.input.current.access.authorization} · pending checkout ${String(item.input.current.pendingCommerce)} · app-active evidence ${item.input.current.activeInApp === null ? 'unknown' : String(item.input.current.activeInApp)}`,
+                ],
+                [
+                  'Existing email preference evidence',
+                  `${item.input.current.preferences.effectivePredictions}; revision ${item.input.current.preferences.revision}. This does not enable a new channel.`,
+                ],
+                [
+                  'Opportunity',
+                  `${candidate.opportunityId} · material ${item.selection.materialVersion} · template ${item.selection.templateId} · locale ${item.selection.locale}`,
+                ],
+                [
+                  'Evaluation window',
+                  `${stamp(item.selection.dispatchAt)} — ${stamp(item.selection.expiresAt)}. This is decision validity, not a new News expiry.`,
+                ],
+                ['Destination reference', candidate.destination ?? 'none'],
+                [
+                  'Versions',
+                  Object.entries(item.input.versions)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(' · '),
+                ],
+                [
+                  'Provider response',
+                  `${item.model.responseId ?? 'none'} · store=false · ${label(item.model.retention)}`,
+                ],
+                [
+                  'Rule comparison',
+                  `${item.baseline.candidateId} · ${label(item.baseline.reasonCode)}. Same candidate/template/window contract as the model.`,
+                ],
+                [
+                  'Exclusions',
+                  item.input.exclusions.map(label).join(' · ') ||
+                    'none recorded',
+                ],
+              ].map(([name, value]) => (
+                <TableRow key={name}>
+                  <TableCell
+                    sx={{
+                      width: { xs: '38%', md: '30%' },
+                      color: 'text.secondary',
+                    }}
+                  >
+                    {name}
+                  </TableCell>
+                  <TableCell>{value}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
       <Button
+        variant="outlined"
         size="small"
         disabled={busy || item.status === 'pending'}
         onClick={onReplay}

@@ -1,21 +1,25 @@
 'use client';
-import { Box } from '@mui/material';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Stack, Typography } from '@mui/material';
+import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RevenueLedgerAccessGate } from '@/modules/revenue-ledger/RevenueLedgerAccessGate';
 import { UserExperimentScorecard } from '@/components/app-events-analytics/UserExperimentScorecard';
 
 export default function UserExperimentsPage() {
   return (
     <ProtectedRoute>
-      <RevenueLedgerAccessGate>
-        <AdminPageHeader title="Policy outcome scorecards" maxWidth={1440} />
-        <Box
-          sx={{ maxWidth: 1440, mx: 'auto', p: { xs: 2, md: 3 }, minWidth: 0 }}
-        >
+      <PersonalizationLayout activeTab="results">
+        <Stack spacing={3}>
+          <div>
+            <Typography component="h1" variant="h4" fontWeight={700}>
+              Results
+            </Typography>
+            <Typography color="text.secondary">
+              Saved cohort outcomes
+            </Typography>
+          </div>
           <UserExperimentScorecard />
-        </Box>
-      </RevenueLedgerAccessGate>
+        </Stack>
+      </PersonalizationLayout>
     </ProtectedRoute>
   );
 }

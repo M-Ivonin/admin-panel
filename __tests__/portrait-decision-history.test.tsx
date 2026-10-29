@@ -105,14 +105,12 @@ const history: History = {
 beforeEach(() => jest.resetAllMocks());
 it('shows the saved model choice with its own snapshot/window and replays only frozen validation', async () => {
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
-  jest
-    .mocked(replayUserPortraitDecision)
-    .mockResolvedValue({
-      status: 'replayed',
-      modelCalled: false,
-      dispatchEnabled: false,
-      validator: { accepted: true },
-    });
+  jest.mocked(replayUserPortraitDecision).mockResolvedValue({
+    status: 'replayed',
+    modelCalled: false,
+    dispatchEnabled: false,
+    validator: { accepted: true },
+  });
   render(
     <PortraitDecisionHistory
       userId="account-one"
@@ -128,12 +126,14 @@ it('shows the saved model choice with its own snapshot/window and replays only f
   ).toBeInTheDocument();
   fireEvent.click(screen.getByText('Exact decision evidence'));
   expect(
-    screen.getByText(/Pinned snapshot: historic-snapshot/)
+    screen.getByRole('row', { name: /Pinned snapshot historic-snapshot/ })
   ).toBeInTheDocument();
-  expect(screen.getByText(/Decision window: 7 days/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('row', { name: /Decision window 7 days/ })
+  ).toBeInTheDocument();
   expect(screen.getByText(/Recorded channel: none/)).toBeInTheDocument();
   expect(
-    screen.getByText(/existing email preference evidence/i)
+    screen.getByRole('row', { name: /existing email preference evidence/i })
   ).toHaveTextContent('unknown');
   fireEvent.click(
     screen.getByRole('button', { name: 'Replay frozen validation' })

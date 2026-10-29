@@ -110,3 +110,24 @@ export function removeEngagementExclusion(
 ): Promise<EngagementExclusion[]> {
   return request(`${base}/exclusions/${encodeURIComponent(id)}`, 'DELETE');
 }
+
+export interface PersonalizationSettings {
+  minimumContactIntervalHours: number;
+  revision: number;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+export function getPersonalizationSettings(): Promise<PersonalizationSettings> {
+  return request(`${base}/personalization-settings`, 'GET');
+}
+
+export function savePersonalizationSettings(
+  minimumContactIntervalHours: number,
+  expectedRevision: number
+): Promise<PersonalizationSettings> {
+  return request(`${base}/personalization-settings`, 'PATCH', {
+    minimumContactIntervalHours,
+    expectedRevision,
+  });
+}

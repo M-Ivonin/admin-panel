@@ -1,0 +1,450 @@
+{
+  "origin": "http://127.0.0.1:4390",
+  "source": "Real production Next.js UI. Portrait/results use isolated DTO fixtures; Settings uses real JWT/admin-guarded Nest API and an isolated PostgreSQL schema. No production data or model/provider calls.",
+  "screens": [
+    {
+      "name": "users-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "users-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "portrait-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "decisions-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "portrait-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "decisions-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "portrait-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "decisions-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-loading-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "portrait-loading-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "decisions-empty-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "decisions-error-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-error-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "stale-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "stale-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "not_ready-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "not_ready-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "restricted-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "restricted-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "error-1440",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "error-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "results-empty-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-desktop",
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-saved-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-error-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    },
+    {
+      "name": "settings-loading-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      },
+      "overflow": false
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/user",
+      "query": "?page=1&limit=20&sortBy=registered_at&sortOrder=DESC"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/campaigns/admin/catalog",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=30&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=30&offset=0&snapshotId=sample-historical"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions/sample-decision/replay",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=30&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/sample-technical-protocol/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/sample-technical-protocol/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/sample-technical-protocol/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/sample-technical-protocol/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    }
+  ],
+  "errors": [],
+  "checks": [
+    "Users→Portrait",
+    "same-route history tabs preserve selected period",
+    "read-only replay",
+    "direct Results without password",
+    "real guarded Settings GET/PATCH persists and reloads 3 hours, then restores 6 hours",
+    "separate Revenue Ledger still gated"
+  ]
+}

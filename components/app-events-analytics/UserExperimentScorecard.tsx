@@ -54,7 +54,11 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, minWidth: 0 }}>
+    <Paper
+      component="section"
+      variant="outlined"
+      sx={{ p: { xs: 2, md: 2.5 }, minWidth: 0 }}
+    >
       <Typography variant="h6" sx={{ mb: 2 }}>
         {title}
       </Typography>
@@ -152,12 +156,7 @@ export function UserExperimentScorecard() {
     setRevision((v) => v + 1);
   };
   return (
-    <Stack spacing={3}>
-      <Alert severity="info">
-        Estimated Store-adjusted revenue uses confirmed ledger purchases/refunds
-        and configured commission. It is not reconciled Store proceeds, actual
-        tax/fees or a bank payout. This view does not enable a pilot.
-      </Alert>
+    <Stack spacing={2}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <FormControl fullWidth size="small" sx={{ minWidth: 0, flex: 1 }}>
           <InputLabel id="experiment-label">Experiment</InputLabel>
@@ -171,6 +170,7 @@ export function UserExperimentScorecard() {
             }}
             labelId="experiment-label"
             label="Experiment"
+            renderValue={(selected) => selected}
             value={id}
             onChange={(e) => {
               setId(e.target.value);
@@ -299,36 +299,30 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
   ];
   return (
     <>
-      <Section
-        title={
-          r.experiment.technicalProtocol
-            ? 'Nonrandomized technical AI · no comparison · no winner'
-            : questions[r.experiment.question]
-        }
-      >
-        <Stack
-          direction="row"
-          spacing={1}
-          useFlexGap
-          flexWrap="wrap"
-          sx={{ mb: 2 }}
-        >
-          <Chip label={r.experiment.targetApp} size="small" />
-          <Chip
-            label={`Protocol ${r.experiment.protocolVersion}`}
-            size="small"
-          />
-          <Chip label="No automatic winner" size="small" variant="outlined" />
-        </Stack>
+      <Box component="section">
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          <Typography component="h2" variant="body2" fontWeight={600}>
+            {r.experiment.technicalProtocol
+              ? 'Nonrandomized technical AI · no comparison · no winner'
+              : questions[r.experiment.question]}
+          </Typography>
+        </Alert>
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2,1fr)',
+              xs: 'repeat(2,minmax(0,1fr))',
+              sm: 'repeat(2,minmax(0,1fr))',
               lg: 'repeat(4,1fr)',
             },
-            gap: 3,
+            gap: 1.5,
+            '& > div': {
+              p: 2,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: '8px',
+              bgcolor: 'background.paper',
+            },
           }}
         >
           <Metric
@@ -363,32 +357,55 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
           Event cutoff: {stamp(r.reportingCutoff)}. Source read/restatement:{' '}
           {stamp(r.sourceReadAt)}.
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {r.estimateBasis}
-        </Typography>
-      </Section>
+        <Box component="details" sx={{ mt: 1 }}>
+          <Typography
+            component="summary"
+            variant="caption"
+            color="text.secondary"
+            sx={{ cursor: 'pointer' }}
+          >
+            Protocol and reporting basis
+          </Typography>
+          <Stack
+            direction="row"
+            gap={1}
+            useFlexGap
+            flexWrap="wrap"
+            sx={{ my: 1 }}
+          >
+            <Chip label={r.experiment.targetApp} size="small" />
+            <Chip
+              label={`Protocol ${r.experiment.protocolVersion}`}
+              size="small"
+            />
+            <Chip label="No automatic winner" size="small" variant="outlined" />
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            {r.estimateBasis}
+          </Typography>
+        </Box>
+      </Box>
       <Section title="Estimated 60-day Store-adjusted revenue">
+        <Metric
+          name="Estimated cohort revenue"
+          value={money(r.financial.estimatedNetAmountUsd)}
+          note={
+            r.financial.status === 'complete'
+              ? 'Configured-commission estimate'
+              : 'Incomplete ledger/FX/cohort inputs'
+          }
+        />
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)' },
-            gap: 3,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' },
+            gap: 2,
+            mt: 2,
+            pt: 2,
+            borderTop: 1,
+            borderColor: 'divider',
           }}
         >
-          <Metric
-            name="Estimated cohort revenue"
-            value={money(r.financial.estimatedNetAmountUsd)}
-            note={
-              r.financial.status === 'complete'
-                ? 'Configured-commission estimate'
-                : 'Incomplete ledger/FX/cohort inputs'
-            }
-          />
-          <Metric
-            name="Estimated revenue per eligible assigned account"
-            value={money(r.financial.perAssignedAccountUsd)}
-            note="Includes assigned non-openers and zero purchasers"
-          />
           <Metric
             name="Confirmed purchases / linked refunds"
             value={`${r.financial.confirmedPurchaseCount} / ${r.financial.confirmedRefundCount}`}
@@ -399,200 +416,158 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
             note={`Policy basis: ${label(r.financial.commissionPolicy.basis)}`}
           />
         </Box>
-        <TableContainer sx={{ mt: 3 }}>
-          <Table size="small" sx={{ minWidth: 600 }}>
-            <TableHead>
-              <TableRow>
-                {[
-                  'Native currency',
-                  'Confirmed purchases',
-                  'Confirmed refunds',
-                  'Net gross',
-                ].map((c) => (
-                  <TableCell key={c}>{c}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {r.financial.nativeTotals.map((n) => (
-                <TableRow key={n.currency}>
-                  <TableCell>{n.currency}</TableCell>
-                  <TableCell>{n.purchases}</TableCell>
-                  <TableCell>{n.refunds}</TableCell>
-                  <TableCell>{n.net}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Typography variant="body2" sx={{ mt: 2 }}>
-          Prior-payment refund guardrail:{' '}
-          {r.financial.priorPaymentRefunds.count} corrections,{' '}
-          {r.financial.priorPaymentRefunds.nativeTotals
-            .map((n) => `${n.amount} ${n.currency}`)
-            .join(' · ') || 'no recorded amount'}
-          . These do not reduce the primary post-assignment purchase window.
-        </Typography>
-        {r.financial.missingLedgerIds.length ? (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {r.financial.missingLedgerIds.length} ledger records lack required
-            amount/currency/original/FX inputs. Missing is not zero.
-          </Alert>
-        ) : null}
-      </Section>
-      <Section title="Comparison questions and assignment">
-        <Stack spacing={1} sx={{ mb: 2 }}>
-          {r.comparisons.map((c) => (
-            <Typography key={c.question} variant="body2">
-              {questions[c.question]}:{' '}
-              {c.enabled ? 'this cohort' : 'not enrolled; sequence separately'}.
-            </Typography>
-          ))}
-        </Stack>
-        <TableContainer>
-          <Table size="small" sx={{ minWidth: 580 }}>
-            <TableHead>
-              <TableRow>
-                {[
-                  'Assigned arm',
-                  'Original assigned accounts',
-                  'Estimated revenue',
-                  'Estimated per account',
-                ].map((v) => (
-                  <TableCell key={v}>{v}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {r.cohort.arms.map((a) => (
-                <TableRow key={a.arm}>
-                  <TableCell>{label(a.arm)}</TableCell>
-                  <TableCell>{a.assignedAccounts}</TableCell>
-                  <TableCell>{money(a.estimatedRevenueUsd)}</TableCell>
-                  <TableCell>{money(a.perAssignedAccountUsd)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
         <Alert severity="warning" sx={{ mt: 2 }}>
-          No uplift or winner is claimed.{' '}
-          {r.quality.reasons.map(label).join(' · ')}.
+          Missing is not zero. This is an estimate, not a Store payout.
         </Alert>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {r.quality.sourceCoverage}
-        </Typography>
-      </Section>
-      <Section title="Useful actions and guardrails">
-        <TableContainer>
-          <Table size="small" sx={{ minWidth: 720 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Measure</TableCell>
-                <TableCell>Recorded result</TableCell>
-                <TableCell>Origin / coverage</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {supporting.map(([name, value, note]) => (
-                <TableRow key={name}>
-                  <TableCell sx={{ minWidth: 180 }}>{name}</TableCell>
-                  <TableCell sx={{ minWidth: 150 }}>{value}</TableCell>
-                  <TableCell>{note}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Section>
-      <Section title="Variable costs and estimated contribution">
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
-            gap: 3,
-          }}
-        >
-          {r.costs.categories.map((c) => (
-            <Metric
-              key={c.category}
-              name={`${label(c.category)} cost`}
-              value={money(c.amountUsd)}
-              note={label(c.status)}
-            />
-          ))}
-        </Box>
-        <Box sx={{ mt: 3 }}>
-          <Metric
-            name="Estimated contribution after variable costs"
-            value={money(r.costs.contributionAfterVariableCostsUsd)}
-            note="Requires explicit complete AI/content/delivery coverage for every assigned account; no missing cost is filled with zero"
-          />
-        </Box>
-      </Section>
-      <Section title="Commission and FX assumptions">
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          {r.financial.commissionPolicy.basis === 'configured'
-            ? 'Configured date-effective commission schedule.'
-            : 'The existing code fallback is assumed: 30% for each Store unless a configured period applies.'}{' '}
-          Refunds reverse the original purchase commission period.
-        </Typography>
-        {r.financial.commissionPolicy.schedule.map((p, i) => (
-          <Typography variant="body2" key={i}>
-            {label(p.store)} · {p.ratePercent}% ·{' '}
-            {p.effectiveFrom ?? 'open start'} → {p.effectiveTo ?? 'open end'}
-          </Typography>
-        ))}
         <Box component="details" sx={{ mt: 2 }}>
-          <Typography component="summary" sx={{ cursor: 'pointer' }}>
-            Exact ledger / FX evidence
+          <Typography
+            component="summary"
+            variant="body2"
+            sx={{ cursor: 'pointer' }}
+          >
+            Financial details
           </Typography>
-          <TableContainer sx={{ mt: 1 }}>
-            <Table size="small" sx={{ minWidth: 1000 }}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            display="block"
+            sx={{ mt: 1 }}
+          >
+            Estimated Store-adjusted revenue uses confirmed ledger
+            purchases/refunds and configured commission. It is not reconciled
+            Store proceeds, actual tax/fees or a bank payout. This view does not
+            enable a pilot.
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Metric
+              name="Estimated revenue per eligible assigned account"
+              value={money(r.financial.perAssignedAccountUsd)}
+              note="Includes assigned non-openers and zero purchasers"
+            />
+          </Box>
+          <TableContainer sx={{ mt: 3 }}>
+            <Table size="small" sx={{ minWidth: 600 }}>
               <TableHead>
                 <TableRow>
                   {[
-                    'Ledger reference',
-                    'Native amount',
-                    'Event / original commission day',
-                    'Applied rate / basis',
-                    'USD FX / source version',
+                    'Native currency',
+                    'Confirmed purchases',
+                    'Confirmed refunds',
+                    'Net gross',
                   ].map((c) => (
                     <TableCell key={c}>{c}</TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {r.financial.lines.map((l) => (
-                  <TableRow key={l.ledgerId}>
-                    <TableCell sx={{ maxWidth: 230, overflowWrap: 'anywhere' }}>
-                      {l.ledgerId}
-                      {l.originalLedgerId ? (
-                        <Typography variant="caption" display="block">
-                          Original: {l.originalLedgerId}
-                        </Typography>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {l.amount} {l.currency}
-                    </TableCell>
-                    <TableCell>
-                      {stamp(l.eventAt)} / {l.commissionDate}
-                    </TableCell>
-                    <TableCell>
-                      {l.commissionRatePercent}% · {label(l.commissionBasis)}
-                    </TableCell>
-                    <TableCell>
-                      {l.fxRate ?? 'Unknown'} ·{' '}
-                      {l.fxVersion ?? 'Unknown source'}
-                    </TableCell>
+                {r.financial.nativeTotals.map((n) => (
+                  <TableRow key={n.currency}>
+                    <TableCell>{n.currency}</TableCell>
+                    <TableCell>{n.purchases}</TableCell>
+                    <TableCell>{n.refunds}</TableCell>
+                    <TableCell>{n.net}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Prior-payment refund guardrail:{' '}
+            {r.financial.priorPaymentRefunds.count} corrections,{' '}
+            {r.financial.priorPaymentRefunds.nativeTotals
+              .map((n) => `${n.amount} ${n.currency}`)
+              .join(' · ') || 'no recorded amount'}
+            . These do not reduce the primary post-assignment purchase window.
+          </Typography>
+          {r.financial.missingLedgerIds.length ? (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              {r.financial.missingLedgerIds.length} ledger records lack required
+              amount/currency/original/FX inputs.
+            </Alert>
+          ) : null}
         </Box>
       </Section>
+      <Box
+        component="details"
+        sx={{ border: 1, borderColor: 'divider', borderRadius: '8px', p: 1.5 }}
+      >
+        <Typography
+          component="summary"
+          variant="body2"
+          sx={{ cursor: 'pointer' }}
+        >
+          Commission and FX assumptions
+        </Typography>
+        <Box sx={{ mt: 2 }}>
+          <Section title="Commission and FX assumptions">
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {r.financial.commissionPolicy.basis === 'configured'
+                ? 'Configured date-effective commission schedule.'
+                : 'The existing code fallback is assumed: 30% for each Store unless a configured period applies.'}{' '}
+              Refunds reverse the original purchase commission period.
+            </Typography>
+            {r.financial.commissionPolicy.schedule.map((p, i) => (
+              <Typography variant="body2" key={i}>
+                {label(p.store)} · {p.ratePercent}% ·{' '}
+                {p.effectiveFrom ?? 'open start'} →{' '}
+                {p.effectiveTo ?? 'open end'}
+              </Typography>
+            ))}
+            <Box component="details" sx={{ mt: 2 }}>
+              <Typography component="summary" sx={{ cursor: 'pointer' }}>
+                Exact ledger / FX evidence
+              </Typography>
+              <TableContainer sx={{ mt: 1 }}>
+                <Table size="small" sx={{ minWidth: 1000 }}>
+                  <TableHead>
+                    <TableRow>
+                      {[
+                        'Ledger reference',
+                        'Native amount',
+                        'Event / original commission day',
+                        'Applied rate / basis',
+                        'USD FX / source version',
+                      ].map((c) => (
+                        <TableCell key={c}>{c}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {r.financial.lines.map((l) => (
+                      <TableRow key={l.ledgerId}>
+                        <TableCell
+                          sx={{ maxWidth: 230, overflowWrap: 'anywhere' }}
+                        >
+                          {l.ledgerId}
+                          {l.originalLedgerId ? (
+                            <Typography variant="caption" display="block">
+                              Original: {l.originalLedgerId}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          {l.amount} {l.currency}
+                        </TableCell>
+                        <TableCell>
+                          {stamp(l.eventAt)} / {l.commissionDate}
+                        </TableCell>
+                        <TableCell>
+                          {l.commissionRatePercent}% ·{' '}
+                          {label(l.commissionBasis)}
+                        </TableCell>
+                        <TableCell>
+                          {l.fxRate ?? 'Unknown'} ·{' '}
+                          {l.fxVersion ?? 'Unknown source'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Section>
+        </Box>
+      </Box>
       <Section title="Assigned account records">
         <TableContainer>
           <Table size="small" sx={{ minWidth: 800 }}>
@@ -691,6 +666,96 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
               </Box>
             ))}
           </Stack>
+        </Box>
+      </Section>
+      <Section title="Comparison questions and assignment">
+        <Stack spacing={1} sx={{ mb: 2 }}>
+          {r.comparisons.map((c) => (
+            <Typography key={c.question} variant="body2">
+              {questions[c.question]}:{' '}
+              {c.enabled ? 'this cohort' : 'not enrolled; sequence separately'}.
+            </Typography>
+          ))}
+        </Stack>
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 580 }}>
+            <TableHead>
+              <TableRow>
+                {[
+                  'Assigned arm',
+                  'Original assigned accounts',
+                  'Estimated revenue',
+                  'Estimated per account',
+                ].map((v) => (
+                  <TableCell key={v}>{v}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {r.cohort.arms.map((a) => (
+                <TableRow key={a.arm}>
+                  <TableCell>{label(a.arm)}</TableCell>
+                  <TableCell>{a.assignedAccounts}</TableCell>
+                  <TableCell>{money(a.estimatedRevenueUsd)}</TableCell>
+                  <TableCell>{money(a.perAssignedAccountUsd)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          No uplift or winner is claimed.{' '}
+          {r.quality.reasons.map(label).join(' · ')}.
+        </Alert>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {r.quality.sourceCoverage}
+        </Typography>
+      </Section>
+      <Section title="Useful actions and guardrails">
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 720 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Measure</TableCell>
+                <TableCell>Recorded result</TableCell>
+                <TableCell>Origin / coverage</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {supporting.map(([name, value, note]) => (
+                <TableRow key={name}>
+                  <TableCell sx={{ minWidth: 180 }}>{name}</TableCell>
+                  <TableCell sx={{ minWidth: 150 }}>{value}</TableCell>
+                  <TableCell>{note}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Section>
+      <Section title="Variable costs and estimated contribution">
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
+            gap: 3,
+          }}
+        >
+          {r.costs.categories.map((c) => (
+            <Metric
+              key={c.category}
+              name={`${label(c.category)} cost`}
+              value={money(c.amountUsd)}
+              note={label(c.status)}
+            />
+          ))}
+        </Box>
+        <Box sx={{ mt: 3 }}>
+          <Metric
+            name="Estimated contribution after variable costs"
+            value={money(r.costs.contributionAfterVariableCostsUsd)}
+            note="Requires explicit complete AI/content/delivery coverage for every assigned account; no missing cost is filled with zero"
+          />
         </Box>
       </Section>
       <Section title="Metric registry">

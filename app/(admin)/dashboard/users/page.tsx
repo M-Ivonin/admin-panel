@@ -33,7 +33,7 @@ import {
 import { Refresh, Search, Chat } from '@mui/icons-material';
 import { UserDeviceDetails } from '@/components/admin/UserDeviceDetails';
 import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
-import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
 import {
   getUsers,
   User,
@@ -383,16 +383,18 @@ export default function UsersPage() {
 
   return (
     <ProtectedRoute>
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-        <AdminPageHeader title="Users" subtitle={`${total} total`} />
+      <PersonalizationLayout activeTab="users">
+        <Typography component="h1" variant="h4" fontWeight={700}>
+          Users
+        </Typography>
+        <Typography color="text.secondary">{total} total</Typography>
 
         {/* Main content */}
         <Box
           sx={{
             width: '100%',
             mx: 'auto',
-            px: { xs: 2, sm: 3, lg: 4 },
-            py: 4,
+            py: 3,
           }}
         >
           {/* Retention Stage Filter Chips */}
@@ -886,7 +888,7 @@ export default function UsersPage() {
             </Paper>
           )}
         </Box>
-      </Box>
+      </PersonalizationLayout>
       <ManualProGrantDialog
         user={grantUser}
         onClose={() => setGrantUser(null)}

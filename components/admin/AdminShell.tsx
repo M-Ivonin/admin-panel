@@ -72,8 +72,7 @@ const groups = [
   {
     label: 'Growth',
     items: [
-      { label: 'Users', href: '/dashboard/users', icon: Users },
-      { label: 'Policy outcomes', href: '/dashboard/user-experiments', icon: BarChart3 },
+      { label: 'Personalization', href: '/dashboard/users', icon: Users },
       {
         label: 'Revenue Ledger',
         href: '/dashboard/revenue-ledger',
@@ -183,9 +182,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
               )}
               {group.items.map(({ label, href, icon: Icon }) => {
                 const active =
-                  href === '/dashboard'
-                    ? pathname === href
-                    : pathname === href || pathname.startsWith(`${href}/`);
+                  href === '/dashboard/users'
+                    ? pathname === href ||
+                      pathname.startsWith(`${href}/`) ||
+                      pathname === '/dashboard/user-experiments' ||
+                      pathname === '/dashboard/personalization/settings'
+                    : href === '/dashboard'
+                      ? pathname === href
+                      : pathname === href || pathname.startsWith(`${href}/`);
                 return (
                   <Link
                     key={href}

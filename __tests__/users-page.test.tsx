@@ -9,6 +9,11 @@ import UsersPage from '@/app/(admin)/dashboard/users/page';
 import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
 import { getUsers, RetentionStage, type PaginatedUser } from '@/lib/api/users';
 
+jest.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard/users',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
 }));
