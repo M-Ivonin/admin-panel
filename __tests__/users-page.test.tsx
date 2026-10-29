@@ -5,9 +5,14 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
+import { getEngagementReport } from '@/lib/api/user-engagement';
 import UsersPage from '@/app/(admin)/dashboard/users/page';
 import { getCampaignEditorCatalog } from '@/lib/api/campaigns';
 import { getUsers, RetentionStage, type PaginatedUser } from '@/lib/api/users';
+
+jest.mock('@/lib/api/user-engagement', () => ({
+  getEngagementReport: jest.fn(),
+}));
 
 jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard/users',
@@ -73,6 +78,7 @@ function createUser(overrides: Partial<PaginatedUser>): PaginatedUser {
 describe('UsersPage', () => {
   beforeEach(() => {
     mockedGetUsers.mockReset();
+    jest.mocked(getEngagementReport).mockReset();
     mockedGetCampaignEditorCatalog.mockReset();
 
     mockedGetCampaignEditorCatalog.mockResolvedValue({
@@ -139,9 +145,69 @@ describe('UsersPage', () => {
       'href',
       '/dashboard/users/two_devices/portrait'
     );
+    jest.mocked(getEngagementReport).mockResolvedValue({
+      configured: true,
+      timezone: 'UTC',
+      metric: 'Firebase',
+      overlapPolicy: 'sum',
+      range: { from: '2026-10-28', to: '2026-10-28', includeExcluded: false },
+      days: [
+        {
+          day: '2026-10-28',
+          status: 'ready',
+          syncedAt: null,
+          activeUsers: 999,
+          totalEngagementMs: 999999999,
+          averageEngagementMs: 999999,
+          anonymousEngagementMs: 0,
+          unknownEngagementMs: 0,
+          excludedEngagementMs: 0,
+        },
+      ],
+      users: [
+        {
+          day: '2026-10-28',
+          userId: 'two_devices',
+          name: 'Two devices',
+          email: null,
+          active: true,
+          engagementMs: 600000,
+          installations: [],
+        },
+        {
+          day: '2026-10-28',
+          userId: 'other',
+          name: 'Unrelated account',
+          email: null,
+          active: true,
+          engagementMs: 9999999,
+          installations: [],
+        },
+      ],
+      exclusions: [],
+      installations: [],
+    });
     expect(
-      within(row).getByRole('link', { name: 'Time in app' })
-    ).toHaveAttribute('href', '/dashboard/time-in-app?userId=two_devices');
+      within(row).queryByRole('link', { name: 'Time in app' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(row).getByRole('button', { name: 'Time in app' }));
+    const timeDialog = await screen.findByRole('dialog', {
+      name: 'Time in app · Two devices',
+    });
+    expect(await within(timeDialog).findByText('10m 00s')).toBeVisible();
+    expect(
+      within(timeDialog).queryByText('Unrelated account')
+    ).not.toBeInTheDocument();
+    expect(
+      within(timeDialog).queryByText('Daily engagement')
+    ).not.toBeInTheDocument();
+    expect(getEngagementReport).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'two_devices' })
+    );
+    fireEvent.click(within(timeDialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
     expect(within(row).getByRole('link', { name: 'Chat' })).toHaveAttribute(
       'href',
       '/dashboard/bot-chat?userId=two_devices'
@@ -153,7 +219,7 @@ describe('UsersPage', () => {
       within(actions).getByRole('link', { name: 'Portrait' })
     ).toBeVisible();
     expect(
-      within(actions).getByRole('link', { name: 'Time in app' })
+      within(actions).getByRole('button', { name: 'Time in app' })
     ).toBeVisible();
     expect(within(actions).getByRole('link', { name: 'Chat' })).toBeVisible();
     expect(

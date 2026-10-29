@@ -37,6 +37,7 @@ import {
   PersonOutline,
   AccessTime,
 } from '@mui/icons-material';
+import { UserTimeInAppDialog } from '@/components/admin/UserTimeInAppDialog';
 import { UserDeviceDetails } from '@/components/admin/UserDeviceDetails';
 import { ManualProGrantDialog } from '@/components/admin/ManualProGrantDialog';
 import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
@@ -253,6 +254,7 @@ export default function UsersPage() {
   const [sortBy, setSortBy] = useState('registered_at');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
+  const [timeUser, setTimeUser] = useState<PaginatedUser | null>(null);
   const [grantUser, setGrantUser] = useState<PaginatedUser | null>(null);
 
   // UI state
@@ -896,8 +898,7 @@ export default function UsersPage() {
                             </Tooltip>
                             <Tooltip title="Time in app">
                               <IconButton
-                                component={Link}
-                                href={`/dashboard/time-in-app?userId=${encodeURIComponent(user.id)}`}
+                                onClick={() => setTimeUser(user)}
                                 size="small"
                                 aria-label="Time in app"
                               >
@@ -961,6 +962,17 @@ export default function UsersPage() {
           )}
         </Box>
       </PersonalizationLayout>
+      {timeUser && (
+        <UserTimeInAppDialog
+          key={timeUser.id}
+          user={{
+            id: timeUser.id,
+            name: getUserDisplayName(timeUser),
+            email: timeUser.email,
+          }}
+          onClose={() => setTimeUser(null)}
+        />
+      )}
       <ManualProGrantDialog
         user={grantUser}
         onClose={() => setGrantUser(null)}

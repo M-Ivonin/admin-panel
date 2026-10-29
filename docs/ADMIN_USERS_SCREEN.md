@@ -87,10 +87,14 @@ Removing the admin button is a safe UI rollback; it does not revoke issued right
 
 ## Time in app
 
-Each user row links to **Time in app** (`/dashboard/time-in-app`), scoped to that canonical
-account. The report owns independent UTC date controls and does not share the
-App Events event/category filters. Its daily totals always cover all eligible
-accounts; the user selection scopes only the detail table.
+The **Time in app** action opens a read-only dialog over Users for the selected
+canonical account. It has independent UTC date controls (the previous seven
+completed days by default), per-day account engagement, device details, import
+status and freshness. It reads the existing engagement API with `userId` and
+renders only matching account rows; global daily totals and installations are
+not shown. Missing imports are distinct from days with no included activity.
+Closing the dialog preserves the Users filters, page and scroll position.
+The separate `/dashboard/time-in-app` report continues to show all accounts.
 
 The report uses imported Firebase/BigQuery engagement. Known simulator hardware
 is always omitted from every time-report view. Shared manual email/installation
@@ -105,8 +109,8 @@ access, storage and activation requirements.
 
 ## Saved portrait
 
-Each Users row links to `/dashboard/users/:userId/portrait`. Time in app and Chat
-keep their existing destinations. The protected portrait renders the backend's
+Each Users row links to `/dashboard/users/:userId/portrait`. Time in app opens the account dialog; Chat
+keeps its existing destination. The protected portrait renders the backend's
 saved 7/30-day features; it does not calculate activity, attribution or access.
 Snapshot identity, feature/schema version, as-of, timezone certainty, windows,
 watermarks, coverage and freshness remain visible. Daily gaps and unavailable
