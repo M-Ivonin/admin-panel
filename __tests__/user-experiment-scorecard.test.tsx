@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { UserExperimentScorecard } from '@/components/app-events-analytics/UserExperimentScorecard';
 import {
@@ -120,17 +121,15 @@ it('keeps missing financial inputs unknown, the original denominator visible and
     .mocked(getPortraitExperimentScorecard)
     .mockResolvedValue(report('saved-cohort'));
   render(<UserExperimentScorecard />);
-  expect(
-    await screen.findByText('Eligible assigned accounts')
-  ).toBeInTheDocument();
+  expect(await screen.findByText('Assigned accounts')).toBeInTheDocument();
   expect(
     screen.getByText(/Some original cohort evaluation data is unavailable/)
   ).toBeInTheDocument();
-  expect(screen.getByText(/Missing is not zero/)).toBeInTheDocument();
-  expect(screen.getAllByText('Unknown').length).toBeGreaterThan(1);
+  expect(screen.getByText(/unavailable, not zero/)).toBeVisible();
+  expect(screen.getAllByText('—').length).toBeGreaterThan(1);
   expect(screen.getByText(/assumed: 30%/)).toBeInTheDocument();
   expect(
-    screen.getByText(/No uplift or winner is claimed/)
+    screen.getByText(/does not establish uplift or a winner/)
   ).toBeInTheDocument();
   expect(screen.getByText(/not reconciled Store proceeds/)).toBeInTheDocument();
 });
@@ -159,39 +158,35 @@ it('clears the old report while refreshing a fixed UTC event cutoff', async () =
         })
     );
   render(<UserExperimentScorecard />);
-  await screen.findByText('Eligible assigned accounts');
+  await screen.findByText('Assigned accounts');
   fireEvent.change(screen.getByLabelText('Event cutoff (UTC)'), {
     target: { value: '2026-09-20T00:00' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Refresh saved report' }));
   await waitFor(() =>
-    expect(
-      screen.queryByText('Eligible assigned accounts')
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText('Assigned accounts')).not.toBeInTheDocument()
   );
   expect(getPortraitExperimentScorecard).toHaveBeenLastCalledWith(
     'saved-cohort',
     '2026-09-20T00:00:00.000Z'
   );
   await act(async () => resolve(report('saved-cohort')));
-  expect(screen.getByText('Eligible assigned accounts')).toBeInTheDocument();
+  expect(screen.getByText('Assigned accounts')).toBeInTheDocument();
 });
 it('identifies incumbent Campaign exposure without inventing an AI decision', async () => {
-  jest
-    .mocked(listPortraitExperiments)
-    .mockResolvedValue({
-      items: [
-        {
-          id: 'saved-cohort',
-          definition: {
-            question: 'policy_vs_current',
-            targetApp: 'SirBro',
-            protocolVersion: 'v1',
-          },
-          assignedAccounts: 2,
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'saved-cohort',
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
         },
-      ],
-    });
+        assignedAccounts: 2,
+      },
+    ],
+  });
   const result = report('saved-cohort');
   result.traces = [
     {
@@ -232,27 +227,194 @@ it('labels a technical AI report without presenting a randomized comparison', as
   technical.experiment.question = 'ai_vs_baseline';
   technical.experiment.technicalProtocol = 'single_account_ai.v1';
   technical.quality.reasons = ['technical_nonrandomized_no_comparison'];
-  jest
-    .mocked(listPortraitExperiments)
-    .mockResolvedValue({
-      items: [
-        {
-          id: 'technical-only',
-          definition: {
-            question: 'ai_vs_baseline',
-            technicalProtocol: 'single_account_ai.v1',
-            targetApp: 'SirBro',
-            protocolVersion: 'v1',
-          },
-          assignedAccounts: 1,
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'technical-only',
+        definition: {
+          question: 'ai_vs_baseline',
+          technicalProtocol: 'single_account_ai.v1',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
         },
-      ],
-    });
+        assignedAccounts: 1,
+      },
+    ],
+  });
   jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(technical);
   render(<UserExperimentScorecard />);
   expect(
     await screen.findByRole('heading', {
-      name: 'Nonrandomized technical AI · no comparison · no winner',
+      name: 'Too early to assess the impact',
     })
   ).toBeInTheDocument();
+  expect(
+    screen.getByText(/nonrandomized technical AI run with no control group/)
+  ).toBeVisible();
 });
+
+it('starts with only Overview expanded and keeps every breakdown reachable without tabs', async () => {
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'saved-cohort',
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
+        },
+        assignedAccounts: 2,
+      },
+    ],
+  });
+  jest
+    .mocked(getPortraitExperimentScorecard)
+    .mockResolvedValue(report('saved-cohort'));
+  render(<UserExperimentScorecard />);
+  const overview = await screen.findByText('Overview', {
+    selector: 'summary *',
+  });
+  expect(overview.closest('details')).toHaveAttribute('open');
+  for (const name of [
+    'Activity & purchases',
+    'Accounts',
+    'Data quality & methodology',
+  ]) {
+    const summary = screen
+      .getByText(name, { selector: 'summary *' })
+      .closest('summary')!;
+    expect(summary.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(summary);
+    expect(summary.closest('details')).toHaveAttribute('open');
+  }
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  expect(screen.getByText('Metric definitions')).toBeInTheDocument();
+});
+
+it.each(['default_missing', 'default_invalid', 'configured'])(
+  'preserves a complete zero revenue estimate with %s commission policy',
+  async (basis) => {
+    const result = report('zero');
+    result.cohort.unavailableAssignedAccounts = 0;
+    result.financial = {
+      ...result.financial,
+      status: 'complete',
+      estimatedNetAmountUsd: '0.00',
+      estimatedCommissionUsd: '0.00',
+      perAssignedAccountUsd: '0.00',
+      confirmedPurchaseCount: 0,
+      missingLedgerIds: [],
+      commissionPolicy: { ...result.financial.commissionPolicy, basis },
+    };
+    jest.mocked(listPortraitExperiments).mockResolvedValue({
+      items: [
+        {
+          id: 'zero',
+          definition: {
+            question: 'policy_vs_current',
+            targetApp: 'SirBro',
+            protocolVersion: 'v1',
+          },
+          assignedAccounts: 2,
+        },
+      ],
+    });
+    jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+    render(<UserExperimentScorecard />);
+    const metric = (await screen.findByText('Estimated 60-day revenue'))
+      .parentElement!;
+    expect(within(metric).getByText('0.00 USD')).toBeInTheDocument();
+    expect(
+      within(metric).getByText(
+        basis === 'configured'
+          ? 'Configured commission · estimate, not a Store payout'
+          : 'Default 30% commission · estimate, not a Store payout'
+      )
+    ).toBeInTheDocument();
+  }
+);
+
+it('keeps a nonzero default-commission estimate numeric and exposes calculation evidence', async () => {
+  const result = report('paid');
+  result.cohort.unavailableAssignedAccounts = 0;
+  result.financial = {
+    ...result.financial,
+    status: 'complete',
+    estimatedNetAmountUsd: '70.00',
+    estimatedCommissionUsd: '30.00',
+    perAssignedAccountUsd: '35.00',
+    missingLedgerIds: [],
+  };
+  jest.mocked(listPortraitExperiments).mockResolvedValue({
+    items: [
+      {
+        id: 'paid',
+        definition: {
+          question: 'policy_vs_current',
+          targetApp: 'SirBro',
+          protocolVersion: 'v1',
+        },
+        assignedAccounts: 2,
+      },
+    ],
+  });
+  jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+  render(<UserExperimentScorecard />);
+  const metric = (await screen.findByText('Estimated 60-day revenue'))
+    .parentElement!;
+  expect(within(metric).getByText('70.00 USD')).toBeVisible();
+  const detail = screen
+    .getByText('Data quality & methodology')
+    .closest('details')!;
+  expect(screen.getByText(/assumed: 30%/)).not.toBeVisible();
+  fireEvent.click(detail.querySelector('summary')!);
+  expect(screen.getByText(/assumed: 30%/)).toBeVisible();
+  expect(screen.getByText('30.00 USD')).toBeVisible();
+  expect(screen.getByText('35.00 USD')).toBeVisible();
+});
+
+it.each([false, true])(
+  'does not call unavailable cohort maturity ongoing observation (technical=%s)',
+  async (technical) => {
+    const result = report('missing-maturity');
+    result.cohort.mature60dAccounts = 1;
+    if (technical) result.experiment.technicalProtocol = 'single_account_ai.v1';
+    jest.mocked(listPortraitExperiments).mockResolvedValue({
+      items: [
+        {
+          id: 'missing-maturity',
+          definition: {
+            question: 'policy_vs_current',
+            targetApp: 'SirBro',
+            protocolVersion: 'v1',
+          },
+          assignedAccounts: 2,
+        },
+      ],
+    });
+    jest.mocked(getPortraitExperimentScorecard).mockResolvedValue(result);
+    render(<UserExperimentScorecard />);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Observation status is incomplete',
+      })
+    ).toBeVisible();
+    expect(
+      screen.getByText('Incomplete cohort data', { selector: 'summary *' })
+    ).toBeVisible();
+    expect(
+      screen.queryByText('Collecting data', { selector: 'summary *' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Observation is still in progress')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /1 of 2 complete.*Unavailable accounts have unknown maturity/
+      )
+    ).toBeVisible();
+    expect(
+      screen.getByText('Assigned accounts').parentElement
+    ).toHaveTextContent('2');
+  }
+);

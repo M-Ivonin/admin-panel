@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Alert,
   Box,
@@ -38,8 +39,7 @@ const questions: Record<ComparisonQuestion, string> = {
 };
 const label = (v: string) =>
   v === 'ai' ? 'AI' : v.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
-const money = (value: string | null) =>
-  value === null ? 'Unknown' : `${value} USD`;
+const money = (value: string | null) => (value === null ? '—' : `${value} USD`);
 const stamp = (value: string) =>
   new Date(value).toLocaleString('en-GB', {
     timeZone: 'UTC',
@@ -54,18 +54,105 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Paper
-      component="section"
-      variant="outlined"
-      sx={{ p: { xs: 2, md: 2.5 }, minWidth: 0 }}
-    >
-      <Typography variant="h6" sx={{ mb: 2 }}>
+    <Box component="section" sx={{ minWidth: 0 }}>
+      <Typography
+        component="h3"
+        variant="subtitle1"
+        fontWeight={600}
+        sx={{ mb: 1.5 }}
+      >
         {title}
       </Typography>
       {children}
+    </Box>
+  );
+}
+
+function ReportSection({
+  number,
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  number: number;
+  title: string;
+  summary: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Paper
+      component="details"
+      open={defaultOpen}
+      variant="outlined"
+      sx={{
+        minWidth: 0,
+        borderRadius: '12px',
+        overflow: 'hidden',
+        '& > summary::-webkit-details-marker': { display: 'none' },
+        '&[open] > summary': { borderBottom: 1, borderColor: 'divider' },
+        '&[open] > summary .report-chevron': { transform: 'rotate(180deg)' },
+      }}
+    >
+      <Box
+        component="summary"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+          p: { xs: 2, md: 2.5 },
+          cursor: 'pointer',
+          listStyle: 'none',
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: -3,
+          },
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            width: 30,
+            height: 30,
+            flexShrink: 0,
+            borderRadius: '50%',
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            display: 'grid',
+            placeItems: 'center',
+            fontSize: 14,
+          }}
+        >
+          {number}
+        </Box>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          gap={{ xs: 0.5, md: 2 }}
+          sx={{ flex: 1, minWidth: 0 }}
+        >
+          <Typography component="span" fontWeight={600}>
+            {title}
+          </Typography>
+          <Typography
+            component="span"
+            variant="body2"
+            color="text.secondary"
+            sx={{ overflowWrap: 'anywhere' }}
+          >
+            {summary}
+          </Typography>
+        </Stack>
+        <ExpandMoreIcon className="report-chevron" sx={{ flexShrink: 0 }} />
+      </Box>
+      <Stack spacing={3} sx={{ p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
+        {children}
+      </Stack>
     </Paper>
   );
 }
+
 function Metric({
   name,
   value,
@@ -80,7 +167,10 @@ function Metric({
       <Typography variant="body2" color="text.secondary">
         {name}
       </Typography>
-      <Typography variant="h5" sx={{ overflowWrap: 'anywhere', mt: 0.5 }}>
+      <Typography
+        variant="h5"
+        sx={{ overflowWrap: 'anywhere', mt: 0.5, fontSize: { xs: 22, md: 24 } }}
+      >
         {value}
       </Typography>
       {note ? (
@@ -268,18 +358,22 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
     ],
     [
       'Point-day 7 retention',
-      `${observed('pointDay7')} observed / ${eligible('pointDay7')} old enough`,
+      eligible('pointDay7')
+        ? `${observed('pointDay7')} observed / ${eligible('pointDay7')} eligible`
+        : 'Not yet eligible',
       '[assignment+7d, assignment+8d), partial telemetry',
     ],
     [
       'Point-day 30 retention',
-      `${observed('pointDay30')} observed / ${eligible('pointDay30')} old enough`,
+      eligible('pointDay30')
+        ? `${observed('pointDay30')} observed / ${eligible('pointDay30')} eligible`
+        : 'Not yet eligible',
       '[assignment+30d, assignment+31d), partial telemetry',
     ],
     [
       'First recorded purchase, 7 / 14 days',
       `${observed('firstPurchase7d')} / ${observed('firstPurchase14d')}`,
-      `${eligible('firstPurchase7d')} baseline-eligible accounts; confirmed ledger only`,
+      `${eligible('firstPurchase7d')} / ${eligible('firstPurchase14d')} baseline-eligible accounts; confirmed ledger only`,
     ],
     [
       'Repeat pass, 30 / 60 days',
@@ -297,135 +391,394 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
       'Different owner facts, not one combined success/failure metric',
     ],
   ];
+  const incomplete =
+    r.financial.status === 'incomplete' ||
+    r.financial.estimatedNetAmountUsd === null;
+  const revenueNote = incomplete
+    ? 'Incomplete ledger, FX or cohort data · unavailable, not zero'
+    : r.financial.commissionPolicy.basis === 'configured'
+      ? 'Configured commission · estimate, not a Store payout'
+      : 'Default 30% commission · estimate, not a Store payout';
+  const collecting =
+    r.cohort.mature60dAccounts < r.cohort.availableAssignedAccounts;
+  const maturityUnknown = r.cohort.unavailableAssignedAccounts > 0;
+  const title =
+    !collecting && maturityUnknown
+      ? 'Observation status is incomplete'
+      : r.experiment.technicalProtocol
+        ? collecting
+          ? 'Too early to assess the impact'
+          : 'Observation windows complete — no comparison available'
+        : collecting
+          ? 'Observation is still in progress'
+          : 'Observed outcomes — no winner is claimed';
+  const ends = r.accounts
+    .filter((a) => !a.mature60d)
+    .map((a) => a.windowEnd)
+    .sort();
   return (
     <>
-      <Box component="section">
-        <Alert severity="warning" sx={{ mb: 1.5 }}>
-          <Typography component="h2" variant="body2" fontWeight={600}>
-            {r.experiment.technicalProtocol
-              ? 'Nonrandomized technical AI · no comparison · no winner'
-              : questions[r.experiment.question]}
+      <Typography variant="caption" color="text.secondary">
+        Report cutoff: {stamp(r.reportingCutoff)}
+      </Typography>
+      <ReportSection
+        number={1}
+        title="Overview"
+        summary={
+          collecting
+            ? 'Collecting data'
+            : maturityUnknown
+              ? 'Incomplete cohort data'
+              : 'Observed outcomes'
+        }
+        defaultOpen
+      >
+        <Box>
+          <Typography
+            component="h2"
+            variant="h6"
+            fontWeight={600}
+            sx={{ fontSize: { xs: 18, md: 20 } }}
+          >
+            {title}
           </Typography>
-        </Alert>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {r.experiment.technicalProtocol
+              ? 'This is a nonrandomized technical AI run with no control group; it cannot establish uplift or a winner.'
+              : `${questions[r.experiment.question]}. This report describes observed outcomes; it does not establish uplift or a winner.`}
+          </Typography>
+        </Box>
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: {
-              xs: 'repeat(2,minmax(0,1fr))',
-              sm: 'repeat(2,minmax(0,1fr))',
-              lg: 'repeat(4,1fr)',
+              xs: '1fr',
+              sm: '1fr 1fr',
+              md: '1fr 1fr 1.4fr',
             },
-            gap: 1.5,
+            gap: 2,
             '& > div': {
               p: 2,
               border: 1,
               borderColor: 'divider',
               borderRadius: '8px',
-              bgcolor: 'background.paper',
             },
           }}
         >
           <Metric
-            name="Eligible assigned accounts"
+            name="Assigned accounts"
             value={r.cohort.assignedAccounts}
-            note={`${r.cohort.intendedCohortAccounts} intended · ${r.cohort.ineligibleAtAssignmentAccounts} excluded before assignment`}
+            note="Original eligible cohort, including non-openers"
           />
           <Metric
-            name="Evaluation records available"
-            value={r.cohort.availableAssignedAccounts}
-            note={`${r.cohort.unavailableAssignedAccounts} unavailable; original denominator stays fixed`}
+            name="Confirmed purchases"
+            value={r.financial.confirmedPurchaseCount}
+            note={
+              r.cohort.unavailableAssignedAccounts
+                ? 'Available records only · cohort coverage incomplete'
+                : 'Recorded purchases in the observation window'
+            }
           />
           <Metric
-            name="Observed linked exposures"
-            value={r.cohort.exposedAccounts}
-            note={`${r.cohort.unexposedAccounts} available accounts without a linked impression`}
-          />
-          <Metric
-            name="Mature 60-day windows"
-            value={r.cohort.mature60dAccounts}
-            note="Future cohort maturity is not an implementation claim"
+            name="Estimated 60-day revenue"
+            value={incomplete ? '—' : money(r.financial.estimatedNetAmountUsd)}
+            note={revenueNote}
           />
         </Box>
-        {r.cohort.unavailableAssignedAccounts ? (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            Some original cohort evaluation data is unavailable after
-            privacy/deletion or retention. The original denominator is retained;
-            the complete cohort estimate remains unknown.
-          </Alert>
-        ) : null}
-        <Typography variant="body2" sx={{ mt: 2 }}>
-          Event cutoff: {stamp(r.reportingCutoff)}. Source read/restatement:{' '}
-          {stamp(r.sourceReadAt)}.
+        <Typography
+          variant="body2"
+          sx={{
+            p: 1.5,
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: '8px',
+          }}
+        >
+          Observation period · {r.cohort.mature60dAccounts} of{' '}
+          {r.cohort.assignedAccounts} complete
+          {maturityUnknown
+            ? ' · Unavailable accounts have unknown maturity'
+            : ''}
+          {ends.length ? ` · Next window ends ${stamp(ends[0])}` : ''}
         </Typography>
-        <Box component="details" sx={{ mt: 1 }}>
-          <Typography
-            component="summary"
-            variant="caption"
-            color="text.secondary"
-            sx={{ cursor: 'pointer' }}
-          >
-            Protocol and reporting basis
+        {r.cohort.unavailableAssignedAccounts ? (
+          <Typography variant="body2" color="warning.main">
+            Some original cohort evaluation data is unavailable (
+            {r.cohort.unavailableAssignedAccounts} account
+            {r.cohort.unavailableAssignedAccounts === 1 ? '' : 's'}). The
+            original denominator is retained; the complete cohort estimate
+            remains unknown.
           </Typography>
-          <Stack
-            direction="row"
-            gap={1}
-            useFlexGap
-            flexWrap="wrap"
-            sx={{ my: 1 }}
-          >
-            <Chip label={r.experiment.targetApp} size="small" />
-            <Chip
-              label={`Protocol ${r.experiment.protocolVersion}`}
-              size="small"
-            />
-            <Chip label="No automatic winner" size="small" variant="outlined" />
-          </Stack>
-          <Typography variant="body2" color="text.secondary">
-            {r.estimateBasis}
-          </Typography>
-        </Box>
-      </Box>
-      <Section title="Estimated 60-day Store-adjusted revenue">
-        <Metric
-          name="Estimated cohort revenue"
-          value={money(r.financial.estimatedNetAmountUsd)}
-          note={
-            r.financial.status === 'complete'
-              ? 'Configured-commission estimate'
-              : 'Incomplete ledger/FX/cohort inputs'
-          }
-        />
+        ) : null}
+      </ReportSection>
+      <ReportSection
+        number={2}
+        title="Activity & purchases"
+        summary={`${r.cohort.exposedAccounts} account${r.cohort.exposedAccounts === 1 ? '' : 's'} with linked exposure · ${useful} useful actions`}
+      >
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' },
             gap: 2,
-            mt: 2,
-            pt: 2,
-            borderTop: 1,
-            borderColor: 'divider',
           }}
         >
+          <Metric
+            name="Evaluation records available"
+            value={r.cohort.availableAssignedAccounts}
+            note={`${r.cohort.unavailableAssignedAccounts} unavailable`}
+          />
           <Metric
             name="Confirmed purchases / linked refunds"
             value={`${r.financial.confirmedPurchaseCount} / ${r.financial.confirmedRefundCount}`}
           />
-          <Metric
-            name="Estimated commission"
-            value={money(r.financial.estimatedCommissionUsd)}
-            note={`Policy basis: ${label(r.financial.commissionPolicy.basis)}`}
-          />
         </Box>
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          Missing is not zero. This is an estimate, not a Store payout.
-        </Alert>
-        <Box component="details" sx={{ mt: 2 }}>
-          <Typography
-            component="summary"
-            variant="body2"
-            sx={{ cursor: 'pointer' }}
+        <Section title="Activity breakdown">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              alignItems: 'start',
+              gap: 2,
+            }}
           >
-            Financial details
+            {[
+              { title: 'Recorded activity', rows: supporting.slice(0, 3) },
+              {
+                title: 'Purchases, retention & guardrails',
+                rows: supporting.slice(3),
+              },
+            ].map((group) => (
+              <Box
+                key={group.title}
+                sx={{
+                  minWidth: 0,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: '8px',
+                  p: 1.5,
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  {group.title}
+                </Typography>
+                <TableContainer>
+                  <Table size="small" aria-label={group.title}>
+                    <TableBody>
+                      {group.rows.map(([name, value, note]) => (
+                        <TableRow key={name}>
+                          <TableCell sx={{ pl: 0, verticalAlign: 'top' }}>
+                            {name}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              {note}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            align="right"
+                            sx={{ pr: 0, verticalAlign: 'top' }}
+                          >
+                            {value}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            ))}
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 1, display: 'block' }}
+          >
+            Telemetry is partial. Unobserved activity remains unknown.
+          </Typography>
+        </Section>
+        <Section title="Variable costs and estimated contribution">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
+              gap: 3,
+            }}
+          >
+            {r.costs.categories.map((c) => (
+              <Metric
+                key={c.category}
+                name={`${label(c.category)} cost`}
+                value={money(c.amountUsd)}
+                note={label(c.status)}
+              />
+            ))}
+          </Box>
+          <Box sx={{ mt: 3 }}>
+            <Metric
+              name="Estimated contribution after variable costs"
+              value={money(r.costs.contributionAfterVariableCostsUsd)}
+              note="Requires explicit complete AI/content/delivery coverage for every assigned account; no missing cost is filled with zero"
+            />
+          </Box>
+        </Section>
+      </ReportSection>
+      <ReportSection
+        number={3}
+        title="Accounts"
+        summary={`${r.cohort.assignedAccounts} assigned · ${r.cohort.availableAssignedAccounts} evaluation record${r.cohort.availableAssignedAccounts === 1 ? '' : 's'} available`}
+      >
+        <Section title="Assigned account records">
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 800 }}>
+              <TableHead>
+                <TableRow>
+                  {[
+                    'Account',
+                    'Arm / origin',
+                    '60-day window',
+                    'Estimated revenue',
+                    'Observed product mix',
+                  ].map((c) => (
+                    <TableCell key={c}>{c}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {r.accounts.map((a) => (
+                  <TableRow key={a.assignmentId}>
+                    <TableCell>
+                      <Link href={`/dashboard/users/${a.userId}/portrait`}>
+                        Account {a.userId.slice(0, 8)}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {label(a.arm)}
+                      <Typography variant="caption" display="block">
+                        {stamp(a.assignedAt)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {a.mature60d ? 'Complete' : 'Collecting data'}
+                      <Typography variant="caption" display="block">
+                        Ends {stamp(a.windowEnd)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {money(a.financial.estimatedNetAmountUsd)}
+                    </TableCell>
+                    <TableCell>
+                      {Object.entries(a.observations.productMix)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(' · ') || 'No confirmed purchase'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box component="div" sx={{ mt: 2 }}>
+            <Typography component="h3" sx={{ fontSize: 16, fontWeight: 600 }}>
+              Source → Delivery → verified transaction evidence
+            </Typography>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              {r.traces.map((t) => (
+                <Box
+                  key={
+                    t.decisionId ?? `${t.assignmentId}:${t.deliveries[0]?.id}`
+                  }
+                  sx={{ overflowWrap: 'anywhere' }}
+                >
+                  <Typography variant="body2">
+                    {t.origin === 'product_campaign'
+                      ? 'Product Campaign'
+                      : `Decision ${t.decisionId}`}{' '}
+                    · assignment {t.assignmentId} · {stamp(t.capturedAt)}
+                  </Typography>
+                  <Box
+                    component="pre"
+                    sx={{
+                      m: 0,
+                      mt: 1,
+                      p: 1,
+                      whiteSpace: 'pre-wrap',
+                      overflowWrap: 'anywhere',
+                      fontSize: 12,
+                    }}
+                  >
+                    {JSON.stringify(t.references, null, 2)}
+                  </Box>
+                  <Typography variant="body2">
+                    {t.deliveries.length
+                      ? t.deliveries
+                          .map((d) => `${d.id}: ${d.status}`)
+                          .join(' · ')
+                      : 'No linked Delivery. A decision is not an impression.'}
+                  </Typography>
+                  <Typography variant="body2">
+                    {t.transactions.length
+                      ? t.transactions
+                          .map(
+                            (x) =>
+                              `Verified ledger ${x.ledgerId} · attempt ${x.transactionAttemptId} · ${label(x.provenance)}`
+                          )
+                          .join(' · ')
+                      : 'No captured transaction context. Cohort revenue does not require attribution.'}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        </Section>
+      </ReportSection>
+      <ReportSection
+        number={4}
+        title="Data quality & methodology"
+        summary="Coverage · revenue assumptions · metric definitions"
+      >
+        <Section title="Data coverage">
+          <Typography variant="body2">{r.quality.sourceCoverage}</Typography>
+          <Box component="ul" sx={{ pl: 2.5, mt: 1 }}>
+            {r.quality.reasons.map((reason) => (
+              <Typography component="li" key={reason} variant="body2">
+                {label(reason)}
+              </Typography>
+            ))}
+          </Box>
+          <Typography variant="body2">
+            {r.cohort.intendedCohortAccounts} intended ·{' '}
+            {r.cohort.ineligibleAtAssignmentAccounts} excluded before assignment
+            · {r.cohort.unexposedAccounts} available accounts without a linked
+            impression.
+          </Typography>
+        </Section>
+        <Section title="Protocol and reporting basis">
+          <Stack direction="row" gap={1} flexWrap="wrap" sx={{ mb: 1 }}>
+            <Chip label={r.experiment.targetApp} size="small" />
+            <Chip
+              label={`Protocol ${r.experiment.protocolVersion}`}
+              size="small"
+            />
+          </Stack>
+          <Typography variant="body2">
+            Source read/restatement: {stamp(r.sourceReadAt)}. {r.estimateBasis}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Policy {r.experiment.policyVersion} · Limits{' '}
+            {r.experiment.limitsVersion} · Template{' '}
+            {r.experiment.templateVersion} · Enrollment{' '}
+            {stamp(r.experiment.startsAt)} – {stamp(r.experiment.stopsAt)}
+          </Typography>
+        </Section>
+        <Box component="div" sx={{ mt: 2 }}>
+          <Typography
+            component="h3"
+            variant="body2"
+            sx={{ fontSize: 16, fontWeight: 600 }}
+          >
+            Revenue calculation
           </Typography>
           <Typography
             variant="caption"
@@ -434,11 +787,23 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
             sx={{ mt: 1 }}
           >
             Estimated Store-adjusted revenue uses confirmed ledger
-            purchases/refunds and configured commission. It is not reconciled
-            Store proceeds, actual tax/fees or a bank payout. This view does not
-            enable a pilot.
+            purchases/refunds and the commission schedule described below. It is
+            not reconciled Store proceeds, actual tax/fees or a bank payout.
+            This view does not enable a pilot.
           </Typography>
-          <Box sx={{ mt: 2 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+              mt: 2,
+            }}
+          >
+            <Metric
+              name="Estimated commission"
+              value={money(r.financial.estimatedCommissionUsd)}
+              note={`Policy basis: ${label(r.financial.commissionPolicy.basis)}`}
+            />
             <Metric
               name="Estimated revenue per eligible assigned account"
               value={money(r.financial.perAssignedAccountUsd)}
@@ -479,301 +844,158 @@ function Report({ report: r }: { report: ExperimentScorecard }) {
               .join(' · ') || 'no recorded amount'}
             . These do not reduce the primary post-assignment purchase window.
           </Typography>
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Gross amount: {money(r.financial.grossAmountUsd)} · Excluded ledger
+            records: {r.financial.excludedRecords}
+          </Typography>
           {r.financial.missingLedgerIds.length ? (
             <Alert severity="warning" sx={{ mt: 2 }}>
               {r.financial.missingLedgerIds.length} ledger records lack required
               amount/currency/original/FX inputs.
+              <Typography
+                component="span"
+                display="block"
+                sx={{ overflowWrap: 'anywhere' }}
+              >
+                {r.financial.missingLedgerIds.join(' · ')}
+              </Typography>
             </Alert>
           ) : null}
         </Box>
-      </Section>
-      <Box
-        component="details"
-        sx={{ border: 1, borderColor: 'divider', borderRadius: '8px', p: 1.5 }}
-      >
-        <Typography
-          component="summary"
-          variant="body2"
-          sx={{ cursor: 'pointer' }}
-        >
-          Commission and FX assumptions
-        </Typography>
-        <Box sx={{ mt: 2 }}>
-          <Section title="Commission and FX assumptions">
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {r.financial.commissionPolicy.basis === 'configured'
-                ? 'Configured date-effective commission schedule.'
-                : 'The existing code fallback is assumed: 30% for each Store unless a configured period applies.'}{' '}
-              Refunds reverse the original purchase commission period.
+
+        <Section title="Commission and FX assumptions">
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {r.financial.commissionPolicy.basis === 'configured'
+              ? 'Configured date-effective commission schedule.'
+              : 'The existing code fallback is assumed: 30% for each Store unless a configured period applies.'}{' '}
+            Refunds reverse the original purchase commission period.
+          </Typography>
+          {r.financial.commissionPolicy.schedule.map((p, i) => (
+            <Typography variant="body2" key={i}>
+              {label(p.store)} · {p.ratePercent}% ·{' '}
+              {p.effectiveFrom ?? 'open start'} → {p.effectiveTo ?? 'open end'}
             </Typography>
-            {r.financial.commissionPolicy.schedule.map((p, i) => (
-              <Typography variant="body2" key={i}>
-                {label(p.store)} · {p.ratePercent}% ·{' '}
-                {p.effectiveFrom ?? 'open start'} →{' '}
-                {p.effectiveTo ?? 'open end'}
+          ))}
+          <Box component="div" sx={{ mt: 2 }}>
+            <Typography component="h3" sx={{ fontSize: 16, fontWeight: 600 }}>
+              Exact ledger / FX evidence
+            </Typography>
+            <TableContainer sx={{ mt: 1 }}>
+              <Table size="small" sx={{ minWidth: 1000 }}>
+                <TableHead>
+                  <TableRow>
+                    {[
+                      'Ledger reference',
+                      'Native amount',
+                      'Event / original commission day',
+                      'Applied rate / basis',
+                      'USD FX / source version',
+                    ].map((c) => (
+                      <TableCell key={c}>{c}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {r.financial.lines.map((l) => (
+                    <TableRow key={l.ledgerId}>
+                      <TableCell
+                        sx={{ maxWidth: 230, overflowWrap: 'anywhere' }}
+                      >
+                        {l.ledgerId}
+                        {l.originalLedgerId ? (
+                          <Typography variant="caption" display="block">
+                            Original: {l.originalLedgerId}
+                          </Typography>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        {l.amount} {l.currency}
+                      </TableCell>
+                      <TableCell>
+                        {stamp(l.eventAt)} / {l.commissionDate}
+                      </TableCell>
+                      <TableCell>
+                        {l.commissionRatePercent}% · {label(l.commissionBasis)}
+                      </TableCell>
+                      <TableCell>
+                        {l.fxRate ?? 'Unknown'} ·{' '}
+                        {l.fxVersion ?? 'Unknown source'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        </Section>
+        <Section title="Comparison questions and assignment">
+          <Stack spacing={1} sx={{ mb: 2 }}>
+            {r.comparisons.map((c) => (
+              <Typography key={c.question} variant="body2">
+                {questions[c.question]}:{' '}
+                {c.enabled
+                  ? 'this cohort'
+                  : 'not enrolled; sequence separately'}
+                .
               </Typography>
             ))}
-            <Box component="details" sx={{ mt: 2 }}>
-              <Typography component="summary" sx={{ cursor: 'pointer' }}>
-                Exact ledger / FX evidence
-              </Typography>
-              <TableContainer sx={{ mt: 1 }}>
-                <Table size="small" sx={{ minWidth: 1000 }}>
-                  <TableHead>
-                    <TableRow>
-                      {[
-                        'Ledger reference',
-                        'Native amount',
-                        'Event / original commission day',
-                        'Applied rate / basis',
-                        'USD FX / source version',
-                      ].map((c) => (
-                        <TableCell key={c}>{c}</TableCell>
-                      ))}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {r.financial.lines.map((l) => (
-                      <TableRow key={l.ledgerId}>
-                        <TableCell
-                          sx={{ maxWidth: 230, overflowWrap: 'anywhere' }}
-                        >
-                          {l.ledgerId}
-                          {l.originalLedgerId ? (
-                            <Typography variant="caption" display="block">
-                              Original: {l.originalLedgerId}
-                            </Typography>
-                          ) : null}
-                        </TableCell>
-                        <TableCell>
-                          {l.amount} {l.currency}
-                        </TableCell>
-                        <TableCell>
-                          {stamp(l.eventAt)} / {l.commissionDate}
-                        </TableCell>
-                        <TableCell>
-                          {l.commissionRatePercent}% ·{' '}
-                          {label(l.commissionBasis)}
-                        </TableCell>
-                        <TableCell>
-                          {l.fxRate ?? 'Unknown'} ·{' '}
-                          {l.fxVersion ?? 'Unknown source'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          </Section>
-        </Box>
-      </Box>
-      <Section title="Assigned account records">
-        <TableContainer>
-          <Table size="small" sx={{ minWidth: 800 }}>
-            <TableHead>
-              <TableRow>
-                {[
-                  'Account',
-                  'Arm / origin',
-                  '60-day window',
-                  'Estimated revenue',
-                  'Observed product mix',
-                ].map((c) => (
-                  <TableCell key={c}>{c}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {r.accounts.map((a) => (
-                <TableRow key={a.assignmentId}>
-                  <TableCell>
-                    <Link href={`/dashboard/users/${a.userId}/portrait`}>
-                      Account {a.userId.slice(0, 8)}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {label(a.arm)}
-                    <Typography variant="caption" display="block">
-                      {stamp(a.assignedAt)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {a.mature60d ? 'Mature' : 'Immature'}
-                    <Typography variant="caption" display="block">
-                      Ends {stamp(a.windowEnd)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {money(a.financial.estimatedNetAmountUsd)}
-                  </TableCell>
-                  <TableCell>
-                    {Object.entries(a.observations.productMix)
-                      .map(([k, v]) => `${k}: ${v}`)
-                      .join(' · ') || 'No confirmed purchase'}
-                  </TableCell>
-                </TableRow>
+          </Stack>
+          {r.experiment.technicalProtocol ? (
+            <Stack spacing={1}>
+              {r.cohort.arms.map((a) => (
+                <Typography key={a.arm} variant="body2">
+                  {label(a.arm)} · {a.assignedAccounts} assigned · estimated
+                  revenue {money(a.estimatedRevenueUsd)} · per account{' '}
+                  {money(a.perAssignedAccountUsd)}
+                </Typography>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Box component="details" sx={{ mt: 2 }}>
-          <Typography component="summary" sx={{ cursor: 'pointer' }}>
-            Source → Delivery → verified transaction evidence
-          </Typography>
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            {r.traces.map((t) => (
-              <Box
-                key={t.decisionId ?? `${t.assignmentId}:${t.deliveries[0]?.id}`}
-                sx={{ overflowWrap: 'anywhere' }}
-              >
-                <Typography variant="body2">
-                  {t.origin === 'product_campaign'
-                    ? 'Product Campaign'
-                    : `Decision ${t.decisionId}`}{' '}
-                  · assignment {t.assignmentId} · {stamp(t.capturedAt)}
+            </Stack>
+          ) : (
+            <TableContainer>
+              <Table size="small" sx={{ minWidth: 580 }}>
+                <TableHead>
+                  <TableRow>
+                    {[
+                      'Assigned arm',
+                      'Original assigned accounts',
+                      'Estimated revenue',
+                      'Estimated per account',
+                    ].map((v) => (
+                      <TableCell key={v}>{v}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {r.cohort.arms.map((a) => (
+                    <TableRow key={a.arm}>
+                      <TableCell>{label(a.arm)}</TableCell>
+                      <TableCell>{a.assignedAccounts}</TableCell>
+                      <TableCell>{money(a.estimatedRevenueUsd)}</TableCell>
+                      <TableCell>{money(a.perAssignedAccountUsd)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Section>
+        <Section title="Metric definitions">
+          <Stack spacing={2}>
+            {r.registry.map((m) => (
+              <Box key={m.key}>
+                <Typography variant="body2" fontWeight={700}>
+                  {label(m.key)}
                 </Typography>
-                <Box
-                  component="pre"
-                  sx={{
-                    m: 0,
-                    mt: 1,
-                    p: 1,
-                    whiteSpace: 'pre-wrap',
-                    overflowWrap: 'anywhere',
-                    fontSize: 12,
-                  }}
-                >
-                  {JSON.stringify(t.references, null, 2)}
-                </Box>
-                <Typography variant="body2">
-                  {t.deliveries.length
-                    ? t.deliveries
-                        .map((d) => `${d.id}: ${d.status}`)
-                        .join(' · ')
-                    : 'No linked Delivery. A decision is not an impression.'}
-                </Typography>
-                <Typography variant="body2">
-                  {t.transactions.length
-                    ? t.transactions
-                        .map(
-                          (x) =>
-                            `Verified ledger ${x.ledgerId} · attempt ${x.transactionAttemptId} · ${label(x.provenance)}`
-                        )
-                        .join(' · ')
-                    : 'No captured transaction context. Cohort revenue does not require attribution.'}
+                <Typography variant="body2">{m.meaning}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Denominator: {m.denominator}. Origin: {m.origin}. Window:{' '}
+                  {m.window}. Source: {m.source}.
                 </Typography>
               </Box>
             ))}
           </Stack>
-        </Box>
-      </Section>
-      <Section title="Comparison questions and assignment">
-        <Stack spacing={1} sx={{ mb: 2 }}>
-          {r.comparisons.map((c) => (
-            <Typography key={c.question} variant="body2">
-              {questions[c.question]}:{' '}
-              {c.enabled ? 'this cohort' : 'not enrolled; sequence separately'}.
-            </Typography>
-          ))}
-        </Stack>
-        <TableContainer>
-          <Table size="small" sx={{ minWidth: 580 }}>
-            <TableHead>
-              <TableRow>
-                {[
-                  'Assigned arm',
-                  'Original assigned accounts',
-                  'Estimated revenue',
-                  'Estimated per account',
-                ].map((v) => (
-                  <TableCell key={v}>{v}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {r.cohort.arms.map((a) => (
-                <TableRow key={a.arm}>
-                  <TableCell>{label(a.arm)}</TableCell>
-                  <TableCell>{a.assignedAccounts}</TableCell>
-                  <TableCell>{money(a.estimatedRevenueUsd)}</TableCell>
-                  <TableCell>{money(a.perAssignedAccountUsd)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          No uplift or winner is claimed.{' '}
-          {r.quality.reasons.map(label).join(' · ')}.
-        </Alert>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          {r.quality.sourceCoverage}
-        </Typography>
-      </Section>
-      <Section title="Useful actions and guardrails">
-        <TableContainer>
-          <Table size="small" sx={{ minWidth: 720 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Measure</TableCell>
-                <TableCell>Recorded result</TableCell>
-                <TableCell>Origin / coverage</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {supporting.map(([name, value, note]) => (
-                <TableRow key={name}>
-                  <TableCell sx={{ minWidth: 180 }}>{name}</TableCell>
-                  <TableCell sx={{ minWidth: 150 }}>{value}</TableCell>
-                  <TableCell>{note}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Section>
-      <Section title="Variable costs and estimated contribution">
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
-            gap: 3,
-          }}
-        >
-          {r.costs.categories.map((c) => (
-            <Metric
-              key={c.category}
-              name={`${label(c.category)} cost`}
-              value={money(c.amountUsd)}
-              note={label(c.status)}
-            />
-          ))}
-        </Box>
-        <Box sx={{ mt: 3 }}>
-          <Metric
-            name="Estimated contribution after variable costs"
-            value={money(r.costs.contributionAfterVariableCostsUsd)}
-            note="Requires explicit complete AI/content/delivery coverage for every assigned account; no missing cost is filled with zero"
-          />
-        </Box>
-      </Section>
-      <Section title="Metric registry">
-        <Stack spacing={2}>
-          {r.registry.map((m) => (
-            <Box key={m.key}>
-              <Typography variant="body2" fontWeight={700}>
-                {label(m.key)}
-              </Typography>
-              <Typography variant="body2">{m.meaning}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Denominator: {m.denominator}. Origin: {m.origin}. Window:{' '}
-                {m.window}. Source: {m.source}.
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      </Section>
+        </Section>
+      </ReportSection>
     </>
   );
 }

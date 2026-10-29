@@ -1,0 +1,62 @@
+{
+  "url": "http://127.0.0.1:4397/dashboard/user-experiments",
+  "viewports": [
+    "1536x1100",
+    "390x844"
+  ],
+  "captures": [
+    "desktop-default",
+    "desktop-breakdown",
+    "desktop-all-details",
+    "mobile-all-details",
+    "mobile-default",
+    "mobile-incomplete",
+    "mobile-maturity-unknown",
+    "mobile-error",
+    "mobile-empty"
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/portrait-prod-qa-ai-20261029-v1/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    }
+  ],
+  "errors": [],
+  "fixture": true
+}

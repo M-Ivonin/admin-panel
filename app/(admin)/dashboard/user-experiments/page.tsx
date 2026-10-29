@@ -14,7 +14,7 @@ export default function UserExperimentsPage() {
               Results
             </Typography>
             <Typography color="text.secondary">
-              Saved cohort outcomes
+              Observed outcomes after personalization
             </Typography>
           </div>
           <UserExperimentScorecard />
