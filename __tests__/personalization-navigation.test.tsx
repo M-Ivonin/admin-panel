@@ -1,5 +1,6 @@
 import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -9,7 +10,11 @@ import {
 import { AdminShell } from '@/components/admin/AdminShell';
 import UserExperimentsPage from '@/app/(admin)/dashboard/user-experiments/page';
 import { UserPortrait } from '@/components/app-events-analytics/UserPortrait';
-import { getUserPortrait } from '@/lib/api/user-portrait';
+import {
+  getUserPortrait,
+  getUserPortraitDecisionHistory,
+} from '@/lib/api/user-portrait';
+import { getUser } from '@/lib/api/users';
 
 let pathname = '/dashboard/user-experiments';
 let query = new URLSearchParams();
@@ -28,12 +33,28 @@ jest.mock('@/components/auth/ProtectedRoute', () => ({
 jest.mock('@/components/app-events-analytics/UserExperimentScorecard', () => ({
   UserExperimentScorecard: () => <div>Saved report is readable</div>,
 }));
-jest.mock('@/lib/api/user-portrait', () => ({ getUserPortrait: jest.fn() }));
+jest.mock('@/lib/api/user-portrait', () => ({
+  getUserPortrait: jest.fn(),
+  getUserPortraitDecisionHistory: jest.fn(),
+}));
+jest.mock('@/lib/api/users', () => ({ getUser: jest.fn() }));
 
 beforeEach(() => {
   jest.clearAllMocks();
   pathname = '/dashboard/user-experiments';
   query = new URLSearchParams();
+  jest.mocked(getUser).mockResolvedValue({
+    id: 'account-a',
+    name_app: 'Alex Morgan',
+    email: 'alex@example.invalid',
+  } as Awaited<ReturnType<typeof getUser>>);
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+    mode: 'shadow',
+    dispatchEnabled: false,
+    status: 'available',
+    capabilities: {},
+    items: [],
+  });
 });
 
 it('provides one selected sidebar entry for both account and results routes', () => {
@@ -54,7 +75,7 @@ it('provides one selected sidebar entry for both account and results routes', ()
   ).toHaveAttribute('aria-current', 'page');
 });
 
-it('shows Results directly, with account-dependent history disabled and one header back link', () => {
+it('shows global Results with only Users, Results and Settings and one header back link', () => {
   render(<UserExperimentsPage />);
   expect(screen.getByText('Saved report is readable')).toBeInTheDocument();
   expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
@@ -62,7 +83,9 @@ it('shows Results directly, with account-dependent history disabled and one head
     'aria-selected',
     'true'
   );
-  expect(screen.getByRole('tab', { name: 'Saved decisions' })).toBeDisabled();
+  expect(
+    screen.queryByRole('tab', { name: 'Saved decisions' })
+  ).not.toBeInTheDocument();
   expect(
     within(screen.getByRole('banner')).getByRole('link', {
       name: 'Back to Users',
@@ -105,6 +128,11 @@ it('keeps the selected portrait period while navigating to and from account-scop
   );
   query = new URLSearchParams();
   rerender(<UserPortrait key="account-a" userId="account-a" />);
+  expect(screen.getByRole('tab', { name: 'Portrait' })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
+  expect(screen.queryByRole('tab', { name: 'Users' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Last 30 days' })).toHaveAttribute(
     'aria-pressed',
     'true'
@@ -120,16 +148,136 @@ it('keeps the selected portrait period while navigating to and from account-scop
 });
 
 it.each(['users', 'settings'] as const)(
-  'explains disabled account history on %s without a selected account',
+  'keeps only the three global tabs on %s',
   (activeTab) => {
     render(
       <PersonalizationLayout activeTab={activeTab}>
         Content
       </PersonalizationLayout>
     );
-    expect(screen.getByRole('tab', { name: 'Saved decisions' })).toBeDisabled();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Users',
+      'Results',
+      'Settings',
+    ]);
     expect(
-      screen.getByText('Select a user in Users to view saved decisions')
-    ).toBeInTheDocument();
+      screen.queryByText('Select a user in Users to view saved decisions')
+    ).not.toBeInTheDocument();
   }
 );
+
+it('opens account history even while the portrait has not finished loading', async () => {
+  pathname = '/dashboard/users/account-a/portrait';
+  query = new URLSearchParams('view=decisions');
+  jest.mocked(getUserPortrait).mockReturnValue(new Promise(() => {}));
+  render(<UserPortrait userId="account-a" />);
+  expect(
+    await screen.findByText(/No saved shadow decisions yet/)
+  ).toBeInTheDocument();
+  screen
+    .queryAllByText('Loading saved portrait…')
+    .forEach((message) => expect(message).not.toBeVisible());
+  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+    'Portrait',
+    'Saved decisions',
+  ]);
+  expect(
+    await screen.findByRole('heading', { name: 'Alex Morgan' })
+  ).toBeInTheDocument();
+  expect(screen.getByText('alex@example.invalid')).toBeInTheDocument();
+  expect(screen.getAllByRole('link', { name: 'Back to Users' })).toHaveLength(
+    1
+  );
+  expect(getUserPortraitDecisionHistory).toHaveBeenCalledWith('account-a');
+});
+
+it.each(['not_ready', 'restricted', 'error'] as const)(
+  'keeps history independent of portrait %s and honours its own restricted response',
+  async (status) => {
+    pathname = '/dashboard/users/account-a/portrait';
+    query = new URLSearchParams('view=decisions');
+    if (status === 'error')
+      jest
+        .mocked(getUserPortrait)
+        .mockRejectedValue(new Error('Portrait read unavailable'));
+    else
+      jest
+        .mocked(getUserPortrait)
+        .mockResolvedValue({ status, userId: 'account-a', snapshot: null });
+    jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+      mode: 'shadow',
+      dispatchEnabled: false,
+      status: 'restricted',
+      capabilities: {},
+      items: [],
+    });
+    render(<UserPortrait userId="account-a" />);
+    expect(
+      await screen.findByText(/Decision evidence is unavailable/)
+    ).toBeInTheDocument();
+    screen
+      .queryAllByText(/No saved portrait is available yet/)
+      .forEach((message) => expect(message).not.toBeVisible());
+  }
+);
+
+it('keeps history usable when identity details fail, with the canonical account ID visible', async () => {
+  pathname = '/dashboard/users/account-a/portrait';
+  query = new URLSearchParams('view=decisions');
+  jest.mocked(getUser).mockRejectedValue(new Error('Identity read failed'));
+  jest
+    .mocked(getUserPortrait)
+    .mockResolvedValue({
+      status: 'not_ready',
+      userId: 'account-a',
+      snapshot: null,
+    });
+  render(<UserPortrait userId="account-a" />);
+  expect(
+    await screen.findByText(/No saved shadow decisions yet/)
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByText('User details could not be loaded.')
+  ).toBeInTheDocument();
+  expect(screen.getByText('User ID: account-a')).toBeInTheDocument();
+});
+
+it('does not label a new account with a late identity response from the previous account', async () => {
+  let resolveFirst!: (user: Awaited<ReturnType<typeof getUser>>) => void;
+  jest
+    .mocked(getUser)
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFirst = resolve;
+      })
+    )
+    .mockResolvedValueOnce({
+      id: 'account-b',
+      name_app: 'Jordan Lee',
+      email: 'jordan@example.invalid',
+    } as Awaited<ReturnType<typeof getUser>>);
+  jest
+    .mocked(getUserPortrait)
+    .mockResolvedValue({
+      status: 'not_ready',
+      userId: 'account-a',
+      snapshot: null,
+    });
+  const { rerender } = render(<UserPortrait userId="account-a" />);
+  rerender(<UserPortrait userId="account-b" />);
+  expect(
+    await screen.findByRole('heading', { name: 'Jordan Lee' })
+  ).toBeInTheDocument();
+  await act(async () =>
+    resolveFirst({
+      id: 'account-a',
+      name_app: 'Alex Morgan',
+      email: 'alex@example.invalid',
+    } as Awaited<ReturnType<typeof getUser>>)
+  );
+  expect(screen.queryByText('alex@example.invalid')).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Chat' })).toHaveAttribute(
+    'href',
+    '/dashboard/bot-chat?userId=account-b'
+  );
+});

@@ -1,0 +1,352 @@
+{
+  "source": "Real production Next.js build with isolated browser fixture authentication and read-only deterministic API DTOs. No live backend/provider calls.",
+  "screens": [
+    {
+      "name": "users-desktop",
+      "viewport": {
+        "width": 1536,
+        "height": 1024
+      }
+    },
+    {
+      "name": "portrait-desktop",
+      "viewport": {
+        "width": 1536,
+        "height": 1024
+      }
+    },
+    {
+      "name": "decisions-desktop",
+      "viewport": {
+        "width": 1536,
+        "height": 1024
+      }
+    },
+    {
+      "name": "portrait-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "decisions-390",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "name": "portrait-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "decisions-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-portrait-loading-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-not_ready-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-restricted-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-portrait_error-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-identity_error-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-history_empty-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-history_restricted-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "history-history_error-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "users-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "results-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    },
+    {
+      "name": "settings-360",
+      "viewport": {
+        "width": 360,
+        "height": 844
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/v1/user",
+      "query": "?page=1&limit=20&sortBy=registered_at&sortOrder=DESC"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/campaigns/admin/catalog",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=30&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=30&offset=0&snapshotId=sample-historical"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions/sample-decision/replay",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111/decisions",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/11111111-1111-4111-8111-111111111111",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/11111111-1111-4111-8111-111111111111",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user/22222222-2222-4222-8222-222222222222",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/portraits/22222222-2222-4222-8222-222222222222",
+      "query": "?days=7&offset=0"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/user",
+      "query": "?page=1&limit=20&sortBy=registered_at&sortOrder=DESC"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/campaigns/admin/catalog",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/experiments/sample-technical-protocol/scorecard",
+      "query": ""
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings",
+      "query": ""
+    }
+  ],
+  "errors": [],
+  "checks": [
+    "Users table preserved at7a473f6b",
+    "directory→separate user detail→history",
+    "global versus account-local tab separation",
+    "period/snapshot preservation",
+    "account switch identity reset",
+    "frozen replay read only",
+    "history independent of portrait loading/not_ready/restricted/error",
+    "history API empty/restricted/error",
+    "identity failure fallback",
+    "desktop1536x1024 and narrow390/360x844",
+    "Back to Users→directory; Results/Settings global navigation"
+  ]
+}

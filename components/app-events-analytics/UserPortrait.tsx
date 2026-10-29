@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -22,7 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
-import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
+import { UserPortraitLayout } from '@/components/admin/UserPortraitLayout';
 import { PortraitOverview } from './PortraitOverview';
 import type {
   PortraitActivity,
@@ -59,70 +58,23 @@ export function UserPortrait({ userId }: { userId: string }) {
   const decisionsView = useSearchParams().get('view') === 'decisions';
   const ready = data?.status === 'ready' ? data : null;
   return (
-    <PersonalizationLayout
-      activeTab={decisionsView ? 'decisions' : 'users'}
+    <UserPortraitLayout
+      activeTab={decisionsView ? 'decisions' : 'portrait'}
       userId={userId}
     >
-      <Stack spacing={2.5}>
-        <Stack
-          direction="row"
-          gap={2}
-          justifyContent="space-between"
-          alignItems={{ sm: 'flex-start' }}
-        >
-          <Box sx={{ minWidth: 0 }}>
-            <Typography component="h1" variant="h4" fontWeight={700}>
-              {decisionsView ? 'Saved decisions' : 'User portrait'}
-            </Typography>
-            {!decisionsView ? (
-              <Typography
-                color="text.secondary"
-                sx={{ display: { xs: 'none', sm: 'block' } }}
-              >
-                Recorded behavior · Saved factual snapshot
-              </Typography>
-            ) : null}
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 1 }}
-              title={userId}
-            >
-              Selected account: {userId.slice(0, 8)}
-            </Typography>
-          </Box>
-          {!decisionsView ? (
-            <Stack
-              direction="row"
-              gap={1}
-              sx={{
-                flexShrink: 0,
-                alignSelf: 'flex-start',
-                '& .MuiButton-root': {
-                  minWidth: 0,
-                  px: { xs: 1, md: 2 },
-                  fontSize: { xs: 12, md: 14 },
-                },
-              }}
-            >
-              <Button
-                variant="outlined"
-                component={Link}
-                href={`/dashboard/time-in-app?userId=${encodeURIComponent(userId)}`}
-              >
-                Time in app
-              </Button>
-              <Button
-                variant="outlined"
-                component={Link}
-                href={`/dashboard/bot-chat?userId=${encodeURIComponent(userId)}`}
-              >
-                Chat
-              </Button>
-            </Stack>
-          ) : null}
+      {decisionsView ? (
+        <Stack spacing={2.5}>
+          <Typography component="h2" variant="h4" fontWeight={700}>
+            Saved decisions
+          </Typography>
+          <PortraitDecisionHistory
+            userId={userId}
+            viewedSnapshotId={ready?.snapshot.id ?? null}
+          />
         </Stack>
-        <Box hidden={decisionsView}>
+      ) : null}
+      <Stack spacing={2.5} sx={{ display: decisionsView ? 'none' : 'flex' }}>
+        <Box>
           <Box>
             <Stack
               direction="row"
@@ -218,16 +170,7 @@ export function UserPortrait({ userId }: { userId: string }) {
         ) : null}
         {ready ? (
           <>
-            {decisionsView ? (
-              <PortraitDecisionHistory
-                userId={userId}
-                viewedSnapshotId={ready.snapshot.id}
-              />
-            ) : null}
-            <Stack
-              spacing={3}
-              sx={{ display: decisionsView ? 'none' : 'flex' }}
-            >
+            <Stack spacing={3}>
               <PortraitOverview data={ready} historical={Boolean(snapshotId)} />
               <Section
                 title="Weekday × hour of actions"
@@ -558,7 +501,7 @@ export function UserPortrait({ userId }: { userId: string }) {
           </>
         ) : null}
       </Stack>
-    </PersonalizationLayout>
+    </UserPortraitLayout>
   );
 }
 

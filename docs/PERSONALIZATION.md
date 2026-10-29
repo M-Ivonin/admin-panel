@@ -1,17 +1,17 @@
 # Personalization
 
-Personalization composes the existing Users, saved portrait/decision and outcome reads. The sidebar contains one entry pointing to `/dashboard/users`; the horizontal tabs are Users, Saved decisions and Results.
+Personalization composes the existing Users, saved portrait/decision and outcome reads. The sidebar contains one entry pointing to `/dashboard/users`; the global horizontal tabs are Users, Results and Settings.
 
 ## Routes and state
 
-- Users keeps its existing search, filters, row actions and pagination.
-- `/dashboard/users/:userId/portrait` is the canonical portrait. `view=decisions` selects that account's saved history in the same host. Switching these tabs preserves the selected portrait period/version. The route keys the host by canonical account so account changes reset its local state.
-- `/dashboard/user-experiments` renders Results. Saved decisions is disabled without a selected portrait; it is not a global journal.
-- `PersonalizationLayout` reuses `AdminPageHeader`. Detail/report views have one Back to Users link before the heading in the shared top header. The root Users list has no self-link back.
+- Users is only the directory. Its table, search, filters, compact columns, right-aligned icon actions and pagination are preserved from commit `7a473f6b`. The navigation mockup is not a table redesign instruction.
+- `/dashboard/users/:userId/portrait` is the canonical portrait. `view=decisions` selects that account's saved history in the same host. Its account-local tabs are Portrait and Saved decisions; neither is labelled Users. Switching these tabs preserves the selected portrait period/version. The route keys the host by canonical account so account changes reset its local state.
+- `/dashboard/user-experiments` renders Results. `/dashboard/personalization/settings` renders Settings. Neither global screen nor the directory has a Saved decisions tab; history belongs to the selected account.
+- `PersonalizationLayout` owns global navigation. `UserPortraitLayout` is a separate account detail shell: shared AdminPageHeader with one Back to Users before User portrait, then account breadcrumb, name/email/ID and account-local tabs. Global tabs are absent from this detail view. Identity uses the existing `GET /user/:id`, with canonical ID fallback and retry on failure; identity failures do not block portrait/history reads. The root Users list has no self-link back.
 
 Portrait overview cards display the existing saved projection. Historical snapshot/version/cutoff, source coverage and captured product access remain distinct. Unknown values stay unknown. Detailed activity, Store evidence, source quality and timeline content remain available below the overview. On narrow screens, snapshot/source explanations use disclosures and the product-access summary precedes daily activity.
 
-Saved decisions still reads the latest 20 evaluations for that account. The source label, selected candidate, baseline, reason, model/validator evidence and pinned snapshot come from the existing API. Frozen replay remains a read. Decision history does not gain a Delivery join or imply actual exposure; the existing Results trace owns those links.
+Saved decisions reads the latest 20 evaluations for that account independently of portrait readiness, loading or read failure. Its own API determines empty/restricted/error states. Portrait-only alerts stay hidden while viewing history. An optional viewed-snapshot context is shown only when that snapshot is available; each historical decision retains its own pinned evidence. The source label, selected candidate, baseline, reason, model/validator evidence and pinned snapshot come from the existing API. Frozen replay remains a read. Decision history does not gain a Delivery join or imply actual exposure; the existing Results trace owns those links.
 
 ## Access and side effects
 
@@ -21,7 +21,7 @@ Opening, refreshing or navigating the section does not run an importer/model, en
 
 ## Design and verification
 
-The approved [design baseline](plans/2026-10-29-personalization-center/DESIGN.md) and [plan](plans/2026-10-29-personalization-center/PLAN.md) define the layout and scope. The implementation proof is recorded alongside them in `UI-EVIDENCE.md`.
+The approved [navigation v2 concepts](plans/2026-10-29-personalization-navigation-v2/README.md) define the separate directory/detail hierarchy, superseding the earlier shared Users/portrait tab. The owner explicitly excluded the redesigned Users table: preserve the current committed table instead. Fresh proof is recorded in [UI-EVIDENCE.md](plans/2026-10-29-personalization-navigation-v2/UI-EVIDENCE.md). Earlier [concepts](plans/2026-10-29-personalization-center/DESIGN.md) remain historical references for the unchanged portrait/report content.
 
 Relevant tests are `personalization-navigation`, `users-page`, `use-user-portrait`, `portrait-decision-history`, `portrait-storefront-evidence` and `user-experiment-scorecard`, plus the existing admin navigation/auth/Revenue Ledger suites. Use `npm run verify:stage` and applicable route smoke profiles, then fresh desktop/narrow browser captures. UI fixtures prove the rendered application and interactions; they do not establish live backend authorization, current pilot readiness or experimental results.
 

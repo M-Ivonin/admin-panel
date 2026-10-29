@@ -39,7 +39,7 @@ export function PortraitDecisionHistory({
   viewedSnapshotId,
 }: {
   userId: string;
-  viewedSnapshotId: string;
+  viewedSnapshotId?: string | null;
 }) {
   const [history, setHistory] = useState<History | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,25 +112,27 @@ export function PortraitDecisionHistory({
           Refresh saved decisions
         </Button>
       </Stack>
-      <Box component="details">
-        <Typography
-          component="summary"
-          variant="caption"
-          color="text.secondary"
-          sx={{ cursor: 'pointer' }}
-        >
-          Viewed portrait context
-        </Typography>
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{ overflowWrap: 'anywhere' }}
-        >
-          Portrait currently viewed: {viewedSnapshotId}. Each historic decision
-          below keeps its own snapshot, seven-day window and current-owner
-          cutoff.
-        </Typography>
-      </Box>
+      {viewedSnapshotId ? (
+        <Box component="details">
+          <Typography
+            component="summary"
+            variant="caption"
+            color="text.secondary"
+            sx={{ cursor: 'pointer' }}
+          >
+            Viewed portrait context
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ overflowWrap: 'anywhere' }}
+          >
+            Portrait currently viewed: {viewedSnapshotId}. Each historic
+            decision below keeps its own snapshot, seven-day window and
+            current-owner cutoff.
+          </Typography>
+        </Box>
+      ) : null}
       {loading ? (
         <Stack direction="row" spacing={1} alignItems="center" role="status">
           <CircularProgress size={18} />
