@@ -73,6 +73,14 @@ it('groups retention by action with separate cohort means and an expandable orig
     .forEach((date) => expect(date).not.toBeVisible());
   fireEvent.click(summary);
   expect(summary).toHaveAttribute('aria-expanded', 'true');
+  expect(
+    screen.getByRole('button', {
+      name: 'Show Collection page viewed breakdown',
+    })
+  ).toHaveAttribute('aria-expanded', 'false');
+  expect(
+    screen.queryByRole('button', { name: 'Show 0% collections' })
+  ).not.toBeInTheDocument();
   const breakdown = screen.getAllByTestId('updated-home-grouped-metric')[0];
   expect(within(breakdown).getByText('COHORT DATE')).toBeVisible();
   expect(within(breakdown).getByText('RETURN DAY')).toBeVisible();
