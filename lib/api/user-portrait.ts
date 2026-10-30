@@ -256,6 +256,8 @@ export interface PortraitShadowDecision {
   };
   validator: { accepted: boolean; reasons: string[] };
   model: {
+    /** Short model-authored summary, absent in historical saved decisions. */
+    explanation?: string;
     status: string;
     model: string;
     responseId: string | null;

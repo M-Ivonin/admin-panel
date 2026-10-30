@@ -302,8 +302,22 @@ function Decision({
             Why this decision
           </Typography>
           <Typography variant="body2">
-            {reasonText(item.selection.reasonCode)}
+            {reasonText(item)}
           </Typography>
+          {item.status === 'completed' && item.model.explanation ? (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2">
+                {item.source === 'model' ? 'AI explanation' : 'AI proposal explanation'}
+              </Typography>
+              <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                {item.model.explanation}
+              </Typography>
+            </Box>
+          ) : item.status === 'completed' && item.source === 'model' ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              No AI explanation was recorded for this decision.
+            </Typography>
+          ) : null}
           {item.source === 'baseline' && item.status === 'completed' ? (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
               {item.model.status === 'not_requested'
@@ -558,7 +572,16 @@ function decisionTitle(item: PortraitShadowDecision) {
     )[candidate.kind] ?? 'Recommend a message'
   );
 }
-function reasonText(code: string) {
+function reasonText(item: PortraitShadowDecision) {
+  if (item.source === 'baseline') {
+    if (item.validator.reasons.some((reason) => reason.startsWith('news_'))) {
+      return 'The proposed News item changed or became unavailable before the decision was saved.';
+    }
+    if (item.selection.reasonCode === 'model_silence') {
+      return 'The fallback rules selected no contact.';
+    }
+  }
+  const code = item.selection.reasonCode;
   return (
     (
       {
@@ -567,7 +590,7 @@ function reasonText(code: string) {
         premium_intent:
           'Recorded product activity indicates interest in premium content.',
         policy_exclusion:
-          'Contact was excluded by the applicable communication rules.',
+          'The saved choice was marked as a policy exclusion; this label alone does not identify a blocking rule.',
         no_opportunity: 'No eligible recommendation was available at the time.',
         stale_snapshot:
           'The saved portrait was too old for a new recommendation.',

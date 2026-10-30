@@ -100,6 +100,41 @@ const history: History = {
 };
 beforeEach(() => jest.resetAllMocks());
 
+it('shows a recorded AI explanation separately from the saved reason code', async () => {
+  const explanation = 'I deferred because repeating the same offer immediately would add no useful context.';
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+    ...history,
+    items: history.items.map((item) => ({...item, model: {...item.model, explanation}})),
+  });
+  render(<PortraitDecisionHistory userId="account-one" />);
+  expect(await screen.findByText(explanation)).toBeVisible();
+  expect(screen.getByText('AI explanation')).toBeVisible();
+});
+
+it('does not invent an explanation for historical AI decisions', async () => {
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
+  render(<PortraitDecisionHistory userId="account-one" />);
+  expect(await screen.findByText('No AI explanation was recorded for this decision.')).toBeVisible();
+});
+
+it('explains server invalidation without attributing fallback silence to AI', async () => {
+  (getUserPortraitDecisionHistory as jest.Mock).mockResolvedValue({
+    ...history,
+    items: history.items.map((item) => ({
+      ...item,
+      source: 'baseline',
+      selection: {...item.selection, candidateId: 'no_action', reasonCode: 'model_silence'},
+      selectedCandidate: {...item.selectedCandidate, kind: 'no_action', copy: null},
+      validator: {accepted: false, reasons: ['news_changed']},
+      model: {...item.model, explanation: 'The News item matches the recorded interests.'},
+    })),
+  });
+  render(<PortraitDecisionHistory userId="account-one" />);
+  expect(await screen.findByText('The proposed News item changed or became unavailable before the decision was saved.')).toBeVisible();
+  expect(screen.queryByText('The AI selected no contact.')).not.toBeInTheDocument();
+  expect(screen.getByText('AI proposal explanation')).toBeVisible();
+});
+
 it('shows what the AI selected, the saved reason and message, with no invented sending confirmation', async () => {
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
   render(
