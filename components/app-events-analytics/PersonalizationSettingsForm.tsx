@@ -35,6 +35,15 @@ export function PersonalizationSettingsForm() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const matchesSearch = (
+    scenario: PersonalizationSettings['scenarios'][number]
+  ) =>
+    [
+      scenario.title,
+      ...(scenario.group === 'message'
+        ? [scenario.when, scenario.reaction]
+        : []),
+    ].some((text) => text.toLowerCase().includes(search.trim().toLowerCase()));
   const read = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -131,9 +140,8 @@ export function PersonalizationSettingsForm() {
                 Scenarios
               </Typography>
               <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
-                Control when personalization uses an activity, which existing
-                messages it may choose.
-                Each scenario has its own condition and reaction.
+                Choose which activities personalization may use and which
+                existing messages it may select.
               </Typography>
             </Box>
             <TextField
@@ -141,7 +149,7 @@ export function PersonalizationSettingsForm() {
               value={search}
               type="search"
               onChange={(event) => setSearch(event.target.value)}
-              helperText={`${saved.scenarios.length} scenarios · Search by activity, condition or reaction`}
+              helperText={`${saved.scenarios.length} scenarios · Search by activity or message`}
             />
             <Stack spacing={1}>
               {(
@@ -154,13 +162,7 @@ export function PersonalizationSettingsForm() {
                   (scenario) => scenario.group === group
                 );
                 const query = search.trim().toLowerCase();
-                const visible = all.filter(
-                  (scenario) =>
-                    !query ||
-                    [scenario.title, scenario.when, scenario.reaction].some(
-                      (text) => text.toLowerCase().includes(query)
-                    )
-                );
+                const visible = all.filter(matchesSearch);
                 if (!visible.length) return null;
                 return (
                   <Accordion
@@ -221,22 +223,26 @@ export function PersonalizationSettingsForm() {
                                 />
                               }
                             />
-                            <Typography variant="body2" sx={{ mt: 0.5 }}>
-                              <Box component="span" fontWeight={700}>
-                                When:{' '}
-                              </Box>
-                              {scenario.when}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ mt: 0.5 }}
-                            >
-                              <Box component="span" fontWeight={700}>
-                                React:{' '}
-                              </Box>
-                              {scenario.reaction}
-                            </Typography>
+                            {scenario.group === 'message' ? (
+                              <>
+                                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                  <Box component="span" fontWeight={700}>
+                                    When:{' '}
+                                  </Box>
+                                  {scenario.when}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{ mt: 0.5 }}
+                                >
+                                  <Box component="span" fontWeight={700}>
+                                    React:{' '}
+                                  </Box>
+                                  {scenario.reaction}
+                                </Typography>
+                              </>
+                            ) : null}
                           </Box>
                         ))}
                       </Stack>
@@ -244,12 +250,7 @@ export function PersonalizationSettingsForm() {
                   </Accordion>
                 );
               })}
-              {!saved.scenarios.some((scenario) =>
-                [scenario.title, scenario.when, scenario.reaction].some(
-                  (text) =>
-                    text.toLowerCase().includes(search.trim().toLowerCase())
-                )
-              ) ? (
+              {!saved.scenarios.some(matchesSearch) ? (
                 <Typography color="text.secondary">
                   No matching scenarios.
                 </Typography>
@@ -259,9 +260,8 @@ export function PersonalizationSettingsForm() {
               Behavioral switches control optional evidence for selecting
               existing messages; an event never requires a message. Analytics,
               verified access, pending purchases, consent and already-read news
-              protections stay active. Disabled AI messages are also blocked before
-              sending. Changes apply
-              after saving.
+              protections stay active. Disabled AI messages are also blocked
+              before sending. Changes apply after saving.
             </Alert>
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
