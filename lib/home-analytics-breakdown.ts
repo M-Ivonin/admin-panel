@@ -5,12 +5,70 @@ import {
   formatHomeAnalyticsRate,
 } from '@/lib/home-analytics-summary';
 
+export const RETENTION_RETURN_DAYS = [1, 7, 30] as const;
+
+export type RetentionMeans = Record<
+  (typeof RETENTION_RETURN_DAYS)[number],
+  number | null
+>;
+
+type GroupedMetricSummary =
+  | { kind: 'retention'; means: RetentionMeans }
+  | { kind: 'metric'; label: string; value: string }
+  | { kind: 'breakdowns' };
+
+export type GroupedMetricProjection = {
+  action: string | null;
+  dimensionKeys: string[];
+  rows: UpdatedHomeMetricValue[];
+  summary: GroupedMetricSummary;
+  collection: {
+    counts: { converting: number; zero: number; na: number };
+    rowsWithoutZero: UpdatedHomeMetricValue[];
+  } | null;
+};
+
 /** Presentation policy only; the original backend observations stay intact. */
 export function projectGroupedMetric(
   metricKey: string,
-  values: readonly UpdatedHomeMetricValue[],
-  showZeroCollections: boolean
-) {
+  values: readonly UpdatedHomeMetricValue[]
+): GroupedMetricProjection[] {
+  if (metricKey === 'd1_d7_d30_retention') {
+    const actions = new Map<string, UpdatedHomeMetricValue[]>();
+    for (const value of values) {
+      const action = value.dimensions.coreAction;
+      if (typeof action !== 'string') continue;
+      const rows = actions.get(action) ?? [];
+      rows.push(value);
+      actions.set(action, rows);
+    }
+
+    return [...actions].map(([action, values]) => {
+      const dimensionKeys = Object.keys(values[0].dimensions).filter(
+        (key) => key !== 'coreAction'
+      );
+      const means: RetentionMeans = { 1: null, 7: null, 30: null };
+      for (const day of RETENTION_RETURN_DAYS) {
+        const observed = values.filter(
+          (value) => value.dimensions.returnDay === day && value.value !== null
+        );
+        if (observed.length > 0) {
+          means[day] =
+            observed.reduce((sum, value) => sum + (value.value ?? 0), 0) /
+            observed.length;
+        }
+      }
+      return {
+        action,
+        dimensionKeys,
+        rows: [...values].sort((left, right) =>
+          compareDimensionBreakdowns(left, right, dimensionKeys)
+        ),
+        summary: { kind: 'retention', means },
+        collection: null,
+      };
+    });
+  }
   const isCollectionBreakdown =
     metricKey === 'collection_assisted_conversion_rate';
   const isModuleBreakdown = values.every(
@@ -27,23 +85,27 @@ export function projectGroupedMetric(
         'compositionModules',
       ].filter((key) => values.some((value) => key in value.dimensions))
     : Object.keys(values[0]?.dimensions ?? {});
-  const rows = [...values]
-    .filter(
-      (value) =>
-        !isCollectionBreakdown || showZeroCollections || value.value !== 0
-    )
-    .sort((left, right) =>
-      compareDimensionBreakdowns(left, right, dimensionKeys)
-    );
+  const rows = [...values].sort((left, right) =>
+    compareDimensionBreakdowns(left, right, dimensionKeys)
+  );
+  const summary = metricSummary(metricKey, values);
 
-  return {
-    summary: metricSummary(metricKey, values),
-    dimensionKeys,
-    collectionCounts: isCollectionBreakdown
-      ? countCollectionValues(values)
-      : null,
-    rows,
-  };
+  return [
+    {
+      action: null,
+      summary: summary
+        ? { kind: 'metric', ...summary }
+        : { kind: 'breakdowns' },
+      dimensionKeys,
+      collection: isCollectionBreakdown
+        ? {
+            counts: countCollectionValues(values),
+            rowsWithoutZero: rows.filter((value) => value.value !== 0),
+          }
+        : null,
+      rows,
+    },
+  ];
 }
 
 function compareDimensionBreakdowns(

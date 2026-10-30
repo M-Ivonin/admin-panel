@@ -28,13 +28,12 @@ import {
   metricValues,
 } from './presentation';
 import { UpdatedHomeFunnel } from './UpdatedHomeFunnel';
-import { projectGroupedMetric } from '@/lib/home-analytics-breakdown';
 import {
-  projectRetention,
+  projectGroupedMetric,
   RETENTION_RETURN_DAYS,
-  type RetentionActionGroup,
+  type GroupedMetricProjection,
   type RetentionMeans,
-} from '@/lib/home-analytics-retention';
+} from '@/lib/home-analytics-breakdown';
 
 const mono = '"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace';
 
@@ -235,11 +234,15 @@ function DashboardProjection({
                 const values =
                   orderedValues.length > 0 ? orderedValues : [undefined];
                 if (
-                  metric.definition.key === 'd1_d7_d30_retention' &&
-                  orderedValues.length > 0
+                  (metric.definition.key === 'd1_d7_d30_retention' &&
+                    orderedValues.length > 0) ||
+                  shouldGroupMetric(dashboard.id, values.length)
                 ) {
-                  const retentionGroups = projectRetention(orderedValues);
-                  if (retentionGroups.length === 0) {
+                  const groups = projectGroupedMetric(
+                    metric.definition.key,
+                    orderedValues
+                  );
+                  if (groups.length === 0) {
                     return (
                       <Alert key={metric.definition.key} severity="info">
                         No eligible registered cohorts with a completed
@@ -247,24 +250,13 @@ function DashboardProjection({
                       </Alert>
                     );
                   }
-                  return retentionGroups.map((retention) => (
+                  return groups.map((group) => (
                     <GroupedMetric
-                      key={`${metric.definition.key}-${retention.action}`}
-                      title={displayLabel(retention.action)}
+                      key={`${metric.definition.key}-${group.action ?? ''}`}
                       definition={metric.definition}
-                      values={retention.rows}
-                      retention={retention}
+                      group={group}
                     />
                   ));
-                }
-                if (shouldGroupMetric(dashboard.id, values.length)) {
-                  return (
-                    <GroupedMetric
-                      key={metric.definition.key}
-                      definition={metric.definition}
-                      values={orderedValues}
-                    />
-                  );
                 }
                 return values.map((value, index) => (
                   <MetricRow
@@ -283,16 +275,14 @@ function DashboardProjection({
 }
 
 function GroupedMetric({
-  title,
   definition,
-  values,
-  retention,
+  group,
 }: {
-  title?: string;
   definition: UpdatedHomeMetricDefinition;
-  values: UpdatedHomeMetricValue[];
-  retention?: RetentionActionGroup;
+  group: GroupedMetricProjection;
 }) {
+  const { rows: values, dimensionKeys } = group;
+  const title = group.action === null ? undefined : displayLabel(group.action);
   const numeratorDefinition =
     values[0]?.formula.numerator ?? definition.numerator;
   const denominatorDefinition =
@@ -300,12 +290,9 @@ function GroupedMetric({
   const distinctUsers = /distinct users/i.test(
     `${numeratorDefinition} ${denominatorDefinition ?? ''}`
   );
-  const isRetention = retention !== undefined;
+  const isRetention = group.summary.kind === 'retention';
   const [showZeroCollections, setShowZeroCollections] = useState(false);
-  const projection = isRetention
-    ? null
-    : projectGroupedMetric(definition.key, values, showZeroCollections);
-  const summary = projection?.summary ?? null;
+  const summary = group.summary.kind === 'metric' ? group.summary : null;
   const summaryToken =
     ANALYTICS_ROLE_TOKENS[
       metricRole(
@@ -313,11 +300,12 @@ function GroupedMetric({
         values.find((value) => value.value !== null)
       )
     ];
-  const collectionCounts = projection?.collectionCounts ?? null;
+  const collectionCounts = group.collection?.counts ?? null;
   const isCollectionBreakdown = collectionCounts !== null;
-  const dimensionKeys =
-    retention?.dimensionKeys ?? projection?.dimensionKeys ?? [];
-  const displayedValues = retention?.rows ?? projection?.rows ?? [];
+  const displayedValues =
+    group.collection && !showZeroCollections
+      ? group.collection.rowsWithoutZero
+      : group.rows;
   const breakdownColumns =
     isRetention && dimensionKeys.length === 2
       ? {
@@ -390,8 +378,8 @@ function GroupedMetric({
               ) : null}
             </Stack>
           </Stack>
-          {retention ? (
-            <RetentionSummary means={retention.means} />
+          {group.summary.kind === 'retention' ? (
+            <RetentionSummary means={group.summary.means} />
           ) : (
             <Stack gap="2px" minWidth={0}>
               <Typography
