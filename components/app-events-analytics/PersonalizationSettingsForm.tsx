@@ -38,12 +38,9 @@ export function PersonalizationSettingsForm() {
   const matchesSearch = (
     scenario: PersonalizationSettings['scenarios'][number]
   ) =>
-    [
-      scenario.title,
-      ...(scenario.group === 'message'
-        ? [scenario.when, scenario.reaction]
-        : []),
-    ].some((text) => text.toLowerCase().includes(search.trim().toLowerCase()));
+    [scenario.title, scenario.when, scenario.reaction].some((text) =>
+      text.toLowerCase().includes(search.trim().toLowerCase())
+    );
   const read = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -149,7 +146,7 @@ export function PersonalizationSettingsForm() {
               value={search}
               type="search"
               onChange={(event) => setSearch(event.target.value)}
-              helperText={`${saved.scenarios.length} scenarios · Search by activity or message`}
+              helperText={`${saved.scenarios.length} scenarios · Search by activity, condition or reaction`}
             />
             <Stack spacing={1}>
               {(
@@ -223,26 +220,22 @@ export function PersonalizationSettingsForm() {
                                 />
                               }
                             />
-                            {scenario.group === 'message' ? (
-                              <>
-                                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                  <Box component="span" fontWeight={700}>
-                                    When:{' '}
-                                  </Box>
-                                  {scenario.when}
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                  sx={{ mt: 0.5 }}
-                                >
-                                  <Box component="span" fontWeight={700}>
-                                    React:{' '}
-                                  </Box>
-                                  {scenario.reaction}
-                                </Typography>
-                              </>
-                            ) : null}
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              <Box component="span" fontWeight={700}>
+                                When:{' '}
+                              </Box>
+                              {scenario.when}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mt: 0.5 }}
+                            >
+                              <Box component="span" fontWeight={700}>
+                                React:{' '}
+                              </Box>
+                              {scenario.reaction}
+                            </Typography>
                           </Box>
                         ))}
                       </Stack>
