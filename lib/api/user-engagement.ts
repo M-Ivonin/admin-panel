@@ -112,6 +112,8 @@ export function removeEngagementExclusion(
 }
 
 export interface PersonalizationSettings {
+  disabledScenarioIds: string[];
+  scenarios: Array<{ id: string; title: string; description: string; enabled: boolean }>;
   minimumContactIntervalHours: number;
   aiCallsPerUser24h: number;
   aiCallsPerDay: number;
@@ -130,7 +132,7 @@ export function savePersonalizationSettings(
   aiLimits?: Pick<
     PersonalizationSettings,
     'aiCallsPerUser24h' | 'aiCallsPerDay'
-  >
+  > & { disabledScenarioIds?: string[] }
 ): Promise<PersonalizationSettings> {
   return request(`${base}/personalization-settings`, 'PATCH', {
     minimumContactIntervalHours,

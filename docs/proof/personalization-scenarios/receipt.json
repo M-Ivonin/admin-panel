@@ -1,0 +1,48 @@
+{
+  "viewports": [
+    "1440x1050",
+    "390x844",
+    "360x844"
+  ],
+  "checks": [
+    "five scenarios",
+    "explicit save",
+    "real HTTP/SQL readback",
+    "reload persists",
+    "all scenarios disabled",
+    "stale revision rejected",
+    "reload resolves conflict",
+    "no horizontal overflow",
+    "no page errors"
+  ],
+  "calls": [
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/app-events/admin/engagement/personalization-settings"
+    }
+  ]
+}

@@ -6,6 +6,8 @@ import {
   Box,
   Button,
   CircularProgress,
+  FormControlLabel,
+  Switch,
   Paper,
   Stack,
   TextField,
@@ -20,6 +22,7 @@ import {
 /** Edits shared contact frequency and AI quotas with revision-protected saves. */
 export function PersonalizationSettingsForm() {
   const [saved, setSaved] = useState<PersonalizationSettings | null>(null);
+  const [disabledScenarios, setDisabledScenarios] = useState<string[]>([]);
   const [hours, setHours] = useState('');
   const [aiPerUser, setAiPerUser] = useState('');
   const [aiPerDay, setAiPerDay] = useState('');
@@ -33,6 +36,7 @@ export function PersonalizationSettingsForm() {
     try {
       const value = await getPersonalizationSettings();
       setSaved(value);
+      setDisabledScenarios(value.disabledScenarioIds);
       setHours(String(value.minimumContactIntervalHours));
       setAiPerUser(String(value.aiCallsPerUser24h));
       setAiPerDay(String(value.aiCallsPerDay));
@@ -68,8 +72,10 @@ export function PersonalizationSettingsForm() {
       const result = await savePersonalizationSettings(value, saved.revision, {
         aiCallsPerUser24h: perUser,
         aiCallsPerDay: perDay,
+        disabledScenarioIds: disabledScenarios,
       });
       setSaved(result);
+      setDisabledScenarios(result.disabledScenarioIds);
       setHours(String(result.minimumContactIntervalHours));
       setAiPerUser(String(result.aiCallsPerUser24h));
       setAiPerDay(String(result.aiCallsPerDay));
@@ -87,7 +93,7 @@ export function PersonalizationSettingsForm() {
           Settings
         </Typography>
         <Typography color="text.secondary">
-          Personalized message frequency and AI usage
+          Personalization scenarios, message frequency and AI usage
         </Typography>
       </Box>
       {error ? (
@@ -114,6 +120,47 @@ export function PersonalizationSettingsForm() {
       {saved ? (
         <Paper component="section" sx={{ p: { xs: 2, md: 3 } }}>
           <Stack spacing={3}>
+            <Box>
+              <Typography component="h2" variant="h6" fontWeight={700}>
+                Scenarios
+              </Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
+                Choose which personalized messages may be selected. Turning a
+                scenario off also blocks its queued messages before sending.
+                Changes apply after saving.
+              </Typography>
+            </Box>
+            <Stack spacing={2}>
+              {saved.scenarios.map((scenario) => (
+                <Box key={scenario.id}>
+                  <FormControlLabel
+                    sx={{ m: 0, width: '100%', justifyContent: 'space-between', gap: 2 }}
+                    labelPlacement="start"
+                    label={scenario.title}
+                    control={
+                      <Switch
+                        checked={!disabledScenarios.includes(scenario.id)}
+                        disabled={busy}
+                        onChange={(_, checked) => {
+                          setDisabledScenarios((current) => checked
+                            ? current.filter((id) => id !== scenario.id)
+                            : [...current, scenario.id]);
+                          setSuccess(false);
+                        }}
+                      />
+                    }
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {scenario.description}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+            <Alert severity="info">
+              Enabled scenarios still require matching user activity, consent and
+              delivery approval. Enabling a scenario does not start a campaign.
+              Screen views and payment events continue to be recorded.
+            </Alert>
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
                 Contact interval
@@ -199,7 +246,9 @@ export function PersonalizationSettingsForm() {
                   !valid ||
                   (value === saved.minimumContactIntervalHours &&
                     perUser === saved.aiCallsPerUser24h &&
-                    perDay === saved.aiCallsPerDay)
+                    perDay === saved.aiCallsPerDay &&
+                    disabledScenarios.length === saved.disabledScenarioIds.length &&
+                    disabledScenarios.every((id) => saved.disabledScenarioIds.includes(id)))
                 }
                 onClick={() => void save()}
               >

@@ -1,0 +1,22 @@
+{
+  "environment": "local applications with DEV database",
+  "admin": "http://127.0.0.1:3000",
+  "backend": "http://localhost:3001",
+  "migration": "ConfigurePersonalizationScenarios1793368800000",
+  "checks": [
+    "five switches visible",
+    "all-off saved via UI",
+    "all-off PostgreSQL readback",
+    "reload retained all-off",
+    "all-on restored via UI",
+    "reload retained all-on",
+    "frequency and quotas preserved"
+  ],
+  "finalSettings": {
+    "disabled_scenario_ids": [],
+    "minimum_contact_interval_hours": 6,
+    "ai_calls_per_user_24h": 4,
+    "ai_calls_per_day": 200,
+    "revision": 3
+  }
+}

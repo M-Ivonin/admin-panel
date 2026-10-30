@@ -12,6 +12,8 @@ const saved = {
   minimumContactIntervalHours: 6,
   aiCallsPerUser24h: 4,
   aiCallsPerDay: 200,
+  disabledScenarioIds: [],
+  scenarios: [{ id: 'stored_news.v1', title: 'News by interests', description: 'Relevant unread news.', enabled: true }],
   revision: 1,
   updatedAt: '2026-10-29T12:00:00Z',
   updatedBy: null,
@@ -40,6 +42,7 @@ it('reads persisted frequency, validates whole hours and saves an explicit chang
   expect(savePersonalizationSettings).toHaveBeenCalledWith(3, 1, {
     aiCallsPerUser24h: 4,
     aiCallsPerDay: 200,
+    disabledScenarioIds: [],
   });
   expect(screen.getByText('Saved interval: 3 hours')).toBeInTheDocument();
   expect(
@@ -116,7 +119,26 @@ it('saves both AI quotas without changing contact frequency and validates them b
   expect(savePersonalizationSettings).toHaveBeenCalledWith(6, 1, {
     aiCallsPerUser24h: 6,
     aiCallsPerDay: 400,
+    disabledScenarioIds: [],
   });
   expect(perUser).toHaveValue(6);
   expect(perServer).toHaveValue(400);
+});
+
+it('lets the operator disable a scenario, saves explicitly and reads the persisted state', async () => {
+  jest.mocked(savePersonalizationSettings).mockResolvedValue({
+    ...saved, revision: 2, disabledScenarioIds: ['stored_news.v1'],
+    scenarios: [{ ...saved.scenarios[0], enabled: false }],
+  });
+  render(<PersonalizationSettingsForm />);
+  const toggle = await screen.findByRole('switch', { name: 'News by interests' });
+  expect(toggle).toBeChecked();
+  fireEvent.click(toggle);
+  expect(savePersonalizationSettings).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenCalledWith(6, 1, {
+    aiCallsPerUser24h: 4, aiCallsPerDay: 200, disabledScenarioIds: ['stored_news.v1'],
+  });
+  expect(toggle).not.toBeChecked();
 });

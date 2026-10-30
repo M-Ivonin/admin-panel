@@ -62,3 +62,27 @@ These quotas govern AI attempts, independently of the six-hour contact interval.
 Failed/timed-out attempts count; quota-denied decisions do not. Exhaustion selects
 the existing rule baseline or no action and never bypasses communication guards.
 Changing settings does not enable a stopped pilot or reset its usage history.
+
+## Scenario switches
+
+Settings lists all five existing personalized message scenarios, with titles,
+eligibility descriptions and individual switches. The backend supplies this
+catalog from the execution template registry: News by interests, News with Full
+Access offer, Use existing AI Chat access, Full Access with price, and Full Access
+options. Screen views and payment/checkout events remain evidence for selecting
+messages, not separate message scenarios.
+
+Edits apply only after Save changes. Reload reads the effective settings; a
+conflicting revision requires Reload before retrying. Disabling a scenario removes
+it from future selection and blocks its unsent queued messages at the backend
+send/render guard. Existing frequency and AI settings save in the same revision.
+All-off leaves the existing no-action/defer outcomes available. Enabling never
+bypasses consent, access, channel approval or campaign/pilot scope.
+
+Backend migration `1793368800000` and the updated settings API must precede this
+UI release. The owner subsequently approved applying that exact migration to
+shared DEV and restarting the existing local apps. The actual localhost:3000 /
+localhost:3001 UI save/reload test passed; all scenarios were restored enabled.
+Production was not deployed or migrated.
+Fresh desktop/narrow screenshots and real isolated HTTP/SQL interaction proof
+are recorded in [the scenario UI report](proof/personalization-scenarios/UI-EVIDENCE.md).
