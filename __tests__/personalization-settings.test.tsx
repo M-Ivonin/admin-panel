@@ -13,7 +13,17 @@ const saved = {
   aiCallsPerUser24h: 4,
   aiCallsPerDay: 200,
   disabledScenarioIds: [],
-  scenarios: [{ id: 'stored_news.v1', title: 'News by interests', description: 'Relevant unread news.', enabled: true }],
+  scenarios: [
+    {
+      id: 'stored_news.v1',
+      group: 'message' as const,
+      title: 'News by interests',
+      when: 'Unread relevant news is available.',
+      reaction: 'Consider the existing news message.',
+      description: 'Relevant unread news.',
+      enabled: true,
+    },
+  ],
   revision: 1,
   updatedAt: '2026-10-29T12:00:00Z',
   updatedBy: null,
@@ -91,14 +101,12 @@ it('keeps the saved value on conflict until the operator reloads', async () => {
 });
 
 it('saves both AI quotas without changing contact frequency and validates them before submitting', async () => {
-  jest
-    .mocked(savePersonalizationSettings)
-    .mockResolvedValue({
-      ...saved,
-      aiCallsPerUser24h: 6,
-      aiCallsPerDay: 400,
-      revision: 2,
-    });
+  jest.mocked(savePersonalizationSettings).mockResolvedValue({
+    ...saved,
+    aiCallsPerUser24h: 6,
+    aiCallsPerDay: 400,
+    revision: 2,
+  });
   render(<PersonalizationSettingsForm />);
   const perUser = await screen.findByRole('spinbutton', {
     name: 'AI calls per user (24 hours)',
@@ -110,7 +118,9 @@ it('saves both AI quotas without changing contact frequency and validates them b
   expect(perServer).toHaveValue(200);
   expect(savePersonalizationSettings).not.toHaveBeenCalled();
   fireEvent.change(perUser, { target: { value: '0' } });
-  expect(screen.getByRole('spinbutton', { name: 'Minimum interval (hours)' })).toHaveAttribute('aria-invalid', 'false');
+  expect(
+    screen.getByRole('spinbutton', { name: 'Minimum interval (hours)' })
+  ).toHaveAttribute('aria-invalid', 'false');
   expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   fireEvent.change(perUser, { target: { value: '6' } });
   fireEvent.change(perServer, { target: { value: '400' } });
@@ -127,18 +137,71 @@ it('saves both AI quotas without changing contact frequency and validates them b
 
 it('lets the operator disable a scenario, saves explicitly and reads the persisted state', async () => {
   jest.mocked(savePersonalizationSettings).mockResolvedValue({
-    ...saved, revision: 2, disabledScenarioIds: ['stored_news.v1'],
+    ...saved,
+    revision: 2,
+    disabledScenarioIds: ['stored_news.v1'],
     scenarios: [{ ...saved.scenarios[0], enabled: false }],
   });
   render(<PersonalizationSettingsForm />);
-  const toggle = await screen.findByRole('switch', { name: 'News by interests' });
+  const toggle = await screen.findByRole('switch', {
+    name: 'News by interests',
+  });
   expect(toggle).toBeChecked();
   fireEvent.click(toggle);
   expect(savePersonalizationSettings).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   await screen.findByText('Personalization settings saved.');
   expect(savePersonalizationSettings).toHaveBeenCalledWith(6, 1, {
-    aiCallsPerUser24h: 4, aiCallsPerDay: 200, disabledScenarioIds: ['stored_news.v1'],
+    aiCallsPerUser24h: 4,
+    aiCallsPerDay: 200,
+    disabledScenarioIds: ['stored_news.v1'],
   });
   expect(toggle).not.toBeChecked();
+});
+
+it('searches conditions and reactions across groups and preserves changes hidden by a search', async () => {
+  jest.mocked(getPersonalizationSettings).mockResolvedValue({
+    ...saved,
+    scenarios: [
+      ...saved.scenarios,
+      {
+        id: 'signal:event:paywall_viewed',
+        group: 'behavior',
+        title: 'Opens the payment screen',
+        when: 'The user views the payment screen.',
+        reaction: 'Consider existing access offers.',
+        description: '',
+        enabled: true,
+      },
+    ],
+  });
+  render(<PersonalizationSettingsForm />);
+  const search = await screen.findByRole('searchbox', {
+    name: 'Find a scenario',
+  });
+  fireEvent.change(search, { target: { value: 'payment screen' } });
+  const signal = await screen.findByRole('switch', {
+    name: 'Opens the payment screen',
+  });
+  fireEvent.click(signal);
+  fireEvent.change(search, { target: { value: 'news' } });
+  expect(
+    screen.getByRole('switch', { name: 'News by interests' })
+  ).toBeInTheDocument();
+  jest
+    .mocked(savePersonalizationSettings)
+    .mockResolvedValue({
+      ...saved,
+      revision: 2,
+      disabledScenarioIds: ['signal:event:paywall_viewed'],
+    });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenCalledWith(
+    6,
+    1,
+    expect.objectContaining({
+      disabledScenarioIds: ['signal:event:paywall_viewed'],
+    })
+  );
 });

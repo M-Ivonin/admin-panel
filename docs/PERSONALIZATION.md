@@ -65,24 +65,19 @@ Changing settings does not enable a stopped pilot or reset its usage history.
 
 ## Scenario switches
 
-Settings lists all five existing personalized message scenarios, with titles,
-eligibility descriptions and individual switches. The backend supplies this
-catalog from the execution template registry: News by interests, News with Full
-Access offer, Use existing AI Chat access, Full Access with price, and Full Access
-options. Screen views and payment/checkout events remain evidence for selecting
-messages, not separate message scenarios.
+Settings exposes 77 AI personalization controls in two searchable groups: 72
+Behavioral events and five AI messages. Every row has an independent switch and
+explicit When/React text. Search covers condition and reaction; hidden edits remain
+in the draft until Save changes. Saves retain frequency, AI quotas and optimistic
+revision protection, with explicit Reload on error.
 
-Edits apply only after Save changes. Reload reads the effective settings; a
-conflicting revision requires Reload before retrying. Disabling a scenario removes
-it from future selection and blocks its unsent queued messages at the backend
-send/render guard. Existing frequency and AI settings save in the same revision.
-All-off leaves the existing no-action/defer outcomes available. Enabling never
-bypasses consent, access, channel approval or campaign/pilot scope.
+Behavioral switches govern optional evidence for selecting existing relevant
+messages. An event never requires a message. Disabling a signal leaves recorded
+portraits, analytics, ownership, pending purchases, consent and already-read News
+protections intact. Message switches restrict eligible templates. Unsent decisions
+that depend on a disabled signal or message are blocked before delivery.
 
-Backend migration `1793368800000` and the updated settings API must precede this
-UI release. The owner subsequently approved applying that exact migration to
-shared DEV and restarting the existing local apps. The actual localhost:3000 /
-localhost:3001 UI save/reload test passed; all scenarios were restored enabled.
-Production was not deployed or migrated.
-Fresh desktop/narrow screenshots and real isolated HTTP/SQL interaction proof
-are recorded in [the scenario UI report](proof/personalization-scenarios/UI-EVIDENCE.md).
+Campaigns have no controls here and their planning/execution logic is unchanged.
+The existing disabled-ID array is reused; no new migration is needed. Current work
+is local only. Fresh runtime evidence is in
+[the v2 UI report](proof/personalization-scenarios-v2/UI-EVIDENCE.md).

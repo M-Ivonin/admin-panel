@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Alert,
   Box,
   Button,
@@ -13,6 +16,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   getPersonalizationSettings,
   savePersonalizationSettings,
@@ -22,6 +26,8 @@ import {
 /** Edits shared contact frequency and AI quotas with revision-protected saves. */
 export function PersonalizationSettingsForm() {
   const [saved, setSaved] = useState<PersonalizationSettings | null>(null);
+  const [search, setSearch] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['message']);
   const [disabledScenarios, setDisabledScenarios] = useState<string[]>([]);
   const [hours, setHours] = useState('');
   const [aiPerUser, setAiPerUser] = useState('');
@@ -125,41 +131,137 @@ export function PersonalizationSettingsForm() {
                 Scenarios
               </Typography>
               <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
-                Choose which personalized messages may be selected. Turning a
-                scenario off also blocks its queued messages before sending.
-                Changes apply after saving.
+                Control when personalization uses an activity, which existing
+                messages it may choose.
+                Each scenario has its own condition and reaction.
               </Typography>
             </Box>
-            <Stack spacing={2}>
-              {saved.scenarios.map((scenario) => (
-                <Box key={scenario.id}>
-                  <FormControlLabel
-                    sx={{ m: 0, width: '100%', justifyContent: 'space-between', gap: 2 }}
-                    labelPlacement="start"
-                    label={scenario.title}
-                    control={
-                      <Switch
-                        checked={!disabledScenarios.includes(scenario.id)}
-                        disabled={busy}
-                        onChange={(_, checked) => {
-                          setDisabledScenarios((current) => checked
-                            ? current.filter((id) => id !== scenario.id)
-                            : [...current, scenario.id]);
-                          setSuccess(false);
-                        }}
-                      />
+            <TextField
+              label="Find a scenario"
+              value={search}
+              type="search"
+              onChange={(event) => setSearch(event.target.value)}
+              helperText={`${saved.scenarios.length} scenarios · Search by activity, condition or reaction`}
+            />
+            <Stack spacing={1}>
+              {(
+                [
+                  ['behavior', 'Behavioral events'],
+                  ['message', 'AI messages'],
+                ] as const
+              ).map(([group, label]) => {
+                const all = saved.scenarios.filter(
+                  (scenario) => scenario.group === group
+                );
+                const query = search.trim().toLowerCase();
+                const visible = all.filter(
+                  (scenario) =>
+                    !query ||
+                    [scenario.title, scenario.when, scenario.reaction].some(
+                      (text) => text.toLowerCase().includes(query)
+                    )
+                );
+                if (!visible.length) return null;
+                return (
+                  <Accordion
+                    key={group}
+                    expanded={query ? true : expandedGroups.includes(group)}
+                    onChange={(_, expanded) =>
+                      setExpandedGroups((current) =>
+                        expanded
+                          ? [...current, group]
+                          : current.filter((item) => item !== group)
+                      )
                     }
-                  />
-                  <Typography variant="body2" color="text.secondary">
-                    {scenario.description}
-                  </Typography>
-                </Box>
-              ))}
+                    disableGutters
+                    sx={{
+                      border: 1,
+                      borderColor: 'divider',
+                      boxShadow: 'none',
+                      '&:before': { display: 'none' },
+                    }}
+                  >
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography fontWeight={700}>
+                        {label} ·{' '}
+                        {query
+                          ? `${visible.length} of ${all.length}`
+                          : all.length}
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Stack spacing={3}>
+                        {visible.map((scenario) => (
+                          <Box key={scenario.id}>
+                            <FormControlLabel
+                              sx={{
+                                m: 0,
+                                width: '100%',
+                                justifyContent: 'space-between',
+                                gap: 2,
+                              }}
+                              labelPlacement="start"
+                              label={scenario.title}
+                              control={
+                                <Switch
+                                  checked={
+                                    !disabledScenarios.includes(scenario.id)
+                                  }
+                                  disabled={busy}
+                                  onChange={(_, checked) => {
+                                    setDisabledScenarios((current) =>
+                                      checked
+                                        ? current.filter(
+                                            (id) => id !== scenario.id
+                                          )
+                                        : [...current, scenario.id]
+                                    );
+                                    setSuccess(false);
+                                  }}
+                                />
+                              }
+                            />
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              <Box component="span" fontWeight={700}>
+                                When:{' '}
+                              </Box>
+                              {scenario.when}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mt: 0.5 }}
+                            >
+                              <Box component="span" fontWeight={700}>
+                                React:{' '}
+                              </Box>
+                              {scenario.reaction}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </AccordionDetails>
+                  </Accordion>
+                );
+              })}
+              {!saved.scenarios.some((scenario) =>
+                [scenario.title, scenario.when, scenario.reaction].some(
+                  (text) =>
+                    text.toLowerCase().includes(search.trim().toLowerCase())
+                )
+              ) ? (
+                <Typography color="text.secondary">
+                  No matching scenarios.
+                </Typography>
+              ) : null}
             </Stack>
             <Alert severity="info">
-              Enabled scenarios still require matching user activity, consent and
-              delivery approval. Enabling a scenario does not start a campaign.
-              Screen views and payment events continue to be recorded.
+              Behavioral switches control optional evidence for selecting
+              existing messages; an event never requires a message. Analytics,
+              verified access, pending purchases, consent and already-read news
+              protections stay active. Disabled AI messages are also blocked before
+              sending. Changes apply
+              after saving.
             </Alert>
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
@@ -185,9 +287,9 @@ export function PersonalizationSettingsForm() {
               sx={{ maxWidth: 300 }}
             />
             <Alert severity="info">
-              Applies only to personalization. Service Campaigns keep their own
-              frequency rules. Consent, duplicate checks and quiet windows still
-              apply.
+              The interval applies only to personalized AI messages. Service
+              Campaigns keep their own frequency rules. Consent, duplicate
+              checks and quiet windows still apply.
             </Alert>
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
@@ -247,8 +349,11 @@ export function PersonalizationSettingsForm() {
                   (value === saved.minimumContactIntervalHours &&
                     perUser === saved.aiCallsPerUser24h &&
                     perDay === saved.aiCallsPerDay &&
-                    disabledScenarios.length === saved.disabledScenarioIds.length &&
-                    disabledScenarios.every((id) => saved.disabledScenarioIds.includes(id)))
+                    disabledScenarios.length ===
+                      saved.disabledScenarioIds.length &&
+                    disabledScenarios.every((id) =>
+                      saved.disabledScenarioIds.includes(id)
+                    ))
                 }
                 onClick={() => void save()}
               >

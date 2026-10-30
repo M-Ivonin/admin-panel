@@ -113,7 +113,15 @@ export function removeEngagementExclusion(
 
 export interface PersonalizationSettings {
   disabledScenarioIds: string[];
-  scenarios: Array<{ id: string; title: string; description: string; enabled: boolean }>;
+  scenarios: Array<{
+    id: string;
+    group: 'behavior' | 'message';
+    title: string;
+    when: string;
+    reaction: string;
+    description: string;
+    enabled: boolean;
+  }>;
   minimumContactIntervalHours: number;
   aiCallsPerUser24h: number;
   aiCallsPerDay: number;
