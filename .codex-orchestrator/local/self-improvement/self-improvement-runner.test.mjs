@@ -15,6 +15,20 @@ import {
   validateReviewReport,
 } from './runner.mjs';
 
+
+/** Explain fixture candidates without weakening their proof or validation fields. */
+function explanation(candidates) {
+  return {
+    checked: ['Architecture: existing state ownership at example:save'],
+    architectureSkills: ['improve-codebase-architecture', 'codebase-design'],
+    architectureEvidence: ['example:save spreads invariants across callers; deepening concentrates behavior'],
+    candidates: candidates.map((item, index) => ({ title: item.title, category: item.category || 'architecture',
+      decision: index === 0 ? 'selected' : 'rejected', evidence: 'example:save caller path',
+      reason: index === 0 ? 'Best scoped proof and locality' : 'Lower impact within the same category' })),
+    limitations: ['Source analysis only'],
+  };
+}
+
 const legacyCodexCommand = '/Applications/Codex.app/Contents/Resources/codex';
 
 function commandKey(command, args = []) {
@@ -67,6 +81,7 @@ async function makeFakeCodex(root) {
 }
 
 const validCandidate = {
+  category: 'architecture',
   title: 'Extract runner phase summaries',
   files: ['src/runner/example.ts'],
   problem: 'Phase summaries are scattered.',
@@ -232,7 +247,7 @@ test('candidate and finding fingerprints are stable sha256 values', () => {
 test('report contracts centralize item limits and residual risk normalization', () => {
   const discovery = reportContracts.discovery.validate({
     status: 'completed',
-    candidates: [validCandidate],
+    analysis: explanation([validCandidate]), candidates: [validCandidate],
     residualRisks: ['  keep this  ', '', 42, 'and this'],
   });
   assert.equal(discovery.ok, true);
@@ -325,7 +340,7 @@ test('discovery creates exactly one agent:auto self-improvement issue for the fi
       assert.match(options.stdin, /Levantem admin-panel repository/);
       await writeFile(options.reportPath, JSON.stringify({
         status: 'completed',
-        candidates: [validCandidate, { ...validCandidate, title: 'Second candidate' }],
+        analysis: explanation([validCandidate, { ...validCandidate, title: 'Second candidate' }]), candidates: [validCandidate, { ...validCandidate, title: 'Second candidate' }],
         residualRisks: [],
       }));
       return { code: 0, stdout: '', stderr: '' };
@@ -428,7 +443,7 @@ test('publication helper owns marker reuse, body files, labels, and result shape
 test('discovery reuses existing marker match and does not create a duplicate issue', async () => {
   const exec = makeExecStub({
     '/Applications/Codex.app/Contents/Resources/codex': async ({ options }) => {
-      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', candidates: [validCandidate], residualRisks: [] }));
+      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', analysis: explanation([validCandidate]), candidates: [validCandidate], residualRisks: [] }));
       return { code: 0, stdout: '', stderr: '' };
     },
     gh: ({ args }) => {
@@ -453,7 +468,7 @@ for (const body of ['', `source-base-sha:${'b'.repeat(40)}\n`]) {
   test(`discovery rejects a reused issue with ${body ? 'a different' : 'no'} analyzed base`, async () => {
     const exec = makeExecStub({
       [legacyCodexCommand]: async ({ options }) => {
-        await writeFile(options.reportPath, JSON.stringify({ status: 'completed', candidates: [validCandidate] }));
+        await writeFile(options.reportPath, JSON.stringify({ status: 'completed', analysis: explanation([validCandidate]), candidates: [validCandidate] }));
         return { code: 0, stdout: '', stderr: '' };
       },
       gh: ({ args }) => {
@@ -480,7 +495,7 @@ test('discovery delegates baseline selection to the package and records that com
     [legacyCodexCommand]: async ({ args, options }) => {
       assert.equal(args[args.indexOf('--cd') + 1], worktreePath);
       assert.equal(options.cwd, worktreePath);
-      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', candidates: [validCandidate] }));
+      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', analysis: explanation([validCandidate]), candidates: [validCandidate] }));
       return { code: 0, stdout: '', stderr: '' };
     },
     gh: async ({ args }) => {
@@ -519,7 +534,7 @@ test('discovery publishes nothing when the package rejects a changed or unavaila
 });
 
 test('invalid discovery report creates no issue', () => {
-  const result = validateDiscoveryReport({ status: 'completed', candidates: [{ ...validCandidate, verification: [] }] });
+  const result = validateDiscoveryReport({ status: 'completed', analysis: explanation([{ category: 'architecture', ...validCandidate, verification: [] }]), candidates: [{ category: 'architecture', ...validCandidate, verification: [] }] });
   assert.equal(result.ok, false);
 });
 
@@ -585,7 +600,7 @@ test('daily implements one code issue and never runs review backlog follow-up pu
       return { code: 0, stdout: '' };
     },
     '/Applications/Codex.app/Contents/Resources/codex': async ({ options }) => {
-      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', candidates: [validCandidate], residualRisks: [] }));
+      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', analysis: explanation([validCandidate]), candidates: [validCandidate], residualRisks: [] }));
       return { code: 0, stdout: '', stderr: '' };
     },
     [commandKey('npm', ['run', 'build', '--silent'])]: { code: 0, stdout: '' },
@@ -619,7 +634,7 @@ test('daily implements one code issue and never runs review backlog follow-up pu
       return { code: 0, stdout: '' };
     }
     if (command === '/Applications/Codex.app/Contents/Resources/codex') {
-      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', candidates: [validCandidate], residualRisks: [] }));
+      await writeFile(options.reportPath, JSON.stringify({ status: 'completed', analysis: explanation([validCandidate]), candidates: [validCandidate], residualRisks: [] }));
       return { code: 0, stdout: '', stderr: '' };
     }
     if (command === 'npm' && args.join(' ') === 'run build --silent') return { code: 0, stdout: '', stderr: '' };

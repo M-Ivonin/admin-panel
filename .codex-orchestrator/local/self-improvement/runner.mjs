@@ -74,6 +74,34 @@ function hasRequiredFields(item, fieldValidators) {
   return Object.entries(fieldValidators).every(([field, validator]) => validator(item[field]));
 }
 
+/** Require evidence for the investigated scope, architecture gates and final choice. */
+function discoveryAnalysisError(report) {
+  const analysis = report.analysis;
+  const strings = value => Array.isArray(value) && value.every(nonEmptyString);
+  if (!analysis || !nonEmptyStringArray(analysis.checked) || !strings(analysis.limitations)
+    || !nonEmptyStringArray(analysis.architectureEvidence)
+    || !strings(analysis.architectureSkills)
+    || !['improve-codebase-architecture', 'codebase-design'].every(skill => analysis.architectureSkills.includes(skill))
+    || !Array.isArray(analysis.candidates)
+    || analysis.candidates.some(item => !item || !['architecture', 'bug', 'performance'].includes(item.category)
+      || !['selected', 'rejected'].includes(item.decision)
+      || !['title', 'evidence', 'reason'].every(key => nonEmptyString(item[key])))) {
+    return 'Discovery requires checked areas, architecture skills/evidence, candidate decisions/reasons and limitations.';
+  }
+  const selected = analysis.candidates.filter(item => item.decision === 'selected');
+  const priority = { architecture: 0, bug: 1, performance: 2 };
+  if (report.candidates.some(item => !item || !Object.hasOwn(priority, item.category))) {
+    return 'Discovery candidate category must be architecture, bug or performance.';
+  }
+  if (!report.candidates.length) return selected.length ? 'Empty discovery cannot select a candidate.' : null;
+  if (selected.length !== 1 || selected[0].title !== report.candidates[0].title
+    || selected[0].category !== report.candidates[0].category
+    || report.candidates.some(item => priority[item.category] < priority[report.candidates[0].category])) {
+    return 'Discovery choice must match its first candidate and prioritize architecture, then bugs, then performance.';
+  }
+  return null;
+}
+
 function createReportContract({
   itemKey,
   shapeReason,
@@ -88,12 +116,19 @@ function createReportContract({
         return { ok: false, reason: shapeReason };
       }
       const items = report[itemKey];
+      if (itemKey === 'candidates') {
+        const reason = discoveryAnalysisError(report);
+        if (reason) return { ok: false, reason };
+      }
       const valid = items.filter(isValidItem);
       if (valid.length === 0 && (!allowEmptyValidItems || items.length > 0)) {
         return { ok: false, reason: noValidReason };
       }
+      if (itemKey === 'candidates' && valid.length !== items.length) {
+        return { ok: false, reason: noValidReason };
+      }
       const limited = Number.isInteger(itemLimit) ? valid.slice(0, itemLimit) : valid;
-      return { ok: true, [itemKey]: limited, residualRisks: normalizeResidualRisks(report.residualRisks) };
+      return { ok: true, [itemKey]: limited, ...(itemKey === 'candidates' ? { analysis: report.analysis } : {}), residualRisks: normalizeResidualRisks(report.residualRisks) };
     },
   });
 }
@@ -131,6 +166,7 @@ function isValidReviewFinding(finding) {
 export const reportContracts = Object.freeze({
   discovery: createReportContract({
     itemKey: 'candidates',
+    allowEmptyValidItems: true,
     shapeReason: 'Discovery report must contain status completed and candidates array.',
     noValidReason: 'Discovery report has no valid candidates.',
     isValidItem: isValidDiscoveryCandidate,
@@ -275,7 +311,7 @@ ADR conflict:
 ${candidate.adrConflict}
 
 Acceptance criteria:
-- Implement the proposed architecture improvement with the smallest safe blast radius.
+- Implement the proposed improvement with the smallest safe blast radius.
 - Run the listed verification or document the blocker.
 - Related test files may be created or minimally updated only to prove the listed acceptance criteria. Changes to unrelated production files are outside scope.
 - Explicit file exclusions and hard allowlists remain binding. Do not skip tests, weaken assertions, or change unrelated behavior.
@@ -510,7 +546,21 @@ export function createRunner(options = {}) {
     await ensureDirs();
     const resolvedReportPath = reportPath ?? path.join(paths.reports, `${phase}-${Date.now()}.json`);
     const prompt = existsSync(promptPath) ? await readFile(promptPath, 'utf8') : '';
-    const stdin = `${prompt.trim()}\n\n${contextText.trim()}\n`;
+    let skillContext = '';
+    if (phase === 'discover') {
+      const skillsRoot = path.join(env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'skills');
+      try {
+        for (const skill of ['improve-codebase-architecture', 'codebase-design']) {
+          const skillPath = path.join(skillsRoot, skill, 'SKILL.md');
+          const contents = await readFile(skillPath, 'utf8');
+          if (!contents.trim()) throw new Error(`Empty skill: ${skillPath}`);
+          skillContext += `\nRequired architecture skill ${skill} (${skillPath}):\n${contents}\n`;
+        }
+      } catch (error) {
+        return { ok: false, reason: `Mandatory architecture skill unavailable: ${error.message}` };
+      }
+    }
+    const stdin = `${prompt.trim()}\n\n${skillContext}\n${contextText.trim()}\n${phase === 'discover' ? 'For unattended discovery, apply architecture skill analysis gates; return the required JSON instead of HTML/browser or interactive selection/grilling. Do not implement.' : ''}\n`;
     let codexCommand;
     try {
       codexCommand = await resolveCodexCommand();
@@ -682,6 +732,14 @@ export function createRunner(options = {}) {
     if (!codex.ok) return { status: 'failed', reason: codex.reason };
     const validation = validateDiscoveryReport(codex.report);
     if (!validation.ok) return { status: 'skipped', reason: validation.reason };
+    if (!validation.candidates.length) {
+      const state = await loadState();
+      await saveState({ ...state, lastDiscovery: {
+        status: 'none', baseSha: snapshot.baseSha, analysis: validation.analysis, at: now().toISOString(),
+      } });
+      return { status: 'none', baseSha: snapshot.baseSha, analysis: validation.analysis,
+        reason: 'No justified candidate in the inspected scope.' };
+    }
     const candidate = validation.candidates[0];
     const fingerprint = fingerprintCandidate(candidate);
     const publication = await publishSelfImprovementIssue({
@@ -700,10 +758,11 @@ export function createRunner(options = {}) {
         issueNumber: publication.issueNumber,
         fingerprint,
         baseSha: snapshot.baseSha,
+        analysis: validation.analysis,
         at: now().toISOString(),
       },
     });
-    return publication;
+    return { ...publication, analysis: validation.analysis };
   }
 
   async function implement({ issue } = {}) {
@@ -858,6 +917,8 @@ export function createRunner(options = {}) {
 
   function printSummary(result) {
     for (const line of dailyPhase.summaryLines(result.phases)) console.log(line);
+    const discovery = result.phases.find(phase => phase.name === 'discover');
+    if (discovery?.analysis) console.log(`discovery-analysis: ${JSON.stringify(discovery.analysis)}`);
   }
 
   return {
@@ -897,6 +958,7 @@ async function main() {
   }
   if (command === 'discover') {
     const result = await runner.discover();
+    if (result.analysis) console.log(`discovery-analysis: ${JSON.stringify(result.analysis)}`);
     console.log(`discover: ${result.status}${result.issueNumber ? ` issue #${result.issueNumber}` : ''}${result.reason ? ` (${result.reason})` : ''}`);
     process.exit(result.status === 'failed' ? 1 : 0);
   }
