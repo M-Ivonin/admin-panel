@@ -188,13 +188,11 @@ it('searches conditions and reactions across groups and preserves changes hidden
   expect(
     screen.getByRole('switch', { name: 'News by interests' })
   ).toBeInTheDocument();
-  jest
-    .mocked(savePersonalizationSettings)
-    .mockResolvedValue({
-      ...saved,
-      revision: 2,
-      disabledScenarioIds: ['signal:event:paywall_viewed'],
-    });
+  jest.mocked(savePersonalizationSettings).mockResolvedValue({
+    ...saved,
+    revision: 2,
+    disabledScenarioIds: ['signal:event:paywall_viewed'],
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
   await screen.findByText('Personalization settings saved.');
   expect(savePersonalizationSettings).toHaveBeenCalledWith(
@@ -204,4 +202,72 @@ it('searches conditions and reactions across groups and preserves changes hidden
       disabledScenarioIds: ['signal:event:paywall_viewed'],
     })
   );
+});
+
+it('persists the two sports message controls independently across reload', async () => {
+  const scenarios = [
+    ...saved.scenarios,
+    {
+      ...saved.scenarios[0],
+      id: 'favorite_team_prediction.v1',
+      title: 'Current prediction for a favorite team',
+      enabled: false,
+    },
+    {
+      ...saved.scenarios[0],
+      id: 'resume_collection.v1',
+      title: 'Continue a viewed Collection',
+      enabled: false,
+    },
+  ];
+  const initial = {
+    ...saved,
+    scenarios,
+    disabledScenarioIds: [
+      'favorite_team_prediction.v1',
+      'resume_collection.v1',
+    ],
+  };
+  jest.mocked(getPersonalizationSettings).mockResolvedValue(initial);
+  jest
+    .mocked(savePersonalizationSettings)
+    .mockResolvedValue({
+      ...initial,
+      revision: 2,
+      disabledScenarioIds: ['resume_collection.v1'],
+    });
+  const { unmount } = render(<PersonalizationSettingsForm />);
+  const prediction = await screen.findByRole('switch', {
+    name: /Current prediction for a favorite team/,
+  });
+  const collection = screen.getByRole('switch', {
+    name: /Continue a viewed Collection/,
+  });
+  expect(prediction).not.toBeChecked();
+  expect(collection).not.toBeChecked();
+  fireEvent.click(prediction);
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenCalledWith(
+    6,
+    1,
+    expect.objectContaining({ disabledScenarioIds: ['resume_collection.v1'] })
+  );
+  unmount();
+  jest
+    .mocked(getPersonalizationSettings)
+    .mockResolvedValue({
+      ...initial,
+      revision: 2,
+      disabledScenarioIds: ['resume_collection.v1'],
+    });
+  render(<PersonalizationSettingsForm />);
+  expect(
+    await screen.findByRole('switch', {
+      name: /Current prediction for a favorite team/,
+    })
+  ).toBeChecked();
+  expect(
+    screen.getByRole('switch', { name: /Continue a viewed Collection/ })
+  ).not.toBeChecked();
 });

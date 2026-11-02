@@ -234,6 +234,27 @@ export interface PortraitShadowDecision {
     copy: { title: string; body: string } | null;
   };
   input: {
+    diagnostics?: {
+      version: 1;
+      sources?: Record<string, { checked: boolean; supplied: number; eligible: number; exclusions: string[] }>;
+      primary:
+        | 'source_unavailable'
+        | 'no_content'
+        | 'no_channel'
+        | 'policy_exclusion'
+        | 'ai';
+      scenarios: Record<
+        string,
+        {
+          supplied: number;
+          relevant: number;
+          consumed: number;
+          channelEligible: number;
+          policyEligible: number;
+          checked: boolean;
+        }
+      >;
+    };
     snapshot: {
       id: string;
       asOf: string;
@@ -245,6 +266,19 @@ export interface PortraitShadowDecision {
     versions: Record<string, string>;
     facts: { selectedWindow: { days: number; from: string; to: string } };
     current: {
+      localTime?: {
+        value: string | null;
+        source: string;
+        observedAt: string | null;
+        localHour: number | null;
+      };
+      receiverFailure?: string | null;
+      channelReadiness?: {
+        inApp: string;
+        push: string;
+        email: string;
+        newsEmail: string;
+      };
       capturedAt: string;
       access: { authorization: string };
       pendingCommerce: boolean;

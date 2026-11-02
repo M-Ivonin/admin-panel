@@ -101,10 +101,14 @@ const history: History = {
 beforeEach(() => jest.resetAllMocks());
 
 it('shows a recorded AI explanation separately from the saved reason code', async () => {
-  const explanation = 'I deferred because repeating the same offer immediately would add no useful context.';
+  const explanation =
+    'I deferred because repeating the same offer immediately would add no useful context.';
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
     ...history,
-    items: history.items.map((item) => ({...item, model: {...item.model, explanation}})),
+    items: history.items.map((item) => ({
+      ...item,
+      model: { ...item.model, explanation },
+    })),
   });
   render(<PortraitDecisionHistory userId="account-one" />);
   expect(await screen.findByText(explanation)).toBeVisible();
@@ -114,7 +118,9 @@ it('shows a recorded AI explanation separately from the saved reason code', asyn
 it('does not invent an explanation for historical AI decisions', async () => {
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
   render(<PortraitDecisionHistory userId="account-one" />);
-  expect(await screen.findByText('No AI explanation was recorded for this decision.')).toBeVisible();
+  expect(
+    await screen.findByText('No AI explanation was recorded for this decision.')
+  ).toBeVisible();
 });
 
 it('explains server invalidation without attributing fallback silence to AI', async () => {
@@ -123,15 +129,32 @@ it('explains server invalidation without attributing fallback silence to AI', as
     items: history.items.map((item) => ({
       ...item,
       source: 'baseline',
-      selection: {...item.selection, candidateId: 'no_action', reasonCode: 'model_silence'},
-      selectedCandidate: {...item.selectedCandidate, kind: 'no_action', copy: null},
-      validator: {accepted: false, reasons: ['news_changed']},
-      model: {...item.model, explanation: 'The News item matches the recorded interests.'},
+      selection: {
+        ...item.selection,
+        candidateId: 'no_action',
+        reasonCode: 'model_silence',
+      },
+      selectedCandidate: {
+        ...item.selectedCandidate,
+        kind: 'no_action',
+        copy: null,
+      },
+      validator: { accepted: false, reasons: ['news_changed'] },
+      model: {
+        ...item.model,
+        explanation: 'The News item matches the recorded interests.',
+      },
     })),
   });
   render(<PortraitDecisionHistory userId="account-one" />);
-  expect(await screen.findByText('The proposed News item changed or became unavailable before the decision was saved.')).toBeVisible();
-  expect(screen.queryByText('The AI selected no contact.')).not.toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      'The proposed News item changed or became unavailable before the decision was saved.'
+    )
+  ).toBeVisible();
+  expect(
+    screen.queryByText('The AI selected no contact.')
+  ).not.toBeInTheDocument();
   expect(screen.getByText('AI proposal explanation')).toBeVisible();
 });
 
@@ -395,4 +418,48 @@ it('shows read failure and recovers with a read-only refresh', async () => {
   );
   expect(await screen.findByText(/No saved decisions yet/)).toBeVisible();
   expect(replayUserPortraitDecision).not.toHaveBeenCalled();
+});
+
+it('shows frozen readiness blockers and marks legacy diagnosis as unavailable', async () => {
+  const item: History['items'][number] = JSON.parse(
+    JSON.stringify(history.items[0])
+  );
+  item.input.diagnostics = {
+    version: 1,
+    primary: 'no_channel',
+    scenarios: {
+      'stored_news.v1': {
+        supplied: 5,
+        relevant: 1,
+        consumed: 0,
+        channelEligible: 0,
+        policyEligible: 0,
+        checked: true,
+      },
+    },
+  };
+  item.input.current.localTime = {
+    value: null,
+    source: 'unknown',
+    observedAt: null,
+    localHour: null,
+  };
+  item.input.current.receiverFailure = 'permission_denied';
+  item.input.current.channelReadiness = {
+    push: 'local_time_unknown',
+    inApp: 'activity_unknown_or_inactive',
+    email: 'unavailable',
+    newsEmail: 'topic_scope_unestablished',
+  };
+  jest
+    .mocked(getUserPortraitDecisionHistory)
+    .mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(
+    await screen.findByText(
+      'Suitable content was available, but no approved channel was ready.'
+    )
+  ).toBeVisible();
+  expect(screen.getByText(/Receiver: permission denied/)).toBeVisible();
+  expect(screen.getByText(/Local time: unknown/)).toBeVisible();
 });

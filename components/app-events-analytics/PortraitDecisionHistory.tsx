@@ -301,13 +301,14 @@ function Decision({
           <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
             Why this decision
           </Typography>
-          <Typography variant="body2">
-            {reasonText(item)}
-          </Typography>
+          <Typography variant="body2">{reasonText(item)}</Typography>
+          <DecisionReadiness item={item} />
           {item.status === 'completed' && item.model.explanation ? (
             <Box sx={{ mt: 1 }}>
               <Typography variant="subtitle2">
-                {item.source === 'model' ? 'AI explanation' : 'AI proposal explanation'}
+                {item.source === 'model'
+                  ? 'AI explanation'
+                  : 'AI proposal explanation'}
               </Typography>
               <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
                 {item.model.explanation}
@@ -700,4 +701,65 @@ function deliveryDescription(d: PortraitDecisionDelivery): {
       'A delivery attempt exists, but there is no confirmed sending outcome.',
     color: 'warning',
   };
+}
+
+/** Reads only frozen filter diagnostics; historical rows never acquire inferred device facts. */
+function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
+  const diagnostics = item.input.diagnostics;
+  if (!diagnostics)
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        Detailed readiness reasons were not saved for this historical decision.
+      </Typography>
+    );
+  const summary = {
+    source_unavailable: 'Current content facts could not be checked.',
+    no_content: 'No suitable content scenario was available.',
+    no_channel:
+      'Suitable content was available, but no approved channel was ready.',
+    policy_exclusion:
+      'A channel was ready, but contact policy excluded the candidates.',
+    ai: 'Candidates passed readiness checks; see the saved AI result below.',
+  }[diagnostics.primary];
+  const current = item.input.current;
+  const local = current.localTime;
+  return (
+    <Stack spacing={1} sx={{ mt: 1.5 }}>
+      <Typography variant="body2">{summary}</Typography>
+      {local ? (
+        <Typography variant="body2" color="text.secondary">
+          Local time: {local.value ?? 'unknown'}
+          {local.localHour == null ? '' : ` · hour ${local.localHour}`} · source{' '}
+          {label(local.source)} · observed{' '}
+          {local.observedAt ? stamp(local.observedAt) : 'not recorded'}.
+        </Typography>
+      ) : null}
+      {current.channelReadiness ? (
+        <Typography variant="body2" color="text.secondary">
+          Push: {label(current.channelReadiness.push)}. In-app:{' '}
+          {label(current.channelReadiness.inApp)}.
+          {current.receiverFailure
+            ? ` Receiver: ${label(current.receiverFailure)}.`
+            : ''}
+        </Typography>
+      ) : null}
+      {diagnostics.sources ? Object.entries(diagnostics.sources).map(([source, facts]) => <Typography key={source} variant="body2" color="text.secondary">
+        {label(source)} source: {facts.checked ? 'checked' : 'unavailable'} · {facts.supplied} supplied · {facts.eligible} eligible{facts.exclusions.length ? ` · ${facts.exclusions.map(label).join(', ')}` : ''}.
+      </Typography>) : null}
+      {Object.entries(diagnostics.scenarios).map(([id, counts]) => (
+        <Typography
+          key={id}
+          variant="body2"
+          color="text.secondary"
+          sx={{ overflowWrap: 'anywhere' }}
+        >
+          {label(id.replace(/\.v[0-9]+$/, ''))}:{' '}
+          {counts.checked
+            ? `${counts.supplied} supplied, ${counts.relevant} relevant, ${counts.consumed} consumed, ${counts.channelEligible} with channel, ${counts.policyEligible} after policy`
+            : 'not checked'}
+          .
+        </Typography>
+      ))}
+    </Stack>
+  );
 }
