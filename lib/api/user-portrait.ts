@@ -236,6 +236,7 @@ export interface PortraitShadowDecision {
   input: {
     diagnostics?: {
       version: 1;
+      noContentReasons?: string[];
       sources?: Record<string, { checked: boolean; supplied: number; eligible: number; exclusions: string[] }>;
       primary:
         | 'source_unavailable'

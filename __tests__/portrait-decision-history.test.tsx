@@ -480,3 +480,11 @@ it('distinguishes a disabled message with suitable content from missing content'
   expect(await screen.findByText('Suitable content was available, but its message scenario was disabled.')).toBeVisible();
   expect(screen.getByText(/disabled in settings/)).toBeVisible();
 });
+
+it('explains why available news did not produce a useful action', async () => {
+  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
+  item.input.diagnostics = { version: 1, primary: 'no_content', scenarios: {}, noContentReasons: ['news_no_interest_match'] } as NonNullable<typeof item.input.diagnostics>;
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText('News did not match recorded teams or leagues.')).toBeVisible();
+});

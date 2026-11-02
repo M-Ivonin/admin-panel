@@ -727,6 +727,9 @@ function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
   return (
     <Stack spacing={1} sx={{ mt: 1.5 }}>
       <Typography variant="body2">{summary}</Typography>
+      {diagnostics.noContentReasons?.map(reason => <Typography key={reason} variant="body2" color="text.secondary">
+        {({ news_catalog_empty: 'The current news catalog is empty.', news_no_interest_match: 'News did not match recorded teams or leagues.', matching_news_already_read: 'Matching news was already read.', sparse_history: 'Recorded activity coverage is insufficient.', stale_snapshot: 'The saved portrait is too old for a new action.' } as Record<string,string>)[reason] ?? label(reason)}
+      </Typography>)}
       {local ? (
         <Typography variant="body2" color="text.secondary">
           Local time: {local.value ?? 'unknown'}
