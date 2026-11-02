@@ -715,6 +715,7 @@ function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
   const summary = {
     source_unavailable: 'Current content facts could not be checked.',
     no_content: 'No suitable content scenario was available.',
+    scenario_disabled: 'Suitable content was available, but its message scenario was disabled.',
     no_channel:
       'Suitable content was available, but no approved channel was ready.',
     policy_exclusion:
@@ -754,6 +755,7 @@ function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
           sx={{ overflowWrap: 'anywhere' }}
         >
           {label(id.replace(/\.v[0-9]+$/, ''))}:{' '}
+          {counts.disabled ? 'disabled in settings · ' : ''}
           {counts.checked
             ? `${counts.supplied} supplied, ${counts.relevant} relevant, ${counts.consumed} consumed, ${counts.channelEligible} with channel, ${counts.policyEligible} after policy`
             : 'not checked'}

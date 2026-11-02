@@ -463,3 +463,20 @@ it('shows frozen readiness blockers and marks legacy diagnosis as unavailable', 
   expect(screen.getByText(/Receiver: permission denied/)).toBeVisible();
   expect(screen.getByText(/Local time: unknown/)).toBeVisible();
 });
+
+
+it('distinguishes a disabled message with suitable content from missing content', async () => {
+  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
+  item.input.diagnostics = {
+    version: 1, primary: 'scenario_disabled', scenarios: {
+      'resume_collection.v1': {
+        checked: true, disabled: true, supplied: 1, relevant: 1,
+        consumed: 0, channelEligible: 0, policyEligible: 0,
+      },
+    },
+  };
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText('Suitable content was available, but its message scenario was disabled.')).toBeVisible();
+  expect(screen.getByText(/disabled in settings/)).toBeVisible();
+});

@@ -240,6 +240,7 @@ export interface PortraitShadowDecision {
       primary:
         | 'source_unavailable'
         | 'no_content'
+        | 'scenario_disabled'
         | 'no_channel'
         | 'policy_exclusion'
         | 'ai';
@@ -252,6 +253,7 @@ export interface PortraitShadowDecision {
           channelEligible: number;
           policyEligible: number;
           checked: boolean;
+          disabled?: boolean;
         }
       >;
     };
