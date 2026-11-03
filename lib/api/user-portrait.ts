@@ -208,6 +208,7 @@ export interface PortraitDecisionDelivery {
   providerAcceptedAt: string | null;
   providerFinalEventAt: string | null;
   emailSubmissionState: string | null;
+  failureReason?: string | null;
   renderedTitle: string | null;
   renderedBody: string | null;
 }
@@ -276,6 +277,8 @@ export interface PortraitShadowDecision {
         localHour: number | null;
       };
       receiverFailure?: string | null;
+      receiverTokenRejectedAt?: string;
+      receiverTokenReportedAt?: string | null;
       channelReadiness?: {
         inApp: string;
         push: string;
@@ -295,6 +298,7 @@ export interface PortraitShadowDecision {
   model: {
     /** Short model-authored summary, absent in historical saved decisions. */
     explanation?: string;
+    skipReason?: string;
     status: string;
     model: string;
     responseId: string | null;

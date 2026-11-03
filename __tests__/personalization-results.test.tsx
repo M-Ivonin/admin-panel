@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import { PersonalizationResults } from '@/components/app-events-analytics/PersonalizationResults';
 import {
@@ -32,6 +33,9 @@ const report: Results = {
     usefulActions: 7,
     purchases: 2,
     contactedAccounts: 9,
+    openedAccounts: 2,
+    usefulActionAccounts: 3,
+    notSent: 2,
     purchasingAccounts: 1,
     lastDecisionAt: '2026-11-03T10:59:00Z',
   },
@@ -60,41 +64,68 @@ beforeEach(() => {
   read.mockResolvedValue(report);
 });
 
-it('shows permanent outcomes without an experiment selector or old cohort metrics', async () => {
+it('shows unique account outcomes and hides diagnostics and explanations until requested', async () => {
   render(<PersonalizationResults />);
-  expect(await screen.findByText('2,444')).toBeInTheDocument();
-  expect(screen.getByText('Permanent personalization')).toBeInTheDocument();
+  const contacted = await screen.findByRole('article', {
+    name: 'Contacted accounts',
+  });
+  expect(within(contacted).getByText('9')).toBeVisible();
+  expect(
+    within(screen.getByRole('article', { name: 'Opened a message' })).getByText(
+      '2'
+    )
+  ).toBeVisible();
+  expect(
+    within(
+      screen.getByRole('article', { name: 'Took useful action' })
+    ).getByText('3')
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('article', { name: 'Made a purchase' })).getByText(
+      '1'
+    )
+  ).toBeVisible();
   expect(screen.queryByLabelText('Experiment')).not.toBeInTheDocument();
   expect(screen.queryByText('Assigned accounts')).not.toBeInTheDocument();
+  screen
+    .getAllByText('Decisions')
+    .forEach((el) => expect(el).not.toBeVisible());
+  expect(screen.getByText('No eligible action: 21000')).not.toBeVisible();
+  expect(screen.getByText(/10 USD/)).not.toBeVisible();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Contacted accounts information' })
+  );
   expect(
-    screen.queryByText('Estimated 60-day revenue')
-  ).not.toBeInTheDocument();
-  expect(screen.getByText('No eligible action: 21000')).toBeInTheDocument();
+    screen.getByRole('dialog', { name: 'Contacted accounts' })
+  ).toHaveTextContent('Unique accounts');
+  fireEvent.keyDown(
+    screen.getByRole('dialog', { name: 'Contacted accounts' }),
+    { key: 'Escape' }
+  );
+  fireEvent.click(screen.getByText('How personalization works'));
+  expect(screen.getByText('No eligible action: 21000')).toBeVisible();
+  fireEvent.click(screen.getByText('Accounts', { exact: true }));
   expect(screen.getByRole('link', { name: 'Alex' })).toHaveAttribute(
     'href',
     '/dashboard/users/account-a/portrait'
   );
-  expect(
-    screen.getByText(/Overview totals include all 2444 accounts/)
-  ).toBeInTheDocument();
-  expect(screen.getByText(/10 USD/)).toBeInTheDocument();
 });
 
 it('loads the chosen period and refreshes from current sources', async () => {
   render(<PersonalizationResults />);
-  await screen.findByText('2,444');
+  await screen.findByRole('article', { name: 'Contacted accounts' });
   fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Period' }));
   fireEvent.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
   await waitFor(() =>
     expect(read).toHaveBeenLastCalledWith(1, expect.any(AbortSignal))
   );
-  await screen.findByText('2,444');
+  await screen.findByRole('article', { name: 'Contacted accounts' });
   read.mockResolvedValue({
     ...report,
-    summary: { ...report.summary, accounts: 2500 },
+    summary: { ...report.summary, contactedAccounts: 25 },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
-  expect(await screen.findByText('2,500')).toBeInTheDocument();
+  expect(await screen.findByText('25')).toBeInTheDocument();
 });
 
 it('refreshes every minute and releases the timer and pending request on unmount', async () => {
@@ -144,13 +175,15 @@ it('does not poll when the document is hidden', async () => {
 
 it('keeps last successful results with an explicit stale warning when refresh fails', async () => {
   render(<PersonalizationResults />);
-  await screen.findByText('2,444');
+  await screen.findByRole('article', { name: 'Contacted accounts' });
   read.mockRejectedValue(new Error('Service unavailable'));
   fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'last successful update'
   );
-  expect(screen.getByText('2,444')).toBeInTheDocument();
+  expect(
+    screen.getByRole('article', { name: 'Contacted accounts' })
+  ).toHaveTextContent('9');
 });
 
 it('shows an honest empty state and missing financial data', async () => {
@@ -166,5 +199,7 @@ it('shows an honest empty state and missing financial data', async () => {
       'No permanent personalization decisions recorded in this period.'
     )
   ).toBeInTheDocument();
-  expect(screen.getByText(/Totals are incomplete/)).toBeInTheDocument();
+  expect(screen.getByText(/Totals are incomplete/)).not.toBeVisible();
+  fireEvent.click(screen.getByText('Metric definitions'));
+  expect(screen.getByText(/Totals are incomplete/)).toBeVisible();
 });

@@ -488,3 +488,36 @@ it('explains why available news did not produce a useful action', async () => {
   render(<PortraitDecisionHistory userId="account" />);
   expect(await screen.findByText('News did not match recorded teams or leagues.')).toBeVisible();
 });
+
+it.each([
+  ['user_ai_quota_exhausted', 'The user AI quota was reached (rolling 24 hours).'],
+  ['daily_ai_quota_exhausted', 'The daily AI quota was reached (resets at 00:00 UTC).'],
+])('explains %s without presenting a provider failure', async (skipReason, explanation) => {
+  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
+  item.source = 'baseline';
+  item.model.status = 'budget_exhausted';
+  item.model.skipReason = skipReason;
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText(explanation)).toBeVisible();
+});
+
+it('explains a marked-invalid Firebase token with its recorded rejection time', async () => {
+  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
+  item.input.diagnostics = { version: 1, primary: 'no_channel', scenarios: {} };
+  item.input.current.channelReadiness = {push:'active_installation_unavailable',inApp:'activity_unknown_or_inactive',email:'unavailable',newsEmail:'unavailable'};
+  item.input.current.receiverFailure = 'stale';
+  item.input.current.receiverTokenRejectedAt = '2026-11-02T10:00:00Z';
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText(/FCM token previously marked invalid/)).toBeVisible();
+  expect(screen.getByText(/Token rejection recorded/)).toBeVisible();
+});
+
+it('shows the safe cause of a failed before-send policy check', async () => {
+  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
+  item.deliveries = [{id:'policy-delivery',channel:'push',status:'failed',failureReason:'account_policy_unavailable:before_submit:db_57014',sentAt:null,openedAt:null,pushOpenedAt:null,providerAcceptedAt:null,providerFinalEventAt:null,emailSubmissionState:null,renderedTitle:null,renderedBody:null}];
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText(/Push policy check failed during before-send validation \(database error 57014\)\./)).toBeVisible();
+});

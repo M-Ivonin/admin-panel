@@ -13,9 +13,6 @@ export default function UserExperimentsPage() {
             <Typography component="h1" variant="h4" fontWeight={700}>
               Results
             </Typography>
-            <Typography color="text.secondary">
-              Current permanent personalization activity and observed outcomes
-            </Typography>
           </div>
           <PersonalizationResults />
         </Stack>

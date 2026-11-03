@@ -321,9 +321,7 @@ function Decision({
           ) : null}
           {item.source === 'baseline' && item.status === 'completed' ? (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {item.model.status === 'not_requested'
-                ? 'AI was not called; the saved choice follows rules.'
-                : 'AI did not return a usable selection; the saved choice follows rules.'}
+              {modelFallbackExplanation(item)}
             </Typography>
           ) : null}
           {item.status === 'pending' ? (
@@ -617,6 +615,33 @@ function channelName(channel: string) {
     )[channel] ?? label(channel)
   );
 }
+function modelFallbackExplanation(item: PortraitShadowDecision): string {
+  const reasons: Record<string, string> = {
+    user_ai_quota_exhausted: 'The user AI quota was reached (rolling 24 hours).',
+    daily_ai_quota_exhausted: 'The daily AI quota was reached (resets at 00:00 UTC).',
+    ai_quota_exhausted: 'An AI quota was reached; this historical record does not distinguish the user and daily limits.',
+    request_budget_exceeded: 'The AI request exceeded its size limit.',
+    decision_unavailable: 'The decision was no longer eligible for an AI call.',
+  };
+  return reasons[item.model.skipReason ?? ''] ?? (item.model.status === 'not_requested'
+    ? 'AI was not called; the saved choice follows rules.'
+    : 'AI did not return a usable selection; the saved choice follows rules.');
+}
+
+function deliveryFailureExplanation(reason?: string | null): string | null {
+  if (!reason) return null;
+  if (reason.startsWith('account_policy_unavailable:')) {
+    const [, stage, code] = reason.split(':');
+    const check = stage === 'before_submit' ? 'before-send validation' : 'account admission';
+    const cause = /^db_[0-9A-Z]{5}$/.test(code ?? '') ? `database error ${code.slice(3)}` : label(code ?? 'unexpected_error');
+    return `Push policy check failed during ${check} (${cause}).`;
+  }
+  if (reason === 'account_policy_unavailable') return 'The push policy could not be checked; the original cause was not recorded.';
+  if (reason === 'invalid_fcm_token') return 'Firebase rejected the registration token.';
+  if (reason === 'approved_dispatch_window_after_expiry') return 'The next permitted send time was after the message expired.';
+  return `Reason: ${label(reason)}.`;
+}
+
 function deliveryDescription(d: PortraitDecisionDelivery): {
   title: string;
   detail: string;
@@ -662,13 +687,13 @@ function deliveryDescription(d: PortraitDecisionDelivery): {
   if (d.status === 'failed' || d.emailSubmissionState === 'permanent_failure')
     return {
       title: 'Send failed',
-      detail: 'The delivery record reports a failed attempt.',
+      detail: deliveryFailureExplanation(d.failureReason) ?? 'The delivery record reports a failed attempt.',
       color: 'error',
     };
   if (d.status === 'skipped')
     return {
       title: 'Not sent — skipped',
-      detail: 'The delivery was skipped by the sending rules.',
+      detail: deliveryFailureExplanation(d.failureReason) ?? 'The delivery was skipped by the sending rules.',
       color: 'default',
     };
   if (d.status === 'available')
@@ -743,8 +768,14 @@ function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
           Push: {label(current.channelReadiness.push)}. In-app:{' '}
           {label(current.channelReadiness.inApp)}.
           {current.receiverFailure
-            ? ` Receiver: ${label(current.receiverFailure)}.`
+            ? ` Receiver: ${current.receiverFailure === 'stale' ? 'FCM token previously marked invalid' : label(current.receiverFailure)}.`
             : ''}
+        </Typography>
+      ) : null}
+      {current.receiverTokenRejectedAt ? (
+        <Typography variant="body2" color="text.secondary">
+          Token rejection recorded {stamp(current.receiverTokenRejectedAt)}.
+          {current.receiverTokenReportedAt ? ` Token last reported ${stamp(current.receiverTokenReportedAt)}.` : ''}
         </Typography>
       ) : null}
       {diagnostics.sources ? Object.entries(diagnostics.sources).map(([source, facts]) => <Typography key={source} variant="body2" color="text.secondary">

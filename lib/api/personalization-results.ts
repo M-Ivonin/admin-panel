@@ -24,6 +24,9 @@ export interface PersonalizationResults {
   > & {
     accounts: number;
     contactedAccounts: number;
+    openedAccounts: number;
+    usefulActionAccounts: number;
+    notSent: number;
     purchasingAccounts: number;
     lastDecisionAt: string | null;
   };
