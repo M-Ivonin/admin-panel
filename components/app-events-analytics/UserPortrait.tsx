@@ -66,12 +66,9 @@ export function UserPortrait({ userId }: { userId: string }) {
       {decisionsView ? (
         <Stack spacing={2.5}>
           <Typography component="h2" variant="h4" fontWeight={700}>
-            Saved decisions
+            Personalization history
           </Typography>
-          <PortraitDecisionHistory
-            userId={userId}
-            viewedSnapshotId={ready?.snapshot.id ?? null}
-          />
+          <PortraitDecisionHistory userId={userId} />
         </Stack>
       ) : null}
       <Stack spacing={2.5} sx={{ display: decisionsView ? 'none' : 'flex' }}>

@@ -171,9 +171,7 @@ it('opens account history even while the portrait has not finished loading', asy
   query = new URLSearchParams('view=decisions');
   jest.mocked(getUserPortrait).mockReturnValue(new Promise(() => {}));
   render(<UserPortrait userId="account-a" />);
-  expect(
-    await screen.findByText(/No saved decisions yet/)
-  ).toBeInTheDocument();
+  expect(await screen.findByText(/No saved decisions yet/)).toBeInTheDocument();
   screen
     .queryAllByText('Loading saved portrait…')
     .forEach((message) => expect(message).not.toBeVisible());
@@ -213,7 +211,7 @@ it.each(['not_ready', 'restricted', 'error'] as const)(
     });
     render(<UserPortrait userId="account-a" />);
     expect(
-      await screen.findByText(/Decision evidence is unavailable/)
+      await screen.findByText(/Personalization history is unavailable/)
     ).toBeInTheDocument();
     screen
       .queryAllByText(/No saved portrait is available yet/)
@@ -231,9 +229,7 @@ it('keeps history usable when identity details fail, with the canonical account 
     snapshot: null,
   });
   render(<UserPortrait userId="account-a" />);
-  expect(
-    await screen.findByText(/No saved decisions yet/)
-  ).toBeInTheDocument();
+  expect(await screen.findByText(/No saved decisions yet/)).toBeInTheDocument();
   expect(
     await screen.findByText('User details could not be loaded.')
   ).toBeInTheDocument();

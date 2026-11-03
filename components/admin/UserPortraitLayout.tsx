@@ -114,13 +114,15 @@ export function UserPortraitLayout({
                 {user.email}
               </Typography>
             ) : null}
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5, overflowWrap: 'anywhere' }}
-            >
-              User ID: {userId}
-            </Typography>
+            {activeTab === 'portrait' || !user ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.5, overflowWrap: 'anywhere' }}
+              >
+                User ID: {userId}
+              </Typography>
+            ) : null}
             {error ? (
               <Stack direction="row" alignItems="center" gap={1}>
                 <Typography variant="caption" color="text.secondary">

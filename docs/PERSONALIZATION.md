@@ -11,7 +11,27 @@ Personalization composes the existing Users, saved portrait/decision and outcome
 
 Portrait overview cards display the existing saved projection. Historical snapshot/version/cutoff, source coverage and captured product access remain distinct. Unknown values stay unknown. Detailed activity, Store evidence, source quality and timeline content remain available below the overview. On narrow screens, snapshot/source explanations use disclosures and the product-access summary precedes daily activity.
 
-Saved decisions reads the latest 20 evaluations for that account independently of portrait readiness, loading or read failure. Its own API determines empty/restricted/error states. Portrait-only alerts stay hidden while viewing history. An optional viewed-snapshot context is shown only when that snapshot is available; each historical decision retains its own pinned evidence. The source label, selected candidate, baseline, reason, model/validator evidence and pinned snapshot come from the existing API. Frozen replay remains a read. Decision history does not gain a Delivery join or imply actual exposure; the existing Results trace owns those links.
+Saved decisions reads the latest 20 evaluations for that account independently of
+portrait readiness, loading or read failure. Its own API determines empty,
+restricted and error states. The Personalization history report uses a compact
+table grouped by Kyiv calendar day, with search over the loaded decisions and an
+outcome filter. Selecting a row opens its reason, exact suggested message (when
+present) and recorded sending outcomes in a right-hand panel; narrow screens use
+a dismissible drawer. The existing Saved decisions tab and account route remain.
+The account ID is omitted in this view when identity loaded successfully; a
+failed identity read keeps the canonical ID and retry control.
+
+The visible outlined Download all decisions (JSON) button exports every retained
+decision through the existing account export endpoint, independently of table
+search and filters. Technical diagnostics, model badges, snapshot context and
+frozen replay controls are absent from this report; underlying evidence remains
+in the export. A reason summary never invents a specific contact restriction.
+Delivery information comes only from the existing decision response: absent
+information, an empty record list, queued, provider-accepted, sent, delivered,
+shown and opened outcomes retain their distinct meanings. A suggested channel
+does not establish a send; sending does not establish delivery or reading.
+Fresh design comparison and runtime proof are in
+[the table/details evidence](evidence/saved-decisions-table/README.md).
 
 ## Access and side effects
 

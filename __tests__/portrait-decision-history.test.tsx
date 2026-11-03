@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { PortraitDecisionHistory } from '@/components/app-events-analytics/PortraitDecisionHistory';
 import {
   getUserPortraitDecisionHistory,
@@ -98,88 +98,93 @@ const history: History = {
     },
   ],
 };
-beforeEach(() => jest.resetAllMocks());
+beforeEach(() => {
+  jest.resetAllMocks();
+  window.matchMedia = jest.fn().mockImplementation((query) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
+});
 
-it('shows a recorded AI explanation separately from the saved reason code', async () => {
-  const explanation =
-    'I deferred because repeating the same offer immediately would add no useful context.';
+async function openDecision(title = 'Recommend a news item') {
+  const table = await screen.findByRole('table', { name: 'Saved decisions' });
+  fireEvent.click(within(table).getByRole('button', { name: title }));
+  return within(screen.getByRole('region', { name: 'Decision details' }));
+}
+
+it('shows the saved reason and exact message only after choosing a decision', async () => {
+  const explanation = 'The news is relevant to the recorded team interests.';
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
     ...history,
-    items: history.items.map((item) => ({
-      ...item,
-      model: { ...item.model, explanation },
-    })),
+    items: [
+      {
+        ...history.items[0],
+        model: { ...history.items[0].model, explanation },
+      },
+    ],
   });
   render(<PortraitDecisionHistory userId="account-one" />);
-  expect(await screen.findByText(explanation)).toBeVisible();
-  expect(screen.getByText('AI explanation')).toBeVisible();
-});
-
-it('does not invent an explanation for historical AI decisions', async () => {
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
-  render(<PortraitDecisionHistory userId="account-one" />);
   expect(
-    await screen.findByText('No AI explanation was recorded for this decision.')
+    await screen.findByRole('table', { name: 'Saved decisions' })
   ).toBeVisible();
+  expect(screen.queryByText('Exact stored title')).not.toBeInTheDocument();
+  const details = await openDecision();
+  expect(
+    details.getByText(/matched the user.s recorded interests/)
+  ).toBeVisible();
+  expect(details.getByText(explanation)).toBeVisible();
+  expect(details.getByText('Exact stored title')).toBeVisible();
+  expect(
+    details.getByText('Exact stored body, without a sales footer.')
+  ).toBeVisible();
+  expect(details.getByText('Sending status unavailable')).toBeVisible();
+  for (const technical of [
+    'Technical details',
+    'Selected by AI',
+    'Replay frozen validation',
+    'historic-snapshot',
+    'resp_actual-reference',
+  ]) {
+    expect(screen.queryByText(technical)).not.toBeInTheDocument();
+  }
+  expect(replayUserPortraitDecision).not.toHaveBeenCalled();
 });
 
-it('explains server invalidation without attributing fallback silence to AI', async () => {
-  (getUserPortraitDecisionHistory as jest.Mock).mockResolvedValue({
+it('does not show an unaccepted AI proposal as the reason for a rule decision', async () => {
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
     ...history,
-    items: history.items.map((item) => ({
-      ...item,
-      source: 'baseline',
-      selection: {
-        ...item.selection,
-        candidateId: 'no_action',
-        reasonCode: 'model_silence',
+    items: [
+      {
+        ...history.items[0],
+        source: 'baseline',
+        validator: { accepted: false, reasons: ['news_changed'] },
+        model: {
+          ...history.items[0].model,
+          explanation: 'This is a great match.',
+        },
+        selectedCandidate: {
+          ...history.items[0].selectedCandidate,
+          kind: 'no_action',
+          copy: null,
+        },
       },
-      selectedCandidate: {
-        ...item.selectedCandidate,
-        kind: 'no_action',
-        copy: null,
-      },
-      validator: { accepted: false, reasons: ['news_changed'] },
-      model: {
-        ...item.model,
-        explanation: 'The News item matches the recorded interests.',
-      },
-    })),
+    ],
   });
   render(<PortraitDecisionHistory userId="account-one" />);
+  const details = await openDecision('Do not contact the user');
   expect(
-    await screen.findByText(
+    details.getByText(
       'The proposed News item changed or became unavailable before the decision was saved.'
     )
   ).toBeVisible();
-  expect(
-    screen.queryByText('The AI selected no contact.')
-  ).not.toBeInTheDocument();
-  expect(screen.getByText('AI proposal explanation')).toBeVisible();
-});
-
-it('shows what the AI selected, the saved reason and message, with no invented sending confirmation', async () => {
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
-  render(
-    <PortraitDecisionHistory
-      userId="account-one"
-      viewedSnapshotId="current-snapshot"
-    />
-  );
-  expect(await screen.findByText('Recommend a news item')).toBeVisible();
-  expect(screen.getByText('Selected by AI')).toBeVisible();
-  expect(
-    screen.getByText(/matched the user.s recorded interests/)
-  ).toBeVisible();
-  expect(screen.getByText('Exact stored title')).toBeVisible();
-  expect(
-    screen.getByText('Exact stored body, without a sales footer.')
-  ).toBeVisible();
-  expect(screen.getByText('Sending status unavailable')).toBeVisible();
-  const details = screen.getByText('Technical details').closest('details');
-  expect(details).not.toHaveAttribute('open');
-  expect(screen.getByText(/Tokens:/)).not.toBeVisible();
-  expect(screen.getByText('Replay frozen validation')).not.toBeVisible();
+  expect(screen.queryByText('This is a great match.')).not.toBeInTheDocument();
+  expect(screen.queryByText('Suggested message')).not.toBeInTheDocument();
 });
 
 it.each(['none', 'in_app', 'push', 'email'] as const)(
@@ -187,14 +192,18 @@ it.each(['none', 'in_app', 'push', 'email'] as const)(
   async (channel) => {
     jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
       ...history,
-      items: history.items.map((item) => ({
-        ...item,
-        selection: { ...item.selection, channel },
-        deliveries: [],
-      })),
+      items: [
+        {
+          ...history.items[0],
+          selection: { ...selection, channel },
+          deliveries: [],
+        },
+      ],
     });
     render(<PortraitDecisionHistory userId="account-one" />);
-    expect(await screen.findByText('No sending record')).toBeVisible();
+    const details = await openDecision();
+    expect(details.getByText('No sending record')).toBeVisible();
+    expect(details.getByText(/A suggestion does not confirm/)).toBeVisible();
     expect(screen.queryByText('Sent')).not.toBeInTheDocument();
   }
 );
@@ -212,10 +221,18 @@ const delivery = {
   renderedTitle: null,
   renderedBody: null,
 };
+
 it.each([
   [{ ...delivery }, 'Sent'],
   [{ ...delivery, pushOpenedAt: '2026-10-28T10:32:00Z' }, 'Opened by user'],
-  [{ ...delivery, status: 'available', channel: 'in_app' }, 'Available in app'],
+  [
+    { ...delivery, status: 'available', channel: 'in_app', sentAt: null },
+    'Available in app',
+  ],
+  [
+    { ...delivery, status: 'shown', channel: 'in_app', sentAt: null },
+    'Shown in app',
+  ],
   [{ ...delivery, status: 'pending', sentAt: null }, 'Queued'],
   [{ ...delivery, status: 'failed', sentAt: null }, 'Send failed'],
   [
@@ -231,47 +248,175 @@ it.each([
     { ...delivery, channel: 'email', emailSubmissionState: 'bounced' },
     'Email bounced',
   ],
+  [
+    { ...delivery, channel: 'email', emailSubmissionState: 'delivered' },
+    'Delivery confirmed',
+  ],
+  [
+    {
+      ...delivery,
+      status: 'pending',
+      sentAt: null,
+      providerAcceptedAt: '2026-10-28T10:31:00Z',
+    },
+    'Accepted by provider',
+  ],
 ] as const)(
-  'shows actual delivery evidence: %s',
+  'preserves actual delivery evidence: %s',
   async (evidence, expected) => {
     jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
       ...history,
-      items: history.items.map((item) => ({
-        ...item,
-        deliveries: [evidence],
-      })),
+      items: [{ ...history.items[0], deliveries: [evidence] }],
     });
     render(<PortraitDecisionHistory userId="account-one" />);
-    expect(await screen.findByText(expected)).toBeVisible();
+    const details = await openDecision();
+    expect(details.getByText(expected)).toBeVisible();
+    expect(within(screen.getByRole('table')).getByText(expected)).toBeVisible();
   }
 );
 
-it('identifies a rule fallback and no-action decision without inventing an AI message', async () => {
+it.each([
+  [
+    'no_channel',
+    'Suitable content was available, but no approved contact channel was ready.',
+  ],
+  [
+    'scenario_disabled',
+    'Suitable content was available, but this message type was disabled in settings.',
+  ],
+  ['policy_exclusion', 'Contact rules excluded the available suggestions.'],
+  ['no_content', 'No suitable content was available.'],
+] as const)(
+  'explains %s without exposing diagnostic counts',
+  async (primary, explanation) => {
+    const item = {
+      ...history.items[0],
+      input: {
+        ...history.items[0].input,
+        diagnostics: {
+          version: 1 as const,
+          primary,
+          scenarios: {
+            'stored_news.v1': {
+              checked: true,
+              supplied: 5,
+              relevant: 1,
+              consumed: 0,
+              channelEligible: 0,
+              policyEligible: 0,
+            },
+          },
+        },
+      },
+    };
+    jest
+      .mocked(getUserPortraitDecisionHistory)
+      .mockResolvedValue({ ...history, items: [item] });
+    render(<PortraitDecisionHistory userId="account" />);
+    expect((await openDecision()).getByText(explanation)).toBeVisible();
+    expect(
+      screen.queryByText(/supplied|FCM|Tokens:|Local time:/)
+    ).not.toBeInTheDocument();
+  }
+);
+
+it('shows a readable send failure without exposing database codes', async () => {
   jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
     ...history,
-    items: history.items.map((item) => ({
-      ...item,
-      source: 'baseline',
-      selection: { ...item.selection, reasonCode: 'no_opportunity' },
-      selectedCandidate: {
-        ...item.selectedCandidate,
-        kind: 'no_action',
-        disposition: 'no_action',
-        copy: null,
+    items: [
+      {
+        ...history.items[0],
+        deliveries: [
+          {
+            ...delivery,
+            status: 'failed',
+            sentAt: null,
+            failureReason: 'account_policy_unavailable:before_submit:db_57014',
+          },
+        ],
       },
-      validator: { accepted: false, reasons: ['model_timeout'] },
-      model: { ...item.model, status: 'timeout' },
-      deliveries: [],
-    })),
+    ],
   });
-  render(<PortraitDecisionHistory userId="account-one" />);
-  expect(await screen.findByText('Do not contact the user')).toBeVisible();
-  expect(screen.getByText('Selected by rules')).toBeVisible();
+  render(<PortraitDecisionHistory userId="account" />);
   expect(
-    screen.getByText(/AI did not return a usable selection/)
+    (await openDecision()).getByText('The sending rules could not be checked.')
   ).toBeVisible();
-  expect(screen.getByText('No message proposed.')).toBeVisible();
-  expect(screen.queryByText('Selected by AI')).not.toBeInTheDocument();
+  expect(screen.queryByText(/57014/)).not.toBeInTheDocument();
+});
+
+it('filters outcomes without treating unknown sending status as no sending record', async () => {
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+    ...history,
+    items: [
+      history.items[0],
+      {
+        ...history.items[0],
+        id: 'no-record',
+        deliveries: [],
+        selectedCandidate: {
+          ...history.items[0].selectedCandidate,
+          kind: 'no_action',
+        },
+      },
+      { ...history.items[0], id: 'sent', deliveries: [delivery] },
+    ],
+  });
+  render(<PortraitDecisionHistory userId="account" />);
+  await screen.findByRole('table');
+  fireEvent.mouseDown(
+    screen.getByRole('combobox', { name: 'Filter sending outcomes' })
+  );
+  fireEvent.click(screen.getByRole('option', { name: 'No sending record' }));
+  expect(
+    screen.queryByText('Sending status unavailable')
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText('Sent')).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Do not contact the user' })
+  ).toBeVisible();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search history' }), {
+    target: { value: 'not found' },
+  });
+  expect(screen.getByText('No decisions match these filters.')).toBeVisible();
+});
+
+it('marks pending choices as provisional', async () => {
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+    ...history,
+    items: [{ ...history.items[0], status: 'pending' }],
+  });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(
+    (await openDecision()).getByText(/This decision is provisional/)
+  ).toBeVisible();
+});
+
+it('shows read failure and recovers with a read-only refresh', async () => {
+  jest
+    .mocked(getUserPortraitDecisionHistory)
+    .mockRejectedValueOnce(new Error('Offline'))
+    .mockResolvedValueOnce(empty);
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(await screen.findByText('Offline')).toBeVisible();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Refresh saved decisions' })
+  );
+  expect(await screen.findByText('No saved decisions yet.')).toBeVisible();
+  expect(replayUserPortraitDecision).not.toHaveBeenCalled();
+});
+
+it('does not expose decisions returned in a restricted response', async () => {
+  jest
+    .mocked(getUserPortraitDecisionHistory)
+    .mockResolvedValue({ ...history, status: 'restricted' });
+  render(<PortraitDecisionHistory userId="account" />);
+  expect(
+    await screen.findByText(/account’s privacy preferences/)
+  ).toBeVisible();
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Download all decisions (JSON)' })
+  ).toBeDisabled();
 });
 
 it('exports the full account history from the export route, including decisions outside the preview', async () => {
@@ -378,146 +523,56 @@ it('discards late history and export responses after switching accounts', async 
   expect(screen.queryByText('Exact stored title')).not.toBeInTheDocument();
 });
 
-it('keeps frozen validation under technical details and performs only a replay on request', async () => {
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue(history);
-  jest.mocked(replayUserPortraitDecision).mockResolvedValue({
-    status: 'replayed',
-    modelCalled: false,
-    dispatchEnabled: false,
-    validator: { accepted: true },
+it('selects a table row, searches saved messages and closes the details panel', async () => {
+  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({
+    ...history,
+    items: [
+      history.items[0],
+      {
+        ...history.items[0],
+        id: 'decision-two',
+        selectedCandidate: {
+          ...history.items[0].selectedCandidate,
+          kind: 'no_action',
+          disposition: 'no_action',
+          copy: null,
+        },
+        selection: { ...selection, reasonCode: 'no_opportunity' },
+        deliveries: [],
+      },
+    ],
   });
   render(<PortraitDecisionHistory userId="account-one" />);
-  const details = (await screen.findByText('Technical details')).closest(
-    'details'
-  )!;
-  details.setAttribute('open', '');
-  expect(
-    screen.getByRole('row', { name: /Pinned snapshot historic-snapshot/ })
-  ).toBeVisible();
+  const table = await screen.findByRole('table', { name: 'Saved decisions' });
   fireEvent.click(
-    screen.getByRole('button', { name: 'Replay frozen validation' })
+    within(table).getByRole('button', { name: 'Do not contact the user' })
   );
   expect(
-    await screen.findByText(/No model was called and no action was executed/)
-  ).toBeVisible();
-  expect(replayUserPortraitDecision).toHaveBeenCalledWith(
-    'account-one',
-    'decision-one'
-  );
-});
-
-it('shows read failure and recovers with a read-only refresh', async () => {
-  jest
-    .mocked(getUserPortraitDecisionHistory)
-    .mockRejectedValueOnce(new Error('Offline'))
-    .mockResolvedValueOnce(empty);
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText('Offline')).toBeVisible();
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Refresh saved decisions' })
-  );
-  expect(await screen.findByText(/No saved decisions yet/)).toBeVisible();
-  expect(replayUserPortraitDecision).not.toHaveBeenCalled();
-});
-
-it('shows frozen readiness blockers and marks legacy diagnosis as unavailable', async () => {
-  const item: History['items'][number] = JSON.parse(
-    JSON.stringify(history.items[0])
-  );
-  item.input.diagnostics = {
-    version: 1,
-    primary: 'no_channel',
-    scenarios: {
-      'stored_news.v1': {
-        supplied: 5,
-        relevant: 1,
-        consumed: 0,
-        channelEligible: 0,
-        policyEligible: 0,
-        checked: true,
-      },
-    },
-  };
-  item.input.current.localTime = {
-    value: null,
-    source: 'unknown',
-    observedAt: null,
-    localHour: null,
-  };
-  item.input.current.receiverFailure = 'permission_denied';
-  item.input.current.channelReadiness = {
-    push: 'local_time_unknown',
-    inApp: 'activity_unknown_or_inactive',
-    email: 'unavailable',
-    newsEmail: 'topic_scope_unestablished',
-  };
-  jest
-    .mocked(getUserPortraitDecisionHistory)
-    .mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(
-    await screen.findByText(
-      'Suitable content was available, but no approved channel was ready.'
+    within(screen.getByRole('region', { name: 'Decision details' })).getByText(
+      'No eligible recommendation was available at the time.'
     )
   ).toBeVisible();
-  expect(screen.getByText(/Receiver: permission denied/)).toBeVisible();
-  expect(screen.getByText(/Local time: unknown/)).toBeVisible();
-});
-
-
-it('distinguishes a disabled message with suitable content from missing content', async () => {
-  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
-  item.input.diagnostics = {
-    version: 1, primary: 'scenario_disabled', scenarios: {
-      'resume_collection.v1': {
-        checked: true, disabled: true, supplied: 1, relevant: 1,
-        consumed: 0, channelEligible: 0, policyEligible: 0,
-      },
-    },
-  };
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText('Suitable content was available, but its message scenario was disabled.')).toBeVisible();
-  expect(screen.getByText(/disabled in settings/)).toBeVisible();
-});
-
-it('explains why available news did not produce a useful action', async () => {
-  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
-  item.input.diagnostics = { version: 1, primary: 'no_content', scenarios: {}, noContentReasons: ['news_no_interest_match'] } as NonNullable<typeof item.input.diagnostics>;
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText('News did not match recorded teams or leagues.')).toBeVisible();
-});
-
-it.each([
-  ['user_ai_quota_exhausted', 'The user AI quota was reached (rolling 24 hours).'],
-  ['daily_ai_quota_exhausted', 'The daily AI quota was reached (resets at 00:00 UTC).'],
-])('explains %s without presenting a provider failure', async (skipReason, explanation) => {
-  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
-  item.source = 'baseline';
-  item.model.status = 'budget_exhausted';
-  item.model.skipReason = skipReason;
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText(explanation)).toBeVisible();
-});
-
-it('explains a marked-invalid Firebase token with its recorded rejection time', async () => {
-  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
-  item.input.diagnostics = { version: 1, primary: 'no_channel', scenarios: {} };
-  item.input.current.channelReadiness = {push:'active_installation_unavailable',inApp:'activity_unknown_or_inactive',email:'unavailable',newsEmail:'unavailable'};
-  item.input.current.receiverFailure = 'stale';
-  item.input.current.receiverTokenRejectedAt = '2026-11-02T10:00:00Z';
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText(/FCM token previously marked invalid/)).toBeVisible();
-  expect(screen.getByText(/Token rejection recorded/)).toBeVisible();
-});
-
-it('shows the safe cause of a failed before-send policy check', async () => {
-  const item: History['items'][number] = JSON.parse(JSON.stringify(history.items[0]));
-  item.deliveries = [{id:'policy-delivery',channel:'push',status:'failed',failureReason:'account_policy_unavailable:before_submit:db_57014',sentAt:null,openedAt:null,pushOpenedAt:null,providerAcceptedAt:null,providerFinalEventAt:null,emailSubmissionState:null,renderedTitle:null,renderedBody:null}];
-  jest.mocked(getUserPortraitDecisionHistory).mockResolvedValue({ ...history, items: [item] });
-  render(<PortraitDecisionHistory userId="account" />);
-  expect(await screen.findByText(/Push policy check failed during before-send validation \(database error 57014\)\./)).toBeVisible();
+  expect(screen.queryByText('Exact stored title')).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Close decision details' })
+  );
+  expect(
+    screen.queryByRole('region', { name: 'Decision details' })
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search history' }), {
+    target: { value: 'Exact stored body' },
+  });
+  expect(
+    within(table).queryByRole('button', { name: 'Do not contact the user' })
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    within(table).getByRole('button', { name: 'Recommend a news item' })
+  );
+  expect(
+    screen.getByText('Exact stored body, without a sales footer.')
+  ).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: 'Download all decisions (JSON)' })
+  ).toBeVisible();
+  expect(screen.queryByText('Technical details')).not.toBeInTheDocument();
 });

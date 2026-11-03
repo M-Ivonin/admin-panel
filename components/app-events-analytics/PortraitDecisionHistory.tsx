@@ -1,27 +1,36 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
   Button,
   Chip,
   CircularProgress,
+  Divider,
+  Drawer,
+  IconButton,
+  InputAdornment,
+  MenuItem,
   Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
+  TableHead,
   TableRow,
+  TextField,
+  Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
+import { Close, Download, Refresh, Search } from '@mui/icons-material';
 import {
   getUserPortraitDecisionHistory,
   exportUserPortraitDecisions,
   type PortraitDecisionDelivery,
-  replayUserPortraitDecision,
   type PortraitDecisionHistory as History,
-  type PortraitDecisionReplay,
   type PortraitShadowDecision,
 } from '@/lib/api/user-portrait';
 
@@ -29,41 +38,55 @@ const label = (text: string) => text.replace(/_/g, ' ');
 const stamp = (text: string | null) =>
   text
     ? new Date(text).toLocaleString('en-GB', {
-        timeZone: 'UTC',
+        timeZone: 'Europe/Kyiv',
         dateStyle: 'medium',
         timeStyle: 'short',
-      }) + ' UTC'
-    : 'Pending';
+      })
+    : 'Not recorded';
 
-/** Presents saved decisions separately from the selected portrait; reads and replay never run a model. */
-export function PortraitDecisionHistory({
-  userId,
-  viewedSnapshotId,
-}: {
-  userId: string;
-  viewedSnapshotId?: string | null;
-}) {
+const dayStamp = (text: string) =>
+  new Date(text).toLocaleDateString('en-GB', {
+    timeZone: 'Europe/Kyiv',
+    dateStyle: 'medium',
+  });
+const timeStamp = (text: string) =>
+  new Date(text).toLocaleTimeString('en-GB', {
+    timeZone: 'Europe/Kyiv',
+    timeStyle: 'short',
+  });
+
+type OutcomeFilter = 'all' | 'recorded' | 'opened' | 'errors' | 'no_record';
+
+/** Account history is read-only; full saved evidence remains available in the JSON export. */
+export function PortraitDecisionHistory({ userId }: { userId: string }) {
   const [history, setHistory] = useState<History | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
-  const [busy, setBusy] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState<string | null>(null);
-  const [replay, setReplay] = useState<PortraitDecisionReplay | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<OutcomeFilter>('all');
   const epoch = useRef(0);
+  const theme = useTheme();
+  const wide = useMediaQuery(theme.breakpoints.up('lg'));
+  const selectionButton = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     const current = ++epoch.current;
     setHistory(null);
+    setSelectedId(null);
+    setQuery('');
+    setFilter('all');
     setError(null);
-    setReplay(null);
-    setBusy(null);
     setExporting(false);
     setExportNote(null);
     setLoading(true);
     void getUserPortraitDecisionHistory(userId)
       .then((value) => {
-        if (current === epoch.current) setHistory(value);
+        if (current !== epoch.current) return;
+        setHistory(value);
       })
       .catch((e: unknown) => {
         if (current === epoch.current)
@@ -113,74 +136,84 @@ export function PortraitDecisionHistory({
     }
   };
 
-  const runReplay = async (id: string) => {
-    const current = epoch.current;
-    setBusy(id);
-    setError(null);
-    setReplay(null);
-    try {
-      const value = await replayUserPortraitDecision(userId, id);
-      if (current === epoch.current) setReplay(value);
-    } catch (e) {
-      if (current === epoch.current)
-        setError(e instanceof Error ? e.message : 'Could not replay evidence.');
-    } finally {
-      if (current === epoch.current) setBusy(null);
-    }
+  const items = history?.status === 'available' ? history.items : [];
+  const visible = items.filter((item) => {
+    const outcomes = item.deliveries?.map(deliveryDescription) ?? [];
+    const matchesFilter =
+      filter === 'all' ||
+      (filter === 'no_record' && item.deliveries?.length === 0) ||
+      (filter === 'recorded' &&
+        outcomes.some((o) =>
+          [
+            'Sent',
+            'Delivery confirmed',
+            'Opened by user',
+            'Shown in app',
+            'Dismissed in app',
+          ].includes(o.title)
+        )) ||
+      (filter === 'opened' &&
+        outcomes.some((o) => o.title === 'Opened by user')) ||
+      (filter === 'errors' && outcomes.some((o) => o.color === 'error'));
+    const copy = item.selectedCandidate.copy;
+    const searchable = [
+      decisionTitle(item),
+      reasonText(item),
+      channelName(item.selectedCandidate.proposedChannel),
+      copy?.title,
+      copy?.body,
+      ...outcomes.map((o) => o.title),
+    ]
+      .join(' ')
+      .toLowerCase();
+    return matchesFilter && searchable.includes(query.trim().toLowerCase());
+  });
+  const selected = visible.find((item) => item.id === selectedId);
+  const closeDetails = () => {
+    setSelectedId(null);
+    selectionButton.current?.focus();
   };
   return (
-    <Stack spacing={2}>
-      <Typography variant="body2" color="text.secondary">
-        Saved recommendations, proposed messages and actual sending records.
-        Opening this history does not call AI or send anything.
-      </Typography>
+    <Stack spacing={2.5}>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         gap={2}
-        alignItems={{ sm: 'center' }}
         justifyContent="space-between"
+        alignItems={{ sm: 'center' }}
       >
-        <Typography variant="body2" fontWeight={600}>
-          Latest 20 saved decisions · JSON includes all retained decisions for
-          this user
+        <Typography color="text.secondary" variant="body2">
+          Decisions, suggested messages and sending outcomes.
         </Typography>
-        <Stack direction="row" gap={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" gap={1} alignItems="center">
           <Button
-            variant="contained"
+            variant="outlined"
+            color="inherit"
+            startIcon={<Download />}
             disabled={loading || exporting || history?.status !== 'available'}
             onClick={() => void downloadAll()}
+            sx={{ whiteSpace: 'nowrap' }}
           >
             {exporting ? 'Preparing JSON…' : 'Download all decisions (JSON)'}
           </Button>
-          <Button
-            variant="outlined"
-            disabled={loading || Boolean(busy) || exporting}
-            onClick={() => setRevision((v) => v + 1)}
-          >
-            Refresh saved decisions
-          </Button>
+          <Tooltip title="Refresh saved decisions">
+            <span>
+              <IconButton
+                aria-label="Refresh saved decisions"
+                disabled={loading || exporting}
+                onClick={() => setRevision((v) => v + 1)}
+                sx={{ border: 1, borderColor: 'divider', borderRadius: 2 }}
+              >
+                <Refresh />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Stack>
       </Stack>
-      {viewedSnapshotId ? (
-        <Box component="details">
-          <Typography
-            component="summary"
-            variant="caption"
-            color="text.secondary"
-            sx={{ cursor: 'pointer' }}
-          >
-            Viewed portrait context
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ overflowWrap: 'anywhere' }}
-          >
-            Portrait currently viewed: {viewedSnapshotId}. Each historic
-            decision below keeps its own snapshot, seven-day window and
-            current-owner cutoff.
-          </Typography>
-        </Box>
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      {exportNote ? (
+        <Typography role="status" variant="body2" color="text.secondary">
+          {exportNote}
+        </Typography>
       ) : null}
       {loading ? (
         <Stack direction="row" spacing={1} alignItems="center" role="status">
@@ -188,370 +221,383 @@ export function PortraitDecisionHistory({
           <Typography>Loading saved decisions…</Typography>
         </Stack>
       ) : null}
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      {exportNote ? (
-        <Typography role="status" variant="body2" color="text.secondary">
-          {exportNote}
-        </Typography>
-      ) : null}
       {history?.status === 'restricted' ? (
         <Alert severity="warning">
-          Decision evidence is unavailable following the verified processing
-          objection.
+          Personalization history is unavailable because of this account’s
+          privacy preferences.
         </Alert>
       ) : null}
-      {history?.status === 'available' && !history.items.length ? (
-        <Typography color="text.secondary">
-          No saved decisions yet. Opening this view does not start analysis.
-        </Typography>
+      {history?.status === 'available' && !items.length ? (
+        <Typography color="text.secondary">No saved decisions yet.</Typography>
       ) : null}
-      {history?.items.map((item) => (
-        <Decision
-          key={item.id}
-          item={item}
-          busy={busy !== null}
-          onReplay={() => void runReplay(item.id)}
-        />
-      ))}
-      {replay ? (
-        <Alert
-          severity={
-            replay.status === 'replayed' && replay.validator?.accepted
-              ? 'success'
-              : 'warning'
-          }
+      {items.length ? (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns:
+              selected && wide
+                ? 'minmax(0, 1.65fr) minmax(340px, 1fr)'
+                : 'minmax(0, 1fr)',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 3,
+            overflow: 'hidden',
+            bgcolor: 'background.paper',
+          }}
         >
-          {replay.status === 'replayed'
-            ? 'Frozen baseline and reference validation replayed. No model was called and no action was executed.'
-            : 'The saved policy version is unavailable for replay; historic evidence is unchanged.'}
-        </Alert>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              gap={1.5}
+              sx={{ p: 2.5 }}
+            >
+              <TextField
+                size="small"
+                placeholder="Search history"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                inputProps={{ 'aria-label': 'Search history' }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                select
+                size="small"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as OutcomeFilter)}
+                SelectProps={{
+                  inputProps: { 'aria-label': 'Filter sending outcomes' },
+                }}
+                sx={{ minWidth: 180 }}
+              >
+                <MenuItem value="all">All outcomes</MenuItem>
+                <MenuItem value="recorded">Sent or shown</MenuItem>
+                <MenuItem value="opened">Opened</MenuItem>
+                <MenuItem value="no_record">No sending record</MenuItem>
+                <MenuItem value="errors">Send errors</MenuItem>
+              </TextField>
+            </Stack>
+            <TableContainer>
+              <Table
+                aria-label="Saved decisions"
+                sx={{
+                  tableLayout: 'fixed',
+                  '& th, & td': {
+                    px: { xs: 1.5, sm: 2.5 },
+                    py: 2,
+                    overflowWrap: 'anywhere',
+                  },
+                }}
+              >
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ width: { xs: '28%', sm: '23%' } }}>
+                      Time
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        color="text.secondary"
+                      >
+                        Kyiv time
+                      </Typography>
+                    </TableCell>
+                    <TableCell>Decision</TableCell>
+                    <TableCell sx={{ width: { xs: '32%', sm: '30%' } }}>
+                      Sending outcome
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {visible.map((item, index) => (
+                    <Fragment key={item.id}>
+                      {index === 0 ||
+                      dayStamp(visible[index - 1].createdAt) !==
+                        dayStamp(item.createdAt) ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={3}
+                            sx={{ bgcolor: 'action.hover', fontWeight: 600 }}
+                          >
+                            {dayStamp(item.createdAt)}
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                      <TableRow
+                        key={item.id}
+                        selected={selected?.id === item.id}
+                        hover
+                        onClick={(e) => {
+                          selectionButton.current =
+                            e.currentTarget.querySelector('button');
+                          setSelectedId(item.id);
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                          '&.Mui-selected': {
+                            bgcolor: 'action.selected',
+                            '& td:first-of-type': {
+                              boxShadow: `inset 3px 0 0 ${theme.palette.primary.main}`,
+                            },
+                          },
+                        }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2">
+                            {timeStamp(item.createdAt)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="text"
+                            color="inherit"
+                            aria-pressed={selected?.id === item.id}
+                            aria-controls={
+                              selected?.id === item.id
+                                ? 'decision-details'
+                                : undefined
+                            }
+                            sx={{
+                              p: 0,
+                              minWidth: 0,
+                              textAlign: 'left',
+                              justifyContent: 'flex-start',
+                              fontWeight: 600,
+                              lineHeight: 1.5,
+                              textTransform: 'none',
+                              '&:hover': { bgcolor: 'transparent' },
+                            }}
+                          >
+                            {decisionTitle(item)}
+                          </Button>
+                          {item.status === 'pending' ? (
+                            <Typography
+                              variant="caption"
+                              display="block"
+                              color="text.secondary"
+                            >
+                              Evaluation in progress
+                            </Typography>
+                          ) : null}
+                          {item.selectedCandidate.proposedChannel !== 'none' ? (
+                            <Typography
+                              variant="caption"
+                              display="block"
+                              color="text.secondary"
+                            >
+                              Suggested:{' '}
+                              {channelName(
+                                item.selectedCandidate.proposedChannel
+                              )}
+                            </Typography>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <OutcomeChips item={item} />
+                        </TableCell>
+                      </TableRow>
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {!visible.length ? (
+              <Typography role="status" color="text.secondary" sx={{ p: 3 }}>
+                No decisions match these filters.
+              </Typography>
+            ) : null}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              sx={{ p: 2.5 }}
+            >
+              {visible.length} of {items.length} latest decisions · JSON
+              includes all saved decisions
+            </Typography>
+          </Box>
+          {selected && wide ? (
+            <Box sx={{ minWidth: 0, borderLeft: 1, borderColor: 'divider' }}>
+              <DecisionDetails item={selected} onClose={closeDetails} />
+            </Box>
+          ) : null}
+        </Box>
       ) : null}
+      <Drawer
+        anchor="right"
+        open={Boolean(selected) && !wide}
+        onClose={closeDetails}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 460 }, maxWidth: '100%' },
+        }}
+      >
+        {selected && !wide ? (
+          <DecisionDetails item={selected} onClose={closeDetails} />
+        ) : null}
+      </Drawer>
     </Stack>
   );
 }
 
-/** Shows controlled references/reasons and exact cutoffs, never treating unsupported model prose as a diagnosis. */
-function Decision({
+function OutcomeChips({ item }: { item: PortraitShadowDecision }) {
+  const outcomes =
+    item.deliveries === undefined
+      ? [{ title: 'Sending status unavailable', color: 'default' as const }]
+      : item.deliveries.length
+        ? item.deliveries.map(deliveryDescription)
+        : [{ title: 'No sending record', color: 'default' as const }];
+  return (
+    <Stack direction="row" flexWrap="wrap" gap={0.75}>
+      {outcomes.map((outcome, index) => (
+        <Chip
+          key={index}
+          size="small"
+          label={outcome.title}
+          color={outcome.color}
+          variant="outlined"
+          sx={{
+            height: 'auto',
+            '& .MuiChip-label': {
+              display: 'block',
+              whiteSpace: 'normal',
+              py: 0.5,
+            },
+          }}
+        />
+      ))}
+    </Stack>
+  );
+}
+
+function DecisionDetails({
   item,
-  busy,
-  onReplay,
+  onClose,
 }: {
   item: PortraitShadowDecision;
-  busy: boolean;
-  onReplay: () => void;
+  onClose: () => void;
 }) {
-  const candidate = item.selectedCandidate,
-    window = item.input.facts.selectedWindow;
+  const candidate = item.selectedCandidate;
   return (
-    <Box
-      sx={{
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: '12px',
-        bgcolor: 'background.paper',
-        p: { xs: 2, md: 2.5 },
-        minWidth: 0,
-      }}
+    <Stack
+      component="section"
+      role="region"
+      aria-label="Decision details"
+      id="decision-details"
+      spacing={2.5}
+      sx={{ p: { xs: 2.5, md: 3 }, minWidth: 0, overflowWrap: 'anywhere' }}
     >
       <Stack
         direction="row"
-        gap={1}
         justifyContent="space-between"
         alignItems="flex-start"
-        flexWrap="wrap"
-        useFlexGap
+        gap={1}
       >
         <Box>
-          <Typography variant="h6" fontWeight={700}>
-            {decisionTitle(item)}
+          <Typography component="h3" variant="h6" fontWeight={700}>
+            Decision details
           </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {stamp(item.createdAt)}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {stamp(item.createdAt)} · Kyiv time
           </Typography>
         </Box>
-        <Chip
+        <IconButton
+          aria-label="Close decision details"
+          onClick={onClose}
           size="small"
-          variant="outlined"
-          color={
-            item.status === 'completed' && item.source === 'model'
-              ? 'primary'
-              : 'default'
-          }
-          label={
-            item.status === 'pending'
-              ? 'Evaluation in progress'
-              : item.source === 'model'
-                ? 'Selected by AI'
-                : 'Selected by rules'
-          }
-        />
-      </Stack>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'minmax(0, 1fr) minmax(0, 1fr)',
-          },
-          gap: 2,
-          mt: 2,
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-            Why this decision
-          </Typography>
-          <Typography variant="body2">{reasonText(item)}</Typography>
-          <DecisionReadiness item={item} />
-          {item.status === 'completed' && item.model.explanation ? (
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="subtitle2">
-                {item.source === 'model'
-                  ? 'AI explanation'
-                  : 'AI proposal explanation'}
-              </Typography>
-              <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                {item.model.explanation}
-              </Typography>
-            </Box>
-          ) : item.status === 'completed' && item.source === 'model' ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              No AI explanation was recorded for this decision.
-            </Typography>
-          ) : null}
-          {item.source === 'baseline' && item.status === 'completed' ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {modelFallbackExplanation(item)}
-            </Typography>
-          ) : null}
-          {item.status === 'pending' ? (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Evaluation is not complete; this is a provisional choice.
-            </Typography>
-          ) : null}
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Proposed channel: {channelName(candidate.proposedChannel)}.
-          </Typography>
-        </Box>
-        <Box
-          sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 2, minWidth: 0 }}
         >
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            Was it sent?
+          <Close />
+        </IconButton>
+      </Stack>
+      <Box>
+        <Typography variant="h6" fontWeight={700}>
+          {decisionTitle(item)}
+        </Typography>
+        {candidate.proposedChannel !== 'none' ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Suggested channel: {channelName(candidate.proposedChannel)}
           </Typography>
-          {item.deliveries === undefined ? (
-            <>
-              <Chip
-                size="small"
-                label="Sending status unavailable"
-                variant="outlined"
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                This history response does not include delivery records. A
-                proposed channel is not proof of sending.
-              </Typography>
-            </>
-          ) : item.deliveries.length ? (
-            <Stack spacing={1.5}>
-              {item.deliveries.map((delivery) => {
-                const result = deliveryDescription(delivery);
-                return (
-                  <Box key={delivery.id}>
-                    <Chip
-                      size="small"
-                      label={result.title}
-                      color={result.color}
-                      variant="outlined"
-                    />
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.75 }}
-                    >
-                      {channelName(delivery.channel)} · {result.detail}
-                    </Typography>
-                  </Box>
-                );
-              })}
-            </Stack>
-          ) : (
-            <>
-              <Chip size="small" label="No sending record" variant="outlined" />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                No live delivery is linked to this decision. The recommendation
-                alone does not confirm contact.
-              </Typography>
-            </>
-          )}
+        ) : null}
+      </Box>
+      {item.status === 'pending' ? (
+        <Alert severity="info">
+          Evaluation in progress. This decision is provisional.
+        </Alert>
+      ) : null}
+      <Box>
+        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.75 }}>
+          Why
+        </Typography>
+        <Typography variant="body2">{reasonText(item)}</Typography>
+        {item.status === 'completed' &&
+        item.source === 'model' &&
+        item.model.explanation ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            {item.model.explanation}
+          </Typography>
+        ) : null}
+      </Box>
+      {candidate.copy ? (
+        <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Suggested message
+          </Typography>
+          <Typography fontWeight={600} sx={{ mt: 0.75 }}>
+            {candidate.copy.title}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+            {candidate.copy.body}
+          </Typography>
         </Box>
-      </Box>
-      <Box
-        sx={{
-          mt: 2,
-          p: 2,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 2,
-          minWidth: 0,
-        }}
-      >
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-          Proposed message
-        </Typography>
-        {candidate.copy ? (
-          <>
-            <Typography fontWeight={600} sx={{ overflowWrap: 'anywhere' }}>
-              {candidate.copy.title}
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                mt: 1,
-                whiteSpace: 'pre-wrap',
-                overflowWrap: 'anywhere',
-                maxHeight: 240,
-                overflowY: 'auto',
-              }}
-            >
-              {candidate.copy.body}
-            </Typography>
-          </>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            No message proposed.
-          </Typography>
-        )}
-      </Box>
-      <Box
-        component="details"
-        sx={{
-          mt: 2,
-          p: 1.5,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: '8px',
-          '& summary': { cursor: 'pointer' },
-        }}
-      >
-        <Typography component="summary" variant="body2" color="primary.main">
-          Technical details
-        </Typography>
-        <Typography variant="body2" sx={{ mt: 1.5 }}>
-          Model: {item.model.model} · {label(item.model.status)} ·{' '}
-          {item.model.latencyMs} ms.
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Tokens: {item.model.inputTokens ?? 'unknown'} input /{' '}
-          {item.model.outputTokens ?? 'unknown'} output.
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Saved reason code: {item.selection.reasonCode}. Validation:{' '}
-          {item.validator.accepted
-            ? 'accepted'
-            : item.validator.reasons.map(label).join(', ')}
-          .
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Recorded channel: {label(item.selection.channel)} · disposition:{' '}
-          {label(candidate.disposition)}. Evaluation mode: {item.mode}; the read
-          API does not execute actions.
+      ) : null}
+      <Divider />
+      <Box>
+        <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
+          Sending outcome
         </Typography>
         {item.deliveries?.length ? (
-          <Box
-            component="pre"
-            sx={{ fontSize: 12, overflowX: 'auto', maxHeight: 240, mt: 1.5 }}
-          >
-            {JSON.stringify(item.deliveries, null, 2)}
-          </Box>
-        ) : null}
-        <TableContainer sx={{ mt: 1 }}>
-          <Table
-            size="small"
-            aria-label="Saved decision evidence"
-            sx={{
-              tableLayout: 'fixed',
-              '& td': {
-                overflowWrap: 'anywhere',
-                verticalAlign: 'top',
-                fontSize: 12,
-                py: 1,
-              },
-            }}
-          >
-            <TableBody>
-              {[
-                ['Decision', `${item.id} · trigger: ${item.triggerKey}`],
-                [
-                  'Pinned snapshot',
-                  `${item.snapshotId} · facts as of ${stamp(item.input.snapshot.asOf)} · ${item.input.snapshot.featureVersion} · schema ${item.input.snapshot.schemaVersion}`,
-                ],
-                [
-                  'Decision window',
-                  `${window.days} days, ${stamp(window.from)} — ${stamp(window.to)} (exclusive)`,
-                ],
-                [
-                  'Current owner checks',
-                  `${stamp(item.input.current.capturedAt)} · access ${item.input.current.access.authorization} · pending checkout ${String(item.input.current.pendingCommerce)} · app-active evidence ${item.input.current.activeInApp === null ? 'unknown' : String(item.input.current.activeInApp)}`,
-                ],
-                [
-                  'Existing email preference evidence',
-                  `${item.input.current.preferences.effectivePredictions}; revision ${item.input.current.preferences.revision}. This does not enable a new channel.`,
-                ],
-                [
-                  'Opportunity',
-                  `${candidate.opportunityId} · material ${item.selection.materialVersion} · template ${item.selection.templateId} · locale ${item.selection.locale}`,
-                ],
-                [
-                  'Evaluation window',
-                  `${stamp(item.selection.dispatchAt)} — ${stamp(item.selection.expiresAt)}. This is decision validity, not a new News expiry.`,
-                ],
-                ['Destination reference', candidate.destination ?? 'none'],
-                [
-                  'Versions',
-                  Object.entries(item.input.versions)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(' · '),
-                ],
-                [
-                  'Provider response',
-                  `${item.model.responseId ?? 'none'} · store=false · ${label(item.model.retention)}`,
-                ],
-                [
-                  'Rule comparison',
-                  `${item.baseline.candidateId} · ${label(item.baseline.reasonCode)}. Same candidate/template/window contract as the model.`,
-                ],
-                [
-                  'Exclusions',
-                  item.input.exclusions.map(label).join(' · ') ||
-                    'none recorded',
-                ],
-              ].map(([name, value]) => (
-                <TableRow key={name}>
-                  <TableCell
-                    sx={{
-                      width: { xs: '38%', md: '30%' },
-                      color: 'text.secondary',
-                    }}
+          <Stack spacing={2}>
+            {item.deliveries.map((delivery) => {
+              const result = deliveryDescription(delivery);
+              return (
+                <Box key={delivery.id}>
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={result.title}
+                    color={result.color}
+                  />
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {channelName(delivery.channel)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
                   >
-                    {name}
-                  </TableCell>
-                  <TableCell>{value}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <Button
-          variant="outlined"
-          size="small"
-          disabled={busy || item.status === 'pending'}
-          onClick={onReplay}
-          sx={{ mt: 1 }}
-        >
-          Replay frozen validation
-        </Button>
+                    {result.detail}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Stack>
+        ) : (
+          <>
+            <OutcomeChips item={item} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {item.deliveries === undefined
+                ? 'Sending information is unavailable for this decision.'
+                : 'No sending record is linked to this decision.'}{' '}
+              A suggestion does not confirm that a message was sent.
+            </Typography>
+          </>
+        )}
       </Box>
-    </Box>
+    </Stack>
   );
 }
 
@@ -576,10 +622,24 @@ function reasonText(item: PortraitShadowDecision) {
     if (item.validator.reasons.some((reason) => reason.startsWith('news_'))) {
       return 'The proposed News item changed or became unavailable before the decision was saved.';
     }
-    if (item.selection.reasonCode === 'model_silence') {
-      return 'The fallback rules selected no contact.';
-    }
   }
+  const primary = item.input.diagnostics?.primary;
+  if (primary && primary !== 'ai') {
+    return {
+      source_unavailable: 'Available content could not be checked at the time.',
+      no_content: 'No suitable content was available.',
+      scenario_disabled:
+        'Suitable content was available, but this message type was disabled in settings.',
+      no_channel:
+        'Suitable content was available, but no approved contact channel was ready.',
+      policy_exclusion: 'Contact rules excluded the available suggestions.',
+    }[primary];
+  }
+  if (
+    item.source === 'baseline' &&
+    item.selection.reasonCode === 'model_silence'
+  )
+    return 'The contact rules selected no message.';
   const code = item.selection.reasonCode;
   return (
     (
@@ -588,8 +648,7 @@ function reasonText(item: PortraitShadowDecision) {
         owned_value: 'The user already has access to this content or feature.',
         premium_intent:
           'Recorded product activity indicates interest in premium content.',
-        policy_exclusion:
-          'The saved choice was marked as a policy exclusion; this label alone does not identify a blocking rule.',
+        policy_exclusion: 'Contact rules excluded the available suggestions.',
         no_opportunity: 'No eligible recommendation was available at the time.',
         stale_snapshot:
           'The saved portrait was too old for a new recommendation.',
@@ -599,8 +658,7 @@ function reasonText(item: PortraitShadowDecision) {
         already_consumed: 'The relevant content had already been consumed.',
         model_silence: 'The AI selected no contact.',
       } as Record<string, string>
-    )[code] ??
-    'No plain-language explanation is available for this saved reason. The original code is in Technical details.'
+    )[code] ?? 'A detailed reason was not recorded for this decision.'
   );
 }
 function channelName(channel: string) {
@@ -615,31 +673,15 @@ function channelName(channel: string) {
     )[channel] ?? label(channel)
   );
 }
-function modelFallbackExplanation(item: PortraitShadowDecision): string {
-  const reasons: Record<string, string> = {
-    user_ai_quota_exhausted: 'The user AI quota was reached (rolling 24 hours).',
-    daily_ai_quota_exhausted: 'The daily AI quota was reached (resets at 00:00 UTC).',
-    ai_quota_exhausted: 'An AI quota was reached; this historical record does not distinguish the user and daily limits.',
-    request_budget_exceeded: 'The AI request exceeded its size limit.',
-    decision_unavailable: 'The decision was no longer eligible for an AI call.',
-  };
-  return reasons[item.model.skipReason ?? ''] ?? (item.model.status === 'not_requested'
-    ? 'AI was not called; the saved choice follows rules.'
-    : 'AI did not return a usable selection; the saved choice follows rules.');
-}
-
 function deliveryFailureExplanation(reason?: string | null): string | null {
   if (!reason) return null;
-  if (reason.startsWith('account_policy_unavailable:')) {
-    const [, stage, code] = reason.split(':');
-    const check = stage === 'before_submit' ? 'before-send validation' : 'account admission';
-    const cause = /^db_[0-9A-Z]{5}$/.test(code ?? '') ? `database error ${code.slice(3)}` : label(code ?? 'unexpected_error');
-    return `Push policy check failed during ${check} (${cause}).`;
-  }
-  if (reason === 'account_policy_unavailable') return 'The push policy could not be checked; the original cause was not recorded.';
-  if (reason === 'invalid_fcm_token') return 'Firebase rejected the registration token.';
-  if (reason === 'approved_dispatch_window_after_expiry') return 'The next permitted send time was after the message expired.';
-  return `Reason: ${label(reason)}.`;
+  if (reason.startsWith('account_policy_unavailable'))
+    return 'The sending rules could not be checked.';
+  if (reason === 'invalid_fcm_token')
+    return 'This device could no longer receive push notifications.';
+  if (reason === 'approved_dispatch_window_after_expiry')
+    return 'The next permitted send time was after the message expired.';
+  return 'The sending attempt could not be completed. A detailed explanation is unavailable.';
 }
 
 function deliveryDescription(d: PortraitDecisionDelivery): {
@@ -687,13 +729,17 @@ function deliveryDescription(d: PortraitDecisionDelivery): {
   if (d.status === 'failed' || d.emailSubmissionState === 'permanent_failure')
     return {
       title: 'Send failed',
-      detail: deliveryFailureExplanation(d.failureReason) ?? 'The delivery record reports a failed attempt.',
+      detail:
+        deliveryFailureExplanation(d.failureReason) ??
+        'The delivery record reports a failed attempt.',
       color: 'error',
     };
   if (d.status === 'skipped')
     return {
       title: 'Not sent — skipped',
-      detail: deliveryFailureExplanation(d.failureReason) ?? 'The delivery was skipped by the sending rules.',
+      detail:
+        deliveryFailureExplanation(d.failureReason) ??
+        'The delivery was skipped by the sending rules.',
       color: 'default',
     };
   if (d.status === 'available')
@@ -717,7 +763,7 @@ function deliveryDescription(d: PortraitDecisionDelivery): {
   if (d.status === 'pending')
     return {
       title: 'Queued',
-      detail: 'Waiting for the delivery worker.',
+      detail: 'Waiting to be sent.',
       color: 'default',
     };
   return {
@@ -726,76 +772,4 @@ function deliveryDescription(d: PortraitDecisionDelivery): {
       'A delivery attempt exists, but there is no confirmed sending outcome.',
     color: 'warning',
   };
-}
-
-/** Reads only frozen filter diagnostics; historical rows never acquire inferred device facts. */
-function DecisionReadiness({ item }: { item: PortraitShadowDecision }) {
-  const diagnostics = item.input.diagnostics;
-  if (!diagnostics)
-    return (
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-        Detailed readiness reasons were not saved for this historical decision.
-      </Typography>
-    );
-  const summary = {
-    source_unavailable: 'Current content facts could not be checked.',
-    no_content: 'No suitable content scenario was available.',
-    scenario_disabled: 'Suitable content was available, but its message scenario was disabled.',
-    no_channel:
-      'Suitable content was available, but no approved channel was ready.',
-    policy_exclusion:
-      'A channel was ready, but contact policy excluded the candidates.',
-    ai: 'Candidates passed readiness checks; see the saved AI result below.',
-  }[diagnostics.primary];
-  const current = item.input.current;
-  const local = current.localTime;
-  return (
-    <Stack spacing={1} sx={{ mt: 1.5 }}>
-      <Typography variant="body2">{summary}</Typography>
-      {diagnostics.noContentReasons?.map(reason => <Typography key={reason} variant="body2" color="text.secondary">
-        {({ news_catalog_empty: 'The current news catalog is empty.', news_no_interest_match: 'News did not match recorded teams or leagues.', matching_news_already_read: 'Matching news was already read.', sparse_history: 'Recorded activity coverage is insufficient.', stale_snapshot: 'The saved portrait is too old for a new action.' } as Record<string,string>)[reason] ?? label(reason)}
-      </Typography>)}
-      {local ? (
-        <Typography variant="body2" color="text.secondary">
-          Local time: {local.value ?? 'unknown'}
-          {local.localHour == null ? '' : ` · hour ${local.localHour}`} · source{' '}
-          {label(local.source)} · observed{' '}
-          {local.observedAt ? stamp(local.observedAt) : 'not recorded'}.
-        </Typography>
-      ) : null}
-      {current.channelReadiness ? (
-        <Typography variant="body2" color="text.secondary">
-          Push: {label(current.channelReadiness.push)}. In-app:{' '}
-          {label(current.channelReadiness.inApp)}.
-          {current.receiverFailure
-            ? ` Receiver: ${current.receiverFailure === 'stale' ? 'FCM token previously marked invalid' : label(current.receiverFailure)}.`
-            : ''}
-        </Typography>
-      ) : null}
-      {current.receiverTokenRejectedAt ? (
-        <Typography variant="body2" color="text.secondary">
-          Token rejection recorded {stamp(current.receiverTokenRejectedAt)}.
-          {current.receiverTokenReportedAt ? ` Token last reported ${stamp(current.receiverTokenReportedAt)}.` : ''}
-        </Typography>
-      ) : null}
-      {diagnostics.sources ? Object.entries(diagnostics.sources).map(([source, facts]) => <Typography key={source} variant="body2" color="text.secondary">
-        {label(source)} source: {facts.checked ? 'checked' : 'unavailable'} · {facts.supplied} supplied · {facts.eligible} eligible{facts.exclusions.length ? ` · ${facts.exclusions.map(label).join(', ')}` : ''}.
-      </Typography>) : null}
-      {Object.entries(diagnostics.scenarios).map(([id, counts]) => (
-        <Typography
-          key={id}
-          variant="body2"
-          color="text.secondary"
-          sx={{ overflowWrap: 'anywhere' }}
-        >
-          {label(id.replace(/\.v[0-9]+$/, ''))}:{' '}
-          {counts.disabled ? 'disabled in settings · ' : ''}
-          {counts.checked
-            ? `${counts.supplied} supplied, ${counts.relevant} relevant, ${counts.consumed} consumed, ${counts.channelEligible} with channel, ${counts.policyEligible} after policy`
-            : 'not checked'}
-          .
-        </Typography>
-      ))}
-    </Stack>
-  );
 }
