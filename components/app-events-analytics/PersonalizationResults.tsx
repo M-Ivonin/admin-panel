@@ -433,7 +433,7 @@ function Report({ report: r }: { report: Results }) {
             means provider acceptance for push/email or an in-app display.
             Opened counts each message once. Not sent means failed or skipped
             without acceptance/display; pending messages remain in diagnostics.
-            Statuses may overlap over a message's lifetime.
+            Statuses may overlap over a message’s lifetime.
           </Info>
         </Stack>
         {messages.map((m) => (
