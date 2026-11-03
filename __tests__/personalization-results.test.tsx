@@ -85,6 +85,11 @@ it('shows unique account outcomes and hides diagnostics and explanations until r
       '1'
     )
   ).toBeVisible();
+  expect(
+    within(screen.getByRole('region', { name: 'Message activity' })).getByText(
+      '3'
+    )
+  ).toBeVisible();
   expect(screen.queryByLabelText('Experiment')).not.toBeInTheDocument();
   expect(screen.queryByText('Assigned accounts')).not.toBeInTheDocument();
   screen

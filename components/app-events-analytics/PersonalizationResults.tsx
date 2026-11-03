@@ -622,7 +622,7 @@ function Report({ report: r }: { report: Results }) {
               </Box>
             ))}
             <Typography variant="body2">
-              Actions and purchases are observed after each account's first
+              Actions and purchases are observed after each account’s first
               contact in this report and before the period ends. These outcomes
               are independent, not a strict funnel or proof of causal impact.
               Only recorded activity is counted. Later source updates may change

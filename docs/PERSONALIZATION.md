@@ -39,13 +39,20 @@ there is no new cron, AI call, enrollment, or send. A failed refresh retains the
 last successful values with an explicit stale-data warning. Changing period
 clears the previous report and cancels its pending request.
 
-Overview totals include every evaluated account in the period. Accounts shows the
-100 most recently evaluated accounts with links to their saved portraits.
-Provider acceptance/in-app display, openings, and selected contacts are distinct.
-Useful actions and verified purchases are observed after each account's first
-contact in this report, counted once per source record. They are not attributed
-conversions or uplift. Purchase amounts stay in their native currencies, before
-fees/refunds; missing amount/currency facts are explicitly incomplete.
+The default view follows the approved compact Results mockup: four account cards,
+one Messages strip, and closed How personalization works / Accounts / Metric
+definitions disclosures. Card values are unique contacted, opened, useful-action
+and purchasing accounts. Repeated messages/events/purchases from one account do
+not increase a card. Message totals remain separate and count delivery records.
+Not sent counts failed/skipped messages without acceptance/display; pending work
+remains visible in diagnostics. Provider acceptance is not device delivery.
+
+All definitions, observation/causality caveats, financial amounts and technical
+counters are behind keyboard/touch-operable information buttons or disclosures.
+The four cards are independent outcomes, not a sequential or causal funnel.
+Accounts still shows the latest 100 evaluated accounts, while card totals include
+all evaluated accounts. Fresh visual proof and the approved reference are in
+[the compact Results evidence](proof/personalization-results-design/UI-EVIDENCE.md).
 
 ## Personalized contact frequency
 
