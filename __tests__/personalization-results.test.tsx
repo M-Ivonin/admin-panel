@@ -1,0 +1,170 @@
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { PersonalizationResults } from '@/components/app-events-analytics/PersonalizationResults';
+import {
+  getPersonalizationResults,
+  type PersonalizationResults as Results,
+} from '@/lib/api/personalization-results';
+
+jest.mock('@/lib/api/personalization-results', () => ({
+  getPersonalizationResults: jest.fn(),
+}));
+const read = jest.mocked(getPersonalizationResults);
+const report: Results = {
+  mode: 'permanent',
+  days: 7,
+  from: '2026-10-27T11:00:00Z',
+  to: '2026-11-03T11:00:00Z',
+  accountLimit: 100,
+  summary: {
+    accounts: 2444,
+    decisions: 21400,
+    aiDecisions: 20,
+    selectedContacts: 18,
+    deliveries: 12,
+    acceptedOrShown: 10,
+    opened: 3,
+    usefulActions: 7,
+    purchases: 2,
+    contactedAccounts: 9,
+    purchasingAccounts: 1,
+    lastDecisionAt: '2026-11-03T10:59:00Z',
+  },
+  accounts: [
+    {
+      userId: 'account-a',
+      accountLabel: 'Alex',
+      lastDecisionAt: '2026-11-03T10:59:00Z',
+      decisions: 10,
+      aiDecisions: 1,
+      selectedContacts: 1,
+      deliveries: 1,
+      acceptedOrShown: 1,
+      opened: 1,
+      usefulActions: 7,
+      purchases: 2,
+    },
+  ],
+  grossPurchases: [{ currency: 'USD', amount: '10' }],
+  missingPurchaseAmounts: 0,
+  decisionReasons: [{ reason: 'no_eligible_action', count: 21000 }],
+  deliveryStatuses: [{ status: 'sent', count: 10 }],
+};
+beforeEach(() => {
+  jest.clearAllMocks();
+  read.mockResolvedValue(report);
+});
+
+it('shows permanent outcomes without an experiment selector or old cohort metrics', async () => {
+  render(<PersonalizationResults />);
+  expect(await screen.findByText('2,444')).toBeInTheDocument();
+  expect(screen.getByText('Permanent personalization')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Experiment')).not.toBeInTheDocument();
+  expect(screen.queryByText('Assigned accounts')).not.toBeInTheDocument();
+  expect(
+    screen.queryByText('Estimated 60-day revenue')
+  ).not.toBeInTheDocument();
+  expect(screen.getByText('No eligible action: 21000')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Alex' })).toHaveAttribute(
+    'href',
+    '/dashboard/users/account-a/portrait'
+  );
+  expect(
+    screen.getByText(/Overview totals include all 2444 accounts/)
+  ).toBeInTheDocument();
+  expect(screen.getByText(/10 USD/)).toBeInTheDocument();
+});
+
+it('loads the chosen period and refreshes from current sources', async () => {
+  render(<PersonalizationResults />);
+  await screen.findByText('2,444');
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Period' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Last 24 hours' }));
+  await waitFor(() =>
+    expect(read).toHaveBeenLastCalledWith(1, expect.any(AbortSignal))
+  );
+  await screen.findByText('2,444');
+  read.mockResolvedValue({
+    ...report,
+    summary: { ...report.summary, accounts: 2500 },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+  expect(await screen.findByText('2,500')).toBeInTheDocument();
+});
+
+it('refreshes every minute and releases the timer and pending request on unmount', async () => {
+  jest.useFakeTimers();
+  try {
+    const view = render(<PersonalizationResults />);
+    await act(async () => {});
+    expect(read).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      jest.advanceTimersByTime(60000);
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    const signal = read.mock.calls[1][1]!;
+    view.unmount();
+    expect(signal.aborted).toBe(true);
+    await act(async () => {
+      jest.advanceTimersByTime(60000);
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it('does not poll when the document is hidden', async () => {
+  jest.useFakeTimers();
+  const visibility = jest.spyOn(document, 'visibilityState', 'get');
+  try {
+    const view = render(<PersonalizationResults />);
+    await act(async () => {});
+    visibility.mockReturnValue('hidden');
+    await act(async () => {
+      jest.advanceTimersByTime(120000);
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    visibility.mockReturnValue('visible');
+    await act(async () => {
+      jest.advanceTimersByTime(60000);
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    view.unmount();
+  } finally {
+    visibility.mockRestore();
+    jest.useRealTimers();
+  }
+});
+
+it('keeps last successful results with an explicit stale warning when refresh fails', async () => {
+  render(<PersonalizationResults />);
+  await screen.findByText('2,444');
+  read.mockRejectedValue(new Error('Service unavailable'));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'last successful update'
+  );
+  expect(screen.getByText('2,444')).toBeInTheDocument();
+});
+
+it('shows an honest empty state and missing financial data', async () => {
+  read.mockResolvedValue({
+    ...report,
+    summary: { ...report.summary, accounts: 0 },
+    accounts: [],
+    missingPurchaseAmounts: 2,
+  });
+  render(<PersonalizationResults />);
+  expect(
+    await screen.findByText(
+      'No permanent personalization decisions recorded in this period.'
+    )
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Totals are incomplete/)).toBeInTheDocument();
+});

@@ -30,8 +30,8 @@ jest.mock('@/lib/hooks/useAuth', () => ({
 jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('@/components/app-events-analytics/UserExperimentScorecard', () => ({
-  UserExperimentScorecard: () => <div>Saved report is readable</div>,
+jest.mock('@/components/app-events-analytics/PersonalizationResults', () => ({
+  PersonalizationResults: () => <div>Current results are readable</div>,
 }));
 jest.mock('@/lib/api/user-portrait', () => ({
   getUserPortrait: jest.fn(),
@@ -77,7 +77,7 @@ it('provides one selected sidebar entry for both account and results routes', ()
 
 it('shows global Results with only Users, Results and Settings and one header back link', () => {
   render(<UserExperimentsPage />);
-  expect(screen.getByText('Saved report is readable')).toBeInTheDocument();
+  expect(screen.getByText('Current results are readable')).toBeInTheDocument();
   expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Results' })).toHaveAttribute(
     'aria-selected',
@@ -172,7 +172,7 @@ it('opens account history even while the portrait has not finished loading', asy
   jest.mocked(getUserPortrait).mockReturnValue(new Promise(() => {}));
   render(<UserPortrait userId="account-a" />);
   expect(
-    await screen.findByText(/No saved shadow decisions yet/)
+    await screen.findByText(/No saved decisions yet/)
   ).toBeInTheDocument();
   screen
     .queryAllByText('Loading saved portrait…')
@@ -225,16 +225,14 @@ it('keeps history usable when identity details fail, with the canonical account 
   pathname = '/dashboard/users/account-a/portrait';
   query = new URLSearchParams('view=decisions');
   jest.mocked(getUser).mockRejectedValue(new Error('Identity read failed'));
-  jest
-    .mocked(getUserPortrait)
-    .mockResolvedValue({
-      status: 'not_ready',
-      userId: 'account-a',
-      snapshot: null,
-    });
+  jest.mocked(getUserPortrait).mockResolvedValue({
+    status: 'not_ready',
+    userId: 'account-a',
+    snapshot: null,
+  });
   render(<UserPortrait userId="account-a" />);
   expect(
-    await screen.findByText(/No saved shadow decisions yet/)
+    await screen.findByText(/No saved decisions yet/)
   ).toBeInTheDocument();
   expect(
     await screen.findByText('User details could not be loaded.')
@@ -256,13 +254,11 @@ it('does not label a new account with a late identity response from the previous
       name_app: 'Jordan Lee',
       email: 'jordan@example.invalid',
     } as Awaited<ReturnType<typeof getUser>>);
-  jest
-    .mocked(getUserPortrait)
-    .mockResolvedValue({
-      status: 'not_ready',
-      userId: 'account-a',
-      snapshot: null,
-    });
+  jest.mocked(getUserPortrait).mockResolvedValue({
+    status: 'not_ready',
+    userId: 'account-a',
+    snapshot: null,
+  });
   const { rerender } = render(<UserPortrait userId="account-a" />);
   rerender(<UserPortrait userId="account-b" />);
   expect(

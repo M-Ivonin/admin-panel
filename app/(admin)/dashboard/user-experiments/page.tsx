@@ -2,7 +2,7 @@
 import { Stack, Typography } from '@mui/material';
 import { PersonalizationLayout } from '@/components/admin/PersonalizationLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { UserExperimentScorecard } from '@/components/app-events-analytics/UserExperimentScorecard';
+import { PersonalizationResults } from '@/components/app-events-analytics/PersonalizationResults';
 
 export default function UserExperimentsPage() {
   return (
@@ -14,10 +14,10 @@ export default function UserExperimentsPage() {
               Results
             </Typography>
             <Typography color="text.secondary">
-              Observed outcomes after personalization
+              Current permanent personalization activity and observed outcomes
             </Typography>
           </div>
-          <UserExperimentScorecard />
+          <PersonalizationResults />
         </Stack>
       </PersonalizationLayout>
     </ProtectedRoute>

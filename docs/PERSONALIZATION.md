@@ -23,7 +23,29 @@ Opening, refreshing or navigating the section does not run an importer/model, en
 
 The approved [navigation v2 concepts](plans/2026-10-29-personalization-navigation-v2/README.md) define the separate directory/detail hierarchy, superseding the earlier shared Users/portrait tab. The owner explicitly excluded the redesigned Users table: preserve the current committed table instead. Fresh proof is recorded in [UI-EVIDENCE.md](plans/2026-10-29-personalization-navigation-v2/UI-EVIDENCE.md). Earlier [concepts](plans/2026-10-29-personalization-center/DESIGN.md) remain historical references for the unchanged portrait/report content.
 
-Relevant tests are `personalization-navigation`, `users-page`, `use-user-portrait`, `portrait-decision-history`, `portrait-storefront-evidence` and `user-experiment-scorecard`, plus the existing admin navigation/auth/Revenue Ledger suites. Use `npm run verify:stage` and applicable route smoke profiles, then fresh desktop/narrow browser captures. UI fixtures prove the rendered application and interactions; they do not establish live backend authorization, current pilot readiness or experimental results.
+Relevant tests are `personalization-navigation`, `personalization-results`, `users-page`, `use-user-portrait`, `portrait-decision-history` and `portrait-storefront-evidence`, plus the existing admin navigation/auth/Revenue Ledger suites. Use the repository validation commands and applicable route smoke profiles, then fresh desktop/narrow browser captures. UI fixtures prove the rendered application and interactions; they do not establish live backend authorization or delivery success.
+
+## Current results
+
+Results reads `GET /app-events/admin/engagement/personalization/results?days=7`
+with the existing admin authentication. Periods are 1, 7 (default), and 30 rolling
+days. The page displays permanent SirBro decisions and their real personalized
+deliveries; historical experiments are not listed or requested. Their stored
+records and backend experiment endpoints remain intact.
+
+Manual refresh and a 60-second client timer reread the report. The timer requests
+data only while the document is visible and is removed when leaving the page;
+there is no new cron, AI call, enrollment, or send. A failed refresh retains the
+last successful values with an explicit stale-data warning. Changing period
+clears the previous report and cancels its pending request.
+
+Overview totals include every evaluated account in the period. Accounts shows the
+100 most recently evaluated accounts with links to their saved portraits.
+Provider acceptance/in-app display, openings, and selected contacts are distinct.
+Useful actions and verified purchases are observed after each account's first
+contact in this report, counted once per source record. They are not attributed
+conversions or uplift. Purchase amounts stay in their native currencies, before
+fees/refunds; missing amount/currency facts are explicitly incomplete.
 
 ## Personalized contact frequency
 
