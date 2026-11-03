@@ -18,21 +18,15 @@ const stamp = (value: string | null) =>
 const surface = { p: { xs: 2, md: 2.5 }, minWidth: 0 };
 
 /** The existing saved projection, composed without recalculating its metrics. */
-export function PortraitOverview({
-  data,
-  historical,
-}: {
-  data: ReadyPortrait;
-  historical: boolean;
-}) {
+export function PortraitOverview({ data }: { data: ReadyPortrait }) {
   const { snapshot, selectedWindow: window } = data;
   const current = snapshot.current;
-  const checkedAt = historical ? null : data.freshness.lastCheckedAt;
+  const checkedAt = data.freshness.lastCheckedAt;
   const sourcesChecked =
     Boolean(checkedAt) && data.freshness.sourcesStale === false;
   const captureLabel = sourcesChecked
-    ? 'Older capture · sources checked'
-    : 'Stale snapshot';
+    ? 'Facts unchanged · sources checked'
+    : 'Source check overdue';
   return (
     <Stack spacing={2}>
       <Box
@@ -58,7 +52,7 @@ export function PortraitOverview({
             sx={{ flexShrink: 0, display: { xs: 'none', md: 'flex' } }}
           >
             <Chip
-              label={historical ? 'Historical snapshot' : 'Latest snapshot'}
+              label="Current portrait"
               size="small"
               color="primary"
               variant="outlined"
@@ -82,7 +76,7 @@ export function PortraitOverview({
             <Typography variant="body2" fontWeight={600}>
               Facts as of {stamp(snapshot.asOf)}
             </Typography>
-            {!historical && checkedAt ? (
+            {checkedAt ? (
               <Typography
                 variant="caption"
                 color="text.secondary"
@@ -106,7 +100,7 @@ export function PortraitOverview({
                 display="block"
                 sx={{ overflowWrap: 'anywhere' }}
               >
-                Snapshot reference:{' '}
+                Portrait reference:{' '}
                 <span data-testid="snapshot-reference">{snapshot.id}</span>
               </Typography>
             </Box>
@@ -132,10 +126,10 @@ export function PortraitOverview({
             color="text.secondary"
             sx={{ cursor: 'pointer' }}
           >
-            Snapshot details
+            Portrait details
           </Typography>
           <Typography variant="caption" display="block" color="text.secondary">
-            Generated {stamp(snapshot.generatedAt)}. Snapshot {snapshot.id}.
+            Generated {stamp(snapshot.generatedAt)}. Portrait {snapshot.id}.
             Source timezone: {snapshot.timezone.value} ·{' '}
             {snapshot.timezone.certainty}.{snapshot.featureVersion} · schema{' '}
             {snapshot.schemaVersion}. Selected period: {stamp(window.from)} —{' '}
@@ -394,7 +388,7 @@ export function PortraitOverview({
               fontWeight={700}
               sx={{ mb: 1, display: { xs: 'none', lg: 'block' } }}
             >
-              Current state captured with this snapshot
+              State at last portrait update
             </Typography>
             {[
               [
@@ -547,7 +541,7 @@ export function PortraitOverview({
                   color="text.secondary"
                   sx={{ display: 'block', mt: 1 }}
                 >
-                  Up to 20 most active content items · snapshot history
+                  Up to 20 most active content items · recorded history
                 </Typography>
               </Box>
               <Typography

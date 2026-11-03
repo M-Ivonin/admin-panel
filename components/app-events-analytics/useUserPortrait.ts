@@ -16,14 +16,34 @@ export function useUserPortrait(
     [loading, setLoading] = useState(true),
     [error, setError] = useState<string | null>(null);
   const revision = useRef(0);
+  const currentVersion = useRef<{
+    userId: string;
+    days: number;
+    asOf: string;
+  } | null>(null);
   const refresh = useCallback(async () => {
     const id = ++revision.current;
     setData(null);
     setError(null);
     setLoading(true);
     try {
-      const value = await getUserPortrait(userId, { days, snapshotId, offset });
-      if (id === revision.current) setData(value);
+      const expectedAsOf =
+        offset > 0 &&
+        currentVersion.current?.userId === userId &&
+        currentVersion.current.days === days
+          ? currentVersion.current.asOf
+          : undefined;
+      const value = await getUserPortrait(userId, {
+        days,
+        snapshotId,
+        offset,
+        ...(expectedAsOf ? { expectedAsOf } : {}),
+      });
+      if (id === revision.current) {
+        if (value.status === 'ready')
+          currentVersion.current = { userId, days, asOf: value.snapshot.asOf };
+        setData(value);
+      }
     } catch (e) {
       if (id === revision.current)
         setError(e instanceof Error ? e.message : 'Could not load portrait.');
