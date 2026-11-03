@@ -158,6 +158,8 @@ export type PortraitResponse =
         total: number;
       };
       freshness: {
+        lastCheckedAt?: string | null;
+        sourcesStale?: boolean;
         ageSeconds: number;
         stale: boolean;
         targetSeconds: number;
@@ -238,7 +240,15 @@ export interface PortraitShadowDecision {
     diagnostics?: {
       version: 1;
       noContentReasons?: string[];
-      sources?: Record<string, { checked: boolean; supplied: number; eligible: number; exclusions: string[] }>;
+      sources?: Record<
+        string,
+        {
+          checked: boolean;
+          supplied: number;
+          eligible: number;
+          exclusions: string[];
+        }
+      >;
       primary:
         | 'source_unavailable'
         | 'no_content'
