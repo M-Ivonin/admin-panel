@@ -26,6 +26,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Close, Download, Refresh, Search } from '@mui/icons-material';
+import { personalizationAnalysisExport } from '@/lib/personalization-decision-export';
 import {
   getUserPortraitDecisionHistory,
   exportUserPortraitDecisions,
@@ -57,7 +58,7 @@ const timeStamp = (text: string) =>
 
 type OutcomeFilter = 'all' | 'recorded' | 'opened' | 'errors' | 'no_record';
 
-/** Account history is read-only; full saved evidence remains available in the JSON export. */
+/** Account history is read-only; a focused analysis report is available in the JSON export. */
 export function PortraitDecisionHistory({ userId }: { userId: string }) {
   const [history, setHistory] = useState<History | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +114,10 @@ export function PortraitDecisionHistory({ userId }: { userId: string }) {
       if (data.status !== 'available' || data.userId !== userId)
         throw new Error('Export is unavailable for this account.');
       const url = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        new Blob(
+          [JSON.stringify(personalizationAnalysisExport(data), null, 2)],
+          { type: 'application/json' }
+        )
       );
       const link = document.createElement('a');
       try {

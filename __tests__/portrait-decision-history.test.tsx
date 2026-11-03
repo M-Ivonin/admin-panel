@@ -457,7 +457,30 @@ it('exports the full account history from the export route, including decisions 
     reader.onload = () => resolve(String(reader.result));
     reader.readAsText(blob!);
   });
-  expect(JSON.parse(content)).toEqual(exported);
+  const report = JSON.parse(content);
+  expect(report).toMatchObject({
+    schemaVersion: 1,
+    format: 'personalization-analysis',
+    userId: 'account-one',
+    scope: 'all_retained_decisions',
+    total: 23,
+    items: expect.arrayContaining([
+      expect.objectContaining({
+        id: 'decision-22',
+        selection: expect.objectContaining({ reasonCode: 'relevant_news' }),
+        message: {
+          title: 'Exact stored title',
+          body: 'Exact stored body, without a sales footer.',
+        },
+        deliveries: [],
+      }),
+    ]),
+  });
+  expect(report.items).toHaveLength(23);
+  expect(report.items[0]).not.toHaveProperty('input');
+  expect(report.items[0]).not.toHaveProperty('model');
+  expect(report.items[0].ai).not.toHaveProperty('responseId');
+  expect(report).not.toHaveProperty('capabilities');
   expect(click).toHaveBeenCalledTimes(1);
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:export');
   click.mockRestore();

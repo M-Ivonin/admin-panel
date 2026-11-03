@@ -23,9 +23,12 @@ failed identity read keeps the canonical ID and retry control.
 
 The visible outlined Download all decisions (JSON) button exports every retained
 decision through the existing account export endpoint, independently of table
-search and filters. Technical diagnostics, model badges, snapshot context and
-frozen replay controls are absent from this report; underlying evidence remains
-in the export. A reason summary never invents a specific contact restriction.
+search and filters. The downloaded file uses the versioned
+[analysis format](evidence/saved-decisions-export/README.md), retaining decision,
+context, eligibility, AI and actual delivery facts while omitting internal
+execution payloads and duplicate candidate messages. Technical diagnostics, model
+badges, snapshot context and frozen replay controls are absent from this report;
+original evidence remains on the server. A reason summary never invents a specific contact restriction.
 Delivery information comes only from the existing decision response: absent
 information, an empty record list, queued, provider-accepted, sent, delivered,
 shown and opened outcomes retain their distinct meanings. A suggested channel
