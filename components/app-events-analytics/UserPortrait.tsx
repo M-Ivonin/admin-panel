@@ -509,7 +509,7 @@ export function UserPortrait({ userId }: { userId: string }) {
                   ))}
                   <Typography variant="body2" color="text.secondary">
                     {ready.freshness.fallback} Freshness target:{' '}
-                    {ready.freshness.targetSeconds} seconds; measured age:{' '}
+                    {ready.freshness.targetSeconds} seconds; capture age:{' '}
                     {ready.freshness.ageSeconds} seconds. A daily export cannot
                     guarantee a live session.
                   </Typography>

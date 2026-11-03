@@ -27,6 +27,12 @@ export function PortraitOverview({
 }) {
   const { snapshot, selectedWindow: window } = data;
   const current = snapshot.current;
+  const checkedAt = historical ? null : data.freshness.lastCheckedAt;
+  const sourcesChecked =
+    Boolean(checkedAt) && data.freshness.sourcesStale === false;
+  const captureLabel = sourcesChecked
+    ? 'Older capture · sources checked'
+    : 'Stale snapshot';
   return (
     <Stack spacing={2}>
       <Box
@@ -65,9 +71,9 @@ export function PortraitOverview({
             />
             {data.freshness.stale ? (
               <Chip
-                label="Stale snapshot"
+                label={captureLabel}
                 size="small"
-                color="warning"
+                color={sourcesChecked ? 'default' : 'warning'}
                 variant="outlined"
               />
             ) : null}
@@ -76,6 +82,16 @@ export function PortraitOverview({
             <Typography variant="body2" fontWeight={600}>
               Facts as of {stamp(snapshot.asOf)}
             </Typography>
+            {!historical && checkedAt ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
+                Sources checked {stamp(checkedAt)}
+                {data.freshness.sourcesStale ? ' · Check overdue' : ''}
+              </Typography>
+            ) : null}
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
               <Typography
                 variant="caption"
@@ -105,7 +121,7 @@ export function PortraitOverview({
           </Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          {data.freshness.stale ? 'Stale snapshot · ' : ''}
+          {data.freshness.stale ? `${captureLabel} · ` : ''}
           {window.coverage.importedDays} of {window.coverage.expectedDays} dates
           have saved BigQuery imports. Unknown values are not zero.
         </Typography>
