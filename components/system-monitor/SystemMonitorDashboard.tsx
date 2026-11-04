@@ -477,13 +477,6 @@ export function SystemMonitorDashboard() {
                     Current target health is unknown.
                   </Alert>
                 )}
-                {overview.checks.find(c => c.checkId === 'backend.personalization.load') && (
-                  <PersonalizationLoadPanel
-                    check={overview.checks.find(c => c.checkId === 'backend.personalization.load')!}
-                    now={now} sourceUnavailable={offline || Boolean(sourceStale)}
-                    onSelect={(selected) => { setAspect(selected ?? 'database'); setCheckId('backend.personalization.load'); setPage(0); }}
-                  />
-                )}
                 {overview.checks.length > 0 && (
                   <MonitorCheckMap
                     checks={overview.checks}
@@ -501,6 +494,13 @@ export function SystemMonitorDashboard() {
                         setRunState(null);
                       }
                     }}
+                  />
+                )}
+                {overview.checks.find(c => c.checkId === 'backend.personalization.load') && (
+                  <PersonalizationLoadPanel
+                    check={overview.checks.find(c => c.checkId === 'backend.personalization.load')!}
+                    now={now} sourceUnavailable={offline || Boolean(sourceStale)}
+                    onSelect={(selected) => { setAspect(selected ?? 'database'); setCheckId('backend.personalization.load'); setPage(0); }}
                   />
                 )}
                 {!overview.checks.length && (

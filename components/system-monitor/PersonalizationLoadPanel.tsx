@@ -1,15 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Database, UsersRound, ArrowUpRight } from 'lucide-react';
 import {
   monitorApi,
   type MonitorCheck,
@@ -17,14 +10,25 @@ import {
 } from '@/lib/api/system-monitor';
 import {
   projectPersonalizationHealth,
-  monitorAspectNames,
   type MonitorAspect,
 } from '@/lib/system-monitor-personalization-health';
+import { LoadActivityChart } from './LoadActivityChart';
 
 const number = (value: number | null | undefined, suffix = '') =>
   value == null
     ? '—'
-    : `${value.toLocaleString('en-GB', { maximumFractionDigits: 1 })}${suffix}`;
+    : `${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })}${suffix}`;
+const time = (at: string | null | undefined) =>
+  at && Number.isFinite(Date.parse(at))
+    ? new Date(at).toLocaleString('en-GB', {
+        timeZone: 'Europe/Kyiv',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : 'Not yet observed';
+
 export function PersonalizationLoadPanel({
   check,
   now,
@@ -38,10 +42,12 @@ export function PersonalizationLoadPanel({
 }) {
   const [runs, setRuns] = useState<MonitorRun[]>([]);
   const [historyUnavailable, setHistoryUnavailable] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const runId = check.lastRun?.runId;
   useEffect(() => {
     let active = true;
     const end = Date.now();
+    setHistoryLoading(true);
     monitorApi
       .history({
         checkId: 'backend.personalization.load',
@@ -58,6 +64,9 @@ export function PersonalizationLoadPanel({
       })
       .catch(() => {
         if (active) setHistoryUnavailable(true);
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
       });
     return () => {
       active = false;
@@ -65,30 +74,118 @@ export function PersonalizationLoadPanel({
   }, [runId]);
   const saved = check.lastRun?.personalizationLoad;
   const m = saved?.scope === 'database' ? saved : undefined;
-  const personal = m?.personalization;
-  const partial = m?.measurement === 'partial';
+  const work = m?.personalization;
   const health = projectPersonalizationHealth(check, now, sourceUnavailable);
   const current = check.enabled && !sourceUnavailable && !health.stale;
-  const header = (aspect: MonitorAspect) => {
-    const status = health[aspect];
+  const lastKnown = !current;
+  const metric = (
+    label: string,
+    value: string,
+    hint: string,
+    positive = false
+  ) => {
+    const unitMatch = value.match(/^(.*) (s\/min|\/min|s)$/);
     return (
-      <>
+      <Box key={label} sx={{ minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontSize: 11 }}
+        >
+          {label}
+        </Typography>
+        <Typography
+          aria-label={value}
+          sx={{
+            fontSize: { xs: 24, sm: 28 },
+            fontWeight: 600,
+            lineHeight: 1.3,
+            letterSpacing: '-.6px',
+            color: positive ? '#8DE0B5' : 'text.primary',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {unitMatch ? (
+            <>
+              {unitMatch[1]}
+              <Box
+                component="span"
+                sx={{ fontSize: 11, letterSpacing: 0, whiteSpace: 'nowrap' }}
+              >
+                {' '}
+                {unitMatch[2]}
+              </Box>
+            </>
+          ) : (
+            value
+          )}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: 'block', fontSize: 10 }}
+        >
+          {hint}
+        </Typography>
+      </Box>
+    );
+  };
+  const detail = (label: string, value: string) => (
+    <Stack key={label} direction="row" gap={1} justifyContent="space-between">
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="caption" sx={{ textAlign: 'right' }}>
+        {value}
+      </Typography>
+    </Stack>
+  );
+  const card = (aspect: MonitorAspect) => {
+    const personal = aspect === 'personalization';
+    const status = health[aspect];
+    const retained =
+      lastKnown ||
+      (personal
+        ? !work || ['unavailable', 'partial'].includes(work.measurement)
+        : m?.measurement === 'unavailable');
+    const Icon = personal ? UsersRound : Database;
+    return (
+      <Paper
+        component="section"
+        aria-label={personal ? 'Personalization health' : 'Database load'}
+        variant="outlined"
+        sx={{
+          minWidth: 0,
+          p: 2.5,
+          borderRadius: 1.5,
+          bgcolor: '#171C27',
+          borderColor: '#2B3241',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1.75,
+        }}
+      >
         <Stack
           direction="row"
-          justifyContent="space-between"
           alignItems="center"
+          justifyContent="space-between"
           gap={1}
-          flexWrap="wrap"
         >
-          <Box>
-            <Typography variant="h6">{monitorAspectNames[aspect]}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {aspect === 'database'
-                ? 'All SQL recorded for this database'
-                : 'Background work and profile freshness'}{' '}
-              · Checked every {check.intervalMs / 60000} minutes
+          <Stack
+            direction="row"
+            gap={1}
+            alignItems="center"
+            sx={{ minWidth: 0 }}
+          >
+            <Icon
+              size={18}
+              color={personal ? '#B5A8FF' : '#76B8FA'}
+              aria-hidden
+            />
+            <Typography variant="h6" sx={{ fontSize: 17 }}>
+              {personal ? 'Personalization' : 'Database'}
             </Typography>
-          </Box>
+          </Stack>
           <Chip
             size="small"
             label={status.label}
@@ -101,253 +198,222 @@ export function PersonalizationLoadPanel({
                     ? 'success'
                     : 'default'
             }
+            sx={{
+              height: 24,
+              maxWidth: '55%',
+              fontSize: 11,
+              bgcolor:
+                status.outcome === 'pass'
+                  ? '#20382F'
+                  : status.outcome === 'warn'
+                    ? '#3D3222'
+                    : status.outcome === 'fail'
+                      ? '#422B30'
+                      : '#29303E',
+              color:
+                status.outcome === 'pass'
+                  ? '#8DE0B5'
+                  : status.outcome === 'warn'
+                    ? '#F4CE86'
+                    : status.outcome === 'fail'
+                      ? '#FFADB6'
+                      : '#A1ACC0',
+            }}
           />
         </Stack>
-        {!current && (
-          <Alert severity="warning">
-            {!check.enabled
-              ? 'This check is disabled.'
-              : 'No fresh measurement. Values below are last known, not a current health confirmation.'}
-          </Alert>
-        )}
-        {current && status.reason && (
-          <Alert severity={status.outcome === 'fail' ? 'error' : 'warning'}>
-            {status.reason}
-          </Alert>
-        )}
-      </>
-    );
-  };
-  const points = runs
-    .filter(
-      (r) =>
-        r.personalizationLoad?.scope === 'database' &&
-        r.personalizationLoad.sqlMsPerMinute != null &&
-        r.personalizationLoad.measurement === 'complete' &&
-        r.endedAt
-    )
-    .sort((a, b) => Date.parse(a.endedAt!) - Date.parse(b.endedAt!));
-  const end = now,
-    start = end - 86400000;
-  const peak = Math.max(
-    0,
-    ...points.map((r) => r.personalizationLoad!.sqlMsPerMinute!)
-  );
-  const max = Math.max(
-    1000,
-    ...points.map((r) => r.personalizationLoad!.sqlMsPerMinute!)
-  );
-  const segments: string[] = [];
-  let previous = 0;
-  for (const r of points) {
-    const at = Date.parse(r.endedAt!);
-    if (at < start || at > end) continue;
-    const x = 12 + ((at - start) / 86400000) * 576;
-    const y = 74 - (r.personalizationLoad!.sqlMsPerMinute! / max) * 62;
-    segments.push(
-      `${at - previous > check.intervalMs * 1.5 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
-    );
-    previous = at;
-  }
-  return (
-    <Stack spacing={3}>
-      <Paper
-        component="section"
-        aria-label="Database load"
-        variant="outlined"
-        sx={{ p: { xs: 2, md: 3 } }}
-      >
-        <Stack spacing={2}>
-          {header('database')}
-          {partial && (
-            <Alert severity="warning">
-              Known work only · lower bound. Missing query statistics are not
-              treated as zero load.
-            </Alert>
-          )}
-          <Typography variant="body2" color="text.secondary">
-            {m?.measurement === 'complete'
-              ? 'Complete measurement'
-              : partial
-                ? 'Partial measurement'
-                : m?.measurement === 'warmup'
-                  ? 'First snapshot; waiting for a measurement interval'
-                  : 'Measurement completeness unavailable'}
-            {m?.intervalMinutes != null &&
-              ` · ${number(m.intervalMinutes)} minute measurement`}
-            {' · Last complete measurement: '}
-            {m?.lastCompleteAt
-              ? new Date(m.lastCompleteAt).toLocaleString('en-GB')
-              : 'None yet'}
-          </Typography>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(2, minmax(0, 1fr))',
-                md: 'repeat(4, minmax(0, 1fr))',
-              },
-              gap: 2,
-            }}
-          >
-            {[
-              [
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 1.5,
+          }}
+        >
+          {personal ? (
+            <>
+              {metric(
+                'Overdue profiles',
+                number(m?.overduePortraits),
+                m
+                  ? `${number(m.overduePortraits)} overdue / ${number(m.totalPortraits)} profiles`
+                  : 'Not measured yet',
+                current && status.outcome === 'pass'
+              )}
+              {metric(
+                'Total profiles',
+                number(m?.totalPortraits),
+                'In personalization'
+              )}
+              {metric(
+                'Last run',
+                work?.lastRunMs == null
+                  ? '—'
+                  : number(work.lastRunMs / 1000, ' s'),
+                'Run duration'
+              )}
+            </>
+          ) : (
+            <>
+              {metric(
                 'SQL execution time',
                 m?.sqlMsPerMinute == null
                   ? '—'
-                  : `${(m.sqlMsPerMinute / 1000).toLocaleString('en-GB', { maximumFractionDigits: 2 })} s/min`,
-              ],
-              ['Queries', number(m?.callsPerMinute, ' /min')],
-              ['Pages accessed', number(m?.sharedBlocksPerMinute, ' /min')],
-              ['Rows written', number(m?.writesPerMinute, ' /min')],
-            ].map(([label, value]) => (
-              <Box key={label} sx={{ minWidth: 0 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {label}
-                </Typography>
-                <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
-                  {value}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-          <Typography variant="body2">
-            {m?.loadRatio != null
-              ? `${partial ? '≥ ' : ''}${m.loadRatio.toFixed(1)}× normal database load`
-              : m?.baselineSqlMsPerMinute != null
-                ? 'Database baseline ready'
-                : `Learning normal database load: ${(m?.baselineHours ?? 0).toFixed(1)} / 24 measured hours`}
-          </Typography>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Complete database SQL measurements · Last 24 hours ·{' '}
-              {points.length
-                ? `Peak ${(peak / 1000).toFixed(2)} s/min`
-                : 'No measurements yet'}
-            </Typography>
-            {historyUnavailable ? (
-              <Alert severity="warning">Load history is unavailable.</Alert>
-            ) : points.length < 2 ? (
-              <Typography variant="body2" color="text.secondary">
-                Waiting for two comparable measurements to show the trend.
-              </Typography>
-            ) : (
-              <Box
-                component="svg"
-                role="img"
-                aria-label="Database SQL execution time over the last 24 hours"
-                viewBox="0 0 600 86"
-                sx={{
-                  width: '100%',
-                  height: 110,
-                  display: 'block',
-                  color: 'primary.main',
-                }}
-              >
-                <path d="M12,74H588" stroke="currentColor" opacity="0.2" />
-                <path
-                  d={segments.join(' ')}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-              </Box>
-            )}
-          </Box>
-          <Typography variant="caption" color="text.secondary">
-            SQL counters cover all recorded statements in the current database,
-            including monitoring. SQL time is cumulative execution time, not CPU
-            usage. Pages include cache hits. The database trend and baseline use
-            complete intervals only; partial rates are lower bounds.
-          </Typography>
-          <Button
-            size="small"
-            onClick={() => onSelect('database')}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            View shared history
-          </Button>
-        </Stack>
-      </Paper>
-      <Paper
-        component="section"
-        aria-label="Personalization health"
-        variant="outlined"
-        sx={{ p: { xs: 2, md: 3 } }}
-      >
-        <Stack spacing={2}>
-          {header('personalization')}
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            {(!current ||
-              !personal ||
-              personal.measurement === 'unavailable') &&
-              'Last known portrait freshness: '}
-            {m
-              ? `${m.overduePortraits} overdue / ${m.totalPortraits} portraits`
-              : 'Portrait freshness not measured yet'}
-            {' · Last completed run: '}
-            {personal?.lastRunAt
-              ? new Date(personal.lastRunAt).toLocaleString('en-GB')
-              : 'Not observed yet'}
-          </Typography>
-          <Box
+                  : `${m.measurement === 'partial' ? '≥ ' : ''}${number(m.sqlMsPerMinute / 1000, ' s/min')}`,
+                'Query execution'
+              )}
+              {metric(
+                'Queries',
+                number(m?.callsPerMinute, ' /min'),
+                'Database activity'
+              )}
+              {metric(
+                'Rows written',
+                number(m?.writesPerMinute, ' /min'),
+                'Database changes'
+              )}
+            </>
+          )}
+        </Box>
+        {(retained || (status.reason && status.outcome !== 'pass')) && (
+          <Typography
+            role="status"
+            variant="caption"
             sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'repeat(2, minmax(0, 1fr))',
-                md: 'repeat(4, minmax(0, 1fr))',
-              },
-              gap: 2,
+              color: retained
+                ? 'text.secondary'
+                : status.outcome === 'fail'
+                  ? 'error.light'
+                  : 'warning.light',
+              fontSize: 11,
             }}
           >
-            {[
-              ['Profiles checked', number(personal?.checked)],
-              ['Reused profiles', number(personal?.reused)],
-              ['Refresh errors', number(personal?.failed)],
-              ['Source poll fallbacks', number(personal?.sourcePollFailures)],
-            ].map(([label, value]) => (
-              <Box key={label} sx={{ minWidth: 0 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {label}
-                </Typography>
-                <Typography variant="h6" sx={{ overflowWrap: 'anywhere' }}>
-                  {value}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-          <Typography variant="body2" sx={{ mt: 2 }}>
-            {personal?.intervalMinutes != null
-              ? `Work in ${number(personal.intervalMinutes)} minutes`
-              : 'Waiting for comparable process observations'}
-            {' · Completed runs '}
-            {number(personal?.runs)}
-            {' · Last run '}
-            {number(personal?.lastRunMs, ' ms')}
-            {' · Average run '}
-            {number(personal?.averageRunMs, ' ms')}
-            {' · Average source poll '}
-            {number(personal?.averageSourcePollMs, ' ms')}
+            {status.reason && `${status.reason} `}
+            {retained && 'Last known values · awaiting a fresh check'}
           </Typography>
-
-          <Typography variant="caption" color="text.secondary">
-            Personalization run durations are wall time, not SQL time. Work
-            counters restart with the backend process. A portrait is overdue
-            after its scheduled refresh is 45 minutes late.
+        )}
+        <Box sx={{ borderTop: '1px solid', borderColor: '#2B3241', pt: 1.5 }}>
+          <LoadActivityChart
+            runs={runs}
+            now={now}
+            intervalMs={check.intervalMs}
+            personal={personal}
+            unavailable={historyUnavailable}
+            loading={historyLoading}
+            baseline={m?.baselineSqlMsPerMinute}
+          />
+        </Box>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          gap={1}
+          sx={{
+            mt: 'auto',
+            borderTop: '1px solid',
+            borderColor: '#2B3241',
+            pt: 1.25,
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontSize: 11 }}
+          >
+            {personal
+              ? `Last completed · ${time(work?.lastRunAt)}`
+              : `Updated ${time(check.lastRun?.endedAt)} · Every ${number(check.intervalMs / 60000)} min`}
           </Typography>
           <Button
             size="small"
-            onClick={() => onSelect('personalization')}
-            sx={{ alignSelf: 'flex-start' }}
+            onClick={() => onSelect(aspect)}
+            aria-label="View shared history"
+            endIcon={<ArrowUpRight size={13} />}
+            sx={{
+              color: '#BEB1FF',
+              minWidth: 0,
+              flexShrink: 0,
+              p: 0,
+              fontSize: 11,
+            }}
           >
-            View shared history
+            View history
           </Button>
         </Stack>
+        <Box
+          component="details"
+          sx={{
+            '& > summary': {
+              cursor: 'pointer',
+              fontSize: 11,
+              color: '#A1ACC0',
+              width: 'fit-content',
+            },
+          }}
+        >
+          <Box component="summary">Details</Box>
+          <Stack spacing={0.5} sx={{ pt: 1 }}>
+            {personal ? (
+              <>
+                {detail('Profiles checked', number(work?.checked))}
+                {detail('Reused profiles', number(work?.reused))}
+                {detail('Refresh errors', number(work?.failed))}
+                {detail(
+                  'Source poll fallbacks',
+                  number(work?.sourcePollFailures)
+                )}
+                {detail('Completed runs', number(work?.runs))}
+                {detail('Average run', number(work?.averageRunMs, ' ms'))}
+                {detail(
+                  'Average source poll',
+                  number(work?.averageSourcePollMs, ' ms')
+                )}
+              </>
+            ) : (
+              <>
+                {detail(
+                  'Pages accessed',
+                  number(m?.sharedBlocksPerMinute, ' /min')
+                )}
+                {detail(
+                  'Measurement interval',
+                  m?.intervalMinutes == null
+                    ? 'Not yet available'
+                    : `${number(m.intervalMinutes)} minutes`
+                )}
+                {detail('Last complete measurement', time(m?.lastCompleteAt))}
+                {detail(
+                  'Usual activity',
+                  m?.loadRatio != null
+                    ? `${m.measurement === 'partial' ? '≥ ' : ''}${m.loadRatio.toFixed(1)}× normal database load`
+                    : m?.baselineSqlMsPerMinute != null
+                      ? 'Database baseline ready'
+                      : `${number(m?.baselineHours ?? 0)} / 24 measured hours`
+                )}
+                {m?.measurement === 'partial' && (
+                  <Typography variant="caption" color="text.secondary">
+                    Partial measurement · values are lower bounds.
+                  </Typography>
+                )}
+              </>
+            )}
+          </Stack>
+        </Box>
       </Paper>
-      <Typography variant="caption" color="text.secondary">
-        Independent statuses and history from one shared probe. Slack incidents
-        use the combined probe result.
-      </Typography>
-    </Stack>
+    );
+  };
+  return (
+    <Box
+      aria-label="Database and personalization"
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          md: 'repeat(2, minmax(0, 1fr))',
+        },
+        gap: 2,
+      }}
+    >
+      {card('personalization')}
+      {card('database')}
+    </Box>
   );
 }

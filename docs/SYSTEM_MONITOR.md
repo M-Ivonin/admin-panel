@@ -152,3 +152,20 @@ warm work counters independently of the database baseline.
 The existing System Monitor route, controls, incident history and auth are retained.
 The backend sends only allowlisted aggregates to admin, never statement identifiers
 or SQL text. Release backend and collector before this UI.
+
+### Compact dashboard cards
+
+The detailed dashboard places two equal cards directly below the check dependency
+map: Personalization on the left and Database on the right. They stack below the
+medium breakpoint. Key figures and a compact 24-hour chart remain visible; Details
+reveals secondary work counters, the database baseline, and measurement timing.
+The Overview summary is unchanged.
+
+Both charts reuse the existing single history request (up to 100 observations).
+Profile bars split checked profiles into refreshed and reused and normalize by
+the observed work interval; database time remains seconds per minute. Only complete
+observations with the database scope and timestamps within the last 24 hours enter
+their respective charts. Query-time lines break across missing intervals; historic
+points never turn a current unavailable or stale status healthy.
+
+Visual reference, viewports and captured states: [compact card proof](evidence/system-monitor/compact-health/REPORT.md).

@@ -939,9 +939,11 @@ it('shows personalization SQL load and overdue portraits without treating HTTP l
   const panel = await screen.findByRole('region', {
     name: 'Database load',
   });
-  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(within(panel).getByLabelText('1.25 s/min')).toBeInTheDocument();
   expect(
-    within(screen.getByRole('region', { name: 'Personalization health' })).getByText(/4 overdue \/ 100 portraits/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/4 overdue \/ 100 profiles/)
   ).toBeInTheDocument();
   expect(
     within(panel).getByText(/3.1× normal database load/)
@@ -1027,7 +1029,7 @@ it('labels partial measurements as a lower bound and does not call measurement f
     name: 'Database load',
   });
   expect(
-    within(panel).getByText(/known work only.*lower bound/i)
+    within(panel).getByText(/Partial measurement.*lower bounds/i)
   ).toBeInTheDocument();
   expect(
     within(panel).getByText(/measurement is incomplete/i)
@@ -1035,7 +1037,7 @@ it('labels partial measurements as a lower bound and does not call measurement f
   expect(
     within(panel).queryByText(/load is above the alert threshold/i)
   ).not.toBeInTheDocument();
-  expect(within(panel).getByText(/15 minute measurement/i)).toBeInTheDocument();
+  expect(within(panel).getByText('15 minutes')).toBeInTheDocument();
   expect(
     within(panel).getByText(/Last complete measurement/i)
   ).toBeInTheDocument();
@@ -1083,10 +1085,12 @@ it('keeps the last complete time visible during measurement outages and labels f
     within(panel).getByText(/Database measurement is unavailable/)
   ).toBeInTheDocument();
   expect(
-    within(panel).getByText(/Last complete measurement:/)
-  ).not.toHaveTextContent('None yet');
+    within(panel).getByText('Last complete measurement').parentElement
+  ).not.toHaveTextContent('Not yet observed');
   expect(
-    within(screen.getByRole('region', { name: 'Personalization health' })).getByText(/Last known portrait freshness/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/Last known values/)
   ).toBeInTheDocument();
   expect(
     within(panel).queryByText(/load is above the alert threshold/)
@@ -1146,14 +1150,18 @@ it('separates whole-database SQL rates from observed personalization work', asyn
   const panel = await screen.findByRole('region', {
     name: 'Database load',
   });
-  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(within(panel).getByLabelText('1.25 s/min')).toBeInTheDocument();
   const work = screen.getByRole('region', { name: 'Personalization health' });
   expect(within(work).getByText('200')).toBeInTheDocument();
   expect(within(work).getByText('198')).toBeInTheDocument();
   expect(within(work).getByText('Source poll fallbacks')).toBeInTheDocument();
-  expect(within(work).getByText(/separate from database measurement failures/)).toBeInTheDocument();
+  expect(
+    within(work).getByText(/separate from database measurement failures/)
+  ).toBeInTheDocument();
   expect(within(panel).getByText('Learning baseline')).toBeInTheDocument();
-  expect(within(work).getByText('Warning', { exact: true })).toBeInTheDocument();
+  expect(
+    within(work).getByText('Warning', { exact: true })
+  ).toBeInTheDocument();
 });
 
 it('does not label old feature-scoped history as current database SQL measurements', async () => {
@@ -1190,7 +1198,9 @@ it('does not label old feature-scoped history as current database SQL measuremen
   });
   expect(within(panel).queryByText('100 s/min')).not.toBeInTheDocument();
   expect(
-    within(screen.getByRole('region', { name: 'Personalization health' })).getByText(/Portrait freshness not measured yet/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/Not measured yet/)
   ).toBeInTheDocument();
   expect(within(panel).queryByText('Healthy')).not.toBeInTheDocument();
 });
@@ -1250,7 +1260,9 @@ it('does not mark stopped reconciliation as Current when database counters are c
   expect(
     within(panel).queryByText('Current', { exact: true })
   ).not.toBeInTheDocument();
-  expect(within(panel).getByText(/Completed runs 0/)).toBeInTheDocument();
+  expect(
+    within(panel).getByText('Completed runs').parentElement
+  ).toHaveTextContent('0');
 });
 
 it.each([
