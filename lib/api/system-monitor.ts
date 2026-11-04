@@ -8,6 +8,9 @@ export type Outcome =
   | 'interrupted'
   | 'unknown';
 export interface PersonalizationLoad {
+  measurement?: 'complete' | 'partial' | 'unavailable' | 'warmup';
+  intervalMinutes?: number | null;
+  lastCompleteAt?: string | null;
   sqlMsPerMinute: number | null;
   callsPerMinute: number | null;
   sharedBlocksPerMinute: number | null;

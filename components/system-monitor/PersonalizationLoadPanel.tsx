@@ -60,6 +60,10 @@ export function PersonalizationLoadPanel({
     };
   }, [runId]);
   const m = check.lastRun?.personalizationLoad;
+  const measurementFailure = check.lastRun?.errorCode?.startsWith(
+    'personalization_measurement_'
+  );
+  const partial = m?.measurement === 'partial';
   const health = projectDetailedCheckHealth(check, now, sourceUnavailable);
   const current = check.enabled && !sourceUnavailable && !health.stale;
   const status = !check.enabled
@@ -67,18 +71,26 @@ export function PersonalizationLoadPanel({
     : !current
       ? 'No fresh data'
       : ['unavailable', 'unknown', 'interrupted'].includes(health.outcome)
-          ? 'Unavailable'
-          : health.outcome === 'fail'
-        ? 'Needs attention'
-        : health.outcome === 'pass'
-          ? 'Healthy'
-          : 'Collecting data';
+        ? 'Unavailable'
+        : health.outcome === 'fail'
+          ? 'Needs attention'
+          : health.outcome === 'pass' && m?.measurement === 'complete'
+            ? 'Healthy'
+            : 'Collecting data';
   const points = runs
-    .filter((r) => r.personalizationLoad?.sqlMsPerMinute != null && r.endedAt)
+    .filter(
+      (r) =>
+        r.personalizationLoad?.sqlMsPerMinute != null &&
+        r.personalizationLoad.measurement === 'complete' &&
+        r.endedAt
+    )
     .sort((a, b) => Date.parse(a.endedAt!) - Date.parse(b.endedAt!));
   const end = now,
     start = end - 86400000;
-  const peak = Math.max(0, ...points.map(r => r.personalizationLoad!.sqlMsPerMinute!));
+  const peak = Math.max(
+    0,
+    ...points.map((r) => r.personalizationLoad!.sqlMsPerMinute!)
+  );
   const max = Math.max(
     1000,
     ...points.map((r) => r.personalizationLoad!.sqlMsPerMinute!)
@@ -91,7 +103,7 @@ export function PersonalizationLoadPanel({
     const x = 12 + ((at - start) / 86400000) * 576;
     const y = 74 - (r.personalizationLoad!.sqlMsPerMinute! / max) * 62;
     segments.push(
-      `${at - previous > 1800000 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
+      `${at - previous > check.intervalMs * 1.5 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`
     );
     previous = at;
   }
@@ -122,7 +134,9 @@ export function PersonalizationLoadPanel({
             color={
               current && health.outcome === 'fail'
                 ? 'error'
-                : current && health.outcome === 'pass'
+                : current &&
+                    health.outcome === 'pass' &&
+                    m?.measurement === 'complete'
                   ? 'success'
                   : 'default'
             }
@@ -135,15 +149,49 @@ export function PersonalizationLoadPanel({
               : 'No fresh measurement. Values below are last known, not a current health confirmation.'}
           </Alert>
         )}
-        {current && ['unavailable', 'unknown', 'interrupted'].includes(health.outcome) && <Alert severity="warning">Database measurements are unavailable. This is not a healthy-load confirmation.</Alert>}
-      {current && health.outcome === 'fail' && (
+        {current &&
+          ['unavailable', 'unknown', 'interrupted'].includes(
+            health.outcome
+          ) && (
+            <Alert severity="warning">
+              Database measurements are unavailable. This is not a healthy-load
+              confirmation.
+            </Alert>
+          )}
+        {current && health.outcome === 'fail' && (
           <Alert severity="error">
             {check.lastRun?.errorCode === 'personalization_stale'
               ? 'Portrait processing is overdue.'
-              : 'Database load is above the alert threshold.'}{' '}
+              : measurementFailure
+                ? check.lastRun?.errorCode ===
+                  'personalization_measurement_unavailable'
+                  ? 'Database measurement is unavailable.'
+                  : 'Database measurement is incomplete.'
+                : 'Database load is above the alert threshold.'}{' '}
             Slack confirms a problem after three consecutive failed checks.
           </Alert>
         )}
+        {partial && (
+          <Alert severity="warning">
+            Known work only · lower bound. Missing query statistics are not
+            treated as zero load.
+          </Alert>
+        )}
+        <Typography variant="body2" color="text.secondary">
+          {m?.measurement === 'complete'
+            ? 'Complete measurement'
+            : partial
+              ? 'Partial measurement'
+              : m?.measurement === 'warmup'
+                ? 'First snapshot; waiting for a measurement interval'
+                : 'Measurement completeness unavailable'}
+          {m?.intervalMinutes != null &&
+            ` · ${number(m.intervalMinutes)} minute measurement`}
+          {' · Last complete measurement: '}
+          {m?.lastCompleteAt
+            ? new Date(m.lastCompleteAt).toLocaleString('en-GB')
+            : 'None yet'}
+        </Typography>
         <Box
           sx={{
             display: 'grid',
@@ -176,19 +224,24 @@ export function PersonalizationLoadPanel({
           ))}
         </Box>
         <Typography variant="body2">
+          {m?.measurement === 'unavailable' &&
+            'Last known portrait freshness: '}
           {m
             ? `${m.overduePortraits} overdue / ${m.totalPortraits} portraits`
             : 'Portrait freshness not measured yet'}{' '}
           ·{' '}
           {m?.loadRatio != null
-            ? `${m.loadRatio.toFixed(1)}× normal load`
+            ? `${partial ? '≥ ' : ''}${m.loadRatio.toFixed(1)}× normal load`
             : m?.baselineSqlMsPerMinute != null
               ? 'Baseline ready'
               : `Learning normal load: ${(m?.baselineHours ?? 0).toFixed(1)} / 24 measured hours`}
         </Typography>
         <Box>
           <Typography variant="caption" color="text.secondary">
-            SQL execution time · Last 24 hours · {points.length ? `Peak ${(peak / 1000).toFixed(2)} s/min` : 'No measurements yet'}
+            Complete SQL measurements · Last 24 hours ·{' '}
+            {points.length
+              ? `Peak ${(peak / 1000).toFixed(2)} s/min`
+              : 'No measurements yet'}
           </Typography>
           {historyUnavailable ? (
             <Alert severity="warning">Load history is unavailable.</Alert>
@@ -220,10 +273,12 @@ export function PersonalizationLoadPanel({
           )}
         </Box>
         <Typography variant="caption" color="text.secondary">
-          Includes queries touching personalization tables. SQL time is
-          cumulative execution time, not CPU usage. Pages include cache hits. A
-          portrait is overdue after its scheduled refresh is 45 minutes late.
-          Counter resets need a new sample.
+          Includes analytics reports and other queries touching core
+          personalization tables. Shared user, device and content reads are not
+          separately attributed. SQL time is cumulative execution time, not CPU
+          usage. Pages include cache hits. A portrait is overdue after its
+          scheduled refresh is 45 minutes late. The trend and baseline use
+          complete intervals only; partial rates are lower bounds.
         </Typography>
         <Button
           size="small"
