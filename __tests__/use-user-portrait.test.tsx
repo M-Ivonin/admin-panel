@@ -56,3 +56,25 @@ it('shows an explicit read failure and retries without a mutation', async () => 
   expect(result.current.error).toBeNull();
   expect(result.current.data?.status).toBe('not_ready');
 });
+
+it('pins later timeline pages to the version read on the first page', async () => {
+  const current = {
+    status: 'ready',
+    userId: 'a',
+    snapshot: { asOf: '2026-11-03T12:00:00.000Z' },
+  } as PortraitResponse;
+  jest.mocked(getUserPortrait).mockResolvedValue(current);
+  const { rerender } = renderHook(
+    ({ offset }) => useUserPortrait('a', 7, undefined, offset),
+    { initialProps: { offset: 0 } }
+  );
+  await act(async () => {});
+  rerender({ offset: 50 });
+  await act(async () => {});
+  expect(getUserPortrait).toHaveBeenLastCalledWith('a', {
+    days: 7,
+    snapshotId: undefined,
+    offset: 50,
+    expectedAsOf: '2026-11-03T12:00:00.000Z',
+  });
+});

@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  MenuItem,
   Paper,
   Stack,
   Table,
@@ -15,7 +14,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -47,13 +45,12 @@ const label = (value: string) => value.replace(/_/g, ' ');
 /** Renders the server's versioned features; selection never recomputes a behavioral metric. */
 export function UserPortrait({ userId }: { userId: string }) {
   const [days, setDays] = useState<7 | 30>(7),
-    [snapshotId, setSnapshotId] = useState<string>(),
     [offset, setOffset] = useState(0),
     [timelineOpen, setTimelineOpen] = useState(false);
   const { data, loading, error, refresh } = useUserPortrait(
     userId,
     days,
-    snapshotId,
+    undefined,
     offset
   );
   const decisionsView = useSearchParams().get('view') === 'decisions';
@@ -96,40 +93,14 @@ export function UserPortrait({ userId }: { userId: string }) {
                 <ToggleButton value={7}>Last 7 days</ToggleButton>
                 <ToggleButton value={30}>Last 30 days</ToggleButton>
               </ToggleButtonGroup>
-              <TextField
-                select
-                size="small"
-                label="Snapshot"
-                InputLabelProps={{ shrink: true }}
-                SelectProps={{ displayEmpty: true }}
-                value={snapshotId ?? ''}
-                onChange={(e) => {
-                  setSnapshotId(e.target.value || undefined);
-                  setOffset(0);
-                }}
-                sx={{
-                  minWidth: { xs: 100, sm: 260 },
-                  flex: { xs: 1, md: '0 1 auto' },
-                }}
-              >
-                <MenuItem value="">Latest saved snapshot</MenuItem>
-                {snapshotId &&
-                !ready?.history.some((item) => item.id === snapshotId) ? (
-                  <MenuItem value={snapshotId}>
-                    Selected saved snapshot
-                  </MenuItem>
-                ) : null}
-                {ready?.history.map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
-                    {stamp(item.asOf)}
-                  </MenuItem>
-                ))}
-              </TextField>
               <Button
                 variant="outlined"
                 sx={{ ml: { md: 'auto' } }}
                 disabled={loading}
-                onClick={() => void refresh()}
+                onClick={() => {
+                  if (offset) setOffset(0);
+                  else void refresh();
+                }}
               >
                 Refresh view
               </Button>
@@ -139,14 +110,20 @@ export function UserPortrait({ userId }: { userId: string }) {
         {loading ? (
           <Box role="status" sx={{ py: 8, textAlign: 'center' }}>
             <CircularProgress size={28} />
-            <Typography sx={{ mt: 2 }}>Loading saved portrait…</Typography>
+            <Typography sx={{ mt: 2 }}>Loading current portrait…</Typography>
           </Box>
         ) : null}
         {error ? (
           <Alert
             severity="error"
             action={
-              <Button color="inherit" onClick={() => void refresh()}>
+              <Button
+                color="inherit"
+                onClick={() => {
+                  if (offset) setOffset(0);
+                  else void refresh();
+                }}
+              >
                 Retry
               </Button>
             }
@@ -156,23 +133,24 @@ export function UserPortrait({ userId }: { userId: string }) {
         ) : null}
         {data?.status === 'not_ready' ? (
           <Alert severity="info">
-            No saved portrait is available yet. Scheduled reconciliation builds
-            snapshots; opening this page does not start an import or analysis.
+            No current portrait is available yet. Scheduled reconciliation
+            updates portraits; opening this page does not start an import or
+            analysis.
           </Alert>
         ) : null}
         {data?.status === 'restricted' ? (
           <Alert severity="warning">
             Portrait processing is restricted following a verified support
-            request. Derived snapshots and timeline are unavailable.
+            request. The current portrait and timeline are unavailable.
           </Alert>
         ) : null}
         {ready ? (
           <>
             <Stack spacing={3}>
-              <PortraitOverview data={ready} historical={Boolean(snapshotId)} />
+              <PortraitOverview data={ready} />
               <Section
                 title="Weekday × hour of actions"
-                subtitle={`${ready.snapshot.timezone.value} at this snapshot. This is not habitual entry time; unknown cells remain grey.`}
+                subtitle={`${ready.snapshot.timezone.value} in this portrait. This is not habitual entry time; unknown cells remain grey.`}
               >
                 <Heatmap value={ready.selectedWindow} />
               </Section>
@@ -471,7 +449,7 @@ export function UserPortrait({ userId }: { userId: string }) {
               </Section>
               <Section
                 title="Source quality and cutoffs"
-                subtitle="These watermarks belong to the exact snapshot above. Missing receipt/ingestion times are not replaced by occurrence time."
+                subtitle="These watermarks belong to the portrait shown above. Missing receipt/ingestion times are not replaced by occurrence time."
               >
                 <TableContainer>
                   <Table size="small" sx={{ minWidth: 680 }}>
@@ -673,7 +651,7 @@ export function PortraitScreens({ window }: { window: PortraitWindow }) {
       subtitle={
         window.screens.length
           ? `Named screen observations · ${window.screenSource}`
-          : 'Screen names are unavailable in this snapshot. This does not mean the user visited no screens.'
+          : 'Screen names are unavailable in the saved portrait. This does not mean the user visited no screens.'
       }
     >
       {window.screens.length ? (

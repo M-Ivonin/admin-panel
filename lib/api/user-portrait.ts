@@ -170,13 +170,19 @@ export type PortraitResponse =
 /** Fetches the saved protected per-account projection; no import or analysis action is available here. */
 export async function getUserPortrait(
   userId: string,
-  query: { days: 7 | 30; snapshotId?: string; offset: number }
+  query: {
+    days: 7 | 30;
+    snapshotId?: string;
+    offset: number;
+    expectedAsOf?: string;
+  }
 ): Promise<PortraitResponse> {
   const params = new URLSearchParams({
     days: String(query.days),
     offset: String(query.offset),
   });
   if (query.snapshotId) params.set('snapshotId', query.snapshotId);
+  if (query.expectedAsOf) params.set('expectedAsOf', query.expectedAsOf);
   const response = await adminAuthFetch({
     path: `/app-events/admin/engagement/portraits/${encodeURIComponent(userId)}?${params}`,
     method: 'GET',
