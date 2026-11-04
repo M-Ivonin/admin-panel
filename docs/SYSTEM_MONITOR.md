@@ -113,3 +113,19 @@ Disabled checks and interrupted/unavailable outcomes retain their existing
 presentation. Deterministic boundary coverage lives in
 `__tests__/system-monitor-health.test.ts`; the Overview and System Monitor
 component tests verify that callers update when a result expires.
+
+## Database load and personalization health
+
+The load panel separates all current-database SQL counters (time, calls, shared
+pages and tuple writes) from actual personalization work (runs, checked/reused
+users, errors, source-poll failures and elapsed durations). SQL time is not CPU;
+job durations are wall-clock time, not attributed SQL.
+
+Only `scope: database` complete readings enter the new SQL trend and baseline.
+Older history remains accessible unchanged. Unknown/partial/unavailable data and
+process-counter warmup never appear as healthy zero work. Backend process restarts
+warm work counters independently of the database baseline.
+
+The existing System Monitor route, controls, incident history and auth are retained.
+The backend sends only allowlisted aggregates to admin, never statement identifiers
+or SQL text. Release backend and collector before this UI.

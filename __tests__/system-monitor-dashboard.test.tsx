@@ -39,21 +39,46 @@ it('keeps backend observations inside the backend group and selectable', async (
   ];
   api.overview.mockResolvedValue({
     ...overview,
-    checks: [...overview.checks, ...ids.map((checkId) => ({
-      ...overview.checks[0],
-      checkId,
-      lastRun: { ...overview.checks[0].lastRun!, checkId, runId: `run-${checkId}` },
-    }))],
+    checks: [
+      ...overview.checks,
+      ...ids.map((checkId) => ({
+        ...overview.checks[0],
+        checkId,
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId,
+          runId: `run-${checkId}`,
+        },
+      })),
+    ],
   });
-  api.run.mockResolvedValue({ ...overview.checks[0].lastRun!, checkId: 'backend.jobs', runId: 'run-backend.jobs' });
+  api.run.mockResolvedValue({
+    ...overview.checks[0].lastRun!,
+    checkId: 'backend.jobs',
+    runId: 'run-backend.jobs',
+  });
   render(<SystemMonitorDashboard />);
-  const backend = await screen.findByRole('region', { name: 'Backend check dependencies' });
-  for (const name of ['Session refresh', 'Prediction freshness', 'Background jobs', 'Processing queues', 'API request errors']) {
-    expect(within(backend).getByRole('button', { name: new RegExp(`${name}: Pass`) })).toBeInTheDocument();
+  const backend = await screen.findByRole('region', {
+    name: 'Backend check dependencies',
+  });
+  for (const name of [
+    'Session refresh',
+    'Prediction freshness',
+    'Background jobs',
+    'Processing queues',
+    'API request errors',
+  ]) {
+    expect(
+      within(backend).getByRole('button', { name: new RegExp(`${name}: Pass`) })
+    ).toBeInTheDocument();
   }
-  fireEvent.click(within(backend).getByRole('button', { name: /Background jobs: Pass/ }));
+  fireEvent.click(
+    within(backend).getByRole('button', { name: /Background jobs: Pass/ })
+  );
   await waitFor(() => expect(api.run).toHaveBeenCalledWith('run-backend.jobs'));
-  expect(await screen.findByText('Check details · Background jobs')).toBeInTheDocument();
+  expect(
+    await screen.findByText('Check details · Background jobs')
+  ).toBeInTheDocument();
 });
 jest.setTimeout(30000);
 const api = jest.mocked(monitorApi);
@@ -203,29 +228,36 @@ it.each([
   [249999, 'Application API: Pass, Fresh'],
   [250000, 'Application API: Pass, Fresh'],
   [250001, 'Application API: Unknown, Stale'],
-])('preserves detailed freshness at a result age of %i ms', async (age, label) => {
-  const now = Date.now();
-  const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
-  api.overview.mockResolvedValue({
-    ...overview,
-    generatedAt: new Date(now).toISOString(),
-    workerHeartbeatAt: new Date(now).toISOString(),
-    checks: [{
-      ...overview.checks[0],
-      intervalMs: 120000,
-      lastRun: {
-        ...overview.checks[0].lastRun!,
-        endedAt: new Date(now - age).toISOString(),
-      },
-    }],
-  });
-  try {
-    render(<SystemMonitorDashboard />);
-    expect(await screen.findByRole('button', { name: new RegExp(label) })).toBeInTheDocument();
-  } finally {
-    clock.mockRestore();
+])(
+  'preserves detailed freshness at a result age of %i ms',
+  async (age, label) => {
+    const now = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now);
+    api.overview.mockResolvedValue({
+      ...overview,
+      generatedAt: new Date(now).toISOString(),
+      workerHeartbeatAt: new Date(now).toISOString(),
+      checks: [
+        {
+          ...overview.checks[0],
+          intervalMs: 120000,
+          lastRun: {
+            ...overview.checks[0].lastRun!,
+            endedAt: new Date(now - age).toISOString(),
+          },
+        },
+      ],
+    });
+    try {
+      render(<SystemMonitorDashboard />);
+      expect(
+        await screen.findByRole('button', { name: new RegExp(label) })
+      ).toBeInTheDocument();
+    } finally {
+      clock.mockRestore();
+    }
   }
-});
+);
 it('selects a map node and loads its exact result and history', async () => {
   const catalog = {
     ...overview.checks[0],
@@ -258,7 +290,9 @@ it('selects a map node and loads its exact result and history', async () => {
   );
 });
 it('shows an expired incident link honestly', async () => {
-  jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-16T12:00:00.000Z'));
+  jest
+    .spyOn(Date, 'now')
+    .mockReturnValue(Date.parse('2026-10-16T12:00:00.000Z'));
   Object.assign(window.location, { search: '?incident=expired' });
   render(<SystemMonitorDashboard />);
   expect(await screen.findByText(/Incident not found/)).toBeInTheDocument();
@@ -755,53 +789,121 @@ it('shows an expired selected range honestly without sending history or log requ
   expect(api.logs).not.toHaveBeenCalled();
 });
 
-
 it('shows each store separately and selects App Store history and details', async () => {
   const google = { ...overview.checks[0], checkId: 'backend.catalog' };
-  const apple = { ...google, checkId: 'backend.catalog.app_store', lastRun: { ...google.lastRun!, checkId: 'backend.catalog.app_store', runId: 'apple-run' } };
+  const apple = {
+    ...google,
+    checkId: 'backend.catalog.app_store',
+    lastRun: {
+      ...google.lastRun!,
+      checkId: 'backend.catalog.app_store',
+      runId: 'apple-run',
+    },
+  };
   api.overview.mockResolvedValue({ ...overview, checks: [google, apple] });
   api.run.mockResolvedValue(apple.lastRun);
   render(<SystemMonitorDashboard />);
-  expect(await screen.findByRole('button', { name: /Google Play catalog: Pass/ })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /App Store catalog: Pass/ }));
+  expect(
+    await screen.findByRole('button', { name: /Google Play catalog: Pass/ })
+  ).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('button', { name: /App Store catalog: Pass/ })
+  );
   await waitFor(() => expect(api.run).toHaveBeenCalledWith('apple-run'));
-  expect(await screen.findByText('Check details · App Store catalog')).toBeInTheDocument();
-  await waitFor(() => expect(api.history).toHaveBeenLastCalledWith(expect.objectContaining({ checkId: 'backend.catalog.app_store', offset: 0 })));
+  expect(
+    await screen.findByText('Check details · App Store catalog')
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(api.history).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        checkId: 'backend.catalog.app_store',
+        offset: 0,
+      })
+    )
+  );
 });
 
 it('opens history Inspect in a dialog and closing it preserves the history row', async () => {
-  const result = { ...overview.checks[0].lastRun!, diagnostic: 'Queue observation is healthy.' };
-  api.history.mockResolvedValue({ items: [result], total: 1, offset: 0, limit: 25, buckets: [] });
+  const result = {
+    ...overview.checks[0].lastRun!,
+    diagnostic: 'Queue observation is healthy.',
+  };
+  api.history.mockResolvedValue({
+    items: [result],
+    total: 1,
+    offset: 0,
+    limit: 25,
+    buckets: [],
+  });
   api.run.mockResolvedValue(result);
   render(<SystemMonitorDashboard />);
   fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Check details · Application API' });
-  expect(await within(dialog).findByText('Queue observation is healthy.')).toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Close check details' }));
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Check details · Application API',
+  });
+  expect(
+    await within(dialog).findByText('Queue observation is healthy.')
+  ).toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Close check details' })
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
   expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
 });
 
 it('keeps a closed loading check dialog closed when its response arrives', async () => {
   let finish!: (run: MonitorRun) => void;
-  api.history.mockResolvedValue({ items: [overview.checks[0].lastRun!], total: 1, offset: 0, limit: 25, buckets: [] });
-  api.run.mockReturnValue(new Promise<MonitorRun>((resolve) => { finish = resolve; }));
+  api.history.mockResolvedValue({
+    items: [overview.checks[0].lastRun!],
+    total: 1,
+    offset: 0,
+    limit: 25,
+    buckets: [],
+  });
+  api.run.mockReturnValue(
+    new Promise<MonitorRun>((resolve) => {
+      finish = resolve;
+    })
+  );
   render(<SystemMonitorDashboard />);
   fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
   const dialog = await screen.findByRole('dialog', { name: 'Check details' });
-  expect(within(dialog).getByLabelText('Loading check details')).toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Close check details' }));
+  expect(
+    within(dialog).getByLabelText('Loading check details')
+  ).toBeInTheDocument();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'Close check details' })
+  );
   finish(overview.checks[0].lastRun!);
-  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
 });
-it.each([404, 500])('shows a check request failure (%s) inside the dialog', async (status) => {
-  api.history.mockResolvedValue({ items: [overview.checks[0].lastRun!], total: 1, offset: 0, limit: 25, buckets: [] });
-  api.run.mockRejectedValue(new MonitorApiError(status));
-  render(<SystemMonitorDashboard />);
-  fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
-  const dialog = await screen.findByRole('dialog', { name: 'Check details' });
-  expect(await within(dialog).findByText(status === 404 ? 'Check result no longer exists in retention.' : 'Check details are unavailable.')).toBeInTheDocument();
-});
+it.each([404, 500])(
+  'shows a check request failure (%s) inside the dialog',
+  async (status) => {
+    api.history.mockResolvedValue({
+      items: [overview.checks[0].lastRun!],
+      total: 1,
+      offset: 0,
+      limit: 25,
+      buckets: [],
+    });
+    api.run.mockRejectedValue(new MonitorApiError(status));
+    render(<SystemMonitorDashboard />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Check details' });
+    expect(
+      await within(dialog).findByText(
+        status === 404
+          ? 'Check result no longer exists in retention.'
+          : 'Check details are unavailable.'
+      )
+    ).toBeInTheDocument();
+  }
+);
 
 it('shows personalization SQL load and overdue portraits without treating HTTP latency as DB load', async () => {
   api.overview.mockResolvedValue({
@@ -817,6 +919,7 @@ it('shows personalization SQL load and overdue portraits without treating HTTP l
           checkId: 'backend.personalization.load',
           outcome: 'fail',
           personalizationLoad: {
+            scope: 'database',
             sqlMsPerMinute: 1250,
             callsPerMinute: 40,
             sharedBlocksPerMinute: 3000,
@@ -834,28 +937,55 @@ it('shows personalization SQL load and overdue portraits without treating HTTP l
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Personalization database load',
+    name: 'Database load and personalization health',
   });
   expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
   expect(
     within(panel).getByText(/4 overdue \/ 100 portraits/)
   ).toBeInTheDocument();
-  expect(within(panel).getByText(/3.1× normal load/)).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/3.1× normal database load/)
+  ).toBeInTheDocument();
 });
 
 it('shows a completed idle baseline without claiming it is still learning', async () => {
-  api.overview.mockResolvedValue({ ...overview, checks: [...overview.checks, {
-    ...overview.checks[0], checkId: 'backend.personalization.load',
-    lastRun: { ...overview.checks[0].lastRun!, checkId: 'backend.personalization.load', personalizationLoad: {
-      sqlMsPerMinute: 0, callsPerMinute: 0, sharedBlocksPerMinute: 0, writesPerMinute: 0,
-      totalPortraits: 0, overduePortraits: 0, lastCheckedAt: null,
-      baselineSqlMsPerMinute: 0, baselineHours: 24, loadRatio: null,
-    } },
-  }] });
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          personalizationLoad: {
+            scope: 'database',
+            sqlMsPerMinute: 0,
+            callsPerMinute: 0,
+            sharedBlocksPerMinute: 0,
+            writesPerMinute: 0,
+            totalPortraits: 0,
+            overduePortraits: 0,
+            lastCheckedAt: null,
+            baselineSqlMsPerMinute: 0,
+            baselineHours: 24,
+            loadRatio: null,
+          },
+        },
+      },
+    ],
+  });
   render(<SystemMonitorDashboard />);
-  const panel = await screen.findByRole('region', {name:'Personalization database load'});
-  expect(within(panel).getByText(/Baseline ready/)).toBeInTheDocument();
-  expect(within(panel).queryByText(/Learning normal load/)).not.toBeInTheDocument();
+  const panel = await screen.findByRole('region', {
+    name: 'Database load and personalization health',
+  });
+  expect(
+    within(panel).getByText(/Database baseline ready/)
+  ).toBeInTheDocument();
+  expect(
+    within(panel).queryByText(/Learning normal database load/)
+  ).not.toBeInTheDocument();
 });
 
 it('labels partial measurements as a lower bound and does not call measurement failure high database load', async () => {
@@ -873,6 +1003,7 @@ it('labels partial measurements as a lower bound and does not call measurement f
           outcome: 'fail',
           errorCode: 'personalization_measurement_incomplete',
           personalizationLoad: {
+            scope: 'database',
             sqlMsPerMinute: 1250,
             callsPerMinute: 40,
             sharedBlocksPerMinute: 3000,
@@ -893,7 +1024,7 @@ it('labels partial measurements as a lower bound and does not call measurement f
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Personalization database load',
+    name: 'Database load and personalization health',
   });
   expect(
     within(panel).getByText(/known work only.*lower bound/i)
@@ -911,16 +1042,216 @@ it('labels partial measurements as a lower bound and does not call measurement f
 });
 
 it('keeps the last complete time visible during measurement outages and labels freshness as last known', async () => {
-  api.overview.mockResolvedValue({...overview,checks:[...overview.checks,{
-    ...overview.checks[0],checkId:'backend.personalization.load',status:'fail',lastRun:{...overview.checks[0].lastRun!,checkId:'backend.personalization.load',outcome:'fail',errorCode:'personalization_measurement_unavailable',personalizationLoad:{
-      measurement:'unavailable',intervalMinutes:null,lastCompleteAt:new Date(Date.now()-900000).toISOString(),
-      sqlMsPerMinute:null,callsPerMinute:null,sharedBlocksPerMinute:null,writesPerMinute:null,totalPortraits:100,overduePortraits:0,lastCheckedAt:new Date(Date.now()-900000).toISOString(),baselineSqlMsPerMinute:null,baselineHours:1,loadRatio:null,
-    }}
-  }]});
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        status: 'fail',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          outcome: 'fail',
+          errorCode: 'personalization_measurement_unavailable',
+          personalizationLoad: {
+            scope: 'database',
+            measurement: 'unavailable',
+            intervalMinutes: null,
+            lastCompleteAt: new Date(Date.now() - 900000).toISOString(),
+            sqlMsPerMinute: null,
+            callsPerMinute: null,
+            sharedBlocksPerMinute: null,
+            writesPerMinute: null,
+            totalPortraits: 100,
+            overduePortraits: 0,
+            lastCheckedAt: new Date(Date.now() - 900000).toISOString(),
+            baselineSqlMsPerMinute: null,
+            baselineHours: 1,
+            loadRatio: null,
+          },
+        },
+      },
+    ],
+  });
   render(<SystemMonitorDashboard />);
-  const panel=await screen.findByRole('region',{name:'Personalization database load'});
-  expect(within(panel).getByText(/Database measurement is unavailable/)).toBeInTheDocument();
-  expect(within(panel).getByText(/Last complete measurement:/)).not.toHaveTextContent('None yet');
-  expect(within(panel).getByText(/Last known portrait freshness/)).toBeInTheDocument();
-  expect(within(panel).queryByText(/load is above the alert threshold/)).not.toBeInTheDocument();
+  const panel = await screen.findByRole('region', {
+    name: 'Database load and personalization health',
+  });
+  expect(
+    within(panel).getByText(/Database measurement is unavailable/)
+  ).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/Last complete measurement:/)
+  ).not.toHaveTextContent('None yet');
+  expect(
+    within(panel).getByText(/Last known portrait freshness/)
+  ).toBeInTheDocument();
+  expect(
+    within(panel).queryByText(/load is above the alert threshold/)
+  ).not.toBeInTheDocument();
+});
+
+it('separates whole-database SQL rates from observed personalization work', async () => {
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        status: 'warn',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          outcome: 'warn',
+          errorCode: 'personalization_work_warning',
+          personalizationLoad: {
+            scope: 'database',
+            measurement: 'complete',
+            intervalMinutes: 15,
+            lastCompleteAt: new Date().toISOString(),
+            sqlMsPerMinute: 1250,
+            callsPerMinute: 40,
+            sharedBlocksPerMinute: 3000,
+            writesPerMinute: 15,
+            totalPortraits: 4327,
+            overduePortraits: 0,
+            lastCheckedAt: new Date().toISOString(),
+            baselineSqlMsPerMinute: null,
+            baselineHours: 1,
+            loadRatio: null,
+            personalization: {
+              measurement: 'complete',
+              intervalMinutes: 15,
+              runs: 15,
+              checked: 200,
+              reused: 198,
+              failed: 1,
+              sourcePolls: 15,
+              sourcePollFailures: 3,
+              averageRunMs: 250,
+              averageSourcePollMs: 150,
+              lastRunAt: new Date().toISOString(),
+              lastSuccessfulAt: new Date().toISOString(),
+              lastRunMs: 300,
+            },
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {
+    name: 'Database load and personalization health',
+  });
+  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(
+    within(panel).getByRole('heading', { name: 'Personalization' })
+  ).toBeInTheDocument();
+  expect(within(panel).getByText('200')).toBeInTheDocument();
+  expect(within(panel).getByText('198')).toBeInTheDocument();
+  expect(within(panel).getByText('Source poll fallbacks')).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/separate from database measurement failures/)
+  ).toBeInTheDocument();
+  expect(within(panel).queryByText('Healthy')).not.toBeInTheDocument();
+});
+
+it('does not label old feature-scoped history as current database SQL measurements', async () => {
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          personalizationLoad: {
+            measurement: 'complete',
+            sqlMsPerMinute: 99999,
+            callsPerMinute: 99999,
+            sharedBlocksPerMinute: 99999,
+            writesPerMinute: 99999,
+            totalPortraits: 100,
+            overduePortraits: 0,
+            lastCheckedAt: null,
+            baselineSqlMsPerMinute: 1234,
+            baselineHours: 24,
+            loadRatio: 1,
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {
+    name: 'Database load and personalization health',
+  });
+  expect(within(panel).queryByText('100 s/min')).not.toBeInTheDocument();
+  expect(
+    within(panel).getByText(/Portrait freshness not measured yet/)
+  ).toBeInTheDocument();
+  expect(within(panel).queryByText('Healthy')).not.toBeInTheDocument();
+});
+
+it('does not mark stopped reconciliation as Current when database counters are complete', async () => {
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        status: 'fail',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          outcome: 'fail',
+          errorCode: 'personalization_job_stale',
+          personalizationLoad: {
+            scope: 'database',
+            measurement: 'complete',
+            sqlMsPerMinute: 1250,
+            callsPerMinute: 40,
+            sharedBlocksPerMinute: 3000,
+            writesPerMinute: 15,
+            totalPortraits: 4327,
+            overduePortraits: 0,
+            lastCheckedAt: new Date().toISOString(),
+            baselineSqlMsPerMinute: null,
+            baselineHours: 1,
+            loadRatio: null,
+            personalization: {
+              measurement: 'complete',
+              intervalMinutes: 15,
+              runs: 0,
+              checked: 0,
+              reused: 0,
+              failed: 0,
+              sourcePolls: 0,
+              sourcePollFailures: 0,
+              averageRunMs: null,
+              averageSourcePollMs: null,
+              lastRunAt: new Date(Date.now() - 300000).toISOString(),
+              lastSuccessfulAt: null,
+              lastRunMs: 300,
+            },
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {
+    name: 'Database load and personalization health',
+  });
+  expect(within(panel).getByText('Reconciliation overdue')).toBeInTheDocument();
+  expect(
+    within(panel).queryByText('Current', { exact: true })
+  ).not.toBeInTheDocument();
+  expect(within(panel).getByText(/Completed runs 0/)).toBeInTheDocument();
 });
