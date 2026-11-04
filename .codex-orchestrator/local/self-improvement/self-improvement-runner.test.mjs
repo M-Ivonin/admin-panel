@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { validConfig } from './test-fixtures.mjs';
 
 import {
   createRunner,
@@ -68,6 +69,8 @@ async function makeRunner(options = {}) {
       baseSha: 'a'.repeat(40), result: await analyze({ worktreePath: root, baseSha: 'a'.repeat(40) }),
     })),
   });
+  await mkdir(path.dirname(runner.paths.config), { recursive: true });
+  await writeFile(runner.paths.config, JSON.stringify(validConfig()));
   return { root, exec, runner, cleanup: () => rm(root, { recursive: true, force: true }) };
 }
 
@@ -126,6 +129,42 @@ test('daily phase helper classifies failures and renders summary details', () =>
     'review: completed (created 1; reused 1)',
   ]);
 });
+
+for (const scenario of [
+  { name: 'missing', configure: (file) => rm(file), reason: /config.*missing/i },
+  { name: 'invalid JSON', configure: (file) => writeFile(file, '{'), reason: /config.*invalid/i },
+  { name: 'unsupported schema', configure: (file) => writeFile(file, JSON.stringify({ ...validConfig(), version: 1 })), reason: /config.*version/i },
+  { name: 'wrong repository', configure: (file) => writeFile(file, JSON.stringify({
+    ...validConfig(), github: { ...validConfig().github, repo: 'other-repo' },
+  })), reason: /config.*repository.*mismatch/i },
+]) {
+  test(`daily stops at preflight for ${scenario.name} config before GitHub actions or discovery`, async () => {
+    const exec = makeExecStub({
+      [commandKey('gh', ['repo', 'view', 'M-Ivonin/admin-panel', '--json', 'nameWithOwner'])]: {
+        code: 0, stdout: JSON.stringify({ nameWithOwner: 'M-Ivonin/admin-panel' }),
+      },
+      [commandKey('gh', ['label', 'list', '--repo', 'M-Ivonin/admin-panel', '--limit', '1000', '--json', 'name'])]: {
+        code: 0, stdout: JSON.stringify(['agent:auto', 'agent:manual', 'self-improvement'].map(name => ({ name }))),
+      },
+    });
+    let discoveryStarted = false;
+    const { runner, cleanup } = await makeRunner({ exec, withRemoteBaseWorktree: async () => {
+      discoveryStarted = true;
+      throw new Error('Discovery must not start');
+    } });
+    try {
+      await scenario.configure(runner.paths.config);
+      const result = await runner.daily();
+      assert.equal(result.exitCode, 1);
+      assert.deepEqual(result.phases.map(phase => phase.name), ['preflight']);
+      assert.match(result.phases[0].reason, scenario.reason);
+      assert.equal(discoveryStarted, false);
+      assert.equal(exec.calls.length, 0);
+    } finally {
+      await cleanup();
+    }
+  });
+}
 
 test('preflight fails before mutation when repo identity is wrong', async () => {
   const exec = makeExecStub({

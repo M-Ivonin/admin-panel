@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { validConfig } from './test-fixtures.mjs';
 import { validateDiscoveryReport } from './runner.mjs';
 
 const analysis = {
@@ -64,6 +65,7 @@ for (const missing of [false, true]) {
       const localDir = path.join(cwd, '.codex-orchestrator/local/self-improvement');
       await mkdir(path.join(localDir, 'prompts'), { recursive: true });
       await writeFile(path.join(localDir, 'prompts/discovery.md'), 'Read-only discovery');
+      await writeFile(path.join(cwd, '.codex-orchestrator/config.json'), JSON.stringify(validConfig()));
       const runner = createRunner({ cwd, localDir, env: { ...process.env, CODEX_HOME: cwd },
         codexCommand: process.execPath,
         withRemoteBaseWorktree: async (_root, analyze) => ({ baseSha: 'a'.repeat(40),

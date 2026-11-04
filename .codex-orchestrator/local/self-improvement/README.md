@@ -40,3 +40,16 @@ An empty candidate list with a complete explanation is a successful `none`
 result: it is saved in local state, printed in the phase summary, and creates no
 issue or implementation. Architecture candidates take priority, then bugs, then
 performance; existing implementation proof, review and runtime safeguards apply.
+
+## Local configuration
+
+Preflight requires a valid `.codex-orchestrator/config.json` for
+`M-Ivonin/admin-panel` before any GitHub action or discovery. Missing, malformed,
+unsupported or mismatched configurations stop the run at preflight.
+The installed package owns schema validation.
+
+Keep this configuration local and ignored. Switching through historical commits
+that still track it can replace or remove it, including during rebase/abort.
+After such operations, verify the file before running the automation. Restore a
+validated admin-panel configuration; do not copy the workspace configuration,
+which targets a different repository.

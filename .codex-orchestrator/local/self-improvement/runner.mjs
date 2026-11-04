@@ -496,6 +496,18 @@ export function createRunner(options = {}) {
 
   async function preflight() {
     try {
+      const { parseAgentAutoConfig } = await import('codex-orchestrator');
+      const config = parseAgentAutoConfig(JSON.parse(await readFile(paths.config, 'utf8')));
+      const repository = `${config.github.owner}/${config.github.repo}`;
+      if (repository !== REPO) {
+        return { ok: false, reason: `config repository mismatch: ${repository}; expected ${REPO}` };
+      }
+    } catch (error) {
+      return { ok: false, reason: error.code === 'ENOENT'
+        ? `config missing: ${paths.config}; restore the local orchestrator configuration before running`
+        : `config invalid: ${error.message}` };
+    }
+    try {
       await resolveCodexCommand();
     } catch (error) {
       return { ok: false, reason: error.message };
