@@ -36,7 +36,7 @@ import { MonitorCharts } from './MonitorCharts';
 import { PersonalizationLoadPanel } from './PersonalizationLoadPanel';
 import { MonitorCheckMap } from './MonitorCheckMap';
 import { projectDetailedSourceHealth } from '@/lib/system-monitor-health';
-import { monitorAspectNames, projectPersonalizationRunHealth, type MonitorAspect } from '@/lib/system-monitor-personalization-health';
+import { aspectReasons, monitorAspectNames, projectPersonalizationRunHealth, type MonitorAspect } from '@/lib/system-monitor-personalization-health';
 import {
   incidentLinkWindow,
   logWindow,
@@ -77,6 +77,7 @@ const checkNames: Record<string, string> = {
 };
 const checkName = (id: string) => checkNames[id] ?? id;
 const incidentReasons: Record<string, string> = {
+  ...aspectReasons,
   timeout: 'The service did not respond before the monitoring request timed out.',
   network_error: 'The monitor could not connect to the service. Its availability could not be verified.',
   slow_response: 'The service responded more slowly than expected.',
@@ -331,6 +332,7 @@ export function SystemMonitorDashboard() {
         setLinkState(match ? null : 'missing');
         if (match) {
           setCheckId(match.checkId);
+          if (match.aspect) setAspect(match.aspect);
           setPage(0);
         }
       })
@@ -676,14 +678,14 @@ export function SystemMonitorDashboard() {
                             fontWeight={600}
                             sx={{ overflowWrap: 'anywhere' }}
                           >
-                            {checkName(item.checkId)} ·{' '}
+                            {item.aspect ? monitorAspectNames[item.aspect] : checkName(item.checkId)} ·{' '}
                             {item.kind === 'coverage'
                               ? 'Probe coverage lost'
                               : 'Target failure'}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {time(item.openedAt)} ·{' '}
-                            {item.resolvedAt ? 'Resolved' : 'Open'}
+                            {item.resolution === 'superseded' ? 'Replaced by separate monitoring' : item.resolvedAt ? 'Resolved' : 'Open'}
                           </Typography>
                         </Box>
                         <Button
@@ -739,15 +741,15 @@ export function SystemMonitorDashboard() {
                 <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
                   <Stack spacing={2.5}>
                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                      <Typography variant="h6">{checkName(selectedIncident.checkId)}</Typography>
-                      <Chip size="small" label={selectedIncident.resolvedAt ? 'Resolved' : 'Open'} color={selectedIncident.resolvedAt ? 'success' : 'warning'} />
+                      <Typography variant="h6">{selectedIncident.aspect ? monitorAspectNames[selectedIncident.aspect] : checkName(selectedIncident.checkId)}</Typography>
+                      <Chip size="small" label={selectedIncident.resolution === 'superseded' ? 'Replaced' : selectedIncident.resolvedAt ? 'Resolved' : 'Open'} color={selectedIncident.resolution === 'superseded' ? 'default' : selectedIncident.resolvedAt ? 'success' : 'warning'} />
                     </Stack>
                     <Box>
                       <Typography variant="subtitle2" gutterBottom>
-                        {selectedIncident.kind === 'coverage' ? 'Monitoring unavailable' : 'Service check failed'}
+                        {selectedIncident.resolution === 'superseded' ? 'Replaced by separate monitoring' : selectedIncident.kind === 'coverage' ? 'Monitoring unavailable' : 'Service check failed'}
                       </Typography>
                       <Typography variant="body2">
-                        {incidentReasons[selectedIncident.reason] ?? 'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
+                        {selectedIncident.resolution === 'superseded' ? 'The combined incident was replaced by separate Database load and Personalization health monitoring. This does not confirm recovery.' : incidentReasons[selectedIncident.reason] ?? 'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
                       </Typography>
                       {selectedIncident.kind === 'coverage' && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -759,7 +761,7 @@ export function SystemMonitorDashboard() {
                       {[
                         ['Started', time(selectedIncident.openedAt)],
                         ['Confirmed', selectedIncident.confirmedAt ? time(selectedIncident.confirmedAt) : selectedIncident.kind === 'coverage' ? 'Not applicable' : 'Not yet confirmed'],
-                        ['Resolved at', selectedIncident.resolvedAt ? time(selectedIncident.resolvedAt) : 'Still open'],
+                        [selectedIncident.resolution === 'superseded' ? 'Replaced at' : 'Resolved at', selectedIncident.resolvedAt ? time(selectedIncident.resolvedAt) : 'Still open'],
                         ['Duration', `${incidentDuration(selectedIncident, now)}${selectedIncident.resolvedAt ? '' : ' so far'}`],
                       ].map(([label, value]) => (
                         <Box key={label}>
@@ -855,7 +857,7 @@ export function SystemMonitorDashboard() {
                 {selectedIncident && !incidentDetailsOpen && (
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
                     <Typography variant="body2">
-                      Incident log context: {checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
+                      Incident log context: {selectedIncident.aspect ? monitorAspectNames[selectedIncident.aspect] : checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
                     </Typography>
                     <Button size="small" onClick={() => setSelectedIncident(null)}>Clear incident context</Button>
                   </Stack>

@@ -6,6 +6,53 @@ export const monitorAspectNames: Record<MonitorAspect, string> = {
   database: 'Database load',
   personalization: 'Personalization health',
 };
+export const aspectReasons: Record<string, string> = {
+  personalization_load_high:
+    'Database load is above the learned alert threshold.',
+  personalization_stale: 'Portrait processing is overdue.',
+  personalization_job_stale:
+    'Personalization reconciliation has not completed for over three minutes.',
+  personalization_work_unavailable: 'No complete work interval is available.',
+  personalization_work_warning:
+    'Personalization reported refresh errors or source poll fallbacks.',
+  personalization_disabled: 'Personalization is disabled.',
+  personalization_counter_warmup: 'Collecting a comparable work interval.',
+  database_measurement_unavailable: 'Database measurement is unavailable.',
+  database_measurement_incomplete: 'Database measurement is incomplete.',
+  database_baseline_learning: 'Learning normal database load.',
+  database_counter_warmup: 'Collecting a database measurement interval.',
+  personalization_measurement_unavailable:
+    'Monitoring measurements are unavailable.',
+};
+function observedHealth(
+  result: import('@/lib/api/system-monitor').MonitorAspectResult
+): AspectHealth {
+  const labels: Partial<Record<string, string>> = {
+    database_baseline_learning: 'Learning baseline',
+    database_counter_warmup: 'Collecting data',
+    personalization_counter_warmup: 'Collecting work interval',
+    personalization_disabled: 'Disabled',
+    personalization_job_stale: 'Reconciliation overdue',
+    database_measurement_incomplete: 'Incomplete measurement',
+  };
+  return {
+    outcome: result.outcome,
+    label:
+      (result.errorCode ? labels[result.errorCode] : undefined) ??
+      (result.outcome === 'pass'
+        ? 'Healthy'
+        : result.outcome === 'warn'
+          ? 'Warning'
+          : result.outcome === 'fail'
+            ? 'Needs attention'
+            : result.outcome === 'interrupted'
+              ? 'Interrupted'
+              : 'Unavailable'),
+    reason:
+      result.diagnostic ||
+      (result.errorCode ? aspectReasons[result.errorCode] : undefined),
+  };
+}
 interface AspectHealth {
   outcome: Outcome;
   label: string;
@@ -35,6 +82,12 @@ export function projectPersonalizationHealth(
       label: health.outcome === 'interrupted' ? 'Interrupted' : 'Unavailable',
     });
   }
+  if (check.lastRun?.aspects)
+    return {
+      database: observedHealth(check.lastRun.aspects.database),
+      personalization: observedHealth(check.lastRun.aspects.personalization),
+      stale,
+    };
   const saved = check.lastRun?.personalizationLoad;
   const m = saved?.scope === 'database' ? saved : undefined;
   const personal = m?.personalization;

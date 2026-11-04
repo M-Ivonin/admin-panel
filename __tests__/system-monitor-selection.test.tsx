@@ -175,3 +175,129 @@ it('selects the corresponding history from either compact card', async () => {
     await screen.findByRole('combobox', { name: 'Check' })
   ).toHaveTextContent('Personalization health');
 });
+
+it('opens a Slack incident link on its own health aspect', async () => {
+  Object.assign(window.location, {
+    search: '?incident=personalization-incident',
+  });
+  const incident = {
+    incidentId: 'personalization-incident',
+    checkId: run.checkId,
+    aspect: 'personalization' as const,
+    kind: 'target' as const,
+    openedAt: at,
+    confirmedAt: at,
+    resolvedAt: null,
+    reason: 'personalization_job_stale',
+    blockedChecks: [],
+  };
+  api.incidents.mockResolvedValue({
+    items: [incident],
+    total: 1,
+    offset: 0,
+    limit: 25,
+  });
+  try {
+    render(<SystemMonitorDashboard />);
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByRole('heading', { name: 'Personalization health' })
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/reconciliation has not completed/)
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Close incident details' })
+    );
+    expect(
+      await screen.findByRole('combobox', { name: 'Check' })
+    ).toHaveTextContent('Personalization health');
+  } finally {
+    Object.assign(window.location, { search: '' });
+  }
+});
+it('shows a retired combined incident as replaced rather than recovered', async () => {
+  const incident = {
+    incidentId: 'combined-old',
+    checkId: run.checkId,
+    kind: 'target' as const,
+    resolution: 'superseded' as const,
+    openedAt: at,
+    confirmedAt: at,
+    resolvedAt: at,
+    reason: 'personalization_stale',
+    blockedChecks: [],
+  };
+  api.incidents.mockResolvedValue({
+    items: [incident],
+    total: 1,
+    offset: 0,
+    limit: 25,
+  });
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Incident details' })
+  );
+  const dialog = await screen.findByRole('dialog');
+  expect(
+    within(dialog).getByText('Replaced', { exact: true })
+  ).toBeInTheDocument();
+  expect(
+    within(dialog).getByText(/does not confirm recovery/)
+  ).toBeInTheDocument();
+  expect(
+    within(dialog).queryByText('Resolved', { exact: true })
+  ).not.toBeInTheDocument();
+});
+it('uses independently persisted results when metrics alone cannot prove a never-completed job is stalled', async () => {
+  api.overview.mockResolvedValue({
+    generatedAt: at,
+    workerHeartbeatAt: at,
+    environment: 'TEST',
+    delivery: {
+      slackPending: 0,
+      slackFailed: 0,
+      lokiPending: 0,
+      lokiDropped: 0,
+    },
+    checks: [
+      {
+        ...check,
+        status: 'fail',
+        lastRun: {
+          ...run,
+          aspects: {
+            database: {
+              outcome: 'unavailable',
+              errorCode: 'database_measurement_unavailable',
+            },
+            personalization: {
+              outcome: 'fail',
+              errorCode: 'personalization_job_stale',
+            },
+          },
+          errorCode: 'personalization_measurement_unavailable',
+          personalizationLoad: {
+            ...run.personalizationLoad!,
+            measurement: 'unavailable',
+            sqlMsPerMinute: null,
+            personalization: {
+              ...run.personalizationLoad!.personalization!,
+              measurement: 'warmup',
+              lastRunAt: null,
+            },
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  expect(
+    await screen.findByRole('button', {
+      name: /Personalization health: Reconciliation overdue/,
+    })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: /Database load: Unavailable/ })
+  ).toBeInTheDocument();
+});

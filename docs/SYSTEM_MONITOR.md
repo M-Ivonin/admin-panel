@@ -132,15 +132,20 @@ Retained portrait totals during a source outage are not current freshness proof.
 Stale, offline, disabled and interrupted coverage never produces a healthy card.
 
 Both views use one shared observation (`backend.personalization.load`), with no
-extra polling, new probe, backend change or database query. The check count,
-incidents and Slack confirmation policy retain their combined
-probe outcome. The Check menu offers both aspects independently; history rows and
+extra signal request or database query. The check count retains the combined probe outcome. Incidents and Slack
+notifications are tracked independently per aspect: three failures confirm a
+problem and two passes confirm recovery. Missing measurements raise coverage
+incidents rather than confirming overload. Two complete database measurements
+restore coverage while a baseline is learning; they do not recover overload.
+Old combined incidents are labelled Replaced, not Recovered.
+The Check menu offers both aspects independently; history rows and
 Inspect status are projected from each stored observation at its original time.
 History shows SQL time/queries/writes for database load and checked profiles/errors/
 overdue profiles for personalization. The combined HTTP-latency/availability charts
 are omitted for these aspects rather than presented as independent health history.
-Inspect retains the shared diagnostic with an explicit scope label. Card and row
-statuses are display projections, not independent alert streams.
+Inspect retains the shared diagnostic with an explicit scope label.
+New observations include authoritative per-aspect results; older history uses
+the existing metric projection. Slack incident links select the matching aspect.
 
 SQL time is not CPU; job durations are wall-clock time, not attributed SQL.
 

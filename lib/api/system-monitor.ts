@@ -39,7 +39,16 @@ export interface PersonalizationLoad {
   baselineHours: number;
   loadRatio: number | null;
 }
+export interface MonitorAspectResult {
+  outcome: Outcome;
+  errorCode?: string;
+  diagnostic?: string;
+}
 export interface MonitorRun {
+  aspects?: {
+    database: MonitorAspectResult;
+    personalization: MonitorAspectResult;
+  };
   personalizationLoad?: PersonalizationLoad;
   runId: string;
   checkId: string;
@@ -94,6 +103,8 @@ export interface MonitorHistory extends Page<MonitorRun> {
   buckets: HistoryBucket[];
 }
 export interface MonitorIncident {
+  aspect?: 'database' | 'personalization';
+  resolution?: 'superseded';
   incidentId: string;
   checkId: string;
   kind: 'target' | 'coverage';
