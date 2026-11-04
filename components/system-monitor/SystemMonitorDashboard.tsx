@@ -57,7 +57,7 @@ import {
 
 const checkNames: Record<string, string> = {
   'backend.health': 'Application API',
-  'backend.personalization.load': 'Personalization database load',
+  'backend.personalization.load': 'Database load and personalization health',
   'n8n.health': 'n8n availability',
   'n8n.readiness': 'n8n readiness',
   'backend.auth': 'Account access',

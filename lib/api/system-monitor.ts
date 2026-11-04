@@ -7,7 +7,24 @@ export type Outcome =
   | 'unavailable'
   | 'interrupted'
   | 'unknown';
+export interface PersonalizationHealth {
+  measurement: 'complete' | 'partial' | 'unavailable' | 'warmup' | 'disabled';
+  intervalMinutes: number | null;
+  runs: number | null;
+  checked: number | null;
+  reused: number | null;
+  failed: number | null;
+  sourcePolls: number | null;
+  sourcePollFailures: number | null;
+  averageRunMs: number | null;
+  averageSourcePollMs: number | null;
+  lastRunAt: string | null;
+  lastSuccessfulAt: string | null;
+  lastRunMs: number | null;
+}
 export interface PersonalizationLoad {
+  scope?: 'database';
+  personalization?: PersonalizationHealth;
   measurement?: 'complete' | 'partial' | 'unavailable' | 'warmup';
   intervalMinutes?: number | null;
   lastCompleteAt?: string | null;

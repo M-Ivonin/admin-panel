@@ -14,7 +14,7 @@ import { projectDetailedCheckHealth } from '@/lib/system-monitor-health';
 
 const names: Record<string, string> = {
   'backend.health': 'Application API',
-  'backend.personalization.load': 'Personalization database load',
+  'backend.personalization.load': 'Database load and personalization health',
   'backend.auth': 'Account access',
   'backend.auth.refresh': 'Session refresh',
   'backend.predictions.freshness': 'Prediction freshness',
