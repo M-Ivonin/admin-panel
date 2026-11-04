@@ -114,12 +114,35 @@ presentation. Deterministic boundary coverage lives in
 `__tests__/system-monitor-health.test.ts`; the Overview and System Monitor
 component tests verify that callers update when a result expires.
 
-## Database load and personalization health
+## Database load and Personalization health
 
-The load panel separates all current-database SQL counters (time, calls, shared
-pages and tuple writes) from actual personalization work (runs, checked/reused
-users, errors, source-poll failures and elapsed durations). SQL time is not CPU;
-job durations are wall-clock time, not attributed SQL.
+Two independent cards appear in Background processing and as separate detailed
+panels. `Database load` evaluates all current-database SQL counters against the
+collector's learned threshold (greater than 3× baseline, with a 1000ms/min floor).
+Complete measurements without a baseline show Learning baseline; partial,
+unavailable and warmup readings cannot appear healthy. A partial lower bound
+above the threshold still proves overload.
+
+`Personalization health` evaluates work errors, source-poll failures, completed
+runs and overdue profile refreshes independently. Disabled work is explicit;
+missing/partial observations are unavailable and process warmup shows Collecting
+work interval. Reconciliation is overdue when its last completion is over three
+minutes before the observation (or the collector explicitly reports it overdue).
+Retained portrait totals during a source outage are not current freshness proof.
+Stale, offline, disabled and interrupted coverage never produces a healthy card.
+
+Both views use one shared observation (`backend.personalization.load`), with no
+extra polling, new probe, backend change or database query. The check count,
+incidents and Slack confirmation policy retain their combined
+probe outcome. The Check menu offers both aspects independently; history rows and
+Inspect status are projected from each stored observation at its original time.
+History shows SQL time/queries/writes for database load and checked profiles/errors/
+overdue profiles for personalization. The combined HTTP-latency/availability charts
+are omitted for these aspects rather than presented as independent health history.
+Inspect retains the shared diagnostic with an explicit scope label. Card and row
+statuses are display projections, not independent alert streams.
+
+SQL time is not CPU; job durations are wall-clock time, not attributed SQL.
 
 Only `scope: database` complete readings enter the new SQL trend and baseline.
 Older history remains accessible unchanged. Unknown/partial/unavailable data and

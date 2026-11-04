@@ -11,10 +11,16 @@ import {
 import { alpha, useTheme } from '@mui/material/styles';
 import type { MonitorCheck, Outcome } from '@/lib/api/system-monitor';
 import { projectDetailedCheckHealth } from '@/lib/system-monitor-health';
+import {
+  projectPersonalizationHealth,
+  monitorAspectNames,
+  type MonitorAspect,
+} from '@/lib/system-monitor-personalization-health';
 
 const names: Record<string, string> = {
   'backend.health': 'Application API',
-  'backend.personalization.load': 'Database load and personalization health',
+  'backend.personalization.load':
+    'Database load / Personalization health (shared probe)',
   'backend.auth': 'Account access',
   'backend.auth.refresh': 'Session refresh',
   'backend.predictions.freshness': 'Prediction freshness',
@@ -49,7 +55,7 @@ export function MonitorCheckMap({
   checks: MonitorCheck[];
   now: number;
   sourceUnavailable: boolean;
-  onSelect: (check: MonitorCheck) => void;
+  onSelect: (check: MonitorCheck, aspect?: MonitorAspect) => void;
 }) {
   const theme = useTheme();
   const color = (outcome: Outcome) =>
@@ -62,7 +68,8 @@ export function MonitorCheckMap({
           : theme.palette.text.disabled;
   const passing = checks.filter(
     (check) =>
-      projectDetailedCheckHealth(check, now, sourceUnavailable).outcome === 'pass'
+      projectDetailedCheckHealth(check, now, sourceUnavailable).outcome ===
+      'pass'
   ).length;
   const required = checks.filter((check) => check.required).length;
   const byId = (id: string) => checks.find((check) => check.checkId === id);
@@ -74,9 +81,13 @@ export function MonitorCheckMap({
   const authChecks = [auth, byId('backend.auth.refresh')].filter(
     (check): check is MonitorCheck => Boolean(check)
   );
-  const processing = ['backend.jobs', 'backend.queues', 'backend.personalization.load'].map(byId).filter(
-    (check): check is MonitorCheck => Boolean(check)
-  );
+  const processing = [
+    'backend.jobs',
+    'backend.queues',
+    'backend.personalization.load',
+  ]
+    .map(byId)
+    .filter((check): check is MonitorCheck => Boolean(check));
   const branches = [
     'backend.catalog',
     'backend.catalog.app_store',
@@ -97,14 +108,26 @@ export function MonitorCheckMap({
       !n8n.includes(check) &&
       !sportmonks.includes(check)
   );
-  const node = (check: MonitorCheck, compact = false) => {
-    const { outcome, stale } = projectDetailedCheckHealth(
-      check,
-      now,
-      sourceUnavailable
-    );
-    const label = names[check.checkId] ?? check.checkId;
-    const status = check.enabled ? labels[outcome] : 'Disabled';
+  const node = (
+    check: MonitorCheck,
+    compact = false,
+    aspect?: MonitorAspect
+  ) => {
+    const health = projectDetailedCheckHealth(check, now, sourceUnavailable);
+    const split = aspect
+      ? projectPersonalizationHealth(check, now, sourceUnavailable)
+      : undefined;
+    const outcome = aspect && split ? split[aspect].outcome : health.outcome;
+    const stale = split?.stale ?? health.stale;
+    const label = aspect
+      ? monitorAspectNames[aspect]
+      : (names[check.checkId] ?? check.checkId);
+    const status =
+      aspect && split
+        ? split[aspect].label
+        : check.enabled
+          ? labels[outcome]
+          : 'Disabled';
     const freshness = !check.enabled ? 'Disabled' : stale ? 'Stale' : 'Fresh';
     const last = check.lastRun?.endedAt
       ? new Date(check.lastRun.endedAt).toLocaleString('en-GB', {
@@ -117,12 +140,12 @@ export function MonitorCheckMap({
         : `${check.intervalMs / 60000} min`;
     return (
       <Tooltip
-        key={check.checkId}
+        key={`${check.checkId}:${aspect ?? 'check'}`}
         title={`Last check: ${last} · Kyiv. Every ${interval}; deadline ${check.deadlineMs / 1000}s. ${check.required ? 'Required' : 'Optional'}.`}
         arrow
       >
         <ButtonBase
-          onClick={() => onSelect(check)}
+          onClick={() => onSelect(check, aspect)}
           aria-label={`${label}: ${status}, ${freshness}, ${check.required ? 'Required' : 'Optional'}. View check details and history`}
           sx={{
             width: '100%',
@@ -167,7 +190,9 @@ export function MonitorCheckMap({
             <Typography variant="caption" color="text.secondary">
               {status}
               {stale ? ' · Stale' : ''}
-              {outcome === 'pass' && check.lastRun?.durationMs != null
+              {!aspect &&
+              outcome === 'pass' &&
+              check.lastRun?.durationMs != null
                 ? ` · ${check.lastRun.durationMs} ms`
                 : ''}
             </Typography>
@@ -341,19 +366,42 @@ export function MonitorCheckMap({
                 </Box>
               ) : (
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
-                  {[...apiChecks, ...authChecks, ...branches].map((check) => node(check))}
+                  {[...apiChecks, ...authChecks, ...branches].map((check) =>
+                    node(check)
+                  )}
                 </Stack>
               )}
               {processing.length > 0 && (
-                <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Typography variant="overline" color="text.secondary">Background processing</Typography>
-                  <Box sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
-                    gap: 1.5,
-                    mt: 1,
-                  }}>
-                    {processing.map((check) => node(check, true))}
+                <Box
+                  sx={{
+                    mt: 2.5,
+                    pt: 2,
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary">
+                    Background processing
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(2, minmax(0, 1fr))',
+                      },
+                      gap: 1.5,
+                      mt: 1,
+                    }}
+                  >
+                    {processing.flatMap((check) =>
+                      check.checkId === 'backend.personalization.load'
+                        ? [
+                            node(check, true, 'database'),
+                            node(check, true, 'personalization'),
+                          ]
+                        : [node(check, true)]
+                    )}
                   </Box>
                 </Box>
               )}
@@ -429,7 +477,8 @@ export function MonitorCheckMap({
           </Box>
         )}
         <Typography variant="caption" color="text.secondary">
-          Arrows show the application access path · Dashed outline means no fresh result
+          Arrows show the application access path · Dashed outline means no
+          fresh result
         </Typography>
       </Stack>
     </Paper>
