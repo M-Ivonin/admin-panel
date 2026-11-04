@@ -53,3 +53,15 @@ that still track it can replace or remove it, including during rebase/abort.
 After such operations, verify the file before running the automation. Restore a
 validated admin-panel configuration; do not copy the workspace configuration,
 which targets a different repository.
+
+Discovery passes the last five completed inspections (`at`, `baseSha`, and
+`analysis.checked`) to the next analysis, oldest first. The agent chooses another
+primary area, preferring uninspected areas and then the least recently inspected.
+Recent commits guide the first inspection and remain supporting context afterward.
+Repeating an area requires a concrete new change/regression signal or no suitable
+alternative, explained in `analysis.checked`. This is prompt-guided scope selection,
+not a fixed subsystem schedule. Existing `lastDiscovery` seeds the history on the
+first run after upgrading. Valid no-candidate reports also advance history; failed
+analysis, invalid reports and remote-base drift do not. A validated inspection is
+retained even if subsequent issue publication fails. History is local runtime
+state in `state.json`; category priority and proof rules are unchanged.

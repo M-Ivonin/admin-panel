@@ -520,7 +520,11 @@ for (const body of ['', `source-base-sha:${'b'.repeat(40)}\n`]) {
       const result = await runner.discover({ preflight: false });
       assert.equal(result.status, 'failed');
       assert.match(result.reason, /existing issue #44.*analyzed base/);
-      assert.deepEqual(await runner.loadState(), {});
+      // Issue reuse failed, but the validated inspection still counts as coverage.
+      assert.deepEqual(await runner.loadState(), { discoveryHistory: [{
+        at: '2026-05-20T09:00:00.000Z', baseSha: 'a'.repeat(40),
+        checked: explanation([validCandidate]).checked,
+      }] });
     } finally { await cleanup(); }
   });
 }
