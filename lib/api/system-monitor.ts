@@ -7,7 +7,20 @@ export type Outcome =
   | 'unavailable'
   | 'interrupted'
   | 'unknown';
+export interface PersonalizationLoad {
+  sqlMsPerMinute: number | null;
+  callsPerMinute: number | null;
+  sharedBlocksPerMinute: number | null;
+  writesPerMinute: number | null;
+  totalPortraits: number;
+  overduePortraits: number;
+  lastCheckedAt: string | null;
+  baselineSqlMsPerMinute: number | null;
+  baselineHours: number;
+  loadRatio: number | null;
+}
 export interface MonitorRun {
+  personalizationLoad?: PersonalizationLoad;
   runId: string;
   checkId: string;
   scheduledAt: string;

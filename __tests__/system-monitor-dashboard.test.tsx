@@ -802,3 +802,58 @@ it.each([404, 500])('shows a check request failure (%s) inside the dialog', asyn
   const dialog = await screen.findByRole('dialog', { name: 'Check details' });
   expect(await within(dialog).findByText(status === 404 ? 'Check result no longer exists in retention.' : 'Check details are unavailable.')).toBeInTheDocument();
 });
+
+it('shows personalization SQL load and overdue portraits without treating HTTP latency as DB load', async () => {
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        status: 'fail',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          outcome: 'fail',
+          personalizationLoad: {
+            sqlMsPerMinute: 1250,
+            callsPerMinute: 40,
+            sharedBlocksPerMinute: 3000,
+            writesPerMinute: 15,
+            totalPortraits: 100,
+            overduePortraits: 4,
+            lastCheckedAt: new Date().toISOString(),
+            baselineSqlMsPerMinute: 400,
+            baselineHours: 24,
+            loadRatio: 3.125,
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {
+    name: 'Personalization database load',
+  });
+  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/4 overdue \/ 100 portraits/)
+  ).toBeInTheDocument();
+  expect(within(panel).getByText(/3.1× normal load/)).toBeInTheDocument();
+});
+
+it('shows a completed idle baseline without claiming it is still learning', async () => {
+  api.overview.mockResolvedValue({ ...overview, checks: [...overview.checks, {
+    ...overview.checks[0], checkId: 'backend.personalization.load',
+    lastRun: { ...overview.checks[0].lastRun!, checkId: 'backend.personalization.load', personalizationLoad: {
+      sqlMsPerMinute: 0, callsPerMinute: 0, sharedBlocksPerMinute: 0, writesPerMinute: 0,
+      totalPortraits: 0, overduePortraits: 0, lastCheckedAt: null,
+      baselineSqlMsPerMinute: 0, baselineHours: 24, loadRatio: null,
+    } },
+  }] });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {name:'Personalization database load'});
+  expect(within(panel).getByText(/Baseline ready/)).toBeInTheDocument();
+  expect(within(panel).queryByText(/Learning normal load/)).not.toBeInTheDocument();
+});
