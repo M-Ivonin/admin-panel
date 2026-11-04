@@ -14,6 +14,7 @@ import { projectDetailedCheckHealth } from '@/lib/system-monitor-health';
 
 const names: Record<string, string> = {
   'backend.health': 'Application API',
+  'backend.personalization.load': 'Personalization database load',
   'backend.auth': 'Account access',
   'backend.auth.refresh': 'Session refresh',
   'backend.predictions.freshness': 'Prediction freshness',
@@ -73,7 +74,7 @@ export function MonitorCheckMap({
   const authChecks = [auth, byId('backend.auth.refresh')].filter(
     (check): check is MonitorCheck => Boolean(check)
   );
-  const processing = ['backend.jobs', 'backend.queues'].map(byId).filter(
+  const processing = ['backend.jobs', 'backend.queues', 'backend.personalization.load'].map(byId).filter(
     (check): check is MonitorCheck => Boolean(check)
   );
   const branches = [

@@ -33,6 +33,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { MonitorCharts } from './MonitorCharts';
+import { PersonalizationLoadPanel } from './PersonalizationLoadPanel';
 import { MonitorCheckMap } from './MonitorCheckMap';
 import { projectDetailedSourceHealth } from '@/lib/system-monitor-health';
 import {
@@ -56,6 +57,7 @@ import {
 
 const checkNames: Record<string, string> = {
   'backend.health': 'Application API',
+  'backend.personalization.load': 'Personalization database load',
   'n8n.health': 'n8n availability',
   'n8n.readiness': 'n8n readiness',
   'backend.auth': 'Account access',
@@ -454,6 +456,13 @@ export function SystemMonitorDashboard() {
                     Monitor worker heartbeat or source snapshot is stale.
                     Current target health is unknown.
                   </Alert>
+                )}
+                {overview.checks.find(c => c.checkId === 'backend.personalization.load') && (
+                  <PersonalizationLoadPanel
+                    check={overview.checks.find(c => c.checkId === 'backend.personalization.load')!}
+                    now={now} sourceUnavailable={offline || Boolean(sourceStale)}
+                    onSelect={() => { setCheckId('backend.personalization.load'); setPage(0); }}
+                  />
                 )}
                 {overview.checks.length > 0 && (
                   <MonitorCheckMap
