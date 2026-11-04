@@ -857,3 +857,70 @@ it('shows a completed idle baseline without claiming it is still learning', asyn
   expect(within(panel).getByText(/Baseline ready/)).toBeInTheDocument();
   expect(within(panel).queryByText(/Learning normal load/)).not.toBeInTheDocument();
 });
+
+it('labels partial measurements as a lower bound and does not call measurement failure high database load', async () => {
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [
+      ...overview.checks,
+      {
+        ...overview.checks[0],
+        checkId: 'backend.personalization.load',
+        status: 'fail',
+        lastRun: {
+          ...overview.checks[0].lastRun!,
+          checkId: 'backend.personalization.load',
+          outcome: 'fail',
+          errorCode: 'personalization_measurement_incomplete',
+          personalizationLoad: {
+            sqlMsPerMinute: 1250,
+            callsPerMinute: 40,
+            sharedBlocksPerMinute: 3000,
+            writesPerMinute: 15,
+            totalPortraits: 100,
+            overduePortraits: 0,
+            lastCheckedAt: new Date().toISOString(),
+            baselineSqlMsPerMinute: null,
+            baselineHours: 1,
+            loadRatio: null,
+            measurement: 'partial',
+            intervalMinutes: 15,
+            lastCompleteAt: new Date().toISOString(),
+          },
+        },
+      },
+    ],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = await screen.findByRole('region', {
+    name: 'Personalization database load',
+  });
+  expect(
+    within(panel).getByText(/known work only.*lower bound/i)
+  ).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/measurement is incomplete/i)
+  ).toBeInTheDocument();
+  expect(
+    within(panel).queryByText(/load is above the alert threshold/i)
+  ).not.toBeInTheDocument();
+  expect(within(panel).getByText(/15 minute measurement/i)).toBeInTheDocument();
+  expect(
+    within(panel).getByText(/Last complete measurement/i)
+  ).toBeInTheDocument();
+});
+
+it('keeps the last complete time visible during measurement outages and labels freshness as last known', async () => {
+  api.overview.mockResolvedValue({...overview,checks:[...overview.checks,{
+    ...overview.checks[0],checkId:'backend.personalization.load',status:'fail',lastRun:{...overview.checks[0].lastRun!,checkId:'backend.personalization.load',outcome:'fail',errorCode:'personalization_measurement_unavailable',personalizationLoad:{
+      measurement:'unavailable',intervalMinutes:null,lastCompleteAt:new Date(Date.now()-900000).toISOString(),
+      sqlMsPerMinute:null,callsPerMinute:null,sharedBlocksPerMinute:null,writesPerMinute:null,totalPortraits:100,overduePortraits:0,lastCheckedAt:new Date(Date.now()-900000).toISOString(),baselineSqlMsPerMinute:null,baselineHours:1,loadRatio:null,
+    }}
+  }]});
+  render(<SystemMonitorDashboard />);
+  const panel=await screen.findByRole('region',{name:'Personalization database load'});
+  expect(within(panel).getByText(/Database measurement is unavailable/)).toBeInTheDocument();
+  expect(within(panel).getByText(/Last complete measurement:/)).not.toHaveTextContent('None yet');
+  expect(within(panel).getByText(/Last known portrait freshness/)).toBeInTheDocument();
+  expect(within(panel).queryByText(/load is above the alert threshold/)).not.toBeInTheDocument();
+});
