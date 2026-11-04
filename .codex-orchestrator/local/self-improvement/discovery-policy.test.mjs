@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { validConfig } from './test-fixtures.mjs';
 import { validateDiscoveryReport } from './runner.mjs';
 
 const analysis = {
@@ -64,6 +65,7 @@ for (const missing of [false, true]) {
       const localDir = path.join(cwd, '.codex-orchestrator/local/self-improvement');
       await mkdir(path.join(localDir, 'prompts'), { recursive: true });
       await writeFile(path.join(localDir, 'prompts/discovery.md'), 'Read-only discovery');
+      await writeFile(path.join(cwd, '.codex-orchestrator/config.json'), JSON.stringify(validConfig()));
       const runner = createRunner({ cwd, localDir, env: { ...process.env, CODEX_HOME: cwd },
         codexCommand: process.execPath,
         withRemoteBaseWorktree: async (_root, analyze) => ({ baseSha: 'a'.repeat(40),
@@ -103,3 +105,57 @@ for (const missing of [false, true]) {
     } finally { await rm(cwd, { recursive: true, force: true }); }
   });
 }
+
+/** Exercise persisted scope history through fresh runner instances and the Codex input. */
+test('discovery carries recent inspected scopes across runs, including legacy none reports', async () => {
+  const cwd = await mkdtemp(path.join(tmpdir(), 'discovery-rotation-'));
+  const localDir = path.join(cwd, '.codex-orchestrator/local/self-improvement');
+  const legacy = { at: '2026-11-03T07:00:00Z', baseSha: 'b'.repeat(40),
+    status: 'none', analysis: { ...analysis, checked: ['Notifications: receipt queue'] } };
+  try {
+    for (const skill of ['improve-codebase-architecture', 'codebase-design']) {
+      await mkdir(path.join(cwd, 'skills', skill), { recursive: true });
+      await writeFile(path.join(cwd, 'skills', skill, 'SKILL.md'), 'fixture gate');
+    }
+    await mkdir(path.join(localDir, 'prompts'), { recursive: true });
+    await writeFile(path.join(localDir, 'prompts/discovery.md'),
+      await readFile(new URL('./prompts/discovery.md', import.meta.url), 'utf8'));
+    await writeFile(path.join(localDir, 'state.json'), JSON.stringify({ lastDiscovery: legacy, unrelated: 'preserve' }));
+    const scopes = ['Authentication', 'Collections', 'Matches', 'Payments', 'Local storage', 'Chat', 'Predictions'];
+    const expectedHistory = [{ at: legacy.at, baseSha: legacy.baseSha, checked: legacy.analysis.checked }];
+    let invalid = false;
+    for (const [index, scope] of scopes.entries()) {
+      const runner = createRunner({ cwd, localDir, env: { ...process.env, CODEX_HOME: cwd },
+        now: () => new Date(`2026-11-${String(index + 4).padStart(2, '0')}T07:00:00Z`),
+        codexCommand: process.execPath,
+        withRemoteBaseWorktree: async (_root, analyze) => ({ baseSha: 'a'.repeat(40),
+          result: await analyze({ worktreePath: cwd, baseSha: 'a'.repeat(40) }) }),
+        exec: async (command, _args, options) => {
+          assert.equal(command, process.execPath, 'discovery without a candidate must not publish');
+          assert.match(options.stdin, /Choose a different primary area/);
+          const historyLine = options.stdin.split('\n').find(line => line.startsWith('Recent discovery scopes (oldest first): '));
+          assert.ok(historyLine, 'Codex must receive inspected scopes from prior runs');
+          assert.deepEqual(JSON.parse(historyLine.slice('Recent discovery scopes (oldest first): '.length)), expectedHistory);
+          await writeFile(options.reportPath, JSON.stringify(invalid ? {} : {
+            status: 'completed', candidates: [], analysis: { ...analysis, checked: [scope] },
+          }));
+          return { code: 0, stdout: '' };
+        } });
+      const result = await runner.discover({ preflight: false });
+      assert.equal(result.status, 'none', result.reason);
+      expectedHistory.push({ at: `2026-11-${String(index + 4).padStart(2, '0')}T07:00:00.000Z`,
+        baseSha: 'a'.repeat(40), checked: [scope] });
+      if (expectedHistory.length > 5) expectedHistory.shift();
+      const state = await runner.loadState();
+      assert.equal(state.unrelated, 'preserve');
+      assert.deepEqual(state.discoveryHistory, expectedHistory);
+      assert.deepEqual(state.lastDiscovery.analysis.checked, [scope]);
+      // A failed report must leave the most recent completed inspection intact.
+      invalid = true;
+      const before = await readFile(path.join(localDir, 'state.json'), 'utf8');
+      assert.equal((await runner.discover({ preflight: false })).status, 'skipped');
+      assert.equal(await readFile(path.join(localDir, 'state.json'), 'utf8'), before);
+      invalid = false;
+    }
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});

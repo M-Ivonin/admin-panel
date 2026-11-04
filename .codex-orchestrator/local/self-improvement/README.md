@@ -40,3 +40,28 @@ An empty candidate list with a complete explanation is a successful `none`
 result: it is saved in local state, printed in the phase summary, and creates no
 issue or implementation. Architecture candidates take priority, then bugs, then
 performance; existing implementation proof, review and runtime safeguards apply.
+
+## Local configuration
+
+Preflight requires a valid `.codex-orchestrator/config.json` for
+`M-Ivonin/admin-panel` before any GitHub action or discovery. Missing, malformed,
+unsupported or mismatched configurations stop the run at preflight.
+The installed package owns schema validation.
+
+Keep this configuration local and ignored. Switching through historical commits
+that still track it can replace or remove it, including during rebase/abort.
+After such operations, verify the file before running the automation. Restore a
+validated admin-panel configuration; do not copy the workspace configuration,
+which targets a different repository.
+
+Discovery passes the last five completed inspections (`at`, `baseSha`, and
+`analysis.checked`) to the next analysis, oldest first. The agent chooses another
+primary area, preferring uninspected areas and then the least recently inspected.
+Recent commits guide the first inspection and remain supporting context afterward.
+Repeating an area requires a concrete new change/regression signal or no suitable
+alternative, explained in `analysis.checked`. This is prompt-guided scope selection,
+not a fixed subsystem schedule. Existing `lastDiscovery` seeds the history on the
+first run after upgrading. Valid no-candidate reports also advance history; failed
+analysis, invalid reports and remote-base drift do not. A validated inspection is
+retained even if subsequent issue publication fails. History is local runtime
+state in `state.json`; category priority and proof rules are unchanged.

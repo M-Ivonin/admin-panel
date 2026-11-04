@@ -937,11 +937,13 @@ it('shows personalization SQL load and overdue portraits without treating HTTP l
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
-  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(within(panel).getByLabelText('1.25 s/min')).toBeInTheDocument();
   expect(
-    within(panel).getByText(/4 overdue \/ 100 portraits/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/4 overdue \/ 100 profiles/)
   ).toBeInTheDocument();
   expect(
     within(panel).getByText(/3.1× normal database load/)
@@ -978,7 +980,7 @@ it('shows a completed idle baseline without claiming it is still learning', asyn
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
   expect(
     within(panel).getByText(/Database baseline ready/)
@@ -1024,10 +1026,10 @@ it('labels partial measurements as a lower bound and does not call measurement f
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
   expect(
-    within(panel).getByText(/known work only.*lower bound/i)
+    within(panel).getByText(/Partial measurement.*lower bounds/i)
   ).toBeInTheDocument();
   expect(
     within(panel).getByText(/measurement is incomplete/i)
@@ -1035,7 +1037,7 @@ it('labels partial measurements as a lower bound and does not call measurement f
   expect(
     within(panel).queryByText(/load is above the alert threshold/i)
   ).not.toBeInTheDocument();
-  expect(within(panel).getByText(/15 minute measurement/i)).toBeInTheDocument();
+  expect(within(panel).getByText('15 minutes')).toBeInTheDocument();
   expect(
     within(panel).getByText(/Last complete measurement/i)
   ).toBeInTheDocument();
@@ -1077,16 +1079,18 @@ it('keeps the last complete time visible during measurement outages and labels f
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
   expect(
     within(panel).getByText(/Database measurement is unavailable/)
   ).toBeInTheDocument();
   expect(
-    within(panel).getByText(/Last complete measurement:/)
-  ).not.toHaveTextContent('None yet');
+    within(panel).getByText('Last complete measurement').parentElement
+  ).not.toHaveTextContent('Not yet observed');
   expect(
-    within(panel).getByText(/Last known portrait freshness/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/Last known values/)
   ).toBeInTheDocument();
   expect(
     within(panel).queryByText(/load is above the alert threshold/)
@@ -1144,19 +1148,20 @@ it('separates whole-database SQL rates from observed personalization work', asyn
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
-  expect(within(panel).getByText('1.25 s/min')).toBeInTheDocument();
+  expect(within(panel).getByLabelText('1.25 s/min')).toBeInTheDocument();
+  const work = screen.getByRole('region', { name: 'Personalization health' });
+  expect(within(work).getByText('200')).toBeInTheDocument();
+  expect(within(work).getByText('198')).toBeInTheDocument();
+  expect(within(work).getByText('Source poll fallbacks')).toBeInTheDocument();
   expect(
-    within(panel).getByRole('heading', { name: 'Personalization' })
+    within(work).getByText(/separate from database measurement failures/)
   ).toBeInTheDocument();
-  expect(within(panel).getByText('200')).toBeInTheDocument();
-  expect(within(panel).getByText('198')).toBeInTheDocument();
-  expect(within(panel).getByText('Source poll fallbacks')).toBeInTheDocument();
+  expect(within(panel).getByText('Learning baseline')).toBeInTheDocument();
   expect(
-    within(panel).getByText(/separate from database measurement failures/)
+    within(work).getByText('Warning', { exact: true })
   ).toBeInTheDocument();
-  expect(within(panel).queryByText('Healthy')).not.toBeInTheDocument();
 });
 
 it('does not label old feature-scoped history as current database SQL measurements', async () => {
@@ -1189,11 +1194,13 @@ it('does not label old feature-scoped history as current database SQL measuremen
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Database load',
   });
   expect(within(panel).queryByText('100 s/min')).not.toBeInTheDocument();
   expect(
-    within(panel).getByText(/Portrait freshness not measured yet/)
+    within(
+      screen.getByRole('region', { name: 'Personalization health' })
+    ).getByText(/Not measured yet/)
   ).toBeInTheDocument();
   expect(within(panel).queryByText('Healthy')).not.toBeInTheDocument();
 });
@@ -1247,11 +1254,161 @@ it('does not mark stopped reconciliation as Current when database counters are c
   });
   render(<SystemMonitorDashboard />);
   const panel = await screen.findByRole('region', {
-    name: 'Database load and personalization health',
+    name: 'Personalization health',
   });
   expect(within(panel).getByText('Reconciliation overdue')).toBeInTheDocument();
   expect(
     within(panel).queryByText('Current', { exact: true })
   ).not.toBeInTheDocument();
-  expect(within(panel).getByText(/Completed runs 0/)).toBeInTheDocument();
+  expect(
+    within(panel).getByText('Completed runs').parentElement
+  ).toHaveTextContent('0');
 });
+
+it.each([
+  [
+    'personalization errors',
+    'complete',
+    1000,
+    'complete',
+    1,
+    0,
+    'pass',
+    'warn',
+  ],
+  ['database overload', 'complete', 4000, 'complete', 0, 0, 'fail', 'pass'],
+  ['simultaneous problems', 'complete', 4000, 'complete', 1, 0, 'fail', 'warn'],
+  [
+    'database unavailable',
+    'unavailable',
+    null,
+    'complete',
+    0,
+    0,
+    'unavailable',
+    'pass',
+  ],
+  [
+    'work unavailable',
+    'complete',
+    1000,
+    'unavailable',
+    null,
+    0,
+    'pass',
+    'unavailable',
+  ],
+  ['overdue profiles', 'complete', 1000, 'complete', 0, 4, 'pass', 'fail'],
+  ['baseline learning', 'complete', 1000, 'complete', 0, 0, 'warn', 'pass'],
+] as const)(
+  'shows independent cards for %s',
+  async (
+    scenario,
+    measurement,
+    sql,
+    workMeasurement,
+    failed,
+    overdue,
+    dbStatus,
+    workStatus
+  ) => {
+    const check = {
+      ...overview.checks[0],
+      checkId: 'backend.personalization.load',
+      status: 'fail' as const,
+      lastRun: {
+        ...overview.checks[0].lastRun!,
+        checkId: 'backend.personalization.load',
+        outcome: 'fail' as const,
+        errorCode: null,
+        personalizationLoad: {
+          scope: 'database' as const,
+          measurement,
+          sqlMsPerMinute: sql,
+          callsPerMinute: 40,
+          sharedBlocksPerMinute: 3000,
+          writesPerMinute: 15,
+          totalPortraits: 100,
+          overduePortraits: overdue,
+          lastCheckedAt: new Date().toISOString(),
+          baselineSqlMsPerMinute:
+            scenario === 'baseline learning' ? null : 1000,
+          baselineHours: scenario === 'baseline learning' ? 1 : 24,
+          loadRatio: sql == null ? null : sql / 1000,
+          personalization: {
+            measurement: workMeasurement,
+            intervalMinutes: 15,
+            runs: 15,
+            checked: 200,
+            reused: 198,
+            failed,
+            sourcePolls: 15,
+            sourcePollFailures: 0,
+            averageRunMs: 250,
+            averageSourcePollMs: 150,
+            lastRunAt: new Date().toISOString(),
+            lastSuccessfulAt: new Date().toISOString(),
+            lastRunMs: 300,
+          },
+        },
+      },
+    };
+    api.overview.mockResolvedValue({
+      ...overview,
+      checks: [...overview.checks, check],
+    });
+    render(<SystemMonitorDashboard />);
+    const database = await screen.findByRole('region', {
+      name: 'Database load',
+    });
+    const personal = screen.getByRole('region', {
+      name: 'Personalization health',
+    });
+    const labels = {
+      pass: 'Healthy',
+      warn: 'Warning',
+      fail: 'Needs attention',
+      unavailable: 'Unavailable',
+    };
+    expect(
+      within(database).getByText(
+        scenario === 'baseline learning'
+          ? 'Learning baseline'
+          : labels[dbStatus],
+        { exact: true }
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(personal).getByText(labels[workStatus], { exact: true })
+    ).toBeInTheDocument();
+    const backend = screen.getByRole('region', {
+      name: 'Backend check dependencies',
+    });
+    expect(
+      within(backend).getByRole('button', {
+        name: new RegExp(
+          `Database load: ${dbStatus === 'warn' && scenario === 'baseline learning' ? 'Learning baseline' : labels[dbStatus]}`
+        ),
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(backend).getByRole('button', {
+        name: new RegExp(`Personalization health: ${labels[workStatus]}`),
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(database).queryByText('Profiles checked')
+    ).not.toBeInTheDocument();
+    expect(
+      within(personal).queryByText('SQL execution time')
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(database).getByRole('button', { name: 'View shared history' })
+    );
+    await waitFor(() =>
+      expect(api.history).toHaveBeenCalledWith(
+        expect.objectContaining({ checkId: 'backend.personalization.load' })
+      )
+    );
+  }
+);

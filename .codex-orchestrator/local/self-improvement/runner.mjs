@@ -496,6 +496,18 @@ export function createRunner(options = {}) {
 
   async function preflight() {
     try {
+      const { parseAgentAutoConfig } = await import('codex-orchestrator');
+      const config = parseAgentAutoConfig(JSON.parse(await readFile(paths.config, 'utf8')));
+      const repository = `${config.github.owner}/${config.github.repo}`;
+      if (repository !== REPO) {
+        return { ok: false, reason: `config repository mismatch: ${repository}; expected ${REPO}` };
+      }
+    } catch (error) {
+      return { ok: false, reason: error.code === 'ENOENT'
+        ? `config missing: ${paths.config}; restore the local orchestrator configuration before running`
+        : `config invalid: ${error.message}` };
+    }
+    try {
       await resolveCodexCommand();
     } catch (error) {
       return { ok: false, reason: error.message };
@@ -711,17 +723,25 @@ export function createRunner(options = {}) {
     return { status: 'created', issueNumber: issueNumberFromUrl(url), url, fingerprint };
   }
 
+  /** Discover a candidate using recent inspection scopes, then publish if justified. */
   async function discover({ preflight: runPreflight = true } = {}) {
     if (runPreflight) {
       const check = await preflight();
       if (!check.ok) return { status: 'failed', reason: check.reason };
     }
+    const previousState = await loadState();
+    // Seed older installations from their last completed report without rewriting it.
+    const history = (previousState.discoveryHistory ?? (previousState.lastDiscovery?.analysis
+      ? [{ at: previousState.lastDiscovery.at, baseSha: previousState.lastDiscovery.baseSha,
+        checked: previousState.lastDiscovery.analysis.checked }]
+      : [])).slice(-5);
     let snapshot;
     try {
       snapshot = await analyzeRemoteBase(cwd, ({ worktreePath, baseSha }) => runCodexJson({
         phase: 'discover',
         promptPath: path.join(paths.prompts, 'discovery.md'),
-        contextText: `Find one local self-improvement candidate for the Levantem admin-panel repository. Analyze only this checkout at remote base ${baseSha}; do not modify repository files.`,
+        contextText: `Find one local self-improvement candidate for the Levantem admin-panel repository. Analyze only this checkout at remote base ${baseSha}; do not modify repository files.
+Recent discovery scopes (oldest first): ${JSON.stringify(history)}`,
         reportPath: path.join(paths.reports, 'discovery.json'),
         workingDirectory: worktreePath,
       }));
@@ -732,6 +752,11 @@ export function createRunner(options = {}) {
     if (!codex.ok) return { status: 'failed', reason: codex.reason };
     const validation = validateDiscoveryReport(codex.report);
     if (!validation.ok) return { status: 'skipped', reason: validation.reason };
+    // Completed inspections count even when no candidate is found or publication fails.
+    const stateAfterInspection = await loadState();
+    await saveState({ ...stateAfterInspection, discoveryHistory: [...history, {
+      at: now().toISOString(), baseSha: snapshot.baseSha, checked: validation.analysis.checked,
+    }].slice(-5) });
     if (!validation.candidates.length) {
       const state = await loadState();
       await saveState({ ...state, lastDiscovery: {

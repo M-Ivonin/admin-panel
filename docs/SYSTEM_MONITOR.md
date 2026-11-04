@@ -114,12 +114,40 @@ presentation. Deterministic boundary coverage lives in
 `__tests__/system-monitor-health.test.ts`; the Overview and System Monitor
 component tests verify that callers update when a result expires.
 
-## Database load and personalization health
+## Database load and Personalization health
 
-The load panel separates all current-database SQL counters (time, calls, shared
-pages and tuple writes) from actual personalization work (runs, checked/reused
-users, errors, source-poll failures and elapsed durations). SQL time is not CPU;
-job durations are wall-clock time, not attributed SQL.
+Two independent cards appear in Background processing and as separate detailed
+panels. `Database load` evaluates all current-database SQL counters against the
+collector's learned threshold (greater than 3× baseline, with a 1000ms/min floor).
+Complete measurements without a baseline show Learning baseline; partial,
+unavailable and warmup readings cannot appear healthy. A partial lower bound
+above the threshold still proves overload.
+
+`Personalization health` evaluates work errors, source-poll failures, completed
+runs and overdue profile refreshes independently. Disabled work is explicit;
+missing/partial observations are unavailable and process warmup shows Collecting
+work interval. Reconciliation is overdue when its last completion is over three
+minutes before the observation (or the collector explicitly reports it overdue).
+Retained portrait totals during a source outage are not current freshness proof.
+Stale, offline, disabled and interrupted coverage never produces a healthy card.
+
+Both views use one shared observation (`backend.personalization.load`), with no
+extra signal request or database query. The check count retains the combined probe outcome. Incidents and Slack
+notifications are tracked independently per aspect: three failures confirm a
+problem and two passes confirm recovery. Missing measurements raise coverage
+incidents rather than confirming overload. Two complete database measurements
+restore coverage while a baseline is learning; they do not recover overload.
+Old combined incidents are labelled Replaced, not Recovered.
+The Check menu offers both aspects independently; history rows and
+Inspect status are projected from each stored observation at its original time.
+History shows SQL time/queries/writes for database load and checked profiles/errors/
+overdue profiles for personalization. The combined HTTP-latency/availability charts
+are omitted for these aspects rather than presented as independent health history.
+Inspect retains the shared diagnostic with an explicit scope label.
+New observations include authoritative per-aspect results; older history uses
+the existing metric projection. Slack incident links select the matching aspect.
+
+SQL time is not CPU; job durations are wall-clock time, not attributed SQL.
 
 Only `scope: database` complete readings enter the new SQL trend and baseline.
 Older history remains accessible unchanged. Unknown/partial/unavailable data and
@@ -129,3 +157,20 @@ warm work counters independently of the database baseline.
 The existing System Monitor route, controls, incident history and auth are retained.
 The backend sends only allowlisted aggregates to admin, never statement identifiers
 or SQL text. Release backend and collector before this UI.
+
+### Compact dashboard cards
+
+The detailed dashboard places two equal cards directly below the check dependency
+map: Personalization on the left and Database on the right. They stack below the
+medium breakpoint. Key figures and a compact 24-hour chart remain visible; Details
+reveals secondary work counters, the database baseline, and measurement timing.
+The Overview summary is unchanged.
+
+Both charts reuse the existing single history request (up to 100 observations).
+Profile bars split checked profiles into refreshed and reused and normalize by
+the observed work interval; database time remains seconds per minute. Only complete
+observations with the database scope and timestamps within the last 24 hours enter
+their respective charts. Query-time lines break across missing intervals; historic
+points never turn a current unavailable or stale status healthy.
+
+Visual reference, viewports and captured states: [compact card proof](evidence/system-monitor/compact-health/REPORT.md).

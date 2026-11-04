@@ -36,6 +36,7 @@ import { MonitorCharts } from './MonitorCharts';
 import { PersonalizationLoadPanel } from './PersonalizationLoadPanel';
 import { MonitorCheckMap } from './MonitorCheckMap';
 import { projectDetailedSourceHealth } from '@/lib/system-monitor-health';
+import { aspectReasons, monitorAspectNames, projectPersonalizationRunHealth, type MonitorAspect } from '@/lib/system-monitor-personalization-health';
 import {
   incidentLinkWindow,
   logWindow,
@@ -57,7 +58,7 @@ import {
 
 const checkNames: Record<string, string> = {
   'backend.health': 'Application API',
-  'backend.personalization.load': 'Database load and personalization health',
+  'backend.personalization.load': 'Database load / Personalization health (shared probe)',
   'n8n.health': 'n8n availability',
   'n8n.readiness': 'n8n readiness',
   'backend.auth': 'Account access',
@@ -76,6 +77,7 @@ const checkNames: Record<string, string> = {
 };
 const checkName = (id: string) => checkNames[id] ?? id;
 const incidentReasons: Record<string, string> = {
+  ...aspectReasons,
   timeout: 'The service did not respond before the monitoring request timed out.',
   network_error: 'The monitor could not connect to the service. Its availability could not be verified.',
   slow_response: 'The service responded more slowly than expected.',
@@ -146,6 +148,19 @@ const denied = (error: unknown) =>
   error instanceof MonitorApiError &&
   (error.status === 403 || error.status === 401);
 
+function historicalValue(run: MonitorRun, aspect: MonitorAspect, column: 'primary' | 'secondary' | 'tertiary') {
+  const m = run.personalizationLoad?.scope === 'database' ? run.personalizationLoad : undefined;
+  if (!m) return '—';
+  if (aspect === 'database') {
+    const value = column === 'primary' ? m.sqlMsPerMinute == null ? null : m.sqlMsPerMinute / 1000 : column === 'secondary' ? m.callsPerMinute : m.writesPerMinute;
+    return value == null ? '—' : `${m.measurement === 'partial' ? '≥ ' : ''}${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })} ${column === 'primary' ? 's/min' : '/min'}`;
+  }
+  const work = m.personalization;
+  if (!work || work.measurement === 'unavailable') return '—';
+  const value = column === 'primary' ? work.checked : column === 'secondary' ? work.failed : m.overduePortraits;
+  return value == null ? '—' : value.toLocaleString('en-GB');
+}
+
 export function SystemMonitorDashboard() {
   const [access, setAccess] = useState<
     'loading' | 'allowed' | 'denied' | 'error'
@@ -154,6 +169,10 @@ export function SystemMonitorDashboard() {
   const [offline, setOffline] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [checkId, setCheckId] = useState('');
+  const [aspect, setAspect] = useState<MonitorAspect>('database');
+  const selectedAspect = checkId === 'backend.personalization.load' ? aspect : undefined;
+  const selectedCheck = overview?.checks.find(check => check.checkId === checkId);
+  const [runAspect, setRunAspect] = useState<MonitorAspect | undefined>();
   const [period, setPeriod] = useState(24);
   const [range, setRange] = useState(() => periodWindow(24, Date.now()));
   const [history, setHistory] = useState<MonitorHistory | null>(null);
@@ -178,6 +197,8 @@ export function SystemMonitorDashboard() {
   const [runState, setRunState] = useState<
     'loading' | 'missing' | 'error' | null
   >(null);
+  const runCheck = overview?.checks.find(check => check.checkId === run?.checkId);
+  const runHealth = run && runCheck && runAspect ? projectPersonalizationRunHealth(run, runCheck)[runAspect] : undefined;
   const [logService, setLogService] = useState<LogService>('system-monitor');
   const [logs, setLogs] = useState<MonitorLogs | null>(null);
   const [logState, setLogState] = useState<
@@ -311,6 +332,7 @@ export function SystemMonitorDashboard() {
         setLinkState(match ? null : 'missing');
         if (match) {
           setCheckId(match.checkId);
+          if (match.aspect) setAspect(match.aspect);
           setPage(0);
         }
       })
@@ -457,19 +479,14 @@ export function SystemMonitorDashboard() {
                     Current target health is unknown.
                   </Alert>
                 )}
-                {overview.checks.find(c => c.checkId === 'backend.personalization.load') && (
-                  <PersonalizationLoadPanel
-                    check={overview.checks.find(c => c.checkId === 'backend.personalization.load')!}
-                    now={now} sourceUnavailable={offline || Boolean(sourceStale)}
-                    onSelect={() => { setCheckId('backend.personalization.load'); setPage(0); }}
-                  />
-                )}
                 {overview.checks.length > 0 && (
                   <MonitorCheckMap
                     checks={overview.checks}
                     now={now}
                     sourceUnavailable={offline || Boolean(sourceStale)}
-                    onSelect={(check) => {
+                    onSelect={(check, selected) => {
+                      setAspect(selected ?? 'database');
+                      setRunAspect(selected);
                       setCheckId(check.checkId);
                       setPage(0);
                       if (check.lastRun) void selectRun(check.lastRun.runId);
@@ -479,6 +496,13 @@ export function SystemMonitorDashboard() {
                         setRunState(null);
                       }
                     }}
+                  />
+                )}
+                {overview.checks.find(c => c.checkId === 'backend.personalization.load') && (
+                  <PersonalizationLoadPanel
+                    check={overview.checks.find(c => c.checkId === 'backend.personalization.load')!}
+                    now={now} sourceUnavailable={offline || Boolean(sourceStale)}
+                    onSelect={(selected) => { setAspect(selected ?? 'database'); setCheckId('backend.personalization.load'); setPage(0); }}
                   />
                 )}
                 {!overview.checks.length && (
@@ -502,19 +526,21 @@ export function SystemMonitorDashboard() {
                   select
                   label="Check"
                   size="small"
-                  value={checkId}
+                  value={selectedAspect ? `${checkId}:${selectedAspect}` : checkId}
                   onChange={(event) => {
-                    setCheckId(event.target.value);
+                    const [id, selected] = event.target.value.split(':');
+                    setCheckId(id);
+                    if (selected === 'database' || selected === 'personalization') setAspect(selected);
                     setPage(0);
                   }}
                   sx={{ minWidth: { sm: 240 } }}
                 >
                   {overview?.checks.length ? (
-                    overview.checks.map((check) => (
-                      <MenuItem key={check.checkId} value={check.checkId}>
-                        {checkName(check.checkId)}
-                      </MenuItem>
-                    ))
+                    overview.checks.flatMap((check) => check.checkId === 'backend.personalization.load'
+                      ? (['database', 'personalization'] as const).map(value => (
+                        <MenuItem key={value} value={`${check.checkId}:${value}`}>{monitorAspectNames[value]}</MenuItem>
+                      ))
+                      : [<MenuItem key={check.checkId} value={check.checkId}>{checkName(check.checkId)}</MenuItem>])
                   ) : (
                     <MenuItem value="" disabled>
                       No checks available
@@ -555,10 +581,10 @@ export function SystemMonitorDashboard() {
             )}
             {history && (
               <>
-                <MonitorCharts buckets={history.buckets} />
+                {!selectedAspect && <MonitorCharts buckets={history.buckets} />}
                 <Paper variant="outlined">
                   <Typography variant="h6" sx={{ p: 2 }}>
-                    Raw check history
+                    {selectedAspect ? `${monitorAspectNames[selectedAspect]} history` : 'Raw check history'}
                   </Typography>
                   <TableContainer>
                     <Table size="small" aria-label="Raw check history">
@@ -566,9 +592,9 @@ export function SystemMonitorDashboard() {
                         <TableRow>
                           <TableCell>Scheduled</TableCell>
                           <TableCell>Outcome</TableCell>
-                          <TableCell>Duration</TableCell>
-                          <TableCell>HTTP</TableCell>
-                          <TableCell>Failed step</TableCell>
+                          <TableCell>{selectedAspect === 'database' ? 'SQL execution' : selectedAspect ? 'Profiles checked' : 'Duration'}</TableCell>
+                          <TableCell>{selectedAspect === 'database' ? 'Queries' : selectedAspect ? 'Refresh errors' : 'HTTP'}</TableCell>
+                          <TableCell>{selectedAspect === 'database' ? 'Rows written' : selectedAspect ? 'Overdue profiles' : 'Failed step'}</TableCell>
                           <TableCell>Details</TableCell>
                         </TableRow>
                       </TableHead>
@@ -579,19 +605,17 @@ export function SystemMonitorDashboard() {
                               {time(item.scheduledAt)}
                             </TableCell>
                             <TableCell>
-                              <Status outcome={item.outcome} />
+                              <Status outcome={selectedAspect && selectedCheck ? projectPersonalizationRunHealth(item, selectedCheck)[selectedAspect].outcome : item.outcome} />
                             </TableCell>
                             <TableCell>
-                              {item.durationMs === null
-                                ? '—'
-                                : `${item.durationMs} ms`}
+                              {selectedAspect ? historicalValue(item, selectedAspect, 'primary') : item.durationMs === null ? '—' : `${item.durationMs} ms`}
                             </TableCell>
-                            <TableCell>{item.httpStatus ?? '—'}</TableCell>
-                            <TableCell>{item.failedStep ?? '—'}</TableCell>
+                            <TableCell>{selectedAspect ? historicalValue(item, selectedAspect, 'secondary') : item.httpStatus ?? '—'}</TableCell>
+                            <TableCell>{selectedAspect ? historicalValue(item, selectedAspect, 'tertiary') : item.failedStep ?? '—'}</TableCell>
                             <TableCell>
                               <Button
                                 size="small"
-                                onClick={() => void selectRun(item.runId)}
+                                onClick={() => { setRunAspect(selectedAspect); void selectRun(item.runId); }}
                               >
                                 Inspect
                               </Button>
@@ -654,14 +678,14 @@ export function SystemMonitorDashboard() {
                             fontWeight={600}
                             sx={{ overflowWrap: 'anywhere' }}
                           >
-                            {checkName(item.checkId)} ·{' '}
+                            {item.aspect ? monitorAspectNames[item.aspect] : checkName(item.checkId)} ·{' '}
                             {item.kind === 'coverage'
                               ? 'Probe coverage lost'
                               : 'Target failure'}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {time(item.openedAt)} ·{' '}
-                            {item.resolvedAt ? 'Resolved' : 'Open'}
+                            {item.resolution === 'superseded' ? 'Replaced by separate monitoring' : item.resolvedAt ? 'Resolved' : 'Open'}
                           </Typography>
                         </Box>
                         <Button
@@ -717,15 +741,15 @@ export function SystemMonitorDashboard() {
                 <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
                   <Stack spacing={2.5}>
                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                      <Typography variant="h6">{checkName(selectedIncident.checkId)}</Typography>
-                      <Chip size="small" label={selectedIncident.resolvedAt ? 'Resolved' : 'Open'} color={selectedIncident.resolvedAt ? 'success' : 'warning'} />
+                      <Typography variant="h6">{selectedIncident.aspect ? monitorAspectNames[selectedIncident.aspect] : checkName(selectedIncident.checkId)}</Typography>
+                      <Chip size="small" label={selectedIncident.resolution === 'superseded' ? 'Replaced' : selectedIncident.resolvedAt ? 'Resolved' : 'Open'} color={selectedIncident.resolution === 'superseded' ? 'default' : selectedIncident.resolvedAt ? 'success' : 'warning'} />
                     </Stack>
                     <Box>
                       <Typography variant="subtitle2" gutterBottom>
-                        {selectedIncident.kind === 'coverage' ? 'Monitoring unavailable' : 'Service check failed'}
+                        {selectedIncident.resolution === 'superseded' ? 'Replaced by separate monitoring' : selectedIncident.kind === 'coverage' ? 'Monitoring unavailable' : 'Service check failed'}
                       </Typography>
                       <Typography variant="body2">
-                        {incidentReasons[selectedIncident.reason] ?? 'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
+                        {selectedIncident.resolution === 'superseded' ? 'The combined incident was replaced by separate Database load and Personalization health monitoring. This does not confirm recovery.' : incidentReasons[selectedIncident.reason] ?? 'The monitor recorded an issue with this check. See technical details for the recorded reason.'}
                       </Typography>
                       {selectedIncident.kind === 'coverage' && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -737,7 +761,7 @@ export function SystemMonitorDashboard() {
                       {[
                         ['Started', time(selectedIncident.openedAt)],
                         ['Confirmed', selectedIncident.confirmedAt ? time(selectedIncident.confirmedAt) : selectedIncident.kind === 'coverage' ? 'Not applicable' : 'Not yet confirmed'],
-                        ['Resolved at', selectedIncident.resolvedAt ? time(selectedIncident.resolvedAt) : 'Still open'],
+                        [selectedIncident.resolution === 'superseded' ? 'Replaced at' : 'Resolved at', selectedIncident.resolvedAt ? time(selectedIncident.resolvedAt) : 'Still open'],
                         ['Duration', `${incidentDuration(selectedIncident, now)}${selectedIncident.resolvedAt ? '' : ' so far'}`],
                       ].map(([label, value]) => (
                         <Box key={label}>
@@ -785,7 +809,7 @@ export function SystemMonitorDashboard() {
               scroll="paper"
             >
               <DialogTitle id="monitor-check-dialog-title">
-                Check details{run ? ` · ${checkName(run.checkId)}` : ''}
+                Check details{run ? ` · ${runAspect ? monitorAspectNames[runAspect] : checkName(run.checkId)}` : ''}
               </DialogTitle>
               <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
                 {runState === 'loading' && (
@@ -799,7 +823,9 @@ export function SystemMonitorDashboard() {
                 )}
                 {run && (
                   <Stack spacing={1}>
-                    <Status outcome={run.outcome} />
+                    <Status outcome={runHealth?.outcome ?? run.outcome} />
+                    {runHealth?.reason && <Typography>{runHealth.reason}</Typography>}
+                    {runHealth && <Typography variant="caption" color="text.secondary">Diagnostic below covers the shared database and personalization check.</Typography>}
                     <Typography variant="body2">Run ID: {run.runId}</Typography>
                     <Typography variant="body2">
                       Scheduled {time(run.scheduledAt)} · Started{' '}
@@ -831,7 +857,7 @@ export function SystemMonitorDashboard() {
                 {selectedIncident && !incidentDetailsOpen && (
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="flex-start">
                     <Typography variant="body2">
-                      Incident log context: {checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
+                      Incident log context: {selectedIncident.aspect ? monitorAspectNames[selectedIncident.aspect] : checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
                     </Typography>
                     <Button size="small" onClick={() => setSelectedIncident(null)}>Clear incident context</Button>
                   </Stack>
