@@ -328,14 +328,14 @@ function Report({ report: r }: { report: Results }) {
         'Unique accounts with at least one recorded message opening. Multiple openings and messages from one account count once.',
     },
     {
-      name: 'Took useful action',
+      name: 'Action after contact',
       value: s.usefulActionAccounts,
       icon: <BoltOutlinedIcon />,
       definition:
         'Unique accounts with a recorded qualifying product action after their first contact in this report. Multiple actions from one account count once. Telemetry is partial; the contact may not have caused the action.',
     },
     {
-      name: 'Made a purchase',
+      name: 'Purchase after contact',
       value: s.purchasingAccounts,
       icon: <ShoppingCartOutlinedIcon />,
       definition:
@@ -376,9 +376,9 @@ function Report({ report: r }: { report: Results }) {
         </Alert>
       ) : null}
       <Box component="section" aria-label="Account outcomes">
-        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 2 }}>
+        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 0.5 }}>
           <Typography component="h2" variant="h5" fontWeight={600}>
-            Account outcomes
+            Unique accounts
           </Typography>
           <Info label="Account outcomes">
             All four cards count unique accounts, independently.{' '}
@@ -388,6 +388,10 @@ function Report({ report: r }: { report: Results }) {
             remains unknown.
           </Info>
         </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Independent counts, not funnel steps. Actions and purchases are
+          counted after contact, even without a recorded message opening.
+        </Typography>
         <Box
           sx={{
             display: 'grid',
@@ -425,9 +429,14 @@ function Report({ report: r }: { report: Results }) {
           alignItems="center"
           sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}
         >
-          <Typography component="h2" variant="h6" fontWeight={600}>
-            Messages
-          </Typography>
+          <Box>
+            <Typography component="h2" variant="h6" fontWeight={600}>
+              Messages
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Individual messages
+            </Typography>
+          </Box>
           <Info label="Messages">
             These counts are messages, not unique accounts. Accepted / shown
             means provider acceptance for push/email or an in-app display.
@@ -471,6 +480,15 @@ function Report({ report: r }: { report: Results }) {
             </Box>
           </Stack>
         ))}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ gridColumn: '1 / -1', mt: 1.5 }}
+        >
+          One account can receive several messages. Opened messages can also be
+          counted in accepted / shown. Pending and other statuses are in
+          diagnostics.
+        </Typography>
       </Paper>
       <Stack spacing={2}>
         <Section title="How personalization works" icon={<TuneOutlinedIcon />}>

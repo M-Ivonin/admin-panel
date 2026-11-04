@@ -70,9 +70,12 @@ not increase a card. Message totals remain separate and count delivery records.
 Not sent counts failed/skipped messages without acceptance/display; pending work
 remains visible in diagnostics. Provider acceptance is not device delivery.
 
-All definitions, observation/causality caveats, financial amounts and technical
-counters are behind keyboard/touch-operable information buttons or disclosures.
-The four cards are independent outcomes, not a sequential or causal funnel.
+The heading identifies unique accounts, with a visible note that the cards are
+independent counts and actions/purchases after contact do not require a recorded
+message opening. The Messages strip identifies individual messages and explains
+that one account can receive several messages and opening overlaps with delivery.
+Detailed definitions, financial amounts and technical counters remain behind
+keyboard/touch-operable information buttons or disclosures.
 Accounts still shows the latest 100 evaluated accounts, while card totals include
 all evaluated accounts. Fresh visual proof and the approved reference are in
 [the compact Results evidence](proof/personalization-results-design/UI-EVIDENCE.md).

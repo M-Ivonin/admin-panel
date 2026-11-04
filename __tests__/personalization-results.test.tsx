@@ -77,13 +77,13 @@ it('shows unique account outcomes and hides diagnostics and explanations until r
   ).toBeVisible();
   expect(
     within(
-      screen.getByRole('article', { name: 'Took useful action' })
+      screen.getByRole('article', { name: 'Action after contact' })
     ).getByText('3')
   ).toBeVisible();
   expect(
-    within(screen.getByRole('article', { name: 'Made a purchase' })).getByText(
-      '1'
-    )
+    within(
+      screen.getByRole('article', { name: 'Purchase after contact' })
+    ).getByText('1')
   ).toBeVisible();
   expect(
     within(screen.getByRole('region', { name: 'Message activity' })).getByText(
