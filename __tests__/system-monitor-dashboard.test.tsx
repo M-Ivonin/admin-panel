@@ -1117,9 +1117,9 @@ it('separates whole-database SQL rates from observed personalization work', asyn
             intervalMinutes: 15,
             lastCompleteAt: new Date().toISOString(),
             sqlMsPerMinute: 1250,
-            callsPerMinute: 40,
+            callsPerMinute: 2174.61,
             sharedBlocksPerMinute: 3000,
-            writesPerMinute: 15,
+            writesPerMinute: 987.79,
             totalPortraits: 4327,
             overduePortraits: 0,
             lastCheckedAt: new Date().toISOString(),
@@ -1151,6 +1151,8 @@ it('separates whole-database SQL rates from observed personalization work', asyn
     name: 'Database load',
   });
   expect(within(panel).getByLabelText('1.25 s/min')).toBeInTheDocument();
+  expect(within(panel).getByText('≈ 36 queries/s')).toBeInTheDocument();
+  expect(within(panel).getByText('≈ 16.5 rows/s')).toBeInTheDocument();
   const work = screen.getByRole('region', { name: 'Personalization health' });
   expect(within(work).getByText('200')).toBeInTheDocument();
   expect(within(work).getByText('198')).toBeInTheDocument();

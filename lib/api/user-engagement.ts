@@ -112,6 +112,7 @@ export function removeEngagementExclusion(
 }
 
 export interface PersonalizationSettings {
+  emailEnabled?: boolean;
   disabledScenarioIds: string[];
   scenarios: Array<{
     id: string;
@@ -137,14 +138,14 @@ export function getPersonalizationSettings(): Promise<PersonalizationSettings> {
 export function savePersonalizationSettings(
   minimumContactIntervalHours: number,
   expectedRevision: number,
-  aiLimits?: Pick<
+  controls?: Pick<
     PersonalizationSettings,
-    'aiCallsPerUser24h' | 'aiCallsPerDay'
+    'aiCallsPerUser24h' | 'aiCallsPerDay' | 'emailEnabled'
   > & { disabledScenarioIds?: string[] }
 ): Promise<PersonalizationSettings> {
   return request(`${base}/personalization-settings`, 'PATCH', {
     minimumContactIntervalHours,
     expectedRevision,
-    ...aiLimits,
+    ...controls,
   });
 }

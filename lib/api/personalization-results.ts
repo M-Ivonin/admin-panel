@@ -13,6 +13,14 @@ export interface PersonalizationAccountResults {
   usefulActions: number;
   purchases: number;
 }
+export interface PersonalizationActivityDay {
+  date: string;
+  contactedAccounts: number;
+  messagesCreated: number;
+  openedAccounts: number;
+  openedMessages: number;
+}
+
 export interface PersonalizationResults {
   mode: 'permanent';
   days: number;
@@ -30,6 +38,7 @@ export interface PersonalizationResults {
     purchasingAccounts: number;
     lastDecisionAt: string | null;
   };
+  dailyActivity?: PersonalizationActivityDay[];
   accounts: PersonalizationAccountResults[];
   accountLimit: number;
   grossPurchases: Array<{ currency: string; amount: string }>;

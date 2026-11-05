@@ -18,6 +18,14 @@ const number = (value: number | null | undefined, suffix = '') =>
   value == null
     ? '—'
     : `${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })}${suffix}`;
+const perSecond = (
+  perMinute: number | null | undefined,
+  unit: string,
+  maximumFractionDigits: number
+) =>
+  perMinute == null
+    ? undefined
+    : `≈ ${(perMinute / 60).toLocaleString('en-GB', { maximumFractionDigits })} ${unit}/s`;
 const time = (at: string | null | undefined) =>
   at && Number.isFinite(Date.parse(at))
     ? new Date(at).toLocaleString('en-GB', {
@@ -263,12 +271,14 @@ export function PersonalizationLoadPanel({
               {metric(
                 'Queries',
                 number(m?.callsPerMinute, ' /min'),
-                'Database activity'
+                perSecond(m?.callsPerMinute, 'queries', 0) ??
+                  'SQL calls, including repeats'
               )}
               {metric(
                 'Rows written',
                 number(m?.writesPerMinute, ' /min'),
-                'Database changes'
+                perSecond(m?.writesPerMinute, 'rows', 1) ??
+                  'Inserts, updates, deletes'
               )}
             </>
           )}
