@@ -45,9 +45,6 @@ const labels: Record<Outcome, string> = {
   interrupted: 'Interrupted',
   unknown: 'Unknown',
 };
-const formatMetric = new Intl.NumberFormat('en-GB', {
-  maximumFractionDigits: 2,
-});
 
 export function MonitorCheckMap({
   checks,
@@ -132,46 +129,6 @@ export function MonitorCheckMap({
           ? labels[outcome]
           : 'Disabled';
     const freshness = !check.enabled ? 'Disabled' : stale ? 'Stale' : 'Fresh';
-    const saved = check.lastRun?.personalizationLoad;
-    const metrics =
-      aspect &&
-      check.enabled &&
-      !sourceUnavailable &&
-      !stale &&
-      saved?.scope === 'database' &&
-      (outcome === 'pass' || outcome === 'warn' || outcome === 'fail')
-        ? saved
-        : undefined;
-    const summary = [];
-    if (aspect === 'database' && metrics?.measurement === 'complete') {
-      if (metrics.sqlMsPerMinute != null)
-        summary.push(
-          `SQL ${formatMetric.format(metrics.sqlMsPerMinute / 1000)} s/min`
-        );
-      if (metrics.callsPerMinute != null)
-        summary.push(
-          `${formatMetric.format(metrics.callsPerMinute)} queries/min`
-        );
-      if (metrics.writesPerMinute != null)
-        summary.push(
-          `${formatMetric.format(metrics.writesPerMinute)} row writes/min`
-        );
-    }
-    const work = metrics?.personalization;
-    if (
-      aspect === 'personalization' &&
-      metrics &&
-      work?.measurement === 'complete'
-    ) {
-      summary.push(
-        `${formatMetric.format(metrics.overduePortraits)} of ${formatMetric.format(metrics.totalPortraits)} profiles overdue`
-      );
-      if (work.lastRunMs != null)
-        summary.push(
-          `Last run ${formatMetric.format(work.lastRunMs / 1000)} s`
-        );
-    }
-    const caption = summary.join(' · ');
     const last = check.lastRun?.endedAt
       ? new Date(check.lastRun.endedAt).toLocaleString('en-GB', {
           timeZone: 'Europe/Kyiv',
@@ -189,7 +146,7 @@ export function MonitorCheckMap({
       >
         <ButtonBase
           onClick={() => onSelect(check, aspect)}
-          aria-label={`${label}: ${status}, ${freshness}, ${check.required ? 'Required' : 'Optional'}.${caption ? ` ${caption}.` : ''} View check details and history`}
+          aria-label={`${label}: ${status}, ${freshness}, ${check.required ? 'Required' : 'Optional'}. View check details and history`}
           sx={{
             width: '100%',
             minWidth: 0,
@@ -239,19 +196,6 @@ export function MonitorCheckMap({
                 ? ` · ${check.lastRun.durationMs} ms`
                 : ''}
             </Typography>
-            {caption && (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{
-                  display: 'block',
-                  fontSize: 11,
-                  overflowWrap: 'anywhere',
-                }}
-              >
-                {caption}
-              </Typography>
-            )}
           </Box>
         </ButtonBase>
       </Tooltip>

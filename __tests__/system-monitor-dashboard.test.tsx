@@ -1384,24 +1384,18 @@ it.each([
     const backend = screen.getByRole('region', {
       name: 'Backend check dependencies',
     });
-    const databaseTile = within(backend).getByRole('button', {
-      name: new RegExp(
-        `Database load: ${scenario === 'baseline learning' ? 'Learning baseline' : labels[dbStatus]}`
-      ),
-    });
-    const personalTile = within(backend).getByRole('button', {
-      name: new RegExp(`Personalization health: ${labels[workStatus]}`),
-    });
-    const rates = within(databaseTile).queryByText(
-      `SQL ${sql === null ? '—' : sql / 1000} s/min · 40 queries/min · 15 row writes/min`
-    );
-    const profiles = within(personalTile).queryByText(
-      `${overdue} of 100 profiles overdue · Last run 0.3 s`
-    );
-    if (measurement === 'complete') expect(rates).toBeInTheDocument();
-    else expect(rates).not.toBeInTheDocument();
-    if (workMeasurement === 'complete') expect(profiles).toBeInTheDocument();
-    else expect(profiles).not.toBeInTheDocument();
+    expect(
+      within(backend).getByRole('button', {
+        name: new RegExp(
+          `Database load: ${dbStatus === 'warn' && scenario === 'baseline learning' ? 'Learning baseline' : labels[dbStatus]}`
+        ),
+      })
+    ).toBeInTheDocument();
+    expect(
+      within(backend).getByRole('button', {
+        name: new RegExp(`Personalization health: ${labels[workStatus]}`),
+      })
+    ).toBeInTheDocument();
     expect(
       within(database).queryByText('Profiles checked')
     ).not.toBeInTheDocument();

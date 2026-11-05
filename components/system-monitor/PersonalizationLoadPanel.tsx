@@ -263,12 +263,12 @@ export function PersonalizationLoadPanel({
               {metric(
                 'Queries',
                 number(m?.callsPerMinute, ' /min'),
-                'Database activity'
+                'SQL calls, including repeats'
               )}
               {metric(
                 'Rows written',
                 number(m?.writesPerMinute, ' /min'),
-                'Database changes'
+                'Inserts, updates, deletes'
               )}
             </>
           )}
