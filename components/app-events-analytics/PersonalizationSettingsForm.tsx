@@ -29,6 +29,7 @@ export function PersonalizationSettingsForm() {
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['message']);
   const [disabledScenarios, setDisabledScenarios] = useState<string[]>([]);
+  const [emailEnabled, setEmailEnabled] = useState(false);
   const [hours, setHours] = useState('');
   const [aiPerUser, setAiPerUser] = useState('');
   const [aiPerDay, setAiPerDay] = useState('');
@@ -48,6 +49,7 @@ export function PersonalizationSettingsForm() {
     try {
       const value = await getPersonalizationSettings();
       setSaved(value);
+      setEmailEnabled(value.emailEnabled === true);
       setDisabledScenarios(value.disabledScenarioIds);
       setHours(String(value.minimumContactIntervalHours));
       setAiPerUser(String(value.aiCallsPerUser24h));
@@ -75,6 +77,8 @@ export function PersonalizationSettingsForm() {
     value >= 1 &&
     value <= 168;
   const valid = hoursValid && aiLimitValid(aiPerUser) && aiLimitValid(aiPerDay);
+  const emailChanged =
+    saved?.emailEnabled !== undefined && emailEnabled !== saved.emailEnabled;
   async function save() {
     if (!saved || !valid) return;
     setBusy(true);
@@ -85,8 +89,10 @@ export function PersonalizationSettingsForm() {
         aiCallsPerUser24h: perUser,
         aiCallsPerDay: perDay,
         disabledScenarioIds: disabledScenarios,
+        ...(emailChanged && { emailEnabled }),
       });
       setSaved(result);
+      setEmailEnabled(result.emailEnabled === true);
       setDisabledScenarios(result.disabledScenarioIds);
       setHours(String(result.minimumContactIntervalHours));
       setAiPerUser(String(result.aiCallsPerUser24h));
@@ -105,7 +111,7 @@ export function PersonalizationSettingsForm() {
           Settings
         </Typography>
         <Typography color="text.secondary">
-          Personalization scenarios, message frequency and AI usage
+          Personalization channels, scenarios, message frequency and AI usage
         </Typography>
       </Box>
       {error ? (
@@ -132,6 +138,36 @@ export function PersonalizationSettingsForm() {
       {saved ? (
         <Paper component="section" sx={{ p: { xs: 2, md: 3 } }}>
           <Stack spacing={3}>
+            <Box>
+              <Typography component="h2" variant="h6" fontWeight={700}>
+                Channels
+              </Typography>
+              <FormControlLabel
+                sx={{
+                  m: 0,
+                  mt: 1,
+                  width: '100%',
+                  justifyContent: 'space-between',
+                }}
+                labelPlacement="start"
+                label="Email"
+                control={
+                  <Switch
+                    checked={emailEnabled}
+                    disabled={busy || saved.emailEnabled === undefined}
+                    onChange={(_, checked) => {
+                      setEmailEnabled(checked);
+                      setSuccess(false);
+                    }}
+                  />
+                }
+              />
+              <Typography color="text.secondary" variant="body2">
+                {saved.emailEnabled === undefined
+                  ? 'Email channel settings are unavailable on this backend.'
+                  : 'Allow personalized AI Chat reminders by email. Changes apply after saving.'}
+              </Typography>
+            </Box>
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
                 Scenarios
@@ -340,6 +376,7 @@ export function PersonalizationSettingsForm() {
                   busy ||
                   !valid ||
                   (value === saved.minimumContactIntervalHours &&
+                    !emailChanged &&
                     perUser === saved.aiCallsPerUser24h &&
                     perDay === saved.aiCallsPerDay &&
                     disabledScenarios.length ===
