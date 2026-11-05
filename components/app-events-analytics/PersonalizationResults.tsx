@@ -1,4 +1,5 @@
 'use client';
+import { PersonalizationDailyActivity } from './PersonalizationDailyActivity';
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -408,6 +409,9 @@ function Report({ report: r }: { report: Results }) {
           ))}
         </Box>
       </Box>
+      {r.days === 7 && r.dailyActivity?.length ? (
+        <PersonalizationDailyActivity days={r.dailyActivity} />
+      ) : null}
       <Paper
         component="section"
         aria-label="Message activity"

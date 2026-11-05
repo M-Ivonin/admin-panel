@@ -116,6 +116,55 @@ it('shows unique account outcomes and hides diagnostics and explanations until r
   );
 });
 
+it('shows the four daily counts for the selected UTC date', async () => {
+  read.mockResolvedValue({
+    ...report,
+    dailyActivity: [
+      {
+        date: '2026-11-01',
+        contactedAccounts: 5,
+        messagesCreated: 12,
+        openedAccounts: 2,
+        openedMessages: 4,
+      },
+      {
+        date: '2026-11-02',
+        contactedAccounts: 3,
+        messagesCreated: 7,
+        openedAccounts: 1,
+        openedMessages: 2,
+      },
+      {
+        date: '2026-11-03',
+        contactedAccounts: 0,
+        messagesCreated: 0,
+        openedAccounts: 0,
+        openedMessages: 0,
+      },
+    ],
+  });
+  render(<PersonalizationResults />);
+  const chart = within(
+    await screen.findByRole('region', { name: 'Daily activity' })
+  );
+  expect(chart.getByText('Nov 2 selected')).toBeVisible();
+  fireEvent.click(chart.getByRole('button', { name: 'Nov 1' }));
+  expect(chart.getByText('Nov 1 selected')).toBeVisible();
+  expect(chart.getByText('Contacted accounts').parentElement).toHaveTextContent(
+    '5'
+  );
+  expect(chart.getByText('Messages created').parentElement).toHaveTextContent(
+    '12'
+  );
+  expect(
+    chart.getByText('Accounts that opened').parentElement
+  ).toHaveTextContent('2');
+  expect(chart.getByText('Opened messages').parentElement).toHaveTextContent(
+    '4'
+  );
+  expect(chart.getByText('Nov 3 in progress')).toBeVisible();
+});
+
 it('loads the chosen period and refreshes from current sources', async () => {
   render(<PersonalizationResults />);
   await screen.findByRole('article', { name: 'Contacted accounts' });

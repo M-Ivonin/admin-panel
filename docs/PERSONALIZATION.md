@@ -76,6 +76,14 @@ message opening. The Messages strip identifies individual messages and explains
 that one account can receive several messages and opening overlaps with delivery.
 Detailed definitions, financial amounts and technical counters remain behind
 keyboard/touch-operable information buttons or disclosures.
+
+Daily activity appears for **Last 7 days**, between the account cards and
+Messages. The two plots share seven UTC dates and use separate scales for
+contact/message volumes and openings. Select a date to read all four values;
+today is marked as in progress. Push openings count recorded notification taps.
+Daily account counts deduplicate within each date, so the same account can
+appear on multiple days. The report cards use the selected rolling period.
+
 Accounts still shows the latest 100 evaluated accounts, while card totals include
 all evaluated accounts. Fresh visual proof and the approved reference are in
 [the compact Results evidence](proof/personalization-results-design/UI-EVIDENCE.md).
