@@ -68,6 +68,7 @@ export interface PortraitSnapshot {
   id: string;
   userId: string;
   generatedAt: string;
+  revision?: string;
   asOf: string;
   schemaVersion: number;
   featureVersion: string;
@@ -167,22 +168,44 @@ export type PortraitResponse =
       };
     };
 
+type PortraitQuery = {
+  days: 7 | 30;
+  snapshotId?: string;
+  offset: number;
+  expectedAsOf?: string;
+  expectedRevision?: string;
+};
+
+type ReadyPortrait = Extract<PortraitResponse, { status: 'ready' }>;
+export type PortraitTimelineResponse =
+  | Exclude<PortraitResponse, ReadyPortrait>
+  | Pick<ReadyPortrait, 'status' | 'userId' | 'timeline'>;
+
 /** Fetches the saved protected per-account projection; no import or analysis action is available here. */
-export async function getUserPortrait(
+export function getUserPortrait(userId: string, query: PortraitQuery) {
+  return readPortrait<PortraitResponse>(userId, query);
+}
+
+export function getUserPortraitTimeline(
   userId: string,
-  query: {
-    days: 7 | 30;
-    snapshotId?: string;
-    offset: number;
-    expectedAsOf?: string;
-  }
-): Promise<PortraitResponse> {
+  query: PortraitQuery & { expectedAsOf: string; expectedRevision?: string }
+) {
+  return readPortrait<PortraitTimelineResponse>(userId, query, true);
+}
+
+async function readPortrait<T>(
+  userId: string,
+  query: PortraitQuery,
+  timelineOnly = false
+): Promise<T> {
   const params = new URLSearchParams({
     days: String(query.days),
     offset: String(query.offset),
   });
   if (query.snapshotId) params.set('snapshotId', query.snapshotId);
   if (query.expectedAsOf) params.set('expectedAsOf', query.expectedAsOf);
+  if (query.expectedRevision) params.set('expectedRevision', query.expectedRevision);
+  if (timelineOnly) params.set('timelineOnly', 'true');
   const response = await adminAuthFetch({
     path: `/app-events/admin/engagement/portraits/${encodeURIComponent(userId)}?${params}`,
     method: 'GET',

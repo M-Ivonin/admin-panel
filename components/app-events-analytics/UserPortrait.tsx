@@ -45,15 +45,17 @@ const label = (value: string) => value.replace(/_/g, ' ');
 /** Renders the server's versioned features; selection never recomputes a behavioral metric. */
 export function UserPortrait({ userId }: { userId: string }) {
   const [days, setDays] = useState<7 | 30>(7),
-    [offset, setOffset] = useState(0),
     [timelineOpen, setTimelineOpen] = useState(false);
-  const { data, loading, error, refresh } = useUserPortrait(
-    userId,
-    days,
-    undefined,
-    offset
-  );
   const decisionsView = useSearchParams().get('view') === 'decisions';
+  const {
+    data,
+    loading,
+    error,
+    refresh,
+    loadTimeline,
+    timelineLoading,
+    timelineError,
+  } = useUserPortrait(userId, days, !decisionsView);
   const ready = data?.status === 'ready' ? data : null;
   return (
     <UserPortraitLayout
@@ -84,10 +86,7 @@ export function UserPortrait({ userId }: { userId: string }) {
                 value={days}
                 aria-label="Portrait period"
                 onChange={(_, value: 7 | 30 | null) => {
-                  if (value) {
-                    setDays(value);
-                    setOffset(0);
-                  }
+                  if (value) setDays(value);
                 }}
               >
                 <ToggleButton value={7}>Last 7 days</ToggleButton>
@@ -97,10 +96,7 @@ export function UserPortrait({ userId }: { userId: string }) {
                 variant="outlined"
                 sx={{ ml: { md: 'auto' } }}
                 disabled={loading}
-                onClick={() => {
-                  if (offset) setOffset(0);
-                  else void refresh();
-                }}
+                onClick={() => void refresh()}
               >
                 Refresh view
               </Button>
@@ -119,10 +115,7 @@ export function UserPortrait({ userId }: { userId: string }) {
             action={
               <Button
                 color="inherit"
-                onClick={() => {
-                  if (offset) setOffset(0);
-                  else void refresh();
-                }}
+                onClick={() => void refresh()}
               >
                 Retry
               </Button>
@@ -402,7 +395,9 @@ export function UserPortrait({ userId }: { userId: string }) {
                 }
               >
                 <Stack
+                  key={ready.timeline.offset}
                   spacing={1.5}
+                  aria-busy={timelineLoading}
                   sx={{ maxHeight: 520, overflowY: 'auto', pr: 1 }}
                 >
                   {ready.timeline.items.length ? (
@@ -418,6 +413,9 @@ export function UserPortrait({ userId }: { userId: string }) {
                     </Typography>
                   )}
                 </Stack>
+                {timelineError ? (
+                  <Alert severity="error">{timelineError}</Alert>
+                ) : null}
                 <Stack
                   direction="row"
                   gap={2}
@@ -426,21 +424,29 @@ export function UserPortrait({ userId }: { userId: string }) {
                   sx={{ mt: 2 }}
                 >
                   <Button
-                    disabled={offset === 0}
-                    onClick={() => setOffset(Math.max(0, offset - 50))}
+                    disabled={timelineLoading || ready.timeline.offset === 0}
+                    onClick={() =>
+                      void loadTimeline(Math.max(0, ready.timeline.offset - 50))
+                    }
                   >
                     Previous events
                   </Button>
-                  <Typography variant="caption">
-                    {ready.timeline.total ? ready.timeline.offset + 1 : 0}–
-                    {ready.timeline.offset + ready.timeline.items.length} of{' '}
-                    {number(ready.timeline.total)} events
+                  <Typography variant="caption" role="status">
+                    {timelineLoading ? (
+                      'Loading events…'
+                    ) : (
+                      <>
+                        {ready.timeline.total ? ready.timeline.offset + 1 : 0}–
+                        {ready.timeline.offset + ready.timeline.items.length} of{' '}
+                        {number(ready.timeline.total)} events
+                      </>
+                    )}
                   </Typography>
                   <Button
-                    disabled={ready.timeline.nextOffset === null}
+                    disabled={timelineLoading || ready.timeline.nextOffset === null}
                     onClick={() => {
                       if (ready.timeline.nextOffset !== null)
-                        setOffset(ready.timeline.nextOffset);
+                        void loadTimeline(ready.timeline.nextOffset);
                     }}
                   >
                     Next events

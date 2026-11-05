@@ -111,11 +111,11 @@ it('keeps the selected portrait period while navigating to and from account-scop
   await waitFor(() =>
     expect(getUserPortrait).toHaveBeenLastCalledWith('account-a', {
       days: 30,
-      snapshotId: undefined,
       offset: 0,
     })
   );
   const historyTab = screen.getByRole('tab', { name: 'Saved decisions' });
+  const portraitReadCount = jest.mocked(getUserPortrait).mock.calls.length;
   expect(historyTab).toHaveAttribute(
     'href',
     '/dashboard/users/account-a/portrait?view=decisions'
@@ -126,6 +126,7 @@ it('keeps the selected portrait period while navigating to and from account-scop
     'aria-selected',
     'true'
   );
+  expect(getUserPortrait).toHaveBeenCalledTimes(portraitReadCount);
   query = new URLSearchParams();
   rerender(<UserPortrait key="account-a" userId="account-a" />);
   expect(screen.getByRole('tab', { name: 'Portrait' })).toHaveAttribute(
@@ -141,7 +142,6 @@ it('keeps the selected portrait period while navigating to and from account-scop
   await waitFor(() =>
     expect(getUserPortrait).toHaveBeenLastCalledWith('account-b', {
       days: 7,
-      snapshotId: undefined,
       offset: 0,
     })
   );

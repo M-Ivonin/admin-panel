@@ -2,9 +2,14 @@ import { act, renderHook } from '@testing-library/react';
 import { useUserPortrait } from '@/components/app-events-analytics/useUserPortrait';
 import {
   getUserPortrait,
+  getUserPortraitTimeline,
   type PortraitResponse,
+  type PortraitTimelineResponse,
 } from '@/lib/api/user-portrait';
-jest.mock('@/lib/api/user-portrait', () => ({ getUserPortrait: jest.fn() }));
+jest.mock('@/lib/api/user-portrait', () => ({
+  getUserPortrait: jest.fn(),
+  getUserPortraitTimeline: jest.fn(),
+}));
 const pending = () => {
   let resolve!: (v: PortraitResponse) => void;
   const promise = new Promise<PortraitResponse>((yes) => (resolve = yes));
@@ -20,7 +25,7 @@ it('clears the previous account and discards a late response after changing acco
     .mockReturnValueOnce(b.promise);
   const { result, rerender } = renderHook(
     ({ user, days }: { user: string; days: 7 | 30 }) =>
-      useUserPortrait(user, days, undefined, 0),
+      useUserPortrait(user, days, true),
     { initialProps: { user: 'a', days: 7 } }
   );
   rerender({ user: 'b', days: 30 });
@@ -36,7 +41,6 @@ it('clears the previous account and discards a late response after changing acco
   expect(result.current.loading).toBe(false);
   expect(getUserPortrait).toHaveBeenLastCalledWith('b', {
     days: 30,
-    snapshotId: undefined,
     offset: 0,
   });
 });
@@ -49,7 +53,7 @@ it('shows an explicit read failure and retries without a mutation', async () => 
       userId: 'a',
       snapshot: null,
     });
-  const { result } = renderHook(() => useUserPortrait('a', 7, undefined, 0));
+  const { result } = renderHook(() => useUserPortrait('a', 7, true));
   await act(async () => {});
   expect(result.current.error).toBe('Offline');
   await act(async () => result.current.refresh());
@@ -57,24 +61,49 @@ it('shows an explicit read failure and retries without a mutation', async () => 
   expect(result.current.data?.status).toBe('not_ready');
 });
 
-it('pins later timeline pages to the version read on the first page', async () => {
+it('keeps the portrait visible while reading events pinned to its version', async () => {
   const current = {
     status: 'ready',
     userId: 'a',
-    snapshot: { asOf: '2026-11-03T12:00:00.000Z' },
-  } as PortraitResponse;
-  jest.mocked(getUserPortrait).mockResolvedValue(current);
-  const { rerender } = renderHook(
-    ({ offset }) => useUserPortrait('a', 7, undefined, offset),
-    { initialProps: { offset: 0 } }
+    snapshot: { asOf: '2026-11-03T12:00:00.000Z', revision: 'saved-revision' },
+    timeline: { items: [], offset: 0, nextOffset: 50, total: 51 },
+  } as unknown as PortraitResponse;
+  let resolvePage!: (value: PortraitTimelineResponse) => void;
+  jest.mocked(getUserPortraitTimeline).mockReturnValue(
+    new Promise(resolve => { resolvePage = resolve; })
   );
+  jest.mocked(getUserPortrait).mockResolvedValue(current);
+  const { result } = renderHook(() => useUserPortrait('a', 7, true));
   await act(async () => {});
-  rerender({ offset: 50 });
-  await act(async () => {});
-  expect(getUserPortrait).toHaveBeenLastCalledWith('a', {
+  act(() => { void result.current.loadTimeline(50); });
+  expect(result.current.data).toBe(current);
+  expect(result.current.loading).toBe(false);
+  expect(result.current.timelineLoading).toBe(true);
+  expect(getUserPortraitTimeline).toHaveBeenCalledWith('a', {
     days: 7,
-    snapshotId: undefined,
     offset: 50,
     expectedAsOf: '2026-11-03T12:00:00.000Z',
+    expectedRevision: 'saved-revision',
   });
+  const timeline = { items: [], offset: 50, nextOffset: null, total: 51 };
+  await act(async () => resolvePage({ status: 'ready', userId: 'a', timeline }));
+  expect(result.current.data).toEqual({ ...current, timeline });
+  expect(getUserPortrait).toHaveBeenCalledTimes(1);
+});
+
+it('loads the portrait only when its view is active', async () => {
+  jest.mocked(getUserPortrait).mockResolvedValue({
+    status: 'not_ready', userId: 'a', snapshot: null,
+  });
+  const { rerender } = renderHook(
+    ({ enabled }) => useUserPortrait('a', 7, enabled),
+    { initialProps: { enabled: false } }
+  );
+  expect(getUserPortrait).not.toHaveBeenCalled();
+  rerender({ enabled: true });
+  await act(async () => {});
+  expect(getUserPortrait).toHaveBeenCalledTimes(1);
+  rerender({ enabled: false });
+  rerender({ enabled: true });
+  expect(getUserPortrait).toHaveBeenCalledTimes(1);
 });

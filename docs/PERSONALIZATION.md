@@ -5,11 +5,15 @@ Personalization composes the existing Users, saved portrait/decision and outcome
 ## Routes and state
 
 - Users is only the directory. Its table, search, filters, compact columns, right-aligned icon actions and pagination are preserved from commit `7a473f6b`. The navigation mockup is not a table redesign instruction.
-- `/dashboard/users/:userId/portrait` is the canonical portrait. `view=decisions` selects that account's saved history in the same host. Its account-local tabs are Portrait and Saved decisions; neither is labelled Users. Switching these tabs preserves the selected portrait period/version. The route keys the host by canonical account so account changes reset its local state.
+- `/dashboard/users/:userId/portrait` is the canonical portrait. `view=decisions` selects that account's saved history in the same host. Its account-local tabs are Portrait and Saved decisions; neither is labelled Users. Switching tabs preserves the loaded portrait and selected period. The first portrait read starts when its tab is active. The route keys the host by canonical account so account changes reset its local state.
 - `/dashboard/user-experiments` renders Results. `/dashboard/personalization/settings` renders Settings. Neither global screen nor the directory has a Saved decisions tab; history belongs to the selected account.
 - `PersonalizationLayout` owns global navigation. `UserPortraitLayout` is a separate account detail shell: shared AdminPageHeader with one Back to Users before User portrait, then account breadcrumb, name/email/ID and account-local tabs. Global tabs are absent from this detail view. Identity uses the existing `GET /user/:id`, with canonical ID fallback and retry on failure; identity failures do not block portrait/history reads. The root Users list has no self-link back.
 
 Portrait overview cards display the existing saved projection. Historical snapshot/version/cutoff, source coverage and captured product access remain distinct. Unknown values stay unknown. Detailed activity, Store evidence, source quality and timeline content remain available below the overview. On narrow screens, snapshot/source explanations use disclosures and the product-access summary precedes daily activity.
+
+Timeline pagination requests events for the displayed snapshot version and keeps
+the portrait visible while loading. If that version changes, Refresh view reads
+the new portrait and starts at the first event page.
 
 Saved decisions reads the latest 20 evaluations for that account independently of
 portrait readiness, loading or read failure. Its own API determines empty,
