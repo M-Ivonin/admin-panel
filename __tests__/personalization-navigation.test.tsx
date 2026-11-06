@@ -106,7 +106,7 @@ it('keeps the selected portrait period while navigating to and from account-scop
   const { rerender } = render(
     <UserPortrait key="account-a" userId="account-a" />
   );
-  await screen.findByText(/No saved portrait is available yet/);
+  await screen.findByText(/No current portrait is available yet/);
   fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }));
   await waitFor(() =>
     expect(getUserPortrait).toHaveBeenLastCalledWith('account-a', {
@@ -214,7 +214,7 @@ it.each(['not_ready', 'restricted', 'error'] as const)(
       await screen.findByText(/Personalization history is unavailable/)
     ).toBeInTheDocument();
     screen
-      .queryAllByText(/No saved portrait is available yet/)
+      .queryAllByText(/No current portrait is available yet/)
       .forEach((message) => expect(message).not.toBeVisible());
   }
 );
