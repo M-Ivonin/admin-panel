@@ -1,4 +1,5 @@
 'use client';
+import { QueueHealthPanel, QueueHistory, QueueDiagnostic, QueueRunHistory } from './QueueHealthPanel';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -565,6 +566,7 @@ export function SystemMonitorDashboard() {
                 </Typography>
               </Stack>
             </Paper>
+            {checkId === 'backend.queues' && <QueueHealthPanel check={selectedCheck} now={now} sourceUnavailable={offline || Boolean(sourceStale)} onLogs={() => {setLogService('backend'); document.getElementById('monitor-logs')?.scrollIntoView({behavior:'smooth'});}}/>}
             {historyLoading && (
               <CircularProgress aria-label="Loading history" />
             )}
@@ -581,7 +583,7 @@ export function SystemMonitorDashboard() {
             )}
             {history && (
               <>
-                {!selectedAspect && <MonitorCharts buckets={history.buckets} />}
+                {checkId === 'backend.queues' ? <><QueueHistory buckets={history.buckets}/><QueueDiagnostic check={selectedCheck} now={now} sourceUnavailable={offline || Boolean(sourceStale)}/></> : !selectedAspect && <MonitorCharts buckets={history.buckets} />}
                 <Paper variant="outlined">
                   <Typography variant="h6" sx={{ p: 2 }}>
                     {selectedAspect ? `${monitorAspectNames[selectedAspect]} history` : 'Raw check history'}
@@ -837,6 +839,7 @@ export function SystemMonitorDashboard() {
                       HTTP {run.httpStatus ?? '—'} · Failed step{' '}
                       {run.failedStep ?? '—'} · Error {run.errorCode ?? '—'}
                     </Typography>
+                    {run.checkId === 'backend.queues' && <QueueRunHistory run={run}/>}
                     <Typography sx={{ whiteSpace: 'pre-wrap' }}>
                       {run.diagnostic || 'No diagnostic message.'}
                     </Typography>
@@ -849,7 +852,7 @@ export function SystemMonitorDashboard() {
             </Dialog>
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack spacing={2}>
-                <Typography variant="h6">Loki logs</Typography>
+                <Typography id="monitor-logs" variant="h6">Loki logs</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Service and time context only; this is not full request
                   correlation. Up to 200 records, within seven days.

@@ -44,7 +44,47 @@ export interface MonitorAspectResult {
   errorCode?: string;
   diagnostic?: string;
 }
+export const MONITOR_QUEUE_IDS = [
+  'commerce.provider_inbox',
+  'commerce.finalization',
+  'commerce.reconciliation',
+  'campaigns.deliveries',
+] as const;
+export type QueueId = (typeof MONITOR_QUEUE_IDS)[number];
+export interface QueueIssue {
+  operationId: string;
+  kind: 'manual_review' | 'expired_lease' | 'overdue';
+  attempts: number;
+  nextAttemptAt: string | null;
+  lastFailureAt: string | null;
+  errorCode: string | null;
+  product: string | null;
+  firstObservedAt?: string;
+}
+export interface QueueAssessment {
+  queueId: QueueId;
+  processing: Outcome;
+  outcome: Outcome;
+  reason: string;
+  lastSuccessfulAt: string | null;
+  dueCount: number | null;
+  overdueCount: number | null;
+  activeLeaseCount: number | null;
+  expiredLeaseCount: number | null;
+  retryCount: number | null;
+  manualReviewCount: number | null;
+  failedCount: number | null;
+  unresolvedCount: number | null;
+  oldestDueAt: string | null;
+  issues: QueueIssue[];
+}
+export interface QueueHealth {
+  generatedAt: string;
+  queues: QueueAssessment[];
+}
+
 export interface MonitorRun {
+  queueHealth?: QueueHealth;
   aspects?: {
     database: MonitorAspectResult;
     personalization: MonitorAspectResult;
@@ -63,6 +103,7 @@ export interface MonitorRun {
   diagnostic: string | null;
 }
 export interface MonitorCheck {
+  lastKnownQueueRuns?: MonitorRun[];
   checkId: string;
   required: boolean;
   enabled: boolean;
@@ -84,6 +125,8 @@ export interface MonitorOverview {
   };
 }
 export interface HistoryBucket {
+  queueProcessing?: Outcome;
+  unresolvedOperations?: number | null;
   at: string;
   pass: number;
   warn: number;

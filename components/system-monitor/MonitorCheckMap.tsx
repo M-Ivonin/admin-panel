@@ -122,12 +122,30 @@ export function MonitorCheckMap({
     const label = aspect
       ? monitorAspectNames[aspect]
       : (names[check.checkId] ?? check.checkId);
+    const queueHealth =
+      check.checkId === 'backend.queues' &&
+      !stale &&
+      !sourceUnavailable &&
+      check.enabled
+        ? check.lastRun?.queueHealth
+        : undefined;
+    const queueBlocked =
+      queueHealth?.queues.filter((q) => q.processing === 'fail').length ?? 0;
+    const queueIssues = queueHealth?.queues.every(
+      (q) => q.unresolvedCount !== null
+    )
+      ? queueHealth.queues.reduce((n, q) => n + q.unresolvedCount!, 0)
+      : null;
     const status =
-      aspect && split
-        ? split[aspect].label
-        : check.enabled
-          ? labels[outcome]
-          : 'Disabled';
+      queueHealth && queueBlocked
+        ? `${queueBlocked} of ${queueHealth.queues.length} queues blocked`
+        : queueHealth && queueIssues
+          ? `${queueIssues} unresolved operation${queueIssues === 1 ? '' : 's'}`
+          : aspect && split
+            ? split[aspect].label
+            : check.enabled
+              ? labels[outcome]
+              : 'Disabled';
     const freshness = !check.enabled ? 'Disabled' : stale ? 'Stale' : 'Fresh';
     const last = check.lastRun?.endedAt
       ? new Date(check.lastRun.endedAt).toLocaleString('en-GB', {
