@@ -30,8 +30,14 @@ the list before retrying a conflict. Use **Pause** for one campaign. Disable
 **In-app** or pause the operator-market record to suppress subsequent delivery
 across its campaigns.
 
-The **Analytics** tab shows qualified impressions, impression-linked CTR,
-unique viewer CTR, age outcomes and a click timeline with links to the existing
-user portrait. Select a UTC range of up to 30 days. CSV uses the applied
-filters and the same authenticated admin API. The timeline and CSV have
-server-enforced row limits.
+The **Analytics** tab opens on the last 30 days (UTC). Select a campaign,
+operator market, placement or platform, and enter dates for a custom range of
+up to 30 days. **More filters** contains audience, visit, version and user
+filters. Use **Apply filters** to update the report or **Reset filters** to
+return to the default range and clear selections.
+
+**Campaign performance** shows the applied period and filters with the main
+impression, tap and CTR metrics. Expand **Metric details** for reach, age
+checks and delivery issues. The click timeline links to user portraits and
+shows up to 250 rows. **Export CSV** uses the applied filters, including when
+edits are pending, and exports up to 5,000 rows.

@@ -7,6 +7,8 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
+  Divider,
   CircularProgress,
   Link,
   MenuItem,
@@ -20,7 +22,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { Download } from '@mui/icons-material';
+import { Download, ExpandMore, MouseOutlined } from '@mui/icons-material';
 import {
   getAppPartnerAnalytics,
   getAppPartnerAnalyticsCsv,
@@ -36,22 +38,60 @@ import {
   type AppPartnerCampaign,
 } from '@/modules/app-partner-campaigns/types';
 
-const metricLabels: ReadonlyArray<
-  [keyof AppPartnerAnalytics['summary'], string]
-> = [
-  ['impressions', 'Qualified impressions'],
-  ['uniqueViewers', 'Unique viewers'],
-  ['clicks', 'Deliberate taps'],
-  ['linkedClicks', 'Impression-linked taps'],
-  ['linkedClickers', 'Unique linked clickers'],
-  ['earlyClicks', 'Early taps'],
-  ['blockedClicks', 'Blocked resolutions'],
-  ['openFailures', 'Browser handoff failures'],
-  ['agePrompts', 'Age prompts'],
-  ['ageYes', 'Age confirmed'],
-  ['ageNo', 'Age declined'],
-  ['ageDismissed', 'Age dismissed'],
-];
+const detailGroups = [
+  {
+    title: 'Reach and attribution',
+    metrics: [
+      ['uniqueViewers', 'Unique viewers'],
+      ['linkedClicks', 'Impression-linked taps'],
+      ['linkedClickers', 'Unique linked clickers'],
+      ['earlyClicks', 'Early taps'],
+    ],
+  },
+  {
+    title: 'Age checks',
+    metrics: [
+      ['agePrompts', 'Age prompts'],
+      ['ageYes', 'Age confirmed'],
+      ['ageNo', 'Age declined'],
+      ['ageDismissed', 'Age dismissed'],
+    ],
+  },
+  {
+    title: 'Delivery issues',
+    metrics: [
+      ['blockedClicks', 'Blocked resolutions'],
+      ['openFailures', 'Browser handoff failures'],
+    ],
+  },
+] as const;
+
+const filterGrid = {
+  display: 'grid',
+  gridTemplateColumns: {
+    xs: '1fr',
+    sm: 'repeat(3, minmax(0, 1fr))',
+  },
+  '@media (min-width: 375px) and (max-width: 599px)': {
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  },
+  gap: { xs: 1.5, sm: 2 },
+  '& > *': { minWidth: 0 },
+};
+
+const disclosureSx = {
+  '& > summary': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 0.5,
+    cursor: 'pointer',
+    width: 'fit-content',
+    listStyle: 'none',
+    '&::-webkit-details-marker': { display: 'none' },
+    '&:hover': { color: 'text.primary' },
+  },
+  '&[open] > summary .MuiSvgIcon-root': { transform: 'rotate(180deg)' },
+};
 
 const optionalFilters = [
   { key: 'countryCode', label: 'Country code' },
@@ -83,13 +123,15 @@ export function CampaignAnalyticsPanel({
   markets: PartnerMarketConfig[];
 }) {
   const [draft, setDraft] = useState<AppPartnerAnalyticsFilters>({});
-  const [applied, setApplied] = useState<AppPartnerAnalyticsFilters>(() =>
-    queryWithRange({})
-  );
+  const [{ filters: appliedFilters, query: applied }, setApplied] = useState<{
+    filters: AppPartnerAnalyticsFilters;
+    query: AppPartnerAnalyticsFilters;
+  }>(() => ({ filters: {}, query: queryWithRange({}) }));
   const [report, setReport] = useState<AppPartnerAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -114,20 +156,50 @@ export function CampaignAnalyticsPanel({
   ) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
-  function apply() {
+  const hasChanges = Object.keys({ ...draft, ...appliedFilters }).some(
+    (key) => {
+      const filter = key as keyof AppPartnerAnalyticsFilters;
+      return (draft[filter] ?? '') !== (appliedFilters[filter] ?? '');
+    }
+  );
+  const canReset =
+    Object.values(draft).some(Boolean) ||
+    Object.values(appliedFilters).some(Boolean);
+  const appliedMarket = markets.find(
+    (item) => item.id === applied.operatorMarketId
+  );
+  const appliedLabels = [
+    applied.campaignId &&
+      `Campaign: ${campaigns.find((item) => item.id === applied.campaignId)?.name ?? applied.campaignId}`,
+    applied.operatorMarketId &&
+      `Market: ${appliedMarket ? marketLabel(appliedMarket) : applied.operatorMarketId}`,
+    applied.placement && `Placement: ${placementLabels[applied.placement]}`,
+    applied.platform && `Platform: ${platformLabels[applied.platform]}`,
+    applied.accessType &&
+      `Access: ${accessLabels[applied.accessType as keyof typeof accessLabels] ?? applied.accessType}`,
+    applied.countryCode && `Country: ${applied.countryCode}`,
+    applied.regionCode && `Region: ${applied.regionCode}`,
+    applied.minimumAge && `Age floor: ${applied.minimumAge}`,
+    applied.sessionOrdinal && `Session: ${applied.sessionOrdinal}`,
+    applied.creativeVersion && `Version: ${applied.creativeVersion}`,
+    applied.userId && `User: ${applied.userId}`,
+  ].filter(Boolean);
+
+  function apply(filters: AppPartnerAnalyticsFilters) {
     try {
-      const query = queryWithRange(draft);
+      const query = queryWithRange(filters);
       setLoading(true);
       setReport(null);
       setError(null);
-      setApplied(query);
+      setExportError(null);
+      setApplied({ filters, query });
     } catch (caught) {
       setError(messageOf(caught));
       return;
     }
   }
   async function exportCsv() {
-    setError(null);
+    setExportError(null);
     setExporting(true);
     try {
       const blob = await getAppPartnerAnalyticsCsv(applied);
@@ -141,7 +213,7 @@ export function CampaignAnalyticsPanel({
         URL.revokeObjectURL(url);
       }
     } catch (caught) {
-      setError(messageOf(caught));
+      setExportError(messageOf(caught));
     } finally {
       setExporting(false);
     }
@@ -149,30 +221,47 @@ export function CampaignAnalyticsPanel({
 
   return (
     <Stack spacing={2}>
-      <Alert severity="info">
-        Qualified impressions use the full placement visibility threshold. CTR
-        uses impression-linked taps. Early taps are reported separately. Reports
-        default to the last 30 days and accept a range of up to 30 days. The
-        timeline shows up to 250 clicks. CSV exports up to 5,000 clicks with the
-        currently applied filters.
-      </Alert>
-      <Card>
+      <Card variant="outlined">
         <CardContent>
           <Stack spacing={2}>
-            <Typography variant="h6">Analytics filters</Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'repeat(2, minmax(0, 1fr))',
-                  md: 'repeat(3, minmax(0, 1fr))',
-                },
-                gap: 2,
-              }}
+            <Stack
+              direction="row"
+              gap={1}
+              alignItems="baseline"
+              flexWrap="wrap"
             >
+              <Typography component="h2" variant="subtitle1" fontWeight={700}>
+                Report filters
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Leave dates blank for the last 30 days · UTC
+              </Typography>
+            </Stack>
+            <Box sx={filterGrid}>
               <TextField
+                size="small"
+                label="From date (UTC)"
+                type="date"
+                slotProps={{ inputLabel: { shrink: true } }}
+                value={draft.from ?? ''}
+                onChange={(event) => set('from', event.target.value)}
+              />
+              <TextField
+                size="small"
+                label="Through date (UTC)"
+                type="date"
+                slotProps={{ inputLabel: { shrink: true } }}
+                value={draft.to ?? ''}
+                onChange={(event) => set('to', event.target.value)}
+              />
+              <TextField
+                size="small"
                 select
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  select: { displayEmpty: true },
+                }}
+                sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
                 label="Campaign"
                 value={draft.campaignId ?? ''}
                 onChange={(event) => set('campaignId', event.target.value)}
@@ -185,23 +274,34 @@ export function CampaignAnalyticsPanel({
                 ))}
               </TextField>
               <TextField
+                size="small"
                 select
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  select: { displayEmpty: true },
+                }}
+                sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
                 label="Operator market"
                 value={draft.operatorMarketId ?? ''}
                 onChange={(event) =>
                   set('operatorMarketId', event.target.value)
                 }
               >
-                <MenuItem value="">All operator markets</MenuItem>
+                <MenuItem value="">All markets</MenuItem>
                 {markets.map((market) => (
                   <MenuItem key={market.id} value={market.id}>
-                    {market.operatorDisplayName} · {market.countryCode}
-                    {market.regionCode ? ` / ${market.regionCode}` : ''}
+                    {marketLabel(market)}
                   </MenuItem>
                 ))}
               </TextField>
               <TextField
+                size="small"
                 select
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  select: { displayEmpty: true },
+                }}
+                sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
                 label="Placement"
                 value={draft.placement ?? ''}
                 onChange={(event) =>
@@ -220,7 +320,13 @@ export function CampaignAnalyticsPanel({
                 ))}
               </TextField>
               <TextField
+                size="small"
                 select
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  select: { displayEmpty: true },
+                }}
+                sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
                 label="Platform"
                 value={draft.platform ?? ''}
                 onChange={(event) =>
@@ -237,59 +343,76 @@ export function CampaignAnalyticsPanel({
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
-                label="From date (UTC)"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                value={draft.from ?? ''}
-                onChange={(event) => set('from', event.target.value)}
-              />
-              <TextField
-                label="Through date (UTC)"
-                type="date"
-                InputLabelProps={{ shrink: true }}
-                value={draft.to ?? ''}
-                onChange={(event) => set('to', event.target.value)}
-              />
-              <TextField
-                select
-                label="Access type"
-                value={draft.accessType ?? ''}
-                onChange={(event) => set('accessType', event.target.value)}
-              >
-                <MenuItem value="">All access types</MenuItem>
-                {Object.entries(accessLabels).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </TextField>
-              {optionalFilters.map((filter) => (
-                <TextField
-                  key={filter.key}
-                  label={filter.label}
-                  type={'numeric' in filter ? 'number' : 'text'}
-                  value={draft[filter.key] ?? ''}
-                  onChange={(event) => set(filter.key, event.target.value)}
-                />
-              ))}
             </Box>
-            <Stack direction="row" gap={1} flexWrap="wrap">
+            <Box component="details" sx={disclosureSx}>
+              <Typography
+                component="summary"
+                variant="body2"
+                color="text.secondary"
+              >
+                <ExpandMore fontSize="small" />
+                More filters
+              </Typography>
+              <Box sx={{ ...filterGrid, mt: 2 }}>
+                <TextField
+                  size="small"
+                  select
+                  slotProps={{
+                    inputLabel: { shrink: true },
+                    select: { displayEmpty: true },
+                  }}
+                  sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
+                  label="Access type"
+                  value={draft.accessType ?? ''}
+                  onChange={(event) => set('accessType', event.target.value)}
+                >
+                  <MenuItem value="">All access types</MenuItem>
+                  {Object.entries(accessLabels).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                {optionalFilters.map((filter) => (
+                  <TextField
+                    size="small"
+                    key={filter.key}
+                    label={filter.label}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    type={'numeric' in filter ? 'number' : 'text'}
+                    value={draft[filter.key] ?? ''}
+                    onChange={(event) => set(filter.key, event.target.value)}
+                  />
+                ))}
+              </Box>
+            </Box>
+            <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
               <Button
                 variant="contained"
                 disabled={loading || exporting}
-                onClick={apply}
+                onClick={() => apply(draft)}
               >
-                Apply analytics filters
+                Apply filters
               </Button>
               <Button
-                variant="outlined"
-                startIcon={<Download />}
-                disabled={!report || loading || exporting}
-                onClick={() => void exportCsv()}
+                color="inherit"
+                disabled={!canReset || loading || exporting}
+                onClick={() => {
+                  setDraft({});
+                  apply({});
+                }}
               >
-                {exporting ? 'Exporting…' : 'Export clicks CSV'}
+                Reset filters
               </Button>
+              {hasChanges ? (
+                <Typography
+                  variant="caption"
+                  color="warning.main"
+                  role="status"
+                >
+                  Unapplied changes
+                </Typography>
+              ) : null}
             </Stack>
           </Stack>
         </CardContent>
@@ -303,58 +426,197 @@ export function CampaignAnalyticsPanel({
       ) : null}
       {report ? (
         <>
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">Campaign summary</Typography>
+          <Stack
+            component="section"
+            spacing={1.5}
+            aria-labelledby="campaign-summary"
+          >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ sm: 'baseline' }}
+              gap={0.5}
+            >
+              <Typography id="campaign-summary" component="h2" variant="h6">
+                Campaign performance
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {formatRange(
+                  applied,
+                  Boolean(appliedFilters.from || appliedFilters.to)
+                )}
+              </Typography>
+            </Stack>
+            {appliedLabels.length > 0 ? (
+              <Stack direction="row" gap={0.75} useFlexGap flexWrap="wrap">
+                {appliedLabels.map((label) => (
+                  <Chip
+                    key={label}
+                    size="small"
+                    variant="outlined"
+                    label={label}
+                    title={label}
+                  />
+                ))}
+              </Stack>
+            ) : null}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(2, minmax(0, 1fr))',
+                  lg: 'repeat(4, minmax(0, 1fr))',
+                },
+                gap: { xs: 1.5, sm: 2 },
+              }}
+            >
+              <MetricCard
+                label="Qualified impressions"
+                value={count(report.summary.impressions)}
+                note={`${count(report.summary.uniqueViewers)} unique viewers`}
+              />
+              <MetricCard
+                label="Deliberate taps"
+                value={count(report.summary.clicks)}
+                note={`${count(report.summary.linkedClicks)} linked to an impression`}
+              />
+              <MetricCard
+                label="Impression CTR"
+                value={ctr(
+                  report.summary.linkedClicks,
+                  report.summary.impressions
+                )}
+                note={`${count(report.summary.linkedClicks)} linked taps / ${count(report.summary.impressions)} impressions`}
+              />
+              <MetricCard
+                label="Unique viewer CTR"
+                value={ctr(
+                  report.summary.linkedClickers,
+                  report.summary.uniqueViewers
+                )}
+                note={`${count(report.summary.linkedClickers)} linked clickers / ${count(report.summary.uniqueViewers)} viewers`}
+              />
+            </Box>
+            <Card variant="outlined" sx={{ px: 2, py: 1.25 }}>
+              <Box component="details" sx={disclosureSx}>
+                <Typography
+                  component="summary"
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  <ExpandMore fontSize="small" />
+                  Metric details
+                </Typography>
+                <Divider sx={{ my: 1.5 }} />
                 <Box
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'repeat(2, minmax(0, 1fr))',
-                      md: 'repeat(4, minmax(0, 1fr))',
-                    },
                     gap: 2,
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(3, minmax(0, 1fr))',
+                    },
                   }}
                 >
-                  {metricLabels.map(([key, label]) => (
-                    <Box key={key}>
-                      <Typography variant="caption" color="text.secondary">
-                        {label}
+                  {detailGroups.map(({ title, metrics }) => (
+                    <Box key={title}>
+                      <Typography
+                        component="h3"
+                        variant="subtitle2"
+                        gutterBottom
+                      >
+                        {title}
                       </Typography>
-                      <Typography variant="h6">
-                        {report.summary[key].toLocaleString('en-US')}
-                      </Typography>
+                      <Stack component="dl" spacing={0.5} sx={{ m: 0 }}>
+                        {metrics.map(([key, label]) => (
+                          <Stack
+                            key={key}
+                            direction="row"
+                            justifyContent="space-between"
+                            gap={1}
+                          >
+                            <Typography
+                              component="dt"
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              {label}
+                            </Typography>
+                            <Typography
+                              component="dd"
+                              variant="body2"
+                              sx={{ m: 0, fontVariantNumeric: 'tabular-nums' }}
+                            >
+                              {count(report.summary[key])}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
                     </Box>
                   ))}
                 </Box>
-                <Typography variant="body2">
-                  Impression CTR ·{' '}
-                  {ctr(report.summary.linkedClicks, report.summary.impressions)}{' '}
-                  ({report.summary.linkedClicks} linked taps /{' '}
-                  {report.summary.impressions} qualified impressions)
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 2 }}
+                >
+                  An impression counts once the placement meets its visibility
+                  threshold. CTR only counts taps linked to a qualified
+                  impression. Early taps are counted separately.
                 </Typography>
-                <Typography variant="body2">
-                  Unique viewer CTR ·{' '}
-                  {ctr(
-                    report.summary.linkedClickers,
-                    report.summary.uniqueViewers
-                  )}{' '}
-                  ({report.summary.linkedClickers} linked clickers /{' '}
-                  {report.summary.uniqueViewers} unique viewers)
-                </Typography>
-              </Stack>
-            </CardContent>
-          </Card>
-          <Card>
+              </Box>
+            </Card>
+          </Stack>
+          <Card variant="outlined">
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Click timeline
-              </Typography>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                justifyContent="space-between"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                gap={1.5}
+                sx={{ mb: 2 }}
+              >
+                <Box>
+                  <Typography component="h2" variant="h6">
+                    Click timeline
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {count(report.clicks.length)} shown · Up to 250 here or
+                    5,000 in CSV
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  startIcon={<Download />}
+                  disabled={exporting}
+                  title="Export clicks using the applied filters"
+                  onClick={() => void exportCsv()}
+                >
+                  {exporting ? 'Exporting…' : 'Export CSV'}
+                </Button>
+              </Stack>
+              {exportError ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {exportError}
+                </Alert>
+              ) : null}
               {report.clicks.length === 0 ? (
-                <Typography color="text.secondary">
-                  No clicks match the current filters.
-                </Typography>
+                <Stack
+                  alignItems="center"
+                  textAlign="center"
+                  spacing={0.5}
+                  py={3}
+                >
+                  <MouseOutlined color="disabled" />
+                  <Typography variant="subtitle2">
+                    No clicks in this report
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Try a different date range or reset your filters.
+                  </Typography>
+                </Stack>
               ) : (
                 <TableContainer
                   tabIndex={0}
@@ -363,16 +625,20 @@ export function CampaignAnalyticsPanel({
                   <Table
                     size="small"
                     aria-label="App partner click timeline"
-                    sx={{ minWidth: 1040 }}
+                    sx={{
+                      minWidth: 900,
+                      '& th': { bgcolor: 'action.hover', fontWeight: 700 },
+                      '& td': { verticalAlign: 'top' },
+                    }}
                   >
                     <TableHead>
                       <TableRow>
                         {[
                           'Time (UTC)',
                           'User',
-                          'Campaign and placement',
+                          'Campaign / placement',
                           'Audience',
-                          'Displayed and resolved version',
+                          'Version',
                           'Resolution',
                           'Browser handoff',
                           'Context',
@@ -383,13 +649,15 @@ export function CampaignAnalyticsPanel({
                     </TableHead>
                     <TableBody>
                       {report.clicks.map((click) => (
-                        <TableRow key={click.tapId}>
+                        <TableRow key={click.tapId} hover>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>
                             {click.occurredAt.slice(0, 19).replace('T', ' ')}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ minWidth: 104 }}>
                             <Link
                               href={`/dashboard/users/${encodeURIComponent(click.userId)}/portrait`}
+                              color="text.primary"
+                              underline="always"
                               sx={{ overflowWrap: 'anywhere' }}
                             >
                               {click.userId}
@@ -415,9 +683,24 @@ export function CampaignAnalyticsPanel({
                             {click.accessType ?? '—'} · {click.threshold ?? '—'}
                             + · visit {click.sessionOrdinal ?? '—'}
                           </TableCell>
-                          <TableCell sx={{ overflowWrap: 'anywhere' }}>
+                          <TableCell
+                            sx={{ minWidth: 94, overflowWrap: 'anywhere' }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              Displayed
+                            </Typography>
                             {click.displayedVersion ?? '—'}
-                            <br />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              Resolved
+                            </Typography>
                             {click.resolvedVersion ?? '—'}
                           </TableCell>
                           <TableCell>{click.resolution ?? '—'}</TableCell>
@@ -455,6 +738,62 @@ export function CampaignAnalyticsPanel({
   );
 }
 
+function MetricCard({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <Card variant="outlined">
+      <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ minHeight: { xs: '2.8em', sm: 0 } }}
+        >
+          {label}
+        </Typography>
+        <Typography
+          variant="h4"
+          fontWeight={800}
+          sx={{ my: 0.5, fontVariantNumeric: 'tabular-nums' }}
+        >
+          {value}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" component="p">
+          {note}
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+}
+
+const count = (value: number) => value.toLocaleString('en-US');
+
+function marketLabel(market: PartnerMarketConfig) {
+  return `${market.operatorDisplayName} · ${market.countryCode}${market.regionCode ? ` / ${market.regionCode}` : ''}`;
+}
+
+function formatRange(query: AppPartnerAnalyticsFilters, custom: boolean) {
+  if (!custom) return 'Last 30 days · UTC';
+  const day = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  const from = new Date(query.from ?? '');
+  // The API end is exclusive; show the last included calendar date.
+  const through = new Date(Date.parse(query.to ?? '') - 1);
+  const firstDay = day.format(from);
+  const lastDay = day.format(through);
+  return `${firstDay === lastDay ? firstDay : `${firstDay} – ${lastDay}`} · UTC`;
+}
+
 function queryWithRange(
   filters: AppPartnerAnalyticsFilters
 ): AppPartnerAnalyticsFilters {
@@ -477,8 +816,10 @@ function queryWithRange(
     ...filters,
     from: new Date(from).toISOString(),
     to: new Date(to).toISOString(),
-    countryCode: filters.countryCode?.toUpperCase(),
-    regionCode: filters.regionCode?.toUpperCase(),
+    countryCode: filters.countryCode?.trim().toUpperCase() || undefined,
+    regionCode: filters.regionCode?.trim().toUpperCase() || undefined,
+    creativeVersion: filters.creativeVersion?.trim() || undefined,
+    userId: filters.userId?.trim() || undefined,
   };
 }
 

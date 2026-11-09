@@ -105,7 +105,11 @@ export function AppPartnerCampaignsDashboard() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AdminPageHeader
         title="App partner campaigns"
-        subtitle="Configure SirBro Matches banners and prediction footers using approved partner markets."
+        subtitle={
+          activeTab === 0
+            ? 'Configure SirBro Matches banners and prediction footers using approved partner markets.'
+            : 'Track impressions, taps and click-through rates for in-app partner placements.'
+        }
         icon={<Campaign color="primary" />}
         actions={
           activeTab === 0 ? (

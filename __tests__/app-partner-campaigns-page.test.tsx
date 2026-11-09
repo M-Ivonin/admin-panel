@@ -434,14 +434,10 @@ it('reports linked CTR denominators and opens the existing user portrait', async
   });
   render(<AppPartnerCampaignsPage />);
   fireEvent.click(screen.getByRole('tab', { name: 'Analytics' }));
-  expect(
-    await screen.findByText(
-      /40\.00% \(4 linked taps \/ 10 qualified impressions\)/
-    )
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText(/25\.00% \(2 linked clickers \/ 8 unique viewers\)/)
-  ).toBeInTheDocument();
+  expect(await screen.findByText('40.00%')).toBeVisible();
+  expect(screen.getByText('4 linked taps / 10 impressions')).toBeVisible();
+  expect(screen.getByText('25.00%')).toBeVisible();
+  expect(screen.getByText('2 linked clickers / 8 viewers')).toBeVisible();
   expect(screen.getByRole('link', { name: 'user/one' })).toHaveAttribute(
     'href',
     '/dashboard/users/user%2Fone/portrait'
@@ -457,12 +453,13 @@ it('reports linked CTR denominators and opens the existing user portrait', async
   fireEvent.change(screen.getByLabelText('Through date (UTC)'), {
     target: { value: throughDay },
   });
+  fireEvent.click(screen.getByText('More filters'));
   fireEvent.change(screen.getByLabelText('Country code'), {
-    target: { value: 'se' },
+    target: { value: ' se ' },
   });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Apply analytics filters' })
-  );
+  expect(screen.getByText('Unapplied changes')).toBeVisible();
+  expect(getAppPartnerAnalytics).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
   await waitFor(() =>
     expect(getAppPartnerAnalytics).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -473,4 +470,18 @@ it('reports linked CTR denominators and opens the existing user portrait', async
     )
   );
   await screen.findByText(/40\.00%/);
+  expect(screen.queryByText('Unapplied changes')).not.toBeInTheDocument();
+  expect(screen.getByText('Country: SE')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Country code'), {
+    target: { value: '   ' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
+  await screen.findByText('40.00%');
+  expect(screen.queryByText(/^Country:/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }));
+  await screen.findByText(/40\.00%/);
+  expect(screen.queryByText('Country: SE')).not.toBeInTheDocument();
+  expect(getAppPartnerAnalytics).toHaveBeenLastCalledWith(
+    expect.objectContaining({ countryCode: undefined, regionCode: undefined })
+  );
 });
