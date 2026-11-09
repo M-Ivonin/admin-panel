@@ -40,6 +40,36 @@ import {
 const previewButtonSx = {
   '&.Mui-disabled': { color: 'text.primary', borderColor: 'divider' },
 };
+const previewPartnerActionSx = {
+  '&.Mui-disabled': { bgcolor: '#d4ff50', color: '#111811' },
+};
+const stadiumBackground = {
+  bgcolor: '#0d1716',
+  backgroundImage:
+    'linear-gradient(#0d1716c7, #0d1716c7), url(/assets/partner_matchday_stadium.png)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'right center',
+  borderRadius: 1.5,
+  color: 'common.white',
+};
+const stadiumTitles = {
+  en: {
+    banner: 'YOUR MATCH.\nYOUR CALL.',
+    footer: 'Your match.\nYour move.',
+    subtitle: 'Make it your matchday.',
+  },
+  es: {
+    banner: 'TU PARTIDO.\nTU DECISIÓN.',
+    footer: 'Tu partido.\nTu jugada.',
+    subtitle: 'Vive tu día de partido.',
+  },
+  pt: {
+    banner: 'SEU JOGO.\nSUA DECISÃO.',
+    footer: 'Seu jogo.\nSua jogada.',
+    subtitle: 'Viva o dia de jogo.',
+  },
+};
+const compactSupport = { en: 'Support', es: 'Ayuda', pt: 'Apoio' };
 
 interface Props {
   form: CampaignForm;
@@ -303,8 +333,112 @@ export function CampaignFixturePreview({
                     ))}
                   </Stack>
                 </Stack>
+              ) : fixture.placement === 'compact_prediction' ? (
+                <Stack
+                  sx={{
+                    ...stadiumBackground,
+                    width: 180,
+                    maxWidth: '100%',
+                    mx: 'auto',
+                    p: 1,
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: 13, lineHeight: '18px', fontWeight: 600 }}
+                  >
+                    {preview.winner.copy.adLabel} ·{' '}
+                    {preview.winner.market.operatorDisplayName}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, lineHeight: '18px' }}>
+                    {preview.winner.copy.affiliateDisclosure}
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 0.5,
+                      alignItems: 'center',
+                      mt: 0.5,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        lineHeight: '16px',
+                        fontWeight: 700,
+                        whiteSpace: 'pre-line',
+                      }}
+                    >
+                      {preview.winner.copy.headline ??
+                        stadiumTitles[fixture.locale].footer}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      disabled
+                      sx={{
+                        ...previewPartnerActionSx,
+                        minWidth: 0,
+                        minHeight: 48,
+                        px: 0.5,
+                        fontSize: 12,
+                        textTransform: 'none',
+                      }}
+                    >
+                      {preview.winner.copy.cta}
+                    </Button>
+                  </Box>
+                  <Typography sx={{ fontSize: 12, lineHeight: '18px' }}>
+                    {preview.winner.minimumAge}+ · {preview.winner.warning}
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap">
+                    <Button
+                      disabled
+                      sx={{
+                        minWidth: 48,
+                        minHeight: 48,
+                        px: 0.5,
+                        textTransform: 'none',
+                        '&.Mui-disabled': { color: 'inherit' },
+                      }}
+                    >
+                      {compactSupport[fixture.locale]}
+                    </Button>
+                    <Button
+                      disabled
+                      sx={{
+                        minWidth: 48,
+                        minHeight: 48,
+                        px: 0.5,
+                        textTransform: 'none',
+                        '&.Mui-disabled': { color: 'inherit' },
+                      }}
+                    >
+                      {policyActions[fixture.locale][1]}
+                    </Button>
+                    <Button
+                      aria-label="About this ad"
+                      disabled
+                      sx={{
+                        minWidth: 48,
+                        minHeight: 48,
+                        px: 0.5,
+                        '&.Mui-disabled': { color: 'inherit' },
+                      }}
+                    >
+                      ⓘ
+                    </Button>
+                  </Stack>
+                </Stack>
               ) : (
-                <Stack spacing={1}>
+                <Stack
+                  spacing={1}
+                  sx={
+                    fixture.placement === 'matches_banner'
+                      ? undefined
+                      : { ...stadiumBackground, p: 1.5 }
+                  }
+                >
                   <Stack
                     direction="row"
                     alignItems="center"
@@ -317,12 +451,19 @@ export function CampaignFixturePreview({
                       {preview.winner.market.operatorDisplayName}
                     </Typography>
                   </Stack>
-                  {preview.winner.imageUrl ? (
-                    // The backend returns the verified uploaded static asset URL.
+                  {fixture.placement === 'matches_banner' ? (
+                    // Use the verified upload or the same built-in artwork as the app.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={preview.winner.imageUrl}
-                      alt={preview.winner.copy.imageAlt ?? ''}
+                      src={
+                        preview.winner.imageUrl ??
+                        '/assets/partner_matchday_stadium.png'
+                      }
+                      alt={
+                        preview.winner.imageUrl
+                          ? (preview.winner.copy.imageAlt ?? '')
+                          : ''
+                      }
                       style={{
                         display: 'block',
                         width: '100%',
@@ -331,9 +472,21 @@ export function CampaignFixturePreview({
                       }}
                     />
                   ) : null}
-                  {preview.winner.copy.headline ? (
-                    <Typography variant="subtitle1">
-                      {preview.winner.copy.headline}
+                  {preview.winner.copy.headline || !preview.winner.imageUrl ? (
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ whiteSpace: 'pre-line' }}
+                    >
+                      {preview.winner.copy.headline ??
+                        (fixture.placement === 'matches_banner'
+                          ? stadiumTitles[fixture.locale].banner
+                          : stadiumTitles[fixture.locale].footer)}
+                    </Typography>
+                  ) : null}
+                  {fixture.placement === 'matches_banner' &&
+                  !preview.winner.imageUrl ? (
+                    <Typography variant="body2">
+                      {stadiumTitles[fixture.locale].subtitle}
                     </Typography>
                   ) : null}
                   <Typography variant="body2">
@@ -353,12 +506,7 @@ export function CampaignFixturePreview({
                   <Button
                     variant="contained"
                     disabled
-                    sx={{
-                      '&.Mui-disabled': {
-                        bgcolor: 'primary.main',
-                        color: 'primary.contrastText',
-                      },
-                    }}
+                    sx={previewPartnerActionSx}
                   >
                     {preview.winner.copy.cta}
                   </Button>

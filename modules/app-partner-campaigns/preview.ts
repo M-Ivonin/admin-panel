@@ -170,7 +170,7 @@ function matchCandidate(
     !copy?.adLabel ||
     !copy.cta ||
     !copy.affiliateDisclosure ||
-    (fixture.placement === 'matches_banner' && (!imageUrl || !copy.imageAlt))
+    (imageUrl && !copy.imageAlt)
   )
     return;
   return {

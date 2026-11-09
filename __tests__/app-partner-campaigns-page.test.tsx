@@ -335,7 +335,7 @@ it('previews the winner, age prompt, localized fallback and ad-free suppression 
   expect(uploadAppPartnerCampaignImage).not.toHaveBeenCalled();
 }, 15_000);
 
-it('validates the banner before activation, saves a verified upload and pauses the versioned campaign', async () => {
+it('saves a verified banner upload and pauses the versioned campaign', async () => {
   const bannerUrl = 'https://cdn.example/replaced.png';
   const active = {
     ...campaign,
@@ -359,11 +359,6 @@ it('validates the banner before activation, saves a verified upload and pauses t
     name: 'Edit app partner campaign',
   });
   choose(dialog, 'Status', 'Active');
-  click(dialog, 'button', 'Activate campaign');
-  expect(
-    within(dialog).getByText(/upload the default banner image/i)
-  ).toBeInTheDocument();
-  expect(saveAppPartnerCampaign).not.toHaveBeenCalled();
   click(dialog, 'tab', 'Localized creative');
   const file = new File(['fixture-image'], 'creative.png', {
     type: 'image/png',
@@ -371,7 +366,9 @@ it('validates the banner before activation, saves a verified upload and pauses t
   fireEvent.change(within(dialog).getByLabelText('Default banner image'), {
     target: { files: [file] },
   });
-  await within(dialog).findByRole('button', { name: 'Remove default banner' });
+  await within(dialog).findByRole('button', {
+    name: 'Restore built-in stadium artwork',
+  });
   click(dialog, 'button', 'Activate campaign');
   await screen.findByText('Sweden fixture saved.');
   expect(saveAppPartnerCampaign).toHaveBeenCalledWith(

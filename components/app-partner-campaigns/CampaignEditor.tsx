@@ -471,7 +471,8 @@ export function CampaignEditor({
             ))}
             <Typography variant="subtitle2">Banner creative</Typography>
             <Typography variant="body2" color="text.secondary">
-              Upload complete static PNG or JPEG images up to 5 MiB.
+              Matches uses the built-in stadium artwork unless you upload a
+              custom PNG or JPEG image up to 5 MiB.
             </Typography>
             {(
               Object.keys(imageLabels) as Array<keyof AppPartnerCampaignImages>
@@ -519,7 +520,9 @@ export function CampaignEditor({
                   </Button>
                   {form.bannerImages?.[kind] ? (
                     <Button onClick={() => removeImage(kind)} disabled={busy}>
-                      Remove {imageLabels[kind].toLowerCase()}
+                      {kind === 'default'
+                        ? 'Restore built-in stadium artwork'
+                        : `Remove ${imageLabels[kind].toLowerCase()}`}
                     </Button>
                   ) : null}
                 </Stack>

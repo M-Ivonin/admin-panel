@@ -12,9 +12,10 @@ footers use the campaign's default prediction link or their placement override.
 Final operator hostnames identify the allowed landing pages after redirects.
 The backend validates the full route to a final hostname on activation and
 revalidates at delivery. The image endpoint verifies uploaded static PNG or
-JPEG files up to 5 MiB. The default banner image can have phone and tablet
-overrides. Write an alternative image description and readable disclosure in
-each configured banner locale. English is the fallback. The approved
+JPEG files up to 5 MiB. Matches uses the built-in stadium artwork when no
+image is uploaded. An uploaded default image can have phone and tablet
+overrides and needs alternative text in each configured banner locale.
+Write a readable disclosure in each locale. English is the fallback. The approved
 jurisdiction policy supplies the warning, support and terms.
 
 The fixture preview simulates app eligibility using loaded market policy,

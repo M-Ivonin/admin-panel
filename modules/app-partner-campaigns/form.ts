@@ -296,14 +296,10 @@ function validateActivation(
       'English copy requires an advertising label, button text and affiliate disclosure.'
     );
   }
-  const hasBanner = input.placements.includes('matches_banner');
-  if (hasBanner && (!input.bannerImages?.default || !englishCopy.imageAlt)) {
-    throw new Error(
-      'Upload the default banner image and add its English description before activation.'
-    );
-  }
+  const hasCustomBanner =
+    input.placements.includes('matches_banner') && input.bannerImages?.default;
   for (const [locale, copy] of Object.entries(input.copyByLocale)) {
-    if (hasBanner && !copy.imageAlt) {
+    if (hasCustomBanner && !copy.imageAlt) {
       throw new Error(
         `Add a banner image description for ${locale.toUpperCase()} or clear that locale to use English.`
       );
