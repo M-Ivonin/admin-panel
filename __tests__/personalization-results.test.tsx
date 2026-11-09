@@ -110,10 +110,118 @@ it('shows unique account outcomes and hides diagnostics and explanations until r
   fireEvent.click(screen.getByText('How personalization works'));
   expect(screen.getByText('No eligible action: 21000')).toBeVisible();
   fireEvent.click(screen.getByText('Accounts', { exact: true }));
-  expect(screen.getByRole('link', { name: 'Alex' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: 'Alex' })).toHaveAttribute(
     'href',
     '/dashboard/users/account-a/portrait'
   );
+});
+
+it('mounts Accounts only while expanded and uses the latest refreshed report', async () => {
+  render(<PersonalizationResults />);
+  const title = await screen.findByText('Accounts', { exact: true });
+  const disclosure = title.closest('details')!;
+  const summary = title.closest('summary')!;
+  const tableName = 'Permanent personalization accounts';
+  expect(summary).toBeVisible();
+  expect(summary).toHaveTextContent('9 contacted');
+  expect(disclosure).not.toHaveAttribute('open');
+  expect(screen.queryByRole('table', { hidden: true })).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/Showing .* evaluated accounts/)
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(summary);
+  const table = await screen.findByRole('table', { name: tableName });
+  const row = within(table).getAllByRole('row')[1];
+  expect(within(row).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+    'Alex',
+    '3 Nov 2026, 10:59 UTC',
+    '10',
+    '1',
+    '1',
+    '7',
+    '2',
+  ]);
+  expect(within(row).getByRole('link', { name: 'Alex' })).toHaveAttribute(
+    'href',
+    '/dashboard/users/account-a/portrait'
+  );
+  expect(screen.getByText(/Showing 1 of 2,444 evaluated accounts/)).toBeVisible();
+
+  fireEvent.click(summary);
+  await waitFor(() =>
+    expect(screen.queryByRole('table', { hidden: true })).not.toBeInTheDocument()
+  );
+  read.mockResolvedValue({
+    ...report,
+    summary: { ...report.summary, contactedAccounts: 12 },
+    accounts: [
+      {
+        ...report.accounts[0],
+        userId: 'account/b',
+        accountLabel: 'Blair',
+        decisions: 23,
+      },
+      { ...report.accounts[0], userId: 'account-c', accountLabel: 'Casey' },
+    ],
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+  await waitFor(() => expect(summary).toHaveTextContent('12 contacted'));
+  expect(screen.queryByRole('table', { hidden: true })).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/Showing .* evaluated accounts/)
+  ).not.toBeInTheDocument();
+
+  fireEvent.click(summary);
+  const refreshed = await screen.findByRole('table', { name: tableName });
+  expect(within(refreshed).getAllByRole('row')).toHaveLength(3);
+  expect(within(refreshed).queryByText('Alex')).not.toBeInTheDocument();
+  expect(within(refreshed).getByRole('link', { name: 'Blair' })).toHaveAttribute(
+    'href',
+    '/dashboard/users/account%2Fb/portrait'
+  );
+  expect(within(refreshed).getByRole('link', { name: 'Casey' })).toHaveAttribute(
+    'href',
+    '/dashboard/users/account-c/portrait'
+  );
+  expect(within(refreshed).getByText('23')).toBeVisible();
+  expect(screen.getByText(/Showing 2 of 2,444 evaluated accounts/)).toBeVisible();
+});
+
+it('keeps expanded Accounts current during polling', async () => {
+  jest.useFakeTimers();
+  try {
+    render(<PersonalizationResults />);
+    await act(async () => {});
+    const summary = screen
+      .getByText('Accounts', { exact: true })
+      .closest('summary')!;
+    fireEvent.click(summary);
+    const disclosure = summary.closest('details')!;
+    expect(disclosure).toHaveAttribute('open');
+    // Deliver the native event explicitly while polling uses fake timers.
+    fireEvent(disclosure, new Event('toggle'));
+    expect(screen.getByRole('link', { name: 'Alex' })).toBeVisible();
+    read.mockResolvedValue({
+      ...report,
+      accounts: [
+        { ...report.accounts[0], accountLabel: 'Alex updated', decisions: 11 },
+      ],
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(60000);
+    });
+    expect(screen.queryByRole('link', { name: 'Alex' })).not.toBeInTheDocument();
+    const table = screen.getByRole('table', {
+      name: 'Permanent personalization accounts',
+    });
+    expect(
+      within(table).getByRole('link', { name: 'Alex updated' })
+    ).toBeVisible();
+    expect(within(table).getByText('11')).toBeVisible();
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 it('shows the four daily counts for the selected UTC date', async () => {
