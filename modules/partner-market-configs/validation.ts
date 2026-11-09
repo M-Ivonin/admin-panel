@@ -30,6 +30,8 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   licenceReference: '',
   evidenceUrl: '',
   minimumAge: '18',
+  emailEnabled: true,
+  inAppEnabled: false,
   partnerOnlyAllowed: false,
   sponsoredPredictionAllowed: false,
   bonusAdvertisingAllowed: false,
@@ -38,6 +40,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   responsibleGamblingUrl: '',
   operatorTermsUrl: '',
   operatorDestinationUrl: '',
+  inAppBannerAffiliateUrl: '',
   approvedDestinationHosts: '',
   affiliateConversionTypes: CORE_AFFILIATE_CONVERSION_TYPES.join('\n'),
   legalReviewedAt: '',
@@ -73,7 +76,6 @@ export function normalizePartnerMarketConfigForm(
   ).sort();
 
   return {
-    ...values,
     operatorKey: values.operatorKey.trim().toLowerCase(),
     operatorLegalName: values.operatorLegalName.trim(),
     operatorDisplayName: values.operatorDisplayName.trim(),
@@ -85,13 +87,21 @@ export function normalizePartnerMarketConfigForm(
     },
     countryCode: values.countryCode.trim().toUpperCase(),
     regionCode: values.regionCode?.trim().toUpperCase() || undefined,
+    status: values.status,
     licenceReference: values.licenceReference.trim(),
     evidenceUrl: values.evidenceUrl.trim(),
     minimumAge: Number(values.minimumAge),
+    emailEnabled: values.emailEnabled,
+    inAppEnabled: values.inAppEnabled,
+    partnerOnlyAllowed: values.partnerOnlyAllowed,
+    sponsoredPredictionAllowed: values.sponsoredPredictionAllowed,
+    bonusAdvertisingAllowed: values.bonusAdvertisingAllowed,
+    matchSpecificPromotionAllowed: values.matchSpecificPromotionAllowed,
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
     operatorTermsUrl: values.operatorTermsUrl.trim(),
     operatorDestinationUrl: values.operatorDestinationUrl.trim(),
+    inAppBannerAffiliateUrl: values.inAppBannerAffiliateUrl.trim() || null,
     approvedDestinationHosts: hosts,
     affiliateConversionTypes,
     legalReviewedAt: toIso(values.legalReviewedAt),
@@ -99,6 +109,7 @@ export function normalizePartnerMarketConfigForm(
     effectiveFrom: toIso(values.effectiveFrom),
     effectiveUntil: effectiveUntil ? toIso(effectiveUntil) : undefined,
     configVersion: values.configVersion.trim(),
+    killSwitchEnabled: values.killSwitchEnabled,
     killSwitchReason: values.killSwitchEnabled ? killSwitchReason : undefined,
   };
 }
@@ -197,6 +208,18 @@ export function validatePartnerMarketConfigForm(
         'The destination hostname must be in approved hostnames.';
     }
   }
+  if (input.inAppBannerAffiliateUrl) {
+    const bannerHost = getStandardHttpsHostname(input.inAppBannerAffiliateUrl);
+    if (!bannerHost) {
+      errors.inAppBannerAffiliateUrl = 'Enter a valid HTTPS banner link.';
+    } else if (
+      !errors.approvedDestinationHosts &&
+      !input.approvedDestinationHosts.includes(bannerHost)
+    ) {
+      errors.inAppBannerAffiliateUrl =
+        'The banner link must use an approved hostname.';
+    }
+  }
   const suppliedConversionTypes = values.affiliateConversionTypes
     .split(/[\n,]/)
     .map((type) => type.trim().toLowerCase())
@@ -257,6 +280,25 @@ function validateDate(
 
 function isBackendUrl(value: string): boolean {
   return isURL(value, { require_tld: false });
+}
+
+export function getStandardHttpsHostname(value: string): string | undefined {
+  if (
+    !value.startsWith('https://') ||
+    !isURL(value, {
+      protocols: ['https'],
+      require_protocol: true,
+      disallow_auth: true,
+    })
+  ) {
+    return;
+  }
+  try {
+    const url = new URL(value);
+    if (!url.port) return url.hostname.toLowerCase().replace(/\.$/, '');
+  } catch {
+    return;
+  }
 }
 
 function hasNormalizedHostDuplicates(value: string): boolean {

@@ -8,6 +8,33 @@ import { RetentionStage } from '@/lib/api/users';
 
 jest.mock('@/modules/http/admin-auth-client', () => ({ adminAuthFetch: jest.fn() }));
 
+it('lists only approved email-enabled partners for affiliate authoring', async () => {
+  jest.mocked(adminAuthFetch).mockResolvedValueOnce(
+    ok({
+      items: [
+        { id: 'email', status: 'approved', emailEnabled: true },
+        { id: 'legacy', status: 'approved' },
+        {
+          id: 'app',
+          status: 'approved',
+          emailEnabled: false,
+          inAppEnabled: true,
+        },
+        { id: 'paused', status: 'paused', emailEnabled: true },
+        {
+          id: 'killed',
+          status: 'approved',
+          emailEnabled: true,
+          killSwitchEnabled: true,
+        },
+      ],
+    })
+  );
+
+  const partners = await emailMarketingRepository.listPartnerMarketConfigs();
+  expect(partners.map(({ id }) => id)).toEqual(['email', 'legacy']);
+});
+
 const input: EmailPublicationInput = {
   name: 'Weekly product news',
   topic: 'sirbro_product_updates',

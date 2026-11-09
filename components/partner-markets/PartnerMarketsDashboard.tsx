@@ -138,9 +138,8 @@ export function PartnerMarketsDashboard() {
             <>
               <Alert severity="info">
                 Draft configurations do not permit email sends. This registry
-                records verified facts and restrictions; campaign eligibility is
-                still decided by the backend with consent, age, geography,
-                jurisdiction, campaign, and offer checks.
+                records approved channels and their restrictions. The backend
+                checks campaign and audience eligibility separately.
               </Alert>
               {error ? <Alert severity="error">{error}</Alert> : null}
               {success ? (
@@ -299,6 +298,22 @@ function PartnerMarketCard({
                 {item.killSwitchEnabled ? (
                   <Chip label="Kill switch on" color="error" size="small" />
                 ) : null}
+                <Chip
+                  label={
+                    item.emailEnabled === false
+                      ? 'Email disabled'
+                      : 'Email enabled'
+                  }
+                  size="small"
+                />
+                <Chip
+                  label={
+                    item.inAppEnabled === true
+                      ? 'In-app enabled'
+                      : 'In-app disabled'
+                  }
+                  size="small"
+                />
               </Stack>
               <Typography color="text.secondary">
                 {item.operatorKey} · {item.countryCode}
@@ -353,6 +368,10 @@ function PartnerMarketCard({
               value={item.approvedDestinationHosts.join(', ')}
             />
             <Detail
+              label="In-app banner affiliate link"
+              value={item.inAppBannerAffiliateUrl ?? 'Not configured'}
+            />
+            <Detail
               label="Affiliate conversion types"
               value={item.affiliateConversionTypes.join(', ')}
             />
@@ -385,7 +404,9 @@ function Detail({ label, value }: { label: string; value: string }) {
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2">{value}</Typography>
+      <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+        {value}
+      </Typography>
     </Box>
   );
 }
@@ -455,9 +476,22 @@ function PartnerMarketFormDialog({
     setSaving(true);
     setSubmitError(null);
     try {
-      await onSaved(
-        await savePartnerMarketConfig(normalizePartnerMarketConfigForm(values))
-      );
+      const input = normalizePartnerMarketConfigForm(values);
+      if (config) {
+        input.expectedUpdatedAt = config.updatedAt;
+        for (const field of [
+          'legalReviewedAt',
+          'legalReviewExpiresAt',
+          'effectiveFrom',
+          'effectiveUntil',
+        ] as const) {
+          const previous = config[field];
+          if (previous && values[field] === toLocalDateTime(previous)) {
+            input[field] = previous;
+          }
+        }
+      }
+      await onSaved(await savePartnerMarketConfig(input));
     } catch (caught) {
       setSubmitError(messageOf(caught));
     } finally {
@@ -469,13 +503,17 @@ function PartnerMarketFormDialog({
       <DialogTitle>
         {config ? 'Edit partner market' : 'Add partner market'}
       </DialogTitle>
+      {submitError ? (
+        <Alert severity="error" sx={{ mx: 3 }}>
+          {submitError}
+        </Alert>
+      ) : null}
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <Alert severity="info">
-            Saving draft does not allow sends. Approved status records legal
-            approval only; backend eligibility checks still apply.
+            Draft configurations cannot run campaigns. Approved configurations
+            still require backend eligibility checks.
           </Alert>
-          {submitError ? <Alert severity="error">{submitError}</Alert> : null}
           <FormText
             label="Operator key"
             field="operatorKey"
@@ -626,6 +664,30 @@ function PartnerMarketFormDialog({
             type="number"
           />
           <Stack>
+            <Typography variant="subtitle2">Advertising channels</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Pause and the kill switch apply to both channels.
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={values.emailEnabled}
+                  onChange={(e) => set('emailEnabled', e.target.checked)}
+                />
+              }
+              label="Email"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={values.inAppEnabled}
+                  onChange={(e) => set('inAppEnabled', e.target.checked)}
+                />
+              }
+              label="In-app"
+            />
+          </Stack>
+          <Stack>
             <Typography variant="subtitle2">Allowed promotion types</Typography>
             <FormControlLabel
               control={
@@ -698,7 +760,15 @@ function PartnerMarketFormDialog({
             values={values}
             errors={errors}
             set={set}
-            helper="Used by the server after the visitor deliberately confirms leaving SirBro."
+            helper="Used by the email offer flow after the visitor confirms leaving SirBro."
+          />
+          <FormText
+            label="In-app banner affiliate link"
+            field="inAppBannerAffiliateUrl"
+            values={values}
+            errors={errors}
+            set={set}
+            helper="Optional HTTPS link for the Matches banner. Leave blank to disable that destination."
           />
           <FormText
             label="Approved destination hosts"
@@ -928,6 +998,9 @@ function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
     },
     operatorTermsUrl: config.operatorTermsUrl ?? '',
     operatorDestinationUrl: config.operatorDestinationUrl ?? '',
+    emailEnabled: config.emailEnabled ?? true,
+    inAppEnabled: config.inAppEnabled ?? false,
+    inAppBannerAffiliateUrl: config.inAppBannerAffiliateUrl ?? '',
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),
     approvedDestinationHosts: config.approvedDestinationHosts.join('\n'),

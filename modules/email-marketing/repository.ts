@@ -78,7 +78,12 @@ export const emailMarketingRepository: EmailMarketingRepository = {
     return (await request<{ items: import('./contracts').SendGridTemplateReference[] }>(`${ROOT}/references/sendgrid-templates`)).items;
   },
   async listPartnerMarketConfigs(): Promise<PartnerMarketProjection[]> {
-    return (await getPartnerMarketConfigs()).filter((item) => item.status === 'approved' && !item.killSwitchEnabled);
+    return (await getPartnerMarketConfigs()).filter(
+      (item) =>
+        item.status === 'approved' &&
+        !item.killSwitchEnabled &&
+        item.emailEnabled !== false
+    );
   },
   async listAudienceSources() {
     const catalog = await getCampaignEditorCatalog();

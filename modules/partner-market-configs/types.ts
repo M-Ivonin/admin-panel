@@ -17,6 +17,8 @@ export interface PartnerMarketConfigInput {
   licenceReference: string;
   evidenceUrl: string;
   minimumAge: number;
+  emailEnabled?: boolean;
+  inAppEnabled?: boolean;
   partnerOnlyAllowed: boolean;
   sponsoredPredictionAllowed: boolean;
   bonusAdvertisingAllowed: boolean;
@@ -25,6 +27,7 @@ export interface PartnerMarketConfigInput {
   responsibleGamblingUrl: string;
   operatorTermsUrl: string;
   operatorDestinationUrl: string;
+  inAppBannerAffiliateUrl?: string | null;
   approvedDestinationHosts: string[];
   affiliateConversionTypes: string[];
   legalReviewedAt: string;
@@ -34,6 +37,7 @@ export interface PartnerMarketConfigInput {
   configVersion: string;
   killSwitchEnabled: boolean;
   killSwitchReason?: string;
+  expectedUpdatedAt?: string;
 }
 
 export interface PartnerMarketConfig
@@ -45,6 +49,8 @@ export interface PartnerMarketConfig
     | 'affiliateDisclosureByLocale'
     | 'operatorTermsUrl'
     | 'operatorDestinationUrl'
+    | 'effectiveUntil'
+    | 'expectedUpdatedAt'
   > {
   id: string;
   regionCode: string | null;
@@ -53,6 +59,8 @@ export interface PartnerMarketConfig
   affiliateDisclosureByLocale: { en: string; es: string; pt: string } | null;
   operatorTermsUrl: string | null;
   operatorDestinationUrl: string | null;
+  inAppConfigVersion?: string | null;
+  effectiveUntil?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,9 +73,18 @@ export interface PartnerMarketConfigFilters {
 export interface PartnerMarketConfigFormValues
   extends Omit<
     PartnerMarketConfigInput,
-    'minimumAge' | 'approvedDestinationHosts' | 'affiliateConversionTypes'
+    | 'minimumAge'
+    | 'approvedDestinationHosts'
+    | 'affiliateConversionTypes'
+    | 'emailEnabled'
+    | 'inAppEnabled'
+    | 'inAppBannerAffiliateUrl'
+    | 'expectedUpdatedAt'
   > {
   minimumAge: string;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  inAppBannerAffiliateUrl: string;
   approvedDestinationHosts: string;
   affiliateConversionTypes: string;
 }

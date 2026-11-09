@@ -19,6 +19,16 @@ allowlist. The five core values (`registration`, `ftd`, `deposit`,
 `commission`, and `reversal`) are always preserved; operators may add only
 normalized, backend-valid extra values through the same configuration command.
 
+The configuration editor and summary show independent **Email** and **In-app**
+channel permissions. Email defaults to enabled and In-app defaults to disabled.
+Disabling Email removes that configuration from affiliate email authoring.
+Pause and the kill switch apply across both channels. **In-app banner affiliate
+link** is the optional HTTPS link for the Matches banner. It must use an approved
+hostname. Clearing it removes that banner destination. The **Exact operator
+destination URL** remains the destination for the email offer flow. When a
+configuration changes while its editor is open, reload the list and reopen
+the latest record before saving.
+
 The jurisdiction tab lists and filters exact country/region rules, creates or
 replaces one record through `PUT /marketing-jurisdictions/admin`, and performs
 an immediate confirmed pause through

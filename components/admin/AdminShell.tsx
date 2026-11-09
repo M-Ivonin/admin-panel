@@ -80,6 +80,11 @@ const groups = [
       },
       { label: 'Campaigns', href: '/dashboard/campaigns', icon: Flag },
       {
+        label: 'App Partner Campaigns',
+        href: '/dashboard/app-partner-campaigns',
+        icon: Flag,
+      },
+      {
         label: 'Email Marketing',
         href: '/dashboard/email-marketing',
         icon: Mail,

@@ -166,6 +166,39 @@ describe('partner market config form validation', () => {
     ).toMatch(/approved hostnames/);
   });
 
+  it.each([
+    ['http://example.bet/banner', /HTTPS/],
+    ['https://user:pass@example.bet/banner', /HTTPS/],
+    ['https://example.bet:444/banner', /HTTPS/],
+    ['https://unapproved.example.bet/banner', /approved hostname/],
+  ])('rejects invalid banner link %s', (inAppBannerAffiliateUrl, message) => {
+    expect(
+      validatePartnerMarketConfigForm({
+        ...valid,
+        inAppBannerAffiliateUrl,
+      }).inAppBannerAffiliateUrl
+    ).toMatch(message);
+  });
+
+  it('normalizes a separate optional banner link, including an explicit clear', () => {
+    const inAppBannerAffiliateUrl = 'https://www.example.bet/banner?ref=sirbro';
+    expect(
+      validatePartnerMarketConfigForm({ ...valid, inAppBannerAffiliateUrl })
+    ).toEqual({});
+    expect(
+      normalizePartnerMarketConfigForm({
+        ...valid,
+        inAppBannerAffiliateUrl: ` ${inAppBannerAffiliateUrl} `,
+      })
+    ).toMatchObject({
+      inAppBannerAffiliateUrl,
+      operatorDestinationUrl: valid.operatorDestinationUrl,
+    });
+    expect(
+      normalizePartnerMarketConfigForm({ ...valid, inAppBannerAffiliateUrl: ' ' })
+    ).toHaveProperty('inAppBannerAffiliateUrl', null);
+  });
+
   it.each(['US', 'CA', 'AR'])(
     'requires a region for %s partner configurations',
     (countryCode) => {

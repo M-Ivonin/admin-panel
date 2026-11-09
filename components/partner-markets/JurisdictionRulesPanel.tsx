@@ -167,7 +167,10 @@ function JurisdictionFormDialog({ rule, onClose, onSaved }: { rule: MarketingJur
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setSaving(true); setSubmitError(null);
-    try { await onSaved(await saveMarketingJurisdiction(normalizeMarketingJurisdictionForm(values))); }
+    try { await onSaved(await saveMarketingJurisdiction({
+      ...normalizeMarketingJurisdictionForm(values),
+      ...(rule ? { expectedUpdatedAt: rule.updatedAt } : {}),
+    })); }
     catch (caught) { setSubmitError(messageOf(caught)); }
     finally { setSaving(false); }
   };

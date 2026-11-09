@@ -402,6 +402,8 @@ describe('PartnerMarketsPage', () => {
     const createDialog = screen.getByRole('dialog', {
       name: 'Add partner market',
     });
+    expect(within(createDialog).getByLabelText('Email')).toBeChecked();
+    expect(within(createDialog).getByLabelText('In-app')).not.toBeChecked();
     expect(
       within(createDialog).queryByLabelText('Country code')
     ).not.toBeInTheDocument();
@@ -428,12 +430,106 @@ describe('PartnerMarketsPage', () => {
         countryCode: 'FR',
         status: 'draft',
         approvedDestinationHosts: ['example.bet'],
+        emailEnabled: true,
+        inAppEnabled: false,
+        inAppBannerAffiliateUrl: null,
       })
     );
     expect(
       await screen.findByText('Example Bet configuration saved.')
     ).toBeInTheDocument();
   }, 15_000);
+
+  it.each([
+    [true, true],
+    [true, false],
+    [false, true],
+    [false, false],
+  ])(
+    'saves and reopens independent channels (Email %s, In-app %s)',
+    async (emailEnabled, inAppEnabled) => {
+      const legacyConfig = {
+        ...config,
+        legalReviewedAt: '2026-08-01T10:00:43.123Z',
+      };
+      const inAppBannerAffiliateUrl = 'https://example.bet/matches?ref=sirbro';
+      const saved = {
+        ...legacyConfig,
+        emailEnabled,
+        inAppEnabled,
+        inAppBannerAffiliateUrl,
+      };
+      (getPartnerMarketConfigs as jest.Mock)
+        .mockResolvedValueOnce([legacyConfig])
+        .mockResolvedValue([saved]);
+      (savePartnerMarketConfig as jest.Mock).mockResolvedValue(saved);
+      render(<PartnerMarketsPage />);
+
+      expect(await screen.findByText('Email enabled')).toBeInTheDocument();
+      expect(screen.getByText('In-app disabled')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      const editDialog = screen.getByRole('dialog', {
+        name: 'Edit partner market',
+      });
+      if (!emailEnabled)
+        fireEvent.click(within(editDialog).getByLabelText('Email'));
+      if (inAppEnabled)
+        fireEvent.click(within(editDialog).getByLabelText('In-app'));
+      fireEvent.change(
+        within(editDialog).getByLabelText('In-app banner affiliate link'),
+        {
+          target: { value: inAppBannerAffiliateUrl },
+        }
+      );
+      fireEvent.click(
+        within(editDialog).getByRole('button', { name: 'Save configuration' })
+      );
+
+      await screen.findByText('Example Bet configuration saved.');
+      expect(savePartnerMarketConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          emailEnabled,
+          inAppEnabled,
+          inAppBannerAffiliateUrl,
+          operatorDestinationUrl: legacyConfig.operatorDestinationUrl,
+          legalReviewedAt: legacyConfig.legalReviewedAt,
+          configVersion: legacyConfig.configVersion,
+          expectedUpdatedAt: legacyConfig.updatedAt,
+        })
+      );
+      expect(
+        await screen.findByText(
+          `Email ${emailEnabled ? 'enabled' : 'disabled'}`
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(`In-app ${inAppEnabled ? 'enabled' : 'disabled'}`)
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      const reopenedDialog = screen.getByRole('dialog', {
+        name: 'Edit partner market',
+      });
+      expect(
+        within(reopenedDialog).getByLabelText('In-app banner affiliate link')
+      ).toHaveValue(inAppBannerAffiliateUrl);
+      fireEvent.change(
+        within(reopenedDialog).getByLabelText('In-app banner affiliate link'),
+        {
+          target: { value: '' },
+        }
+      );
+      fireEvent.click(
+        within(reopenedDialog).getByRole('button', {
+          name: 'Save configuration',
+        })
+      );
+      await waitFor(() =>
+        expect(savePartnerMarketConfig).toHaveBeenLastCalledWith(
+          expect.objectContaining({ inAppBannerAffiliateUrl: null })
+        )
+      );
+    }
+  );
 
   it('edits an existing row and uses the dedicated confirmed pause request', async () => {
     (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([config]);

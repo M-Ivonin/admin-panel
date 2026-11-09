@@ -29,6 +29,7 @@ deleting the backlog.
 - [Support ticket operations](./SUPPORT_TICKET_OPERATIONS.md)
 - [Match ranking](./MATCH_RANKING_ADMIN.md)
 - [Partner markets](./PARTNER_MARKETS_ADMIN_SCREEN.md)
+- [App partner campaigns](./APP_PARTNER_CAMPAIGNS_ADMIN.md)
 
 ## Agent guidance
 
