@@ -117,12 +117,14 @@ function Section({
   title: string;
   summary?: string;
   icon: React.ReactNode;
-  children: React.ReactNode;
+  children: React.ReactNode | (() => React.ReactNode);
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <Paper
       component="details"
       variant="outlined"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
       sx={{
         borderRadius: '12px',
         overflow: 'hidden',
@@ -156,7 +158,9 @@ function Section({
           sx={{ ml: 'auto', flexShrink: 0 }}
         />
       </Box>
-      <Box sx={{ px: 2.5, pb: 2.5, minWidth: 0 }}>{children}</Box>
+      <Box sx={{ px: 2.5, pb: 2.5, minWidth: 0 }}>
+        {typeof children === 'function' ? (open ? children() : null) : children}
+      </Box>
     </Paper>
   );
 }
@@ -575,57 +579,61 @@ function Report({ report: r }: { report: Results }) {
           summary={`${s.contactedAccounts.toLocaleString()} contacted`}
           icon={<GroupOutlinedIcon />}
         >
-          <TableContainer>
-            <Table
-              size="small"
-              aria-label="Permanent personalization accounts"
-              sx={{ minWidth: 800 }}
-            >
-              <TableHead>
-                <TableRow>
-                  {[
-                    'Account',
-                    'Last decision (UTC)',
-                    'Decisions',
-                    'Accepted / shown',
-                    'Opened',
-                    'Useful actions',
-                    'Purchases',
-                  ].map((h) => (
-                    <TableCell key={h}>{h}</TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {r.accounts.map((a) => (
-                  <TableRow key={a.userId}>
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/users/${encodeURIComponent(a.userId)}/portrait`}
-                        style={{ overflowWrap: 'anywhere' }}
-                      >
-                        {a.accountLabel}
-                      </Link>
-                    </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      {stamp(a.lastDecisionAt)}
-                    </TableCell>
-                    <TableCell>{a.decisions}</TableCell>
-                    <TableCell>{a.acceptedOrShown}</TableCell>
-                    <TableCell>{a.opened}</TableCell>
-                    <TableCell>{a.usefulActions}</TableCell>
-                    <TableCell>{a.purchases}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Typography variant="caption" color="text.secondary">
-            Showing {r.accounts.length} of {s.accounts.toLocaleString()}{' '}
-            evaluated accounts, most recent first. Account outcomes includes all
-            accounts; table activity columns count messages, actions and
-            purchases per account.
-          </Typography>
+          {() => (
+            <>
+              <TableContainer>
+                <Table
+                  size="small"
+                  aria-label="Permanent personalization accounts"
+                  sx={{ minWidth: 800 }}
+                >
+                  <TableHead>
+                    <TableRow>
+                      {[
+                        'Account',
+                        'Last decision (UTC)',
+                        'Decisions',
+                        'Accepted / shown',
+                        'Opened',
+                        'Useful actions',
+                        'Purchases',
+                      ].map((h) => (
+                        <TableCell key={h}>{h}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {r.accounts.map((a) => (
+                      <TableRow key={a.userId}>
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/users/${encodeURIComponent(a.userId)}/portrait`}
+                            style={{ overflowWrap: 'anywhere' }}
+                          >
+                            {a.accountLabel}
+                          </Link>
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {stamp(a.lastDecisionAt)}
+                        </TableCell>
+                        <TableCell>{a.decisions}</TableCell>
+                        <TableCell>{a.acceptedOrShown}</TableCell>
+                        <TableCell>{a.opened}</TableCell>
+                        <TableCell>{a.usefulActions}</TableCell>
+                        <TableCell>{a.purchases}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Typography variant="caption" color="text.secondary">
+                Showing {r.accounts.length} of {s.accounts.toLocaleString()}{' '}
+                evaluated accounts, most recent first. Account outcomes includes
+                all accounts; table activity columns count messages, actions and
+                purchases per account.
+              </Typography>
+            </>
+          )}
         </Section>
         <Section title="Metric definitions" icon={<InfoOutlinedIcon />}>
           <Stack spacing={2}>
