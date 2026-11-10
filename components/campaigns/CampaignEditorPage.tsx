@@ -106,20 +106,11 @@ import {
 } from '@/modules/campaigns/schedule';
 import { getAvailableCampaignLocales } from '@/modules/campaigns/target-app-locales';
 
-const COLORS = {
-  canvas: '#111111',
-  panel: '#1a1a1a',
-  surface: '#232323',
-  soft: '#2c2c2c',
-  accent: '#c44d36',
-  accentSoft: '#3a2019',
-  textPrimary: '#f5f5f5',
-  textSecondary: '#b0b0b0',
-  stroke: '#3b3b3b',
-  success: '#66bb6a',
-  warning: '#f0a63a',
-  danger: '#e05a5a',
-};
+import {
+  campaignEditorColors as COLORS,
+  SectionCard,
+  StepButton,
+} from './CampaignEditorLayout';
 
 const CUSTOM_DEEPLINK_SELECT_VALUE = '__custom_deeplink__';
 
@@ -396,74 +387,6 @@ function getStatusChipStyles(status: CampaignStatus) {
   }
 
   return { color: COLORS.textSecondary, bgcolor: COLORS.soft };
-}
-
-function SectionCard({
-  title,
-  children,
-  action,
-}: {
-  title?: string;
-  children: ReactNode;
-  action?: ReactNode;
-}) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        borderRadius: 4,
-        bgcolor: COLORS.surface,
-        border: `1px solid ${COLORS.stroke}`,
-      }}
-    >
-      {title || action ? (
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ mb: 1.5 }}
-        >
-          {title ? (
-            <Typography
-              sx={{ color: COLORS.textPrimary, fontSize: 16, fontWeight: 700 }}
-            >
-              {title}
-            </Typography>
-          ) : null}
-          {action}
-        </Stack>
-      ) : null}
-      {children}
-    </Paper>
-  );
-}
-
-function StepButton({
-  label,
-  selected,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      variant="text"
-      onClick={onClick}
-      sx={{
-        borderRadius: 999,
-        px: 1.75,
-        py: 1,
-        color: selected ? COLORS.textPrimary : COLORS.textSecondary,
-        bgcolor: selected ? COLORS.accentSoft : COLORS.soft,
-        border: `1px solid ${selected ? COLORS.accent : COLORS.stroke}`,
-      }}
-    >
-      {label}
-    </Button>
-  );
 }
 
 function ToggleChip({

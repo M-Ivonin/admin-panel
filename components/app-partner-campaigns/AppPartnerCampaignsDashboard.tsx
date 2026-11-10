@@ -36,6 +36,13 @@ import {
 import { CampaignEditor } from './CampaignEditor';
 import { CampaignAnalyticsPanel } from './CampaignAnalyticsPanel';
 
+const createButtonId = 'create-app-partner-campaign';
+const saveFeedbackId = 'app-partner-campaign-save-feedback';
+
+function editButtonId(campaignId: string) {
+  return `edit-app-partner-campaign-${campaignId}`;
+}
+
 export function AppPartnerCampaignsDashboard() {
   const [campaigns, setCampaigns] = useState<AppPartnerCampaign[]>([]);
   const [markets, setMarkets] = useState<PartnerMarketConfig[]>([]);
@@ -53,6 +60,7 @@ export function AppPartnerCampaignsDashboard() {
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const latestLoadId = useRef(0);
+  const returnFocusId = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     const loadId = ++latestLoadId.current;
@@ -91,14 +99,41 @@ export function AppPartnerCampaignsDashboard() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (editing === undefined && returnFocusId.current) {
+      document.getElementById(returnFocusId.current)?.focus();
+      returnFocusId.current = null;
+    }
+  }, [editing]);
+
+  function closeEditor(focusId: string) {
+    returnFocusId.current = focusId;
+    setEditing(undefined);
+  }
+
   async function finish(
     campaign: AppPartnerCampaign,
     action: 'saved' | 'paused'
   ) {
-    setEditing(undefined);
+    if (action === 'saved') closeEditor(saveFeedbackId);
     setPausing(null);
     setSuccess(`${campaign.name} ${action}.`);
     await load();
+  }
+
+  if (editing !== undefined) {
+    return (
+      <CampaignEditor
+        campaign={editing ?? undefined}
+        campaigns={campaigns}
+        markets={markets}
+        jurisdictions={jurisdictions}
+        onClose={() =>
+          closeEditor(editing ? editButtonId(editing.id) : createButtonId)
+        }
+        onSaved={(campaign) => finish(campaign, 'saved')}
+      />
+    );
   }
 
   return (
@@ -114,6 +149,7 @@ export function AppPartnerCampaignsDashboard() {
         actions={
           activeTab === 0 ? (
             <Button
+              id={createButtonId}
               startIcon={<Add />}
               variant="contained"
               disabled={
@@ -175,7 +211,12 @@ export function AppPartnerCampaignsDashboard() {
               </Alert>
             ) : null}
             {success ? (
-              <Alert severity="success" onClose={() => setSuccess(null)}>
+              <Alert
+                id={saveFeedbackId}
+                tabIndex={-1}
+                severity="success"
+                onClose={() => setSuccess(null)}
+              >
                 {success}
               </Alert>
             ) : null}
@@ -257,6 +298,7 @@ export function AppPartnerCampaignsDashboard() {
                           alignItems="flex-start"
                         >
                           <Button
+                            id={editButtonId(campaign.id)}
                             startIcon={<Edit />}
                             disabled={loadingPolicy || Boolean(policyError)}
                             onClick={() => setEditing(campaign)}
@@ -281,16 +323,6 @@ export function AppPartnerCampaignsDashboard() {
           </>
         )}
       </Stack>
-      {editing !== undefined ? (
-        <CampaignEditor
-          campaign={editing ?? undefined}
-          campaigns={campaigns}
-          markets={markets}
-          jurisdictions={jurisdictions}
-          onClose={() => setEditing(undefined)}
-          onSaved={(campaign) => finish(campaign, 'saved')}
-        />
-      ) : null}
       {pausing ? (
         <PauseCampaignDialog
           campaign={pausing}

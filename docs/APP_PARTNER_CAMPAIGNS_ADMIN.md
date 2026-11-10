@@ -2,10 +2,14 @@
 
 Open **Growth → App Partner Campaigns** to configure the large Matches banner,
 the banner on a match’s Predictions tab, and the fixed Full Analysis banner.
-New campaigns start in draft. Select one
-operator market, independent placements and platforms, a minimum age and a
-minimum of two genuine foreground visits. Enter both schedule times with a
-shared UTC offset. Use UTC for schedules that cross a daylight-saving change.
+**Create campaign** opens the campaign builder with **Campaign setup**,
+**Localized creative**, and **Fixture preview**. Use the step buttons or
+**Back** and **Continue** to move through the builder. **Save draft** stores a
+new draft, and **Back to campaigns** returns to the list.
+
+In Campaign setup, select one operator market, independent placements and
+platforms, a minimum age and a minimum of two genuine foreground visits.
+Enter both schedule times with a shared UTC offset. Use UTC for schedules that cross a daylight-saving change.
 The backend receives UTC instants.
 
 All three placements use the same in-app affiliate link in **Partner Markets**.

@@ -8,6 +8,8 @@ type AdminPageHeaderProps = {
   subtitle?: ReactNode;
   backHref?: string;
   backLabel?: string;
+  onBack?: () => void;
+  backDisabled?: boolean;
   showBack?: boolean;
   icon?: ReactNode;
   titleAddon?: ReactNode;
@@ -20,6 +22,8 @@ export function AdminPageHeader({
   subtitle,
   backHref = '/dashboard',
   backLabel = 'Back',
+  onBack,
+  backDisabled,
   showBack = true,
   icon,
   titleAddon,
@@ -50,8 +54,10 @@ export function AdminPageHeader({
           <Stack direction="row" spacing={2} alignItems="center" minWidth={0}>
             {showBack ? (
               <Button
-                component={Link}
-                href={backHref}
+                {...(onBack
+                  ? { onClick: onBack }
+                  : { component: Link, href: backHref })}
+                disabled={backDisabled}
                 variant="outlined"
                 size="small"
                 startIcon={<ArrowBack />}

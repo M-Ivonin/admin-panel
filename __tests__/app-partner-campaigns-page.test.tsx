@@ -133,9 +133,14 @@ const campaign: AppPartnerCampaign = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
   jest.mocked(getAppPartnerCampaigns).mockResolvedValue([]);
   jest.mocked(getPartnerMarketConfigs).mockResolvedValue([market]);
   jest.mocked(getMarketingJurisdictions).mockResolvedValue([rule]);
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 function deferred<T>() {
@@ -247,27 +252,27 @@ it('saves a disabled draft with explicit timezone and rejects a one-session mini
   render(<AppPartnerCampaignsPage />);
   await screen.findByText('No app partner campaigns found');
   fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }));
-  const dialog = screen.getByRole('dialog', {
+  const editor = screen.getByRole('region', {
     name: 'Create app partner campaign',
   });
-  change(dialog, 'Campaign name', 'Sweden fixture');
+  change(editor, 'Campaign name', 'Sweden fixture');
   choose(
-    dialog,
+    editor,
     'Operator-market configuration',
     'Example Bet · SE · In-app on'
   );
-  change(dialog, 'Starts at', '2026-11-09T13:30');
-  change(dialog, 'Ends at', '2026-11-10T13:30');
-  change(dialog, 'UTC offset', '+01:30');
-  change(dialog, 'Minimum sessions', '1');
-  click(dialog, 'button', 'Save campaign');
+  change(editor, 'Starts at', '2026-11-09T13:30');
+  change(editor, 'Ends at', '2026-11-10T13:30');
+  change(editor, 'UTC offset', '+01:30');
+  change(editor, 'Minimum sessions', '1');
+  click(editor, 'button', 'Save draft');
   expect(
-    within(dialog).getByText(/minimum sessions must be/i)
+    within(editor).getByText(/minimum sessions must be/i)
   ).toBeInTheDocument();
   expect(saveAppPartnerCampaign).not.toHaveBeenCalled();
 
-  change(dialog, 'Minimum sessions', '2');
-  click(dialog, 'button', 'Save campaign');
+  change(editor, 'Minimum sessions', '2');
+  click(editor, 'button', 'Save draft');
   await screen.findByText('Sweden fixture saved.');
   expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -292,47 +297,49 @@ it('previews the winner, age prompt, localized fallback and ad-free suppression 
   render(<AppPartnerCampaignsPage />);
   await screen.findByText(campaign.name);
   fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
-  const dialog = screen.getByRole('dialog', {
+  const editor = screen.getByRole('region', {
     name: 'Edit app partner campaign',
   });
-  click(dialog, 'tab', 'Fixture preview');
+  click(editor, 'button', 'Fixture preview');
   expect(
-    within(dialog).getByText(/Winning campaign · Earlier ID wins/)
+    within(editor).getByText(/Winning campaign · Earlier ID wins/)
   ).toBeInTheDocument();
   expect(
-    within(dialog).getByText('Are you 21 years old or older?')
+    within(editor).getByText('Are you 21 years old or older?')
   ).toBeInTheDocument();
-  expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
-  change(dialog, 'Foreground visits', '1');
-  expect(within(dialog).getByText(/second genuine visit/)).toBeInTheDocument();
-  change(dialog, 'Foreground visits', '2');
-  choose(dialog, 'Age fixture', 'Self-declared threshold');
-  change(dialog, 'Evidence threshold', '21');
-  choose(dialog, 'Preview locale', 'ES');
-  choose(dialog, 'Preview device', 'Tablet');
+  expect(within(editor).queryByRole('img')).not.toBeInTheDocument();
+  change(editor, 'Foreground visits', '1');
+  expect(within(editor).getByText(/second genuine visit/)).toBeInTheDocument();
+  change(editor, 'Foreground visits', '2');
+  choose(editor, 'Age fixture', 'Self-declared threshold');
+  change(editor, 'Evidence threshold', '21');
+  choose(editor, 'Preview locale', 'ES');
+  choose(editor, 'Preview device', 'Tablet');
   expect(
-    within(dialog).getByRole('img', { name: 'Example fixture artwork' })
+    within(editor).getByRole('img', { name: 'Example fixture artwork' })
   ).toHaveAttribute('src', campaign.bannerImages?.default);
-  expect(within(dialog).getByText(/Approved app warning/)).toBeInTheDocument();
+  expect(within(editor).getByText(/Approved app warning/)).toBeInTheDocument();
   expect(
-    within(dialog).getByRole('button', { name: 'Visit Example Bet' })
+    within(editor).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
-  choose(dialog, 'Preview placement', 'Match · Predictions banner');
-  expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+  choose(editor, 'Preview placement', 'Match · Predictions banner');
+  expect(within(editor).queryByRole('img')).not.toBeInTheDocument();
   expect(
-    within(dialog).getByRole('button', { name: 'Visit Example Bet' })
+    within(editor).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
-  choose(dialog, 'Preview placement', 'Full Analysis · Fixed banner');
+  choose(editor, 'Preview placement', 'Full Analysis · Fixed banner');
   expect(
-    within(dialog).getByRole('button', { name: 'Visit Example Bet' })
+    within(editor).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
-  choose(dialog, 'Access fixture', 'Subscription or explicit ad-free');
+  choose(editor, 'Access fixture', 'Subscription or explicit ad-free');
   expect(
-    within(dialog).getByText(/fixture has ad-free access/)
+    within(editor).getByText(/fixture has ad-free access/)
   ).toBeInTheDocument();
   expect(
-    within(dialog).queryByRole('button', { name: 'Visit Example Bet' })
+    within(editor).queryByRole('button', { name: 'Visit Example Bet' })
   ).not.toBeInTheDocument();
+  await act(async () => click(editor, 'button', 'Back to campaigns'));
+  expect(screen.getAllByRole('button', { name: 'Edit' })[0]).toHaveFocus();
   expect(saveAppPartnerCampaign).not.toHaveBeenCalled();
   expect(uploadAppPartnerCampaignImage).not.toHaveBeenCalled();
 }, 15_000);
@@ -350,31 +357,39 @@ it('saves a verified banner upload and pauses the versioned campaign', async () 
     .mockResolvedValueOnce([active])
     .mockResolvedValue([{ ...active, status: 'paused' }]);
   jest.mocked(saveAppPartnerCampaign).mockResolvedValue(active);
-  jest.mocked(uploadAppPartnerCampaignImage).mockResolvedValue(bannerUrl);
+  jest
+    .mocked(uploadAppPartnerCampaignImage)
+    .mockRejectedValueOnce(new Error('Could not upload banner'))
+    .mockResolvedValue(bannerUrl);
   jest
     .mocked(pauseAppPartnerCampaign)
     .mockResolvedValue({ ...active, status: 'paused' });
   render(<AppPartnerCampaignsPage />);
   await screen.findByText(campaign.name);
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-  const dialog = screen.getByRole('dialog', {
+  const editor = screen.getByRole('region', {
     name: 'Edit app partner campaign',
   });
-  choose(dialog, 'Status', 'Active');
-  click(dialog, 'tab', 'Localized creative');
+  choose(editor, 'Status', 'Active');
+  click(editor, 'button', 'Continue');
+  expect(
+    within(editor).getByRole('button', { name: 'Localized creative' })
+  ).toHaveAttribute('aria-pressed', 'true');
   const file = new File(['fixture-image'], 'creative.png', {
     type: 'image/png',
   });
-  fireEvent.change(
-    within(dialog).getByLabelText('Custom banner background image'),
-    {
-      target: { files: [file] },
-    }
+  const uploadInput = within(editor).getByLabelText(
+    'Custom banner background image'
   );
-  await within(dialog).findByRole('button', {
+  fireEvent.change(uploadInput, { target: { files: [file] } });
+  const uploadError = await within(editor).findByText('Could not upload banner');
+  expect(uploadError.closest('[role="alert"]')).toHaveFocus();
+
+  fireEvent.change(uploadInput, { target: { files: [file] } });
+  await within(editor).findByRole('button', {
     name: 'Restore built-in stadium artwork',
   });
-  click(dialog, 'button', 'Activate campaign');
+  click(editor, 'button', 'Activate campaign');
   await screen.findByText('Sweden fixture saved.');
   expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
     expect.objectContaining({
