@@ -200,6 +200,11 @@ export function SystemMonitorDashboard() {
   >(null);
   const runCheck = overview?.checks.find(check => check.checkId === run?.checkId);
   const runHealth = run && runCheck && runAspect ? projectPersonalizationRunHealth(run, runCheck)[runAspect] : undefined;
+  const runName = run ? (runAspect ? monitorAspectNames[runAspect] : checkName(run.checkId)) : '';
+  const [runLogContext, setRunLogContext] = useState<{
+    name: string;
+    endedAt: string;
+  } | null>(null);
   const [logService, setLogService] = useState<LogService>('system-monitor');
   const [logs, setLogs] = useState<MonitorLogs | null>(null);
   const [logState, setLogState] = useState<
@@ -332,6 +337,7 @@ export function SystemMonitorDashboard() {
         setIncidentDetailsOpen(Boolean(match));
         setLinkState(match ? null : 'missing');
         if (match) {
+          setRunLogContext(null);
           setCheckId(match.checkId);
           if (match.aspect) setAspect(match.aspect);
           setPage(0);
@@ -351,12 +357,18 @@ export function SystemMonitorDashboard() {
     ++logRequest.current;
     setLogs(null);
     setLogState(null);
-  }, [logService, range, selectedIncident, run]);
+  }, [logService, range, selectedIncident, runLogContext]);
 
   const closeRunDetails = () => {
     ++runRequest.current;
     setRun(null);
     setRunState(null);
+  };
+  const viewRunLogs = () => {
+    if (!run?.endedAt) return;
+    setSelectedIncident(null);
+    setRunLogContext({ name: runName, endedAt: run.endedAt });
+    closeRunDetails();
   };
   const selectRun = async (runId: string) => {
     const request = ++runRequest.current;
@@ -382,7 +394,11 @@ export function SystemMonitorDashboard() {
     const request = ++logRequest.current;
     setLogState('loading');
     setLogs(null);
-    const window = logWindow(range, { run, incident: selectedIncident }, Date.now());
+    const window = logWindow(
+      range,
+      { run: runLogContext, incident: selectedIncident },
+      Date.now()
+    );
     if (!window) {
       setLogState('expired');
       return;
@@ -566,7 +582,18 @@ export function SystemMonitorDashboard() {
                 </Typography>
               </Stack>
             </Paper>
-            {checkId === 'backend.queues' && <QueueHealthPanel check={selectedCheck} now={now} sourceUnavailable={offline || Boolean(sourceStale)} onLogs={() => {setLogService('backend'); document.getElementById('monitor-logs')?.scrollIntoView({behavior:'smooth'});}}/>}
+            {checkId === 'backend.queues' && (
+              <QueueHealthPanel
+                check={selectedCheck}
+                now={now}
+                sourceUnavailable={offline || Boolean(sourceStale)}
+                onLogs={() => {
+                  setRunLogContext(null);
+                  setLogService('backend');
+                  document.getElementById('monitor-logs')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            )}
             {historyLoading && (
               <CircularProgress aria-label="Loading history" />
             )}
@@ -693,6 +720,7 @@ export function SystemMonitorDashboard() {
                         <Button
                           onClick={() => {
                             ++runRequest.current;
+                            setRunLogContext(null);
                             setSelectedIncident(item);
                             setIncidentDetailsOpen(true);
                             setRun(null);
@@ -811,7 +839,7 @@ export function SystemMonitorDashboard() {
               scroll="paper"
             >
               <DialogTitle id="monitor-check-dialog-title">
-                Check details{run ? ` · ${runAspect ? monitorAspectNames[runAspect] : checkName(run.checkId)}` : ''}
+                Check details{run && ` · ${runName}`}
               </DialogTitle>
               <DialogContent dividers sx={{ overflowWrap: 'anywhere' }}>
                 {runState === 'loading' && (
@@ -847,6 +875,9 @@ export function SystemMonitorDashboard() {
                 )}
               </DialogContent>
               <DialogActions>
+                {run?.endedAt && (
+                  <Button onClick={viewRunLogs}>View related logs</Button>
+                )}
                 <Button size="small" onClick={closeRunDetails}>Close check details</Button>
               </DialogActions>
             </Dialog>
@@ -863,6 +894,21 @@ export function SystemMonitorDashboard() {
                       Incident log context: {selectedIncident.aspect ? monitorAspectNames[selectedIncident.aspect] : checkName(selectedIncident.checkId)} · {time(selectedIncident.openedAt)}
                     </Typography>
                     <Button size="small" onClick={() => setSelectedIncident(null)}>Clear incident context</Button>
+                  </Stack>
+                )}
+                {runLogContext && (
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems="flex-start"
+                  >
+                    <Typography variant="body2">
+                      Check log context: {runLogContext.name} ·{' '}
+                      {time(runLogContext.endedAt)}
+                    </Typography>
+                    <Button size="small" onClick={() => setRunLogContext(null)}>
+                      Clear check context
+                    </Button>
                   </Stack>
                 )}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
