@@ -26,8 +26,6 @@ const input: AppPartnerCampaignInput = {
   priority: 0,
   copyByLocale: {},
   bannerImages: null,
-  predictionUrl: null,
-  predictionOverrides: {},
   finalDestinationHosts: [],
 };
 const saved = { ...input, id: 'campaign/one', version: 'v1' };

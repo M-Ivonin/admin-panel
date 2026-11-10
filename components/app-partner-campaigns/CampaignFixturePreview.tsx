@@ -69,7 +69,6 @@ const stadiumTitles = {
     subtitle: 'Viva o dia de jogo.',
   },
 };
-const compactSupport = { en: 'Support', es: 'Ayuda', pt: 'Apoio' };
 
 interface Props {
   form: CampaignForm;
@@ -319,7 +318,13 @@ export function CampaignFixturePreview({
             {preview.winner.campaign.priority}
           </Typography>
           <Card variant="outlined">
-            <CardContent>
+            <CardContent
+              sx={
+                fixture.placement === 'matches_banner'
+                  ? undefined
+                  : { px: { xs: 0.5, sm: 2 } }
+              }
+            >
               {preview.status === 'prompt' ? (
                 <Stack spacing={1}>
                   <Typography variant="h6">
@@ -333,41 +338,48 @@ export function CampaignFixturePreview({
                     ))}
                   </Stack>
                 </Stack>
-              ) : fixture.placement === 'compact_prediction' ? (
+              ) : fixture.placement !== 'matches_banner' ? (
                 <Stack
                   sx={{
                     ...stadiumBackground,
-                    width: 180,
-                    maxWidth: '100%',
-                    mx: 'auto',
-                    p: 1,
+                    p: '8px 12px',
                     overflowWrap: 'anywhere',
                   }}
                 >
-                  <Typography
-                    sx={{ fontSize: 13, lineHeight: '18px', fontWeight: 600 }}
-                  >
-                    {preview.winner.copy.adLabel} ·{' '}
-                    {preview.winner.market.operatorDisplayName}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, lineHeight: '18px' }}>
-                    {preview.winner.copy.affiliateDisclosure}
-                  </Typography>
+                  <Stack direction="row" justifyContent="space-between" gap={1}>
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: 12, lineHeight: '18px' }}
+                    >
+                      {preview.winner.copy.adLabel} ·{' '}
+                      {preview.winner.copy.affiliateDisclosure}
+                    </Typography>
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: 13, lineHeight: '18px', fontWeight: 600 }}
+                    >
+                      {preview.winner.market.operatorDisplayName}
+                    </Typography>
+                  </Stack>
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: 0.5,
+                      gridTemplateColumns: '6fr 5fr',
+                      gap: 1,
                       alignItems: 'center',
-                      mt: 0.5,
+                      minHeight: 48,
                     }}
                   >
                     <Typography
                       sx={{
-                        fontSize: 12,
-                        lineHeight: '16px',
+                        fontSize: 16,
+                        lineHeight: '18px',
                         fontWeight: 700,
                         whiteSpace: 'pre-line',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
                       }}
                     >
                       {preview.winner.copy.headline ??
@@ -376,119 +388,108 @@ export function CampaignFixturePreview({
                     <Button
                       variant="contained"
                       disabled
+                      endIcon={<span aria-hidden>↗</span>}
                       sx={{
                         ...previewPartnerActionSx,
                         minWidth: 0,
-                        minHeight: 48,
-                        px: 0.5,
-                        fontSize: 12,
+                        minHeight: 40,
+                        px: 1,
+                        fontSize: 13,
                         textTransform: 'none',
+                        justifyContent: 'space-between',
+                        borderRadius: 2,
+                        lineHeight: 1.2,
+                        '& .MuiButton-endIcon': {
+                          '@media (max-width: 400px)': { display: 'none' },
+                        },
                       }}
                     >
-                      {preview.winner.copy.cta}
+                      <Box
+                        component="span"
+                        sx={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {preview.winner.copy.cta}
+                      </Box>
                     </Button>
                   </Box>
-                  <Typography sx={{ fontSize: 12, lineHeight: '18px' }}>
-                    {preview.winner.minimumAge}+ · {preview.winner.warning}
-                  </Typography>
-                  <Stack direction="row" flexWrap="wrap">
-                    <Button
-                      disabled
-                      sx={{
-                        minWidth: 48,
-                        minHeight: 48,
-                        px: 0.5,
-                        textTransform: 'none',
-                        '&.Mui-disabled': { color: 'inherit' },
-                      }}
+                  <Stack direction="row" sx={{ whiteSpace: 'pre' }}>
+                    <Typography sx={{ fontSize: 12, lineHeight: '16px' }}>
+                      {preview.winner.minimumAge}+ ·{' '}
+                    </Typography>
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: 12, lineHeight: '16px', minWidth: 0 }}
                     >
-                      {compactSupport[fixture.locale]}
-                    </Button>
-                    <Button
-                      disabled
-                      sx={{
-                        minWidth: 48,
-                        minHeight: 48,
-                        px: 0.5,
-                        textTransform: 'none',
-                        '&.Mui-disabled': { color: 'inherit' },
-                      }}
+                      {preview.winner.warning}
+                    </Typography>
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: 12, lineHeight: '16px', minWidth: 0 }}
                     >
-                      {policyActions[fixture.locale][1]}
-                    </Button>
-                    <Button
-                      aria-label="About this ad"
-                      disabled
-                      sx={{
-                        minWidth: 48,
-                        minHeight: 48,
-                        px: 0.5,
-                        '&.Mui-disabled': { color: 'inherit' },
-                      }}
-                    >
-                      ⓘ
-                    </Button>
+                      {' · '}
+                      {new URL(preview.winner.supportUrl).hostname.replace(
+                        /^www\./,
+                        ''
+                      )}
+                    </Typography>
                   </Stack>
                 </Stack>
               ) : (
-                <Stack
-                  spacing={1}
-                  sx={
-                    fixture.placement === 'matches_banner'
-                      ? undefined
-                      : { ...stadiumBackground, p: 1.5 }
-                  }
-                >
+                <Stack spacing={1}>
                   <Stack
-                    direction="row"
-                    alignItems="center"
                     spacing={1}
                     useFlexGap
-                    flexWrap="wrap"
+                    sx={{
+                      ...stadiumBackground,
+                      minHeight: 194,
+                      p: 2,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      isolation: 'isolate',
+                    }}
                   >
-                    <Chip size="small" label={preview.winner.copy.adLabel} />
-                    <Typography variant="subtitle2">
-                      {preview.winner.market.operatorDisplayName}
-                    </Typography>
-                  </Stack>
-                  {fixture.placement === 'matches_banner' ? (
-                    // Use the verified upload or the same built-in artwork as the app.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={
-                        preview.winner.imageUrl ??
-                        '/assets/partner_matchday_stadium.png'
-                      }
-                      alt={
-                        preview.winner.imageUrl
-                          ? (preview.winner.copy.imageAlt ?? '')
-                          : ''
-                      }
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        maxHeight: 320,
-                        objectFit: 'contain',
-                      }}
-                    />
-                  ) : null}
-                  {preview.winner.copy.headline || !preview.winner.imageUrl ? (
+                    {preview.winner.imageUrl ? (
+                      <Box
+                        component="img"
+                        key={preview.winner.imageUrl}
+                        src={preview.winner.imageUrl}
+                        alt={preview.winner.copy.imageAlt ?? ''}
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                        }}
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          zIndex: -1,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          filter: 'brightness(60%)',
+                        }}
+                      />
+                    ) : null}
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Chip size="small" label={preview.winner.copy.adLabel} />
+                      <Typography variant="subtitle2">
+                        {preview.winner.market.operatorDisplayName}
+                      </Typography>
+                    </Stack>
                     <Typography
                       variant="subtitle1"
                       sx={{ whiteSpace: 'pre-line' }}
                     >
                       {preview.winner.copy.headline ??
-                        (fixture.placement === 'matches_banner'
-                          ? stadiumTitles[fixture.locale].banner
-                          : stadiumTitles[fixture.locale].footer)}
+                        stadiumTitles[fixture.locale].banner}
                     </Typography>
-                  ) : null}
-                  {fixture.placement === 'matches_banner' &&
-                  !preview.winner.imageUrl ? (
                     <Typography variant="body2">
                       {stadiumTitles[fixture.locale].subtitle}
                     </Typography>
-                  ) : null}
+                  </Stack>
                   <Typography variant="body2">
                     {preview.winner.copy.affiliateDisclosure}
                   </Typography>

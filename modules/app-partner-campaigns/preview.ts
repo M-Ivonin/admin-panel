@@ -4,7 +4,6 @@ import {
   campaignMarketIsAvailable,
   isApprovedDestination,
   jurisdictionFor,
-  placementUrl,
 } from './form';
 import type {
   AppPartnerCampaign,
@@ -146,10 +145,7 @@ function matchCandidate(
     !campaign.finalDestinationHosts.every((host) =>
       market.approvedDestinationHosts.includes(host)
     ) ||
-    !isApprovedDestination(
-      placementUrl(campaign, market, fixture.placement),
-      market
-    )
+    !isApprovedDestination(market.inAppBannerAffiliateUrl, market)
   )
     return;
   const policy = rule.inAppPartnerPolicy;
@@ -160,8 +156,7 @@ function matchCandidate(
     campaign.copyByLocale[fixture.locale] ?? campaign.copyByLocale.en;
   const imageUrl =
     fixture.placement === 'matches_banner'
-      ? (campaign.bannerImages?.[fixture.device] ??
-        campaign.bannerImages?.default)
+      ? campaign.bannerImages?.default
       : undefined;
   if (
     !assurance ||

@@ -2,12 +2,10 @@ import type { MarketingJurisdiction } from '@/modules/marketing-jurisdictions/ty
 import type { PartnerMarketConfig } from '@/modules/partner-market-configs/types';
 import { getStandardHttpsHostname } from '@/modules/partner-market-configs/validation';
 import {
-  placementLabels,
   platformLabels,
   type AppPartnerCampaign,
   type AppPartnerCampaignCopy,
   type AppPartnerCampaignInput,
-  type AppPartnerPlacement,
   type AppPartnerPlatform,
 } from './types';
 
@@ -60,8 +58,6 @@ export function campaignForm(campaign?: AppPartnerCampaign): CampaignForm {
     priority: String(campaign?.priority ?? 0),
     copyByLocale: campaign?.copyByLocale ?? {},
     bannerImages: campaign?.bannerImages ?? null,
-    predictionUrl: campaign?.predictionUrl ?? null,
-    predictionOverrides: campaign?.predictionOverrides ?? {},
     finalDestinationHosts: campaign?.finalDestinationHosts.join('\n') ?? '',
     utcOffset: '+00:00',
   };
@@ -116,16 +112,6 @@ function approvalCurrent(
     Date.parse(row.effectiveFrom) <= at &&
     (!row.effectiveUntil || Date.parse(row.effectiveUntil) > at)
   );
-}
-
-export function placementUrl(
-  campaign: AppPartnerCampaignInput,
-  market: PartnerMarketConfig | undefined,
-  placement: AppPartnerPlacement
-): string | null | undefined {
-  return placement === 'matches_banner'
-    ? market?.inAppBannerAffiliateUrl
-    : (campaign.predictionOverrides[placement] ?? campaign.predictionUrl);
 }
 
 export function campaignInput(
@@ -197,21 +183,6 @@ export function campaignInput(
       'Each final operator hostname must be approved on the partner market.'
     );
   }
-  const predictionUrl = form.predictionUrl?.trim() || null;
-  const predictionOverrides = { ...form.predictionOverrides };
-  for (const placement of ['compact_prediction', 'full_prediction'] as const) {
-    const value = predictionOverrides[placement]?.trim();
-    if (value) predictionOverrides[placement] = value;
-    else delete predictionOverrides[placement];
-  }
-  for (const url of [predictionUrl, ...Object.values(predictionOverrides)]) {
-    if (url && !isApprovedDestination(url, market)) {
-      throw new Error(
-        'Prediction links must use HTTPS and an approved hostname.'
-      );
-    }
-  }
-
   const input: AppPartnerCampaignInput = {
     name,
     partnerMarketConfigId: market.id,
@@ -224,9 +195,9 @@ export function campaignInput(
     minimumAge,
     priority,
     copyByLocale,
-    bannerImages: form.bannerImages,
-    predictionUrl,
-    predictionOverrides,
+    bannerImages: form.bannerImages?.default
+      ? { default: form.bannerImages.default }
+      : null,
     finalDestinationHosts,
   };
   if (input.status === 'active') {
@@ -305,14 +276,10 @@ function validateActivation(
       );
     }
   }
-  for (const placement of input.placements) {
-    if (
-      !isApprovedDestination(placementUrl(input, market, placement), market)
-    ) {
-      throw new Error(
-        `${placementLabels[placement]} needs an HTTPS link on an approved hostname.`
-      );
-    }
+  if (!isApprovedDestination(market.inAppBannerAffiliateUrl, market)) {
+    throw new Error(
+      'Set an HTTPS operator homepage affiliate link on an approved hostname in Partner Markets.'
+    );
   }
 }
 

@@ -33,7 +33,6 @@ import {
   placementLabels,
   platformLabels,
   type AppPartnerCampaign,
-  type AppPartnerCampaignImages,
   type AppPartnerLocale,
 } from '@/modules/app-partner-campaigns/types';
 import {
@@ -55,11 +54,6 @@ interface Props {
   onSaved: (campaign: AppPartnerCampaign) => Promise<void>;
 }
 
-const imageLabels = {
-  default: 'Default banner',
-  phone: 'Phone banner override',
-  tablet: 'Tablet banner override',
-};
 const gridSx = {
   display: 'grid',
   gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
@@ -78,14 +72,12 @@ export function CampaignEditor({
   const [tab, setTab] = useState(0);
   const [locale, setLocale] = useState<AppPartnerLocale>('en');
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<
-    keyof AppPartnerCampaignImages | null
-  >(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const market = markets.find((item) => item.id === form.partnerMarketConfigId);
   const rule = jurisdictionFor(market, jurisdictions);
   const copy = form.copyByLocale[locale] ?? emptyCampaignCopy;
-  const busy = saving || uploading !== null;
+  const busy = saving || uploading;
 
   const set = <K extends keyof CampaignForm>(
     key: K,
@@ -106,10 +98,7 @@ export function CampaignEditor({
       setSaving(false);
     }
   }
-  async function uploadImage(
-    kind: keyof AppPartnerCampaignImages,
-    event: ChangeEvent<HTMLInputElement>
-  ) {
+  async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
@@ -122,34 +111,20 @@ export function CampaignEditor({
       setError('Choose a nonempty PNG or JPEG image up to 5 MiB.');
       return;
     }
-    setUploading(kind);
+    setUploading(true);
     try {
       const imageUrl = await uploadAppPartnerCampaignImage(file);
       if (!imageUrl) throw new Error('The image upload did not return a URL.');
       setForm((current) => ({
         ...current,
-        bannerImages: {
-          ...current.bannerImages,
-          default: current.bannerImages?.default ?? '',
-          [kind]: imageUrl,
-        },
+        bannerImages: { default: imageUrl },
       }));
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
-      setUploading(null);
+      setUploading(false);
     }
   }
-  function removeImage(kind: keyof AppPartnerCampaignImages) {
-    if (kind === 'default') {
-      set('bannerImages', null);
-    } else if (form.bannerImages) {
-      const remaining = { ...form.bannerImages };
-      delete remaining[kind];
-      set('bannerImages', remaining);
-    }
-  }
-
   return (
     <Dialog open onClose={busy ? undefined : onClose} fullWidth maxWidth="md">
       <DialogTitle>
@@ -252,7 +227,7 @@ export function CampaignEditor({
                 Market status {market.status}. In-app{' '}
                 {market.inAppEnabled ? 'enabled' : 'disabled'}.
                 {market.killSwitchEnabled ? ' Kill switch on.' : ''} Edit
-                permissions and the Matches banner link in{' '}
+                permissions and the operator homepage affiliate link in{' '}
                 <Link
                   href="/dashboard/partner-markets"
                   target="_blank"
@@ -381,36 +356,12 @@ export function CampaignEditor({
             </Box>
             <Typography variant="subtitle2">Destinations</Typography>
             <TextField
-              label="Matches banner affiliate link"
+              label="Operator homepage affiliate link"
               value={market?.inAppBannerAffiliateUrl ?? ''}
               InputProps={{ readOnly: true }}
               InputLabelProps={{ shrink: true }}
-              helperText="Managed in the selected Partner Markets configuration."
+              helperText="All placements use this link from the selected Partner Markets configuration."
             />
-            <TextField
-              label="Default prediction HTTPS link"
-              value={form.predictionUrl ?? ''}
-              onChange={(event) => set('predictionUrl', event.target.value)}
-              inputProps={{ maxLength: 2048 }}
-            />
-            <Box sx={gridSx}>
-              {(['compact_prediction', 'full_prediction'] as const).map(
-                (placement) => (
-                  <TextField
-                    key={placement}
-                    label={`${placementLabels[placement]} URL override`}
-                    value={form.predictionOverrides[placement] ?? ''}
-                    onChange={(event) =>
-                      set('predictionOverrides', {
-                        ...form.predictionOverrides,
-                        [placement]: event.target.value,
-                      })
-                    }
-                    inputProps={{ maxLength: 2048 }}
-                  />
-                )
-              )}
-            </Box>
             <TextField
               label="Final operator hostnames"
               value={form.finalDestinationHosts}
@@ -419,7 +370,7 @@ export function CampaignEditor({
               }
               multiline
               minRows={2}
-              helperText="Enter approved landing-page hosts only. Separate hosts with commas or new lines."
+              helperText="Enter approved operator homepage hosts. Separate hosts with commas or new lines."
             />
             {market ? (
               <Typography
@@ -471,63 +422,41 @@ export function CampaignEditor({
             ))}
             <Typography variant="subtitle2">Banner creative</Typography>
             <Typography variant="body2" color="text.secondary">
-              Matches uses the built-in stadium artwork unless you upload a
-              custom PNG or JPEG image up to 5 MiB.
+              The stadium is the default Matches background. An optional PNG or
+              JPEG up to 5 MiB replaces only the background on every device.
             </Typography>
-            {(
-              Object.keys(imageLabels) as Array<keyof AppPartnerCampaignImages>
-            ).map((kind) => (
-              <Box key={kind}>
-                <Typography variant="body2">{imageLabels[kind]}</Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="wrap"
-                  useFlexGap
-                  alignItems="center"
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button component="label" variant="outlined" disabled={busy}>
+                {uploading
+                  ? 'Uploading…'
+                  : form.bannerImages?.default
+                    ? 'Replace custom background'
+                    : 'Upload custom background'}
+                <input
+                  type="file"
+                  aria-label="Custom banner background image"
+                  accept="image/png,image/jpeg"
+                  onChange={(event) => void uploadImage(event)}
+                  disabled={busy}
+                  style={{
+                    width: 1,
+                    height: 1,
+                    padding: 0,
+                    overflow: 'hidden',
+                    position: 'absolute',
+                    clipPath: 'inset(50%)',
+                  }}
+                />
+              </Button>
+              {form.bannerImages?.default ? (
+                <Button
+                  onClick={() => set('bannerImages', null)}
+                  disabled={busy}
                 >
-                  <Button
-                    component="label"
-                    variant="outlined"
-                    disabled={
-                      busy ||
-                      (kind !== 'default' && !form.bannerImages?.default)
-                    }
-                  >
-                    {uploading === kind
-                      ? 'Uploading…'
-                      : form.bannerImages?.[kind]
-                        ? `Replace ${imageLabels[kind].toLowerCase()}`
-                        : `Upload ${imageLabels[kind].toLowerCase()}`}
-                    <input
-                      type="file"
-                      aria-label={`${imageLabels[kind]} image`}
-                      accept="image/png,image/jpeg"
-                      onChange={(event) => void uploadImage(kind, event)}
-                      disabled={
-                        busy ||
-                        (kind !== 'default' && !form.bannerImages?.default)
-                      }
-                      style={{
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        overflow: 'hidden',
-                        position: 'absolute',
-                        clipPath: 'inset(50%)',
-                      }}
-                    />
-                  </Button>
-                  {form.bannerImages?.[kind] ? (
-                    <Button onClick={() => removeImage(kind)} disabled={busy}>
-                      {kind === 'default'
-                        ? 'Restore built-in stadium artwork'
-                        : `Remove ${imageLabels[kind].toLowerCase()}`}
-                    </Button>
-                  ) : null}
-                </Stack>
-              </Box>
-            ))}
+                  Restore built-in stadium artwork
+                </Button>
+              ) : null}
+            </Stack>
           </Stack>
         ) : null}
         {tab === 2 ? (

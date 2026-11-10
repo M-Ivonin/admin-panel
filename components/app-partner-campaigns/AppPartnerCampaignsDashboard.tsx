@@ -107,7 +107,7 @@ export function AppPartnerCampaignsDashboard() {
         title="App partner campaigns"
         subtitle={
           activeTab === 0
-            ? 'Configure SirBro Matches banners and prediction footers using approved partner markets.'
+            ? 'Configure SirBro partner banners for Matches, match Predictions and Full Analysis.'
             : 'Track impressions, taps and click-through rates for in-app partner placements.'
         }
         icon={<Campaign color="primary" />}

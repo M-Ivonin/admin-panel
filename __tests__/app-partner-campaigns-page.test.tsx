@@ -113,7 +113,7 @@ const campaign: AppPartnerCampaign = {
   partnerMarketConfigId: market.id,
   status: 'draft',
   platforms: ['ios'],
-  placements: ['matches_banner', 'compact_prediction'],
+  placements: ['matches_banner', 'compact_prediction', 'full_prediction'],
   startsAt: '2020-11-09T12:00:00.000Z',
   endsAt: '2098-12-01T00:00:00.000Z',
   minimumSessions: 2,
@@ -128,8 +128,6 @@ const campaign: AppPartnerCampaign = {
     },
   },
   bannerImages: { default: 'https://cdn.example/banner.png' },
-  predictionUrl: 'https://operator.example/prediction',
-  predictionOverrides: {},
   finalDestinationHosts: ['operator.example'],
 };
 
@@ -319,8 +317,12 @@ it('previews the winner, age prompt, localized fallback and ad-free suppression 
   expect(
     within(dialog).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
-  choose(dialog, 'Preview placement', 'Compact prediction footer');
+  choose(dialog, 'Preview placement', 'Match · Predictions banner');
   expect(within(dialog).queryByRole('img')).not.toBeInTheDocument();
+  expect(
+    within(dialog).getByRole('button', { name: 'Visit Example Bet' })
+  ).toBeDisabled();
+  choose(dialog, 'Preview placement', 'Full Analysis · Fixed banner');
   expect(
     within(dialog).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
@@ -363,9 +365,12 @@ it('saves a verified banner upload and pauses the versioned campaign', async () 
   const file = new File(['fixture-image'], 'creative.png', {
     type: 'image/png',
   });
-  fireEvent.change(within(dialog).getByLabelText('Default banner image'), {
-    target: { files: [file] },
-  });
+  fireEvent.change(
+    within(dialog).getByLabelText('Custom banner background image'),
+    {
+      target: { files: [file] },
+    }
+  );
   await within(dialog).findByRole('button', {
     name: 'Restore built-in stadium artwork',
   });
@@ -399,11 +404,6 @@ it('reports linked CTR denominators and opens the existing user portrait', async
       linkedClickers: 2,
       earlyClicks: 1,
       blockedClicks: 1,
-      openFailures: 1,
-      agePrompts: 3,
-      ageYes: 1,
-      ageNo: 1,
-      ageDismissed: 1,
     },
     clicks: [
       {
@@ -421,7 +421,6 @@ it('reports linked CTR denominators and opens the existing user portrait', async
         displayedVersion: 'version-1',
         resolvedVersion: 'version-2',
         resolution: 'allowed',
-        openResult: 'failed',
         impressionId: 'fixture-impression',
         fixtureId: null,
         predictionVersionId: null,

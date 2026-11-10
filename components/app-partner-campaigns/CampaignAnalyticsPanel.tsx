@@ -49,19 +49,9 @@ const detailGroups = [
     ],
   },
   {
-    title: 'Age checks',
-    metrics: [
-      ['agePrompts', 'Age prompts'],
-      ['ageYes', 'Age confirmed'],
-      ['ageNo', 'Age declined'],
-      ['ageDismissed', 'Age dismissed'],
-    ],
-  },
-  {
     title: 'Delivery issues',
     metrics: [
       ['blockedClicks', 'Blocked resolutions'],
-      ['openFailures', 'Browser handoff failures'],
     ],
   },
 ] as const;
@@ -640,7 +630,6 @@ export function CampaignAnalyticsPanel({
                           'Audience',
                           'Version',
                           'Resolution',
-                          'Browser handoff',
                           'Context',
                         ].map((label) => (
                           <TableCell key={label}>{label}</TableCell>
@@ -704,7 +693,6 @@ export function CampaignAnalyticsPanel({
                             {click.resolvedVersion ?? '—'}
                           </TableCell>
                           <TableCell>{click.resolution ?? '—'}</TableCell>
-                          <TableCell>{click.openResult ?? '—'}</TableCell>
                           <TableCell>
                             {click.screen ?? '—'}
                             <br />

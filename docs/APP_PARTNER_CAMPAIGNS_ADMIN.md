@@ -1,20 +1,21 @@
 # App partner campaigns
 
-Open **Growth → App Partner Campaigns** to configure the SirBro Matches banner
-and compact/full prediction footers. New campaigns start in draft. Select one
+Open **Growth → App Partner Campaigns** to configure the large Matches banner,
+the banner on a match’s Predictions tab, and the fixed Full Analysis banner.
+New campaigns start in draft. Select one
 operator market, independent placements and platforms, a minimum age and a
 minimum of two genuine foreground visits. Enter both schedule times with a
 shared UTC offset. Use UTC for schedules that cross a daylight-saving change.
 The backend receives UTC instants.
 
-Matches uses the optional banner link in **Partner Markets**. Prediction
-footers use the campaign's default prediction link or their placement override.
-Final operator hostnames identify the allowed landing pages after redirects.
-The backend validates the full route to a final hostname on activation and
-revalidates at delivery. The image endpoint verifies uploaded static PNG or
+All three placements use the same in-app affiliate link in **Partner Markets**.
+Final operator hostnames identify the approved homepage hosts after redirects.
+The backend verifies the terminal operator homepage on activation and
+revalidates at delivery. It accepts a localized homepage if the operator root
+redirects to that path. The image endpoint verifies uploaded static PNG or
 JPEG files up to 5 MiB. Matches uses the built-in stadium artwork when no
-image is uploaded. An uploaded default image can have phone and tablet
-overrides and needs alternative text in each configured banner locale.
+image is uploaded. An optional custom image replaces only the background on
+every device and needs alternative text in each configured banner locale.
 Write a readable disclosure in each locale. English is the fallback. The approved
 jurisdiction policy supplies the warning, support and terms.
 
@@ -38,7 +39,7 @@ filters. Use **Apply filters** to update the report or **Reset filters** to
 return to the default range and clear selections.
 
 **Campaign performance** shows the applied period and filters with the main
-impression, tap and CTR metrics. Expand **Metric details** for reach, age
-checks and delivery issues. The click timeline links to user portraits and
+impression, tap and CTR metrics. Expand **Metric details** for reach and tap
+attribution. The click timeline links to user portraits and
 shows up to 250 rows. **Export CSV** uses the applied filters, including when
 edits are pending, and exports up to 5,000 rows.

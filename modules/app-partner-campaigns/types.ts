@@ -9,16 +9,12 @@ export const appPartnerLocales = ['en', 'es', 'pt'] as const;
 export type AppPartnerPlatform = (typeof appPartnerPlatforms)[number];
 export type AppPartnerPlacement = (typeof appPartnerPlacements)[number];
 export type AppPartnerLocale = (typeof appPartnerLocales)[number];
-export type PredictionPlacement = Exclude<
-  AppPartnerPlacement,
-  'matches_banner'
->;
 export type AppPartnerCampaignStatus = 'draft' | 'active' | 'paused';
 
 export const placementLabels: Record<AppPartnerPlacement, string> = {
   matches_banner: 'Matches banner',
-  compact_prediction: 'Compact prediction footer',
-  full_prediction: 'Full prediction footer',
+  compact_prediction: 'Match · Predictions banner',
+  full_prediction: 'Full Analysis · Fixed banner',
 };
 export const platformLabels: Record<AppPartnerPlatform, string> = {
   ios: 'iOS',
@@ -52,8 +48,6 @@ export interface AppPartnerCampaignInput {
   priority: number;
   copyByLocale: Record<string, AppPartnerCampaignCopy>;
   bannerImages: AppPartnerCampaignImages | null;
-  predictionUrl: string | null;
-  predictionOverrides: Partial<Record<PredictionPlacement, string>>;
   finalDestinationHosts: string[];
 }
 
@@ -87,11 +81,6 @@ export interface AppPartnerAnalytics {
     linkedClickers: number;
     earlyClicks: number;
     blockedClicks: number;
-    openFailures: number;
-    agePrompts: number;
-    ageYes: number;
-    ageNo: number;
-    ageDismissed: number;
   };
   clicks: {
     tapId: string;
@@ -108,7 +97,6 @@ export interface AppPartnerAnalytics {
     displayedVersion: string;
     resolvedVersion: string | null;
     resolution: string;
-    openResult: string | null;
     impressionId: string | null;
     fixtureId: string | null;
     predictionVersionId: string | null;

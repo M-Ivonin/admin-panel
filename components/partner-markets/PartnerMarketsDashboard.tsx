@@ -768,7 +768,7 @@ function PartnerMarketFormDialog({
             values={values}
             errors={errors}
             set={set}
-            helper="Optional HTTPS link for the Matches banner. Leave blank to disable that destination."
+            helper="HTTPS affiliate link to the operator homepage for all app banners. Leave blank to disable app banner destinations."
           />
           <FormText
             label="Approved destination hosts"
