@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -139,6 +140,16 @@ beforeEach(() => {
   jest.mocked(getMarketingJurisdictions).mockResolvedValue([rule]);
 });
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
 function change(dialog: HTMLElement, label: string, value: string) {
   fireEvent.change(within(dialog).getByLabelText(new RegExp(`^${label}`)), {
     target: { value },
@@ -155,6 +166,83 @@ function choose(dialog: HTMLElement, label: string, option: string) {
 function click(dialog: HTMLElement, role: 'tab' | 'button', name: string) {
   fireEvent.click(within(dialog).getByRole(role, { name }));
 }
+
+it('keeps the retried campaign and status when the original response arrives last', async () => {
+  const initialCampaigns = deferred<AppPartnerCampaign[]>();
+  const retryCampaigns = deferred<AppPartnerCampaign[]>();
+  const initialMarkets = deferred<PartnerMarketConfig[]>();
+  const retryMarkets = deferred<PartnerMarketConfig[]>();
+  const latestCampaign: AppPartnerCampaign = { ...campaign, status: 'active' };
+  jest
+    .mocked(getAppPartnerCampaigns)
+    .mockReturnValueOnce(initialCampaigns.promise)
+    .mockReturnValueOnce(retryCampaigns.promise);
+  jest
+    .mocked(getPartnerMarketConfigs)
+    .mockReturnValueOnce(initialMarkets.promise)
+    .mockReturnValueOnce(retryMarkets.promise);
+
+  render(<AppPartnerCampaignsPage />);
+  await act(async () => {
+    initialMarkets.reject(new Error('Initial market policy request failed'));
+  });
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'Loading app partner campaigns'
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+  await act(async () => {
+    retryCampaigns.resolve([latestCampaign]);
+  });
+  expect(screen.getByText(latestCampaign.name)).toBeInTheDocument();
+  expect(screen.getByText('active')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Edit' })).toBeDisabled();
+
+  await act(async () => {
+    retryMarkets.resolve([market]);
+  });
+  expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled();
+
+  const obsoleteName = 'Previous campaign name';
+  await act(async () => {
+    initialCampaigns.resolve([
+      { ...campaign, name: obsoleteName, version: 'version-1' },
+    ]);
+  });
+  expect(screen.getByText(latestCampaign.name)).toBeInTheDocument();
+  expect(screen.getByText('active')).toBeInTheDocument();
+  expect(screen.queryByText(obsoleteName)).not.toBeInTheDocument();
+});
+
+it('keeps the retry loading and hides a superseded campaign error', async () => {
+  const initialCampaigns = deferred<AppPartnerCampaign[]>();
+  const retryCampaigns = deferred<AppPartnerCampaign[]>();
+  jest
+    .mocked(getAppPartnerCampaigns)
+    .mockReturnValueOnce(initialCampaigns.promise)
+    .mockReturnValueOnce(retryCampaigns.promise);
+  jest
+    .mocked(getPartnerMarketConfigs)
+    .mockRejectedValueOnce(new Error('Initial market policy request failed'));
+
+  render(<AppPartnerCampaignsPage />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+
+  const obsoleteError = 'Previous campaign request failed';
+  await act(async () => {
+    initialCampaigns.reject(new Error(obsoleteError));
+  });
+  expect(screen.queryByText(obsoleteError)).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent(
+    'Loading app partner campaigns'
+  );
+
+  await act(async () => {
+    retryCampaigns.resolve([campaign]);
+  });
+  expect(screen.getByText(campaign.name)).toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
 
 it('saves a disabled draft with explicit timezone and rejects a one-session minimum', async () => {
   jest.mocked(saveAppPartnerCampaign).mockResolvedValue(campaign);
