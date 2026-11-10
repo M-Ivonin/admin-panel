@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -52,24 +52,38 @@ export function AppPartnerCampaignsDashboard() {
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const latestLoadId = useRef(0);
 
   const load = useCallback(async () => {
+    const loadId = ++latestLoadId.current;
+    const isCurrentLoad = () => loadId === latestLoadId.current;
     setLoading(true);
     setError(null);
     setLoadingPolicy(true);
     setPolicyError(null);
     await Promise.all([
       getAppPartnerCampaigns()
-        .then(setCampaigns)
-        .catch((caught: unknown) => setError(messageOf(caught)))
-        .finally(() => setLoading(false)),
+        .then((loadedCampaigns) => {
+          if (isCurrentLoad()) setCampaigns(loadedCampaigns);
+        })
+        .catch((caught: unknown) => {
+          if (isCurrentLoad()) setError(messageOf(caught));
+        })
+        .finally(() => {
+          if (isCurrentLoad()) setLoading(false);
+        }),
       Promise.all([getPartnerMarketConfigs(), getMarketingJurisdictions()])
         .then(([loadedMarkets, loadedJurisdictions]) => {
+          if (!isCurrentLoad()) return;
           setMarkets(loadedMarkets);
           setJurisdictions(loadedJurisdictions);
         })
-        .catch((caught: unknown) => setPolicyError(messageOf(caught)))
-        .finally(() => setLoadingPolicy(false)),
+        .catch((caught: unknown) => {
+          if (isCurrentLoad()) setPolicyError(messageOf(caught));
+        })
+        .finally(() => {
+          if (isCurrentLoad()) setLoadingPolicy(false);
+        }),
     ]);
   }, []);
 
