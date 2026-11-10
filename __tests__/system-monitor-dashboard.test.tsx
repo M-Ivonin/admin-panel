@@ -1,4 +1,5 @@
 import {
+  act,
   configure,
   fireEvent,
   render,
@@ -11,6 +12,7 @@ import {
   monitorApi,
   MonitorApiError,
   MonitorOverview,
+  type MonitorLogs,
   type MonitorRun,
 } from '@/lib/api/system-monitor';
 
@@ -823,7 +825,9 @@ it('shows each store separately and selects App Store history and details', asyn
   );
 });
 
-it('opens history Inspect in a dialog and closing it preserves the history row', async () => {
+it('opens history Inspect in a dialog and closing it preserves history without scoping logs', async () => {
+  const now = Date.now();
+  jest.spyOn(Date, 'now').mockReturnValue(now);
   const result = {
     ...overview.checks[0].lastRun!,
     diagnostic: 'Queue observation is healthy.',
@@ -851,6 +855,98 @@ it('opens history Inspect in a dialog and closing it preserves the history row',
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   );
   expect(screen.getByRole('button', { name: 'Inspect' })).toBeInTheDocument();
+  expect(screen.queryByText(/Check log context/)).not.toBeInTheDocument();
+  expect(api.logs).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
+  expect(api.logs).toHaveBeenCalledWith({
+    service: 'system-monitor',
+    from: new Date(now - 24 * 3600000).toISOString(),
+    to: new Date(now).toISOString(),
+    limit: 200,
+  });
+  await screen.findByText('No logs found in this window.');
+});
+
+it('loads the inspected run window on demand and restores the selected period when cleared', async () => {
+  const now = Date.now();
+  jest.spyOn(Date, 'now').mockReturnValue(now);
+  const ended = now - 12 * 60000;
+  const result = {
+    ...overview.checks[0].lastRun!,
+    scheduledAt: new Date(ended - 1000).toISOString(),
+    startedAt: new Date(ended - 120).toISOString(),
+    endedAt: new Date(ended).toISOString(),
+  };
+  api.history.mockResolvedValue({
+    items: [result],
+    total: 1,
+    offset: 0,
+    limit: 25,
+    buckets: [],
+  });
+  api.run.mockResolvedValue(result);
+  let finishRunLogs!: (logs: MonitorLogs) => void;
+  api.logs.mockReturnValueOnce(
+    new Promise<MonitorLogs>((resolve) => {
+      finishRunLogs = resolve;
+    })
+  );
+  render(<SystemMonitorDashboard />);
+  fireEvent.click(await screen.findByRole('button', { name: '1 hour' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Inspect' }));
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Check details · Application API',
+  });
+  expect(api.logs).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(dialog).getByRole('button', { name: 'View related logs' })
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
+  const endedLabel = new Date(ended).toLocaleString('en-GB', {
+    timeZone: 'Europe/Kyiv',
+  });
+  expect(
+    screen.getByText(`Check log context: Application API · ${endedLabel}`)
+  ).toBeInTheDocument();
+  expect(api.logs).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
+  expect(api.logs).toHaveBeenNthCalledWith(1, {
+    service: 'system-monitor',
+    from: new Date(ended - 5 * 60000).toISOString(),
+    to: new Date(ended + 5 * 60000).toISOString(),
+    limit: 200,
+  });
+  expect(screen.getByLabelText('Loading Loki logs')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear check context' }));
+  expect(screen.queryByText(/Check log context/)).not.toBeInTheDocument();
+  expect(api.logs).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    finishRunLogs({
+      items: [
+        {
+          at: result.endedAt,
+          service: 'system-monitor',
+          level: 'info',
+          message: 'Late check log',
+        },
+      ],
+      truncated: false,
+    });
+  });
+  expect(screen.queryByText('Late check log')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Load logs' }));
+  expect(api.logs).toHaveBeenNthCalledWith(2, {
+    service: 'system-monitor',
+    from: new Date(now - 3600000).toISOString(),
+    to: new Date(now).toISOString(),
+    limit: 200,
+  });
+  await screen.findByText('No logs found in this window.');
 });
 
 it('keeps a closed loading check dialog closed when its response arrives', async () => {
