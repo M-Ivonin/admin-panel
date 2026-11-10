@@ -286,7 +286,7 @@ it('saves a disabled draft with explicit timezone and rejects a one-session mini
   );
 });
 
-it('previews the winner, age prompt, localized fallback and ad-free suppression without writes', async () => {
+it('previews a sample campaign, age prompt, localized fallback and ad-free suppression without writes', async () => {
   const competitor = {
     ...campaign,
     id: 'campaign-1',
@@ -302,7 +302,7 @@ it('previews the winner, age prompt, localized fallback and ad-free suppression 
   });
   click(editor, 'button', 'Fixture preview');
   expect(
-    within(editor).getByText(/Winning campaign · Earlier ID wins/)
+    within(editor).getByText(/Sample campaign · Earlier ID wins/)
   ).toBeInTheDocument();
   expect(
     within(editor).getByText('Are you 21 years old or older?')

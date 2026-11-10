@@ -25,11 +25,11 @@ jurisdiction policy supplies the warning, support and terms.
 
 The fixture preview simulates app eligibility using loaded market policy,
 platform, placement, locale, device, visits, commerce and age inputs. It
-includes the current draft as a hypothetical active campaign and shows the
-winner by priority and stable campaign ID. Save a new record to establish its
-tie-break ID. The preview estimates decisions with synthetic inputs. Production
-edge, access and redirect checks remain backend-owned. Preview actions are
-disabled and do not write evidence or record commercial events.
+includes the current draft as a hypothetical active campaign. It shows a sample
+chosen by priority and stable campaign ID so the preview is repeatable. Live
+delivery rotates eligible campaigns, giving higher priorities more opportunities
+to show. The backend owns live edge, access and redirect checks. Preview actions
+are disabled and do not write evidence or record commercial events.
 
 The backend requires a fresh version for changes and pause commands. Refresh
 the list before retrying a conflict. Use **Pause** for one campaign. Disable

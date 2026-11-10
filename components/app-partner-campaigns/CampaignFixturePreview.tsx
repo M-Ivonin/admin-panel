@@ -158,12 +158,9 @@ export function CampaignFixturePreview({
     <Stack spacing={2}>
       <Alert severity="info">
         Synthetic audience and market. This preview considers unsaved edits as
-        if activated and estimates the campaign winner using saved competitors.
-        Delivery also validates destinations, trusted geography and platform
-        launch controls.
-        {!editing
-          ? ' Save a draft to establish its campaign ID for priority ties.'
-          : ''}
+        if activated and shows a sample campaign. Live delivery rotates
+        eligible campaigns by priority and checks destinations, trusted
+        geography and platform controls.
       </Alert>
       <Box
         sx={{
@@ -314,7 +311,7 @@ export function CampaignFixturePreview({
           }}
         >
           <Typography variant="body2">
-            Winning campaign · {preview.winner.campaign.name} · Priority{' '}
+            Sample campaign · {preview.winner.campaign.name} · Priority{' '}
             {preview.winner.campaign.priority}
           </Typography>
           <Card variant="outlined">

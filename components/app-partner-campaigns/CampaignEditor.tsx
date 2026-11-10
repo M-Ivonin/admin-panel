@@ -412,7 +412,7 @@ export function CampaignEditor({
                       type="number"
                       value={form.priority}
                       onChange={(event) => set('priority', event.target.value)}
-                      helperText="Higher values win. Equal values use campaign ID order."
+                      helperText="Higher priority gives an eligible campaign a greater chance of being shown."
                       inputProps={{ step: 1 }}
                     />
                     <TextField
