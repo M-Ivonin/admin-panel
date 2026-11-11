@@ -15,7 +15,8 @@ Enter both schedule times with a shared UTC offset. Use UTC for schedules that c
 The backend receives UTC instants.
 
 All three placements use the same in-app affiliate link in **Partner Markets**.
-Final operator hostnames identify the approved homepage hosts after redirects.
+Set Final operator hostnames in the partner configuration alongside the
+affiliate link. They identify the approved homepage hosts after redirects.
 The backend verifies the terminal operator homepage on activation and
 revalidates at delivery. It accepts a localized homepage if the operator root
 redirects to that path. The image endpoint verifies uploaded static PNG or

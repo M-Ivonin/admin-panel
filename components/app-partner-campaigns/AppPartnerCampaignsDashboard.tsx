@@ -232,17 +232,16 @@ export function AppPartnerCampaignsDashboard() {
                 Turn on <strong>In-app</strong> and add the HTTPS banner
                 affiliate link. In <strong>Approved destination hosts</strong>,
                 include every hostname in the redirect chain to the operator’s
-                homepage.
+                homepage. In <strong>Final operator hostnames</strong>, enter
+                the homepage hostname reached after redirects.
               </Typography>
             </Box>
             <Box component="li">
               <Typography variant="subtitle2">Create and activate the campaign</Typography>
               <Typography variant="body2">
                 Select <strong>Create campaign</strong> and choose the partner
-                configuration, platforms, placements, and schedule. In{' '}
-                <strong>Final operator hostnames</strong>, enter the homepage
-                hostname reached after redirects. Add the English ad copy and
-                check <strong>Fixture preview</strong>. Then set the status to{' '}
+                configuration, platforms, placements, and schedule. Add the
+                English ad copy and check <strong>Fixture preview</strong>. Then set the status to{' '}
                 <strong>Active</strong> and select <strong>Activate campaign</strong>.
               </Typography>
             </Box>

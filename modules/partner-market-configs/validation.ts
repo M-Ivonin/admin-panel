@@ -41,6 +41,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   operatorTermsUrl: '',
   operatorDestinationUrl: '',
   inAppBannerAffiliateUrl: '',
+  inAppFinalDestinationHosts: '',
   approvedDestinationHosts: '',
   affiliateConversionTypes: CORE_AFFILIATE_CONVERSION_TYPES.join('\n'),
   legalReviewedAt: '',
@@ -98,6 +99,9 @@ export function normalizePartnerMarketConfigForm(
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
     inAppBannerAffiliateUrl: values.inAppBannerAffiliateUrl.trim() || null,
+    inAppFinalDestinationHosts: normalizeApprovedDestinationHosts(
+      values.inAppFinalDestinationHosts
+    ),
     approvedDestinationHosts: normalizeApprovedDestinationHosts(
       values.approvedDestinationHosts
     ),
@@ -214,6 +218,15 @@ export function validatePartnerMarketConfigForm(
       errors.operatorDestinationUrl =
         'The destination hostname must be in approved hostnames.';
     }
+  }
+  const finalHosts = input.inAppFinalDestinationHosts ?? [];
+  if (finalHosts.length > 10) {
+    errors.inAppFinalDestinationHosts = 'Enter up to 10 final operator hostnames.';
+  } else if (
+    finalHosts.some((host) => !input.approvedDestinationHosts.includes(host))
+  ) {
+    errors.inAppFinalDestinationHosts =
+      'Every final operator hostname must also be an approved hostname.';
   }
   if (input.inAppBannerAffiliateUrl) {
     const bannerHost = getStandardHttpsHostname(input.inAppBannerAffiliateUrl);

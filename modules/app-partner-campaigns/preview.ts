@@ -141,8 +141,8 @@ function matchCandidate(
     fixture.sessions < campaign.minimumSessions ||
     Date.parse(campaign.startsAt) > fixture.at ||
     Date.parse(campaign.endsAt) <= fixture.at ||
-    !campaign.finalDestinationHosts.length ||
-    !campaign.finalDestinationHosts.every((host) =>
+    !market.inAppFinalDestinationHosts?.length ||
+    !market.inAppFinalDestinationHosts.every((host) =>
       market.approvedDestinationHosts.includes(host)
     ) ||
     !isApprovedDestination(market.inAppBannerAffiliateUrl, market)

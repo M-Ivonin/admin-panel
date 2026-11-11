@@ -48,7 +48,6 @@ export interface AppPartnerCampaignInput {
   priority: number;
   copyByLocale: Record<string, AppPartnerCampaignCopy>;
   bannerImages: AppPartnerCampaignImages | null;
-  finalDestinationHosts: string[];
 }
 
 export interface AppPartnerCampaign extends AppPartnerCampaignInput {

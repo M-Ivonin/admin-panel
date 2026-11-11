@@ -26,7 +26,6 @@ const input: AppPartnerCampaignInput = {
   priority: 0,
   copyByLocale: {},
   bannerImages: null,
-  finalDestinationHosts: [],
 };
 const saved = { ...input, id: 'campaign/one', version: 'v1' };
 

@@ -28,6 +28,7 @@ export interface PartnerMarketConfigInput {
   operatorTermsUrl?: string;
   operatorDestinationUrl?: string;
   inAppBannerAffiliateUrl?: string | null;
+  inAppFinalDestinationHosts?: string[];
   approvedDestinationHosts: string[];
   affiliateConversionTypes: string[];
   legalReviewedAt: string;
@@ -82,6 +83,7 @@ export interface PartnerMarketConfigFormValues
     | 'emailEnabled'
     | 'inAppEnabled'
     | 'inAppBannerAffiliateUrl'
+    | 'inAppFinalDestinationHosts'
     | 'expectedUpdatedAt'
   > {
   affiliateDisclosureByLocale: NonNullable<
@@ -93,6 +95,7 @@ export interface PartnerMarketConfigFormValues
   emailEnabled: boolean;
   inAppEnabled: boolean;
   inAppBannerAffiliateUrl: string;
+  inAppFinalDestinationHosts: string;
   approvedDestinationHosts: string;
   affiliateConversionTypes: string;
 }

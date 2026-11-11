@@ -476,26 +476,11 @@ export function CampaignEditor({
                       InputLabelProps={{ shrink: true }}
                       helperText="All placements use this link from the selected Partner Markets configuration."
                     />
-                    <TextField
-                      label="Final operator hostnames"
-                      value={form.finalDestinationHosts}
-                      onChange={(event) =>
-                        set('finalDestinationHosts', event.target.value)
-                      }
-                      multiline
-                      minRows={2}
-                      helperText="Enter approved operator homepage hosts. Separate hosts with commas or new lines."
-                    />
-                    {market ? (
-                      <Typography
-                        variant="caption"
-                        sx={{ overflowWrap: 'anywhere' }}
-                        color="text.secondary"
-                      >
-                        Approved hosts ·{' '}
-                        {market.approvedDestinationHosts.join(', ')}
-                      </Typography>
-                    ) : null}
+                    <Typography variant="caption" color="text.secondary">
+                      Final operator hostnames ·{' '}
+                      {market?.inAppFinalDestinationHosts?.join(', ') ||
+                        'Configure in Partner Markets'}
+                    </Typography>
                   </Stack>
                 </SectionCard>
               </Stack>

@@ -15,12 +15,11 @@ import {
 
 export type CampaignForm = Omit<
   AppPartnerCampaignInput,
-  'minimumSessions' | 'minimumAge' | 'priority' | 'finalDestinationHosts'
+  'minimumSessions' | 'minimumAge' | 'priority'
 > & {
   minimumSessions: string;
   minimumAge: string;
   priority: string;
-  finalDestinationHosts: string;
   utcOffset: string;
 };
 
@@ -62,7 +61,6 @@ export function campaignForm(campaign?: AppPartnerCampaign): CampaignForm {
     priority: String(campaign?.priority ?? 0),
     copyByLocale: campaign?.copyByLocale ?? {},
     bannerImages: campaign?.bannerImages ?? null,
-    finalDestinationHosts: campaign?.finalDestinationHosts.join('\n') ?? '',
     utcOffset: '+00:00',
   };
 }
@@ -167,23 +165,6 @@ export function campaignInput(
       return [[locale, trimmed]];
     })
   );
-  const finalDestinationHosts = [
-    ...new Set(
-      form.finalDestinationHosts
-        .split(/[\n,]/)
-        .map((value) => value.trim().toLowerCase().replace(/\.$/, ''))
-        .filter(Boolean)
-    ),
-  ];
-  if (
-    finalDestinationHosts.some(
-      (host) => !market.approvedDestinationHosts.includes(host)
-    )
-  ) {
-    throw new Error(
-      'Each final operator hostname must be approved on the partner market.'
-    );
-  }
   const input: AppPartnerCampaignInput = {
     name,
     partnerMarketConfigId: market.id,
@@ -199,7 +180,6 @@ export function campaignInput(
     bannerImages: form.bannerImages?.default
       ? { default: form.bannerImages.default }
       : null,
-    finalDestinationHosts,
   };
   if (input.status === 'active') {
     validateActivation(input, market, rule, now);
@@ -220,9 +200,9 @@ function validateActivation(
       'Select at least one platform and one placement before activation.'
     );
   }
-  if (!input.finalDestinationHosts.length) {
+  if (!market.inAppFinalDestinationHosts?.length) {
     throw new Error(
-      'Enter at least one approved final operator hostname before activation.'
+      'Add at least one final operator hostname in Partner Markets before activation.'
     );
   }
   for (const platform of input.platforms) {

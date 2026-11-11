@@ -714,6 +714,15 @@ function PartnerMarketFormDialog({
                 set={set}
                 helper="HTTPS affiliate link to the operator homepage for all app banners. Leave blank to disable app banner destinations."
               />
+              <FormText
+                label="Final operator hostnames"
+                field="inAppFinalDestinationHosts"
+                values={values}
+                errors={errors}
+                set={set}
+                multiline
+                helper="Enter the operator homepage hostnames reached after redirects, separated by commas or new lines. Include them in Approved destination hosts too."
+              />
             </Stack>
             <Stack spacing={0.5} sx={{ pl: 1, overflowWrap: 'anywhere' }}>
               <Typography variant="body2">
@@ -1173,6 +1182,7 @@ function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
     emailEnabled: config.emailEnabled ?? true,
     inAppEnabled: config.inAppEnabled ?? false,
     inAppBannerAffiliateUrl: config.inAppBannerAffiliateUrl ?? '',
+    inAppFinalDestinationHosts: config.inAppFinalDestinationHosts?.join('\n') ?? '',
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),
     approvedDestinationHosts: config.approvedDestinationHosts.join('\n'),

@@ -60,6 +60,7 @@ const market: PartnerMarketConfig = {
   inAppEnabled: true,
   inAppConfigVersion: 'app-config-1',
   inAppBannerAffiliateUrl: 'https://tracking.example/matches',
+  inAppFinalDestinationHosts: ['operator.example'],
   partnerOnlyAllowed: false,
   sponsoredPredictionAllowed: false,
   bonusAdvertisingAllowed: false,
@@ -128,7 +129,6 @@ const campaign: AppPartnerCampaign = {
     },
   },
   bannerImages: { default: 'https://cdn.example/banner.png' },
-  finalDestinationHosts: ['operator.example'],
 };
 
 beforeEach(() => {
