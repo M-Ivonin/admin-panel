@@ -14,6 +14,11 @@ platforms, a minimum age and a minimum of two genuine foreground visits.
 Enter both schedule times with a shared UTC offset. Use UTC for schedules that cross a daylight-saving change.
 The backend receives UTC instants.
 
+The campaign builder shows the age assurance method from the jurisdiction
+rule for each selected platform. A platform requiring Verified age blocks
+activation. When enabling a new platform in **Jurisdiction rules**, explicitly
+select the method approved for that jurisdiction.
+
 All three placements use the same in-app affiliate link in **Partner Markets**.
 Set Final operator hostnames in the partner configuration alongside the
 affiliate link. They identify the approved homepage hosts after redirects.

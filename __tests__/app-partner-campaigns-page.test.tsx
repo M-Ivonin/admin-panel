@@ -428,6 +428,8 @@ it('activates a campaign in a new country using its approved configuration', asy
   await screen.findByText('Brazil fixture');
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
   const editor = screen.getByRole('region', { name: 'Edit app partner campaign' });
+  expect(within(editor).getByText('iOS age assurance: Self-declaration')).toBeVisible();
+  expect(within(editor).queryByRole('combobox', { name: /age assurance/i })).toBeNull();
   choose(editor, 'Status', 'Active');
   click(editor, 'button', 'Continue');
   click(editor, 'button', 'Activate campaign');

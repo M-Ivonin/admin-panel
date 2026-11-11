@@ -110,10 +110,7 @@ export function InAppJurisdictionFields({ value, onChange, error }: Props) {
                       value={platform.assurance}
                       onChange={(event) =>
                         update({
-                          assurance:
-                            event.target.value === 'verified'
-                              ? 'verified'
-                              : 'self_declaration',
+                          assurance: event.target.value as typeof platform.assurance,
                         })
                       }
                     >

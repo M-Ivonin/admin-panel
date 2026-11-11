@@ -7,7 +7,7 @@ export const appPlatformKeys: AppPlatform[] = ['ios', 'android'];
 type PlatformDraft = {
   enabled: boolean;
   minimumAge: string;
-  assurance: NonNullable<
+  assurance: '' | NonNullable<
     InAppPartnerPolicy['platforms'][AppPlatform]
   >['assurance'];
 };
@@ -25,7 +25,7 @@ export function toInAppPolicyDraft(policy?: InAppPartnerPolicy | null) {
     return {
       enabled: Boolean(existing),
       minimumAge: existing ? String(existing.minimumAge) : '',
-      assurance: existing?.assurance ?? 'verified',
+      assurance: existing?.assurance ?? '',
     };
   };
 
@@ -58,6 +58,9 @@ export function readInAppPolicy(
     const age = Number(minimumAge);
     if (!Number.isInteger(age) || age < 18 || age > 125) {
       return `${appPlatforms[key]} minimum age must be a whole number from 18 to 125.`;
+    }
+    if (!assurance) {
+      return `Select an age assurance method for ${appPlatforms[key]}.`;
     }
     platforms[key] = { minimumAge: age, assurance };
   }

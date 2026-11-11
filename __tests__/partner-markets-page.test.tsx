@@ -207,6 +207,14 @@ describe('PartnerMarketsPage', () => {
     expect(saveMarketingJurisdiction).not.toHaveBeenCalled();
 
     fireEvent.change(age, { target: { value: '22' } });
+    fireEvent.click(screen.getByLabelText('Allow Android'));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Android minimum age' }), {
+      target: { value: '21' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
+    expect(await screen.findByText('Select an age assurance method for Android.')).toBeVisible();
+    expect(saveMarketingJurisdiction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('Allow Android'));
     fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
     await screen.findByText('FR jurisdiction rule saved.');
     expect(saveMarketingJurisdiction).toHaveBeenLastCalledWith(expect.objectContaining({

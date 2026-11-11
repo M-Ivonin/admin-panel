@@ -369,6 +369,25 @@ export function CampaignEditor({
                           }
                         />
                       ))}
+                      {form.platforms.map((platform) => {
+                        const assurance =
+                          rule?.inAppPartnerPolicy?.platforms[platform]?.assurance;
+                        if (!assurance) return null;
+
+                        return (
+                          <Typography
+                            key={platform}
+                            variant="caption"
+                            color={assurance === 'verified' ? 'error' : 'text.secondary'}
+                          >
+                            {`${platformLabels[platform]} age assurance: ${
+                              assurance === 'verified'
+                                ? 'Verified age required. Activation is unavailable for this platform.'
+                                : 'Self-declaration'
+                            }`}
+                          </Typography>
+                        );
+                      })}
                       {rule?.inAppPartnerPolicy?.expiresAt ? (
                         <Typography variant="caption" color="text.secondary">
                           App policy expires{' '}
