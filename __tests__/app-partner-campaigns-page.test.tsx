@@ -344,6 +344,26 @@ it('previews a sample campaign, age prompt, localized fallback and ad-free suppr
   expect(uploadAppPartnerCampaignImage).not.toHaveBeenCalled();
 }, 15_000);
 
+it('activates a campaign in a new country using its approved configuration', async () => {
+  const brazilCampaign = { ...campaign, name: 'Brazil fixture' };
+  jest.mocked(getPartnerMarketConfigs).mockResolvedValue([{ ...market, countryCode: 'BR' }]);
+  jest.mocked(getMarketingJurisdictions).mockResolvedValue([{ ...rule, countryCode: 'BR' }]);
+  jest.mocked(getAppPartnerCampaigns).mockResolvedValue([brazilCampaign]);
+  jest.mocked(saveAppPartnerCampaign).mockResolvedValue({ ...brazilCampaign, status: 'active' });
+  render(<AppPartnerCampaignsPage />);
+  await screen.findByText('Brazil fixture');
+  fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+  const editor = screen.getByRole('region', { name: 'Edit app partner campaign' });
+  choose(editor, 'Status', 'Active');
+  click(editor, 'button', 'Continue');
+  click(editor, 'button', 'Activate campaign');
+  await screen.findByText('Brazil fixture saved.');
+  expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
+    expect.objectContaining({ status: 'active', partnerMarketConfigId: market.id, platforms: ['ios'] }),
+    expect.objectContaining({ id: campaign.id, version: campaign.version })
+  );
+});
+
 it('saves a verified banner upload and pauses the versioned campaign', async () => {
   const bannerUrl = 'https://cdn.example/replaced.png';
   const active = {

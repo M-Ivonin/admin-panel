@@ -1,3 +1,4 @@
+import { isAppAdLocation } from '@/modules/marketing-jurisdictions/region-requirement';
 import {
   appPlatformKeys,
   appPlatforms,
@@ -88,11 +89,8 @@ function partnerBlocker(market: PartnerMarketConfigFormValues, at: number) {
     return `Partner configuration is ${market.status}.`;
   const review = reviewBlocker(market, at, 'Partner configuration');
   if (review) return review;
-  if (
-    !(market.countryCode === 'SE' && !market.regionCode) &&
-    !(market.countryCode === 'US' && /^[A-Z]{2}$/.test(market.regionCode ?? ''))
-  ) {
-    return 'In-app campaigns currently support Sweden and approved US states.';
+  if (!isAppAdLocation(market.countryCode, market.regionCode)) {
+    return 'Select a valid country or required region.';
   }
   const link = market.inAppBannerAffiliateUrl.trim();
   if (!link) {

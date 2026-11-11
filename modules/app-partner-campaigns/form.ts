@@ -1,3 +1,4 @@
+import { isAppAdLocation } from '@/modules/marketing-jurisdictions/region-requirement';
 import type { MarketingJurisdiction } from '@/modules/marketing-jurisdictions/types';
 import type { PartnerMarketConfig } from '@/modules/partner-market-configs/types';
 import {
@@ -89,10 +90,7 @@ export function campaignMarketIsAvailable(
       market.inAppEnabled &&
       market.inAppConfigVersion &&
       !market.killSwitchEnabled &&
-      (market.countryCode === 'SE'
-        ? market.regionCode === null
-        : market.countryCode === 'US' &&
-          /^[A-Z]{2}$/.test(market.regionCode ?? '')) &&
+      isAppAdLocation(market.countryCode, market.regionCode) &&
       rule?.status === 'approved' &&
       rule.inAppRulesVersion &&
       policy?.platforms[platform] &&

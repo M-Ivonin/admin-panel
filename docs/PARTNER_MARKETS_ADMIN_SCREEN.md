@@ -28,7 +28,9 @@ preserved on unrelated edits.
 
 The In-app switch shows the platforms the current jurisdiction permits
 and configuration-level blockers. Campaign and app rollout checks still
-apply. Creating or editing a configuration requires its exact jurisdiction
+apply. New countries use the same setup. Argentina, Canada, and the US require
+an exact region. An existing regional rule takes precedence over the country
+rule in that region. Creating or editing a configuration requires its exact jurisdiction
 rule to be available. The dedicated pause action remains available separately.
 
 In the edit dialog, **Licence and restrictions** and **Advanced settings**
