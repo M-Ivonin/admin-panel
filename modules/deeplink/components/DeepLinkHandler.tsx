@@ -24,7 +24,6 @@ interface DeepLinkHandlerProps {
   appPath: string;
   fallbackUrl?: string;
   channelId?: string;
-  token?: string;
   config: ClientDeepLinkConfig;
   translations: Translations;
   variant?: 'channel' | 'generic';
@@ -34,7 +33,6 @@ export function DeepLinkHandler({
   appPath,
   fallbackUrl,
   channelId,
-  token,
   config,
   translations,
   variant = 'generic',
@@ -60,8 +58,7 @@ export function DeepLinkHandler({
 
     const logData = createSafeLogData({
       channelId,
-      token,
-      appPath: normalizedAppPath,
+      appPath: normalizedAppPath.split('?', 1)[0],
       platform: platformInfo.platform,
       userAgent: platformInfo.userAgent,
       timestamp: new Date().toISOString(),
@@ -118,7 +115,7 @@ export function DeepLinkHandler({
       return;
     }
     setShowFallback(true);
-  }, [channelId, token, config, normalizedAppPath, fallbackUrl]);
+  }, [channelId, config, normalizedAppPath, fallbackUrl]);
 
   const handleOpenApp = () => {
     const deepLinkUrl = buildInternalAppDeepLink(
