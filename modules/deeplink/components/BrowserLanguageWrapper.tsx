@@ -73,7 +73,6 @@ export function BrowserLanguageWrapper({
       appPath={resolvedAppPath}
       fallbackUrl={fallbackUrl}
       channelId={channelId}
-      token={token}
       config={config}
       translations={translations}
       variant={channelId ? 'channel' : 'generic'}
