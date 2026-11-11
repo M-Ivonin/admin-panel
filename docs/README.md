@@ -22,6 +22,8 @@ deleting the backlog.
 - [Campaigns](./CAMPAIGNS_FEATURE_OVERVIEW.md)
 - [Email Marketing](./EMAIL_MARKETING_ADMIN.md)
 - [Users](./ADMIN_USERS_SCREEN.md)
+- [Personalization](./PERSONALIZATION.md)
+- [Admin Overview](./ADMIN_OVERVIEW.md)
 - [Prediction evaluations](./PREDICTION_EVALUATION_ADMIN_SCREEN.md)
 - [Revenue Ledger](./REVENUE_LEDGER_ADMIN_SCREEN.md)
 - [Remote diagnostics](./REMOTE_DIAGNOSTICS_ADMIN.md)
@@ -34,6 +36,11 @@ deleting the backlog.
 ## Agent guidance
 
 - [Execution routing](./agents/execution-routing.md)
+
+## Archived plans
+
+- [Personalization center](./archive/2026-10-29-personalization-center/PLAN.md)
+- [Personalization navigation v2](./archive/2026-10-29-personalization-navigation-v2/README.md)
 
 ## Retention rules
 

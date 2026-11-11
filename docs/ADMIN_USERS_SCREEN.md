@@ -124,13 +124,10 @@ material/template/version evidence. Refresh and frozen replay only read saved
 evidence; they never evaluate a new model decision or perform a user action.
 All communication and price capabilities remain disabled pending their separate
 integration proof. No saved history is a distinct empty state, not a prompt to
-start analysis. See `docs/evaluation/2026-10-28-shadow-decisions-492.md`.
+start analysis.
 
 The Support Ticket detail screen offers **Record portrait-processing objection**.
 An administrator must verify that the displayed account's existing request asks
 to stop processing, then confirm the dialog. Backend enforces ticket/account
 identity and persists suppression with purge; this action does not update channel
 preferences or financial records and offers no speculative re-enable control.
-
-The local source-backed acceptance procedure and desktop/narrow screenshots are
-in `docs/evaluation/2026-10-28-491-portrait.md`.

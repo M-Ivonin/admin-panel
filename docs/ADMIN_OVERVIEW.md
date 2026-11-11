@@ -74,7 +74,7 @@ New read endpoints must be released with the backend before the new summary can
 show growth and marketing data. No schema migration is required. Until then those
 panels show their unavailable state.
 
-Validation and reference captures: [UI evidence](./evidence/admin-overview/UI_EVIDENCE_REPORT.md).
+The [Admin Overview tests](../__tests__/admin-overview.test.tsx) cover the dashboard states.
 
 ## Home Analytics
 

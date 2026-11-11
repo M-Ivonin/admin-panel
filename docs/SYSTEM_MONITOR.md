@@ -173,4 +173,4 @@ observations with the database scope and timestamps within the last 24 hours ent
 their respective charts. Query-time lines break across missing intervals; historic
 points never turn a current unavailable or stale status healthy.
 
-Visual reference, viewports and captured states: [compact card proof](evidence/system-monitor/compact-health/REPORT.md).
+The [dashboard tests](../__tests__/system-monitor-dashboard.test.tsx) cover the monitoring view.

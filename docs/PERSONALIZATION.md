@@ -28,17 +28,15 @@ failed identity read keeps the canonical ID and retry control.
 The visible outlined Download all decisions (JSON) button exports every retained
 decision through the existing account export endpoint, independently of table
 search and filters. The downloaded file uses the versioned
-[analysis format](evidence/saved-decisions-export/README.md), retaining decision,
+`personalization-analysis` format with `schemaVersion: 1`, retaining decision,
 context, eligibility, AI and actual delivery facts while omitting internal
 execution payloads and duplicate candidate messages. Technical diagnostics, model
 badges, snapshot context and frozen replay controls are absent from this report;
-original evidence remains on the server. A reason summary never invents a specific contact restriction.
+original evidence remains on the server. The [download projection](../lib/personalization-decision-export.ts) preserves distinct unknown and empty delivery states. It stores repeated interest profiles once and links each decision to its saved profile. A reason summary never invents a specific contact restriction.
 Delivery information comes only from the existing decision response: absent
 information, an empty record list, queued, provider-accepted, sent, delivered,
 shown and opened outcomes retain their distinct meanings. A suggested channel
 does not establish a send; sending does not establish delivery or reading.
-Fresh design comparison and runtime proof are in
-[the table/details evidence](evidence/saved-decisions-table/README.md).
 
 ## Access and side effects
 
@@ -48,7 +46,7 @@ Opening, refreshing or navigating the section does not run an importer/model, en
 
 ## Design and verification
 
-The approved [navigation v2 concepts](plans/2026-10-29-personalization-navigation-v2/README.md) define the separate directory/detail hierarchy, superseding the earlier shared Users/portrait tab. The owner explicitly excluded the redesigned Users table: preserve the current committed table instead. Fresh proof is recorded in [UI-EVIDENCE.md](plans/2026-10-29-personalization-navigation-v2/UI-EVIDENCE.md). Earlier [concepts](plans/2026-10-29-personalization-center/DESIGN.md) remain historical references for the unchanged portrait/report content.
+The [archived center plan](archive/2026-10-29-personalization-center/PLAN.md) and [navigation v2 design](archive/2026-10-29-personalization-navigation-v2/README.md) record the decisions behind the current routes.
 
 Relevant tests are `personalization-navigation`, `personalization-results`, `users-page`, `use-user-portrait`, `portrait-decision-history` and `portrait-storefront-evidence`, plus the existing admin navigation/auth/Revenue Ledger suites. Use the repository validation commands and applicable route smoke profiles, then fresh desktop/narrow browser captures. UI fixtures prove the rendered application and interactions; they do not establish live backend authorization or delivery success.
 
@@ -89,8 +87,7 @@ Daily account counts deduplicate within each date, so the same account can
 appear on multiple days. The report cards use the selected rolling period.
 
 Accounts still shows the latest 100 evaluated accounts, while card totals include
-all evaluated accounts. Fresh visual proof and the approved reference are in
-[the compact Results evidence](proof/personalization-results-design/UI-EVIDENCE.md).
+all evaluated accounts.
 
 ## Personalized contact frequency
 
@@ -144,7 +141,4 @@ portraits, analytics, ownership, pending purchases, consent and already-read New
 protections intact. Message switches restrict eligible templates. Unsent decisions
 that depend on a disabled signal or message are blocked before delivery.
 
-Campaigns have no controls here and their planning/execution logic is unchanged.
-The existing disabled-ID array is reused; no new migration is needed. Current work
-is local only. Fresh runtime evidence is in
-[the v2 UI report](proof/personalization-scenarios-v2/UI-EVIDENCE.md).
+The switches reuse the existing disabled-ID array and apply to personalization.
