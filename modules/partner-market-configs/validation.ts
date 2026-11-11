@@ -72,11 +72,17 @@ export function normalizePartnerMarketConfigForm(
     operatorLegalName: values.operatorLegalName.trim(),
     operatorDisplayName: values.operatorDisplayName.trim(),
     operatorLogoUrl: values.operatorLogoUrl.trim(),
-    affiliateDisclosureByLocale: {
-      en: values.affiliateDisclosureByLocale.en.trim(),
-      es: values.affiliateDisclosureByLocale.es.trim(),
-      pt: values.affiliateDisclosureByLocale.pt.trim(),
-    },
+    ...(values.emailEnabled
+      ? {
+          affiliateDisclosureByLocale: {
+            en: values.affiliateDisclosureByLocale.en.trim(),
+            es: values.affiliateDisclosureByLocale.es.trim(),
+            pt: values.affiliateDisclosureByLocale.pt.trim(),
+          },
+          operatorTermsUrl: values.operatorTermsUrl.trim(),
+          operatorDestinationUrl: values.operatorDestinationUrl.trim(),
+        }
+      : {}),
     countryCode: values.countryCode.trim().toUpperCase(),
     regionCode: values.regionCode?.trim().toUpperCase() || undefined,
     status: values.status,
@@ -91,8 +97,6 @@ export function normalizePartnerMarketConfigForm(
     matchSpecificPromotionAllowed: values.matchSpecificPromotionAllowed,
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
-    operatorTermsUrl: values.operatorTermsUrl.trim(),
-    operatorDestinationUrl: values.operatorDestinationUrl.trim(),
     inAppBannerAffiliateUrl: values.inAppBannerAffiliateUrl.trim() || null,
     approvedDestinationHosts: normalizeApprovedDestinationHosts(
       values.approvedDestinationHosts
@@ -130,6 +134,7 @@ export function validatePartnerMarketConfigForm(
     errors.operatorLogoUrl = 'Enter a valid HTTPS operator logo URL.';
   }
   if (
+    input.affiliateDisclosureByLocale &&
     Object.values(input.affiliateDisclosureByLocale).some((value) => !value)
   ) {
     errors.affiliateDisclosureByLocale =
@@ -164,20 +169,24 @@ export function validatePartnerMarketConfigForm(
     errors.responsibleGamblingUrl = 'Enter a valid URL.';
   }
   if (
-    !isURL(input.operatorTermsUrl, {
-      protocols: ['https'],
-      require_protocol: true,
-    }) ||
-    !input.operatorTermsUrl.startsWith('https://')
+    values.emailEnabled &&
+    (!input.operatorTermsUrl ||
+      !isURL(input.operatorTermsUrl, {
+        protocols: ['https'],
+        require_protocol: true,
+      }) ||
+      !input.operatorTermsUrl.startsWith('https://'))
   ) {
     errors.operatorTermsUrl = 'Enter a valid HTTPS operator terms URL.';
   }
   if (
-    !isURL(input.operatorDestinationUrl, {
-      protocols: ['https'],
-      require_protocol: true,
-    }) ||
-    !input.operatorDestinationUrl.startsWith('https://')
+    values.emailEnabled &&
+    (!input.operatorDestinationUrl ||
+      !isURL(input.operatorDestinationUrl, {
+        protocols: ['https'],
+        require_protocol: true,
+      }) ||
+      !input.operatorDestinationUrl.startsWith('https://'))
   )
     errors.operatorDestinationUrl =
       'Enter the exact approved HTTPS operator destination.';
@@ -193,7 +202,11 @@ export function validatePartnerMarketConfigForm(
     errors.approvedDestinationHosts =
       'Use hostnames only, without scheme, port, or path.';
   }
-  if (!errors.operatorDestinationUrl && !errors.approvedDestinationHosts) {
+  if (
+    input.operatorDestinationUrl &&
+    !errors.operatorDestinationUrl &&
+    !errors.approvedDestinationHosts
+  ) {
     const destinationHost = new URL(
       input.operatorDestinationUrl
     ).hostname.toLowerCase();

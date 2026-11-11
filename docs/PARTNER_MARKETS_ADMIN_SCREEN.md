@@ -39,6 +39,11 @@ the **In-app** switch.
 The configuration editor and summary show independent **Email** and **In-app**
 channel permissions. Email defaults to enabled and In-app defaults to disabled.
 Disabling Email removes that configuration from affiliate email authoring.
+With Email off, the editor hides the email offer URL, operator terms URL, and
+EN/ES/PT email affiliate disclosures. The save leaves previously stored values
+in place, so they are available when Email is enabled again. App Partner
+Campaigns still require their own creative disclosure and use warning, support,
+and terms from the in-app jurisdiction policy.
 Pause and the kill switch apply across both channels. **In-app banner affiliate
 link** is the optional HTTPS link for the Matches banner. It must use an approved
 hostname. Clearing it removes that banner destination. The **Exact operator

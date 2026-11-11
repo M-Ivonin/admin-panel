@@ -648,7 +648,7 @@ describe('PartnerMarketsPage', () => {
           emailEnabled,
           inAppEnabled,
           inAppBannerAffiliateUrl,
-          operatorDestinationUrl: legacyConfig.operatorDestinationUrl,
+          ...(emailEnabled ? { operatorDestinationUrl: legacyConfig.operatorDestinationUrl } : {}),
           legalReviewedAt: legacyConfig.legalReviewedAt,
           configVersion: legacyConfig.configVersion,
           expectedUpdatedAt: legacyConfig.updatedAt,
@@ -798,6 +798,42 @@ describe('PartnerMarketsPage', () => {
     await waitFor(() => expect(version).toHaveFocus());
     expect(advanced).toHaveAttribute('open');
     expect(version).toHaveAccessibleDescription(message);
+  });
+
+  it('saves an in-app partner without email fields and restores their validation when Email is enabled', async () => {
+    const market = {
+      ...config,
+      emailEnabled: false,
+      inAppEnabled: true,
+      inAppBannerAffiliateUrl: 'https://example.bet/banner',
+      operatorDestinationUrl: null,
+      operatorTermsUrl: null,
+      affiliateDisclosureByLocale: null,
+    };
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([market]);
+    (savePartnerMarketConfig as jest.Mock).mockResolvedValue(market);
+    render(<PartnerMarketsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    const save = dialog.getByRole('button', { name: 'Save configuration' });
+    await waitFor(() => expect(save).toBeEnabled());
+    expect(dialog.queryByLabelText('Exact operator destination URL')).not.toBeInTheDocument();
+    expect(dialog.queryByLabelText('Affiliate disclosure (EN)')).not.toBeInTheDocument();
+    expect(dialog.queryByLabelText('Full operator terms URL')).not.toBeInTheDocument();
+
+    fireEvent.click(dialog.getByLabelText('Email'));
+    fireEvent.click(save);
+    expect(await dialog.findByText('Enter the exact approved HTTPS operator destination.')).toBeVisible();
+    expect(savePartnerMarketConfig).not.toHaveBeenCalled();
+
+    fireEvent.click(dialog.getByLabelText('Email'));
+    fireEvent.click(save);
+    await screen.findByText('Example Bet configuration saved.');
+    const [payload] = (savePartnerMarketConfig as jest.Mock).mock.calls[0];
+    expect(payload).toMatchObject({ emailEnabled: false, inAppEnabled: true, inAppBannerAffiliateUrl: market.inAppBannerAffiliateUrl });
+    expect(payload).not.toHaveProperty('operatorDestinationUrl');
+    expect(payload).not.toHaveProperty('operatorTermsUrl');
+    expect(payload).not.toHaveProperty('affiliateDisclosureByLocale');
   });
 
   it('shows migrated missing display data and keeps it required when editing', async () => {

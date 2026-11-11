@@ -789,21 +789,25 @@ function PartnerMarketFormDialog({
               label="Match-specific promotion"
             />
           </Stack>
-          <FormText
-            label="Full operator terms URL"
-            field="operatorTermsUrl"
-            values={values}
-            errors={errors}
-            set={set}
-          />
-          <FormText
-            label="Exact operator destination URL"
-            field="operatorDestinationUrl"
-            values={values}
-            errors={errors}
-            set={set}
-            helper="Used by the email offer flow after the visitor confirms leaving SirBro."
-          />
+          {values.emailEnabled && (
+            <>
+              <FormText
+                label="Full operator terms URL"
+                field="operatorTermsUrl"
+                values={values}
+                errors={errors}
+                set={set}
+              />
+              <FormText
+                label="Exact operator destination URL"
+                field="operatorDestinationUrl"
+                values={values}
+                errors={errors}
+                set={set}
+                helper="Used by the email offer flow after the visitor confirms leaving SirBro."
+              />
+            </>
+          )}
           <FormControlLabel
             control={
               <Switch
@@ -935,34 +939,38 @@ function PartnerMarketFormDialog({
               errors={errors}
               set={set}
             />
-            <Typography variant="subtitle2">
-              Localized affiliate disclosure
-            </Typography>
-            {(['en', 'es', 'pt'] as const).map((locale) => (
-              <TextField
-                key={locale}
-                fullWidth
-                multiline
-                minRows={2}
-                label={`Affiliate disclosure (${locale.toUpperCase()})`}
-                value={values.affiliateDisclosureByLocale[locale]}
-                onChange={(event) =>
-                  set('affiliateDisclosureByLocale', {
-                    ...values.affiliateDisclosureByLocale,
-                    [locale]: event.target.value,
-                  })
-                }
-                error={Boolean(
-                  errors.affiliateDisclosureByLocale &&
-                    !values.affiliateDisclosureByLocale[locale].trim()
-                )}
-                helperText={
-                  !values.affiliateDisclosureByLocale[locale].trim()
-                    ? errors.affiliateDisclosureByLocale
-                    : undefined
-                }
-              />
-            ))}
+            {values.emailEnabled && (
+              <>
+                <Typography variant="subtitle2">
+                  Localized affiliate disclosure
+                </Typography>
+                {(['en', 'es', 'pt'] as const).map((locale) => (
+                  <TextField
+                    key={locale}
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    label={`Affiliate disclosure (${locale.toUpperCase()})`}
+                    value={values.affiliateDisclosureByLocale[locale]}
+                    onChange={(event) =>
+                      set('affiliateDisclosureByLocale', {
+                        ...values.affiliateDisclosureByLocale,
+                        [locale]: event.target.value,
+                      })
+                    }
+                    error={Boolean(
+                      errors.affiliateDisclosureByLocale &&
+                        !values.affiliateDisclosureByLocale[locale].trim()
+                    )}
+                    helperText={
+                      !values.affiliateDisclosureByLocale[locale].trim()
+                        ? errors.affiliateDisclosureByLocale
+                        : undefined
+                    }
+                  />
+                ))}
+              </>
+            )}
             <FormText
               label="Approved destination hosts"
               field="approvedDestinationHosts"

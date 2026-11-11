@@ -10,7 +10,7 @@ export interface PartnerMarketConfigInput {
   operatorLegalName: string;
   operatorDisplayName: string;
   operatorLogoUrl: string;
-  affiliateDisclosureByLocale: { en: string; es: string; pt: string };
+  affiliateDisclosureByLocale?: { en: string; es: string; pt: string };
   countryCode: string;
   regionCode?: string;
   status: PartnerMarketConfigStatus;
@@ -25,8 +25,8 @@ export interface PartnerMarketConfigInput {
   matchSpecificPromotionAllowed: boolean;
   requiredWarningText: string;
   responsibleGamblingUrl: string;
-  operatorTermsUrl: string;
-  operatorDestinationUrl: string;
+  operatorTermsUrl?: string;
+  operatorDestinationUrl?: string;
   inAppBannerAffiliateUrl?: string | null;
   approvedDestinationHosts: string[];
   affiliateConversionTypes: string[];
@@ -73,6 +73,9 @@ export interface PartnerMarketConfigFilters {
 export interface PartnerMarketConfigFormValues
   extends Omit<
     PartnerMarketConfigInput,
+    | 'affiliateDisclosureByLocale'
+    | 'operatorTermsUrl'
+    | 'operatorDestinationUrl'
     | 'minimumAge'
     | 'approvedDestinationHosts'
     | 'affiliateConversionTypes'
@@ -81,6 +84,11 @@ export interface PartnerMarketConfigFormValues
     | 'inAppBannerAffiliateUrl'
     | 'expectedUpdatedAt'
   > {
+  affiliateDisclosureByLocale: NonNullable<
+    PartnerMarketConfigInput['affiliateDisclosureByLocale']
+  >;
+  operatorTermsUrl: string;
+  operatorDestinationUrl: string;
   minimumAge: string;
   emailEnabled: boolean;
   inAppEnabled: boolean;
