@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   Alert,
   Box,
@@ -436,6 +442,8 @@ function PartnerMarketFormDialog({
   const [values, setValues] = useState<PartnerMarketConfigFormValues>(() =>
     config ? toForm(config) : { ...emptyPartnerMarketConfigForm }
   );
+  const fields = useRef<HTMLDivElement>(null);
+  const focusErrors = useRef(false);
   const [errors, setErrors] = useState<PartnerMarketConfigFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -480,6 +488,19 @@ function PartnerMarketFormDialog({
       active = false;
     };
   }, []);
+  useEffect(() => {
+    if (!focusErrors.current) return;
+    focusErrors.current = false;
+    const invalidFields = fields.current?.querySelectorAll<HTMLElement>(
+      '[aria-invalid="true"]:not([disabled]):not([aria-hidden="true"])'
+    );
+    invalidFields?.forEach((field) => {
+      const section = field.closest('details');
+      if (section) section.open = true;
+    });
+    invalidFields?.[0]?.focus();
+  }, [errors]);
+
   const set = <K extends keyof PartnerMarketConfigFormValues>(
     key: K,
     value: PartnerMarketConfigFormValues[K]
@@ -504,13 +525,10 @@ function PartnerMarketFormDialog({
     ) {
       nextErrors.minimumAge = `Enter a whole number above ${marketAge}, up to 125.`;
     }
-    if (nextErrors.requiredWarningText || nextErrors.responsibleGamblingUrl) {
-      setSubmitError(
-        'Complete the warning and responsible gambling URL in Jurisdiction Rules before saving.'
-      );
-    }
+    const hasErrors = Object.keys(nextErrors).length > 0;
+    focusErrors.current = hasErrors;
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (hasErrors) return;
     setSaving(true);
     try {
       const input = normalizePartnerMarketConfigForm(inheritedValues);
@@ -530,7 +548,13 @@ function PartnerMarketFormDialog({
       }
       await onSaved(await savePartnerMarketConfig(input));
     } catch (caught) {
-      setSubmitError(messageOf(caught));
+      const message = messageOf(caught);
+      if (message.startsWith('configVersion must change ')) {
+        focusErrors.current = true;
+        setErrors({ configVersion: message });
+      } else {
+        setSubmitError(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -546,7 +570,7 @@ function PartnerMarketFormDialog({
         </Alert>
       ) : null}
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <Stack ref={fields} spacing={2} sx={{ mt: 1 }}>
           <Alert severity="info">
             Draft configurations cannot run campaigns. Approved configurations
             still require backend eligibility checks.
@@ -573,36 +597,6 @@ function PartnerMarketFormDialog({
             errors={errors}
             set={set}
           />
-          <FormText
-            label="Operator logo URL"
-            field="operatorLogoUrl"
-            values={values}
-            errors={errors}
-            set={set}
-          />
-          <Typography variant="subtitle2">
-            Localized affiliate disclosure
-          </Typography>
-          {(['en', 'es', 'pt'] as const).map((locale) => (
-            <TextField
-              key={locale}
-              fullWidth
-              multiline
-              minRows={2}
-              label={`Affiliate disclosure (${locale.toUpperCase()})`}
-              value={values.affiliateDisclosureByLocale[locale]}
-              onChange={(event) =>
-                set('affiliateDisclosureByLocale', {
-                  ...values.affiliateDisclosureByLocale,
-                  [locale]: event.target.value,
-                })
-              }
-              error={Boolean(errors.affiliateDisclosureByLocale)}
-              helperText={
-                locale === 'en' ? errors.affiliateDisclosureByLocale : undefined
-              }
-            />
-          ))}
           {jurisdictionsError ? (
             <Alert severity="error">
               Could not load jurisdiction rules: {jurisdictionsError}
@@ -679,20 +673,6 @@ function PartnerMarketFormDialog({
               ))}
             </TextField>
           </Stack>
-          <FormText
-            label="Licence reference"
-            field="licenceReference"
-            values={values}
-            errors={errors}
-            set={set}
-          />
-          <FormText
-            label="Evidence URL"
-            field="evidenceUrl"
-            values={values}
-            errors={errors}
-            set={set}
-          />
           {config &&
             !jurisdiction &&
             !jurisdictionsLoading &&
@@ -702,35 +682,6 @@ function PartnerMarketFormDialog({
                 rule before saving.
               </Alert>
             )}
-          {jurisdiction && (
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">
-                Inherited from Jurisdiction Rules
-              </Typography>
-              <Detail
-                label="Jurisdiction warning"
-                value={jurisdiction.requiredWarningText}
-              />
-              <Detail
-                label="Responsible gambling URL"
-                value={jurisdiction.responsibleGamblingUrl}
-              />
-            </Stack>
-          )}
-          <TextField
-            label="Higher partner minimum age"
-            slotProps={{ htmlInput: { inputMode: 'numeric' } }}
-            value={displayedAge}
-            disabled={!jurisdiction || marketAge >= 125}
-            error={Boolean(errors.minimumAge)}
-            helperText={
-              errors.minimumAge ??
-              (jurisdiction
-                ? `Base minimum: ${marketAge}+. Leave blank to use it.`
-                : 'Select a jurisdiction rule to see the market minimum.')
-            }
-            onChange={(event) => setAgeOverride(event.target.value)}
-          />
           <Stack>
             <Typography variant="subtitle2">Advertising channels</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -754,6 +705,16 @@ function PartnerMarketFormDialog({
               }
               label="In-app"
             />
+            <Stack spacing={1} sx={{ mt: 0.5 }}>
+              <FormText
+                label="In-app banner affiliate link"
+                field="inAppBannerAffiliateUrl"
+                values={values}
+                errors={errors}
+                set={set}
+                helper="HTTPS affiliate link to the operator homepage for all app banners. Leave blank to disable app banner destinations."
+              />
+            </Stack>
             <Stack spacing={0.5} sx={{ pl: 1, overflowWrap: 'anywhere' }}>
               <Typography variant="body2">
                 Jurisdiction platforms:{' '}
@@ -843,79 +804,6 @@ function PartnerMarketFormDialog({
             set={set}
             helper="Used by the email offer flow after the visitor confirms leaving SirBro."
           />
-          <FormText
-            label="In-app banner affiliate link"
-            field="inAppBannerAffiliateUrl"
-            values={values}
-            errors={errors}
-            set={set}
-            helper="HTTPS affiliate link to the operator homepage for all app banners. Leave blank to disable app banner destinations."
-          />
-          <FormText
-            label="Approved destination hosts"
-            field="approvedDestinationHosts"
-            values={values}
-            errors={errors}
-            set={set}
-            multiline
-            helper="One hostname per line or comma-separated. No scheme, port, or path."
-          />
-          <FormText
-            label="Affiliate conversion types"
-            field="affiliateConversionTypes"
-            values={values}
-            errors={errors}
-            set={set}
-            multiline
-            helper="Core types are always preserved: registration, ftd, deposit, commission, reversal. Add approved extras one per line or comma-separated."
-          />
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormText
-              label="Legal reviewed at"
-              field="legalReviewedAt"
-              values={values}
-              errors={errors}
-              set={set}
-              type="datetime-local"
-              shrink
-            />
-            <FormText
-              label="Legal review expires at"
-              field="legalReviewExpiresAt"
-              values={values}
-              errors={errors}
-              set={set}
-              type="datetime-local"
-              shrink
-            />
-          </Stack>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <FormText
-              label="Effective from"
-              field="effectiveFrom"
-              values={values}
-              errors={errors}
-              set={set}
-              type="datetime-local"
-              shrink
-            />
-            <FormText
-              label="Effective until (optional)"
-              field="effectiveUntil"
-              values={values}
-              errors={errors}
-              set={set}
-              type="datetime-local"
-              shrink
-            />
-          </Stack>
-          <FormText
-            label="Config version"
-            field="configVersion"
-            values={values}
-            errors={errors}
-            set={set}
-          />
           <FormControlLabel
             control={
               <Switch
@@ -935,6 +823,172 @@ function PartnerMarketFormDialog({
               multiline
             />
           ) : null}
+          <PartnerMarketDetails
+            title="Licence and restrictions"
+            initiallyOpen={!config}
+          >
+            <FormText
+              label="Licence reference"
+              field="licenceReference"
+              values={values}
+              errors={errors}
+              set={set}
+            />
+            <FormText
+              label="Evidence URL"
+              field="evidenceUrl"
+              values={values}
+              errors={errors}
+              set={set}
+            />
+            {jurisdiction && (
+              <Stack
+                spacing={1}
+                tabIndex={-1}
+                aria-invalid={Boolean(
+                  errors.requiredWarningText || errors.responsibleGamblingUrl
+                )}
+              >
+                <Typography variant="subtitle2">
+                  Inherited from Jurisdiction Rules
+                </Typography>
+                <Detail
+                  label="Jurisdiction warning"
+                  value={jurisdiction.requiredWarningText}
+                />
+                <Detail
+                  label="Responsible gambling URL"
+                  value={jurisdiction.responsibleGamblingUrl}
+                />
+                {(errors.requiredWarningText ||
+                  errors.responsibleGamblingUrl) && (
+                  <Alert severity="error">
+                    Complete the warning and responsible gambling URL in
+                    Jurisdiction Rules before saving.
+                  </Alert>
+                )}
+              </Stack>
+            )}
+            <TextField
+              label="Higher partner minimum age"
+              slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+              value={displayedAge}
+              disabled={!jurisdiction || marketAge >= 125}
+              error={Boolean(errors.minimumAge)}
+              helperText={
+                errors.minimumAge ??
+                (jurisdiction
+                  ? `Base minimum: ${marketAge}+. Leave blank to use it.`
+                  : 'Select a jurisdiction rule to see the market minimum.')
+              }
+              onChange={(event) => setAgeOverride(event.target.value)}
+            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormText
+                label="Legal reviewed at"
+                field="legalReviewedAt"
+                values={values}
+                errors={errors}
+                set={set}
+                type="datetime-local"
+                shrink
+              />
+              <FormText
+                label="Legal review expires at"
+                field="legalReviewExpiresAt"
+                values={values}
+                errors={errors}
+                set={set}
+                type="datetime-local"
+                shrink
+              />
+            </Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <FormText
+                label="Effective from"
+                field="effectiveFrom"
+                values={values}
+                errors={errors}
+                set={set}
+                type="datetime-local"
+                shrink
+              />
+              <FormText
+                label="Effective until (optional)"
+                field="effectiveUntil"
+                values={values}
+                errors={errors}
+                set={set}
+                type="datetime-local"
+                shrink
+              />
+            </Stack>
+          </PartnerMarketDetails>
+          <PartnerMarketDetails
+            title="Advanced settings"
+            initiallyOpen={!config}
+          >
+            <FormText
+              label="Operator logo URL"
+              field="operatorLogoUrl"
+              values={values}
+              errors={errors}
+              set={set}
+            />
+            <Typography variant="subtitle2">
+              Localized affiliate disclosure
+            </Typography>
+            {(['en', 'es', 'pt'] as const).map((locale) => (
+              <TextField
+                key={locale}
+                fullWidth
+                multiline
+                minRows={2}
+                label={`Affiliate disclosure (${locale.toUpperCase()})`}
+                value={values.affiliateDisclosureByLocale[locale]}
+                onChange={(event) =>
+                  set('affiliateDisclosureByLocale', {
+                    ...values.affiliateDisclosureByLocale,
+                    [locale]: event.target.value,
+                  })
+                }
+                error={Boolean(
+                  errors.affiliateDisclosureByLocale &&
+                    !values.affiliateDisclosureByLocale[locale].trim()
+                )}
+                helperText={
+                  !values.affiliateDisclosureByLocale[locale].trim()
+                    ? errors.affiliateDisclosureByLocale
+                    : undefined
+                }
+              />
+            ))}
+            <FormText
+              label="Approved destination hosts"
+              field="approvedDestinationHosts"
+              values={values}
+              errors={errors}
+              set={set}
+              multiline
+              helper="One hostname per line or comma-separated. No scheme, port, or path."
+            />
+            <FormText
+              label="Affiliate conversion types"
+              field="affiliateConversionTypes"
+              values={values}
+              errors={errors}
+              set={set}
+              multiline
+              helper="Core types are always preserved: registration, ftd, deposit, commission, reversal. Add approved extras one per line or comma-separated."
+            />
+            <FormText
+              label="Config version"
+              field="configVersion"
+              values={values}
+              errors={errors}
+              set={set}
+            />
+          </PartnerMarketDetails>
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -950,6 +1004,35 @@ function PartnerMarketFormDialog({
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function PartnerMarketDetails({
+  title,
+  initiallyOpen,
+  children,
+}: {
+  title: string;
+  initiallyOpen: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Box
+      component="details"
+      open={initiallyOpen || undefined}
+      sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}
+    >
+      <Typography
+        component="summary"
+        variant="subtitle2"
+        sx={{ p: 2, cursor: 'pointer' }}
+      >
+        {title}
+      </Typography>
+      <Stack spacing={2} sx={{ px: 2, pb: 2 }}>
+        {children}
+      </Stack>
+    </Box>
   );
 }
 

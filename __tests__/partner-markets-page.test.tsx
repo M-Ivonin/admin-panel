@@ -544,6 +544,7 @@ describe('PartnerMarketsPage', () => {
     render(<PartnerMarketsPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     const dialog = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    fireEvent.click(dialog.getByText('Licence and restrictions'));
     expect(await dialog.findByText('Market-specific warning.')).toBeVisible();
     expect(dialog.getByText('https://example.se/support')).toBeVisible();
     expect(dialog.getByText('Jurisdiction platforms: iOS')).toBeVisible();
@@ -586,6 +587,7 @@ describe('PartnerMarketsPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     const reopened = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
     await reopened.findByText('Inherited from Jurisdiction Rules');
+    fireEvent.click(reopened.getByText('Licence and restrictions'));
     const savedAge = reopened.getByRole('textbox', { name: 'Higher partner minimum age' });
     expect(savedAge).toHaveValue('23');
     fireEvent.change(savedAge, { target: { value: '2e' } });
@@ -711,6 +713,7 @@ describe('PartnerMarketsPage', () => {
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: 'Escape',
     });
+    fireEvent.click(within(editDialog).getByText('Advanced settings'));
     fireEvent.change(within(editDialog).getByLabelText('Config version'), {
       target: { value: 'legal-2' },
     });
@@ -749,6 +752,52 @@ describe('PartnerMarketsPage', () => {
         ' Licence suspended '
       )
     );
+  });
+
+  it('opens collapsed sections and focuses the first invalid field when saving', async () => {
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([{
+      ...config,
+      licenceReference: '',
+      operatorLogoUrl: '',
+    }]);
+    render(<PartnerMarketsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    const licence = dialog.getByText('Licence and restrictions').closest('details');
+    const advanced = dialog.getByText('Advanced settings').closest('details');
+    expect(licence).not.toHaveAttribute('open');
+    expect(advanced).not.toHaveAttribute('open');
+    const save = dialog.getByRole('button', { name: 'Save configuration' });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    await waitFor(() => expect(dialog.getByLabelText('Licence reference')).toHaveFocus());
+    expect(licence).toHaveAttribute('open');
+    expect(advanced).toHaveAttribute('open');
+    expect(dialog.getByLabelText('Operator logo URL')).toHaveAttribute('aria-invalid', 'true');
+    expect(savePartnerMarketConfig).not.toHaveBeenCalled();
+  });
+
+  it('reveals Config version when the server requires a new version', async () => {
+    const message = 'configVersion must change when operator logo, terms, affiliate disclosure or conversion allowlist changes';
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([config]);
+    (savePartnerMarketConfig as jest.Mock).mockRejectedValueOnce(new Error(message));
+    render(<PartnerMarketsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    const advanced = dialog.getByText('Advanced settings').closest('details');
+    expect(advanced).not.toHaveAttribute('open');
+    fireEvent.change(dialog.getByLabelText('Full operator terms URL'), {
+      target: { value: 'https://example.bet/updated-terms' },
+    });
+    const save = dialog.getByRole('button', { name: 'Save configuration' });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    const version = dialog.getByLabelText('Config version');
+    await waitFor(() => expect(version).toHaveFocus());
+    expect(advanced).toHaveAttribute('open');
+    expect(version).toHaveAccessibleDescription(message);
   });
 
   it('shows migrated missing display data and keeps it required when editing', async () => {
@@ -795,10 +844,10 @@ describe('PartnerMarketsPage', () => {
       )
     ).toBeInTheDocument();
     expect(
-      within(editDialog).getByText(
+      within(editDialog).getAllByText(
         'Affiliate disclosure is required for all en, es, and pt locales.'
       )
-    ).toBeInTheDocument();
+    ).toHaveLength(3);
     expect(
       within(editDialog).getByText('Enter a valid HTTPS operator terms URL.')
     ).toBeInTheDocument();

@@ -31,6 +31,11 @@ and configuration-level blockers. Campaign and app rollout checks still
 apply. Creating or editing a configuration requires its exact jurisdiction
 rule to be available. The dedicated pause action remains available separately.
 
+In the edit dialog, **Licence and restrictions** and **Advanced settings**
+start collapsed. Saving with invalid fields opens the affected sections and
+focuses the first invalid field. The banner affiliate link sits directly below
+the **In-app** switch.
+
 The configuration editor and summary show independent **Email** and **In-app**
 channel permissions. Email defaults to enabled and In-app defaults to disabled.
 Disabling Email removes that configuration from affiliate email authoring.
