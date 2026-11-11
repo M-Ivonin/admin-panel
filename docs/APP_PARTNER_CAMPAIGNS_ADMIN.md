@@ -20,8 +20,11 @@ redirects to that path. The image endpoint verifies uploaded static PNG or
 JPEG files up to 5 MiB. Matches uses the built-in stadium artwork when no
 image is uploaded. An optional custom image replaces only the background on
 every device and needs alternative text in each configured banner locale.
-Write a readable disclosure in each locale. English is the fallback. The approved
-jurisdiction policy supplies the warning, support and terms.
+When creating a campaign, the selected operator market’s saved affiliate
+disclosures prefill the matching EN, ES, and PT fields. Edit the text for the
+campaign if needed. A prefilled disclosure alone does not add a translation
+to the campaign. English is the fallback. The approved jurisdiction policy
+supplies the warning, support and terms.
 
 The fixture preview simulates app eligibility using loaded market policy,
 platform, placement, locale, device, visits, commerce and age inputs. It

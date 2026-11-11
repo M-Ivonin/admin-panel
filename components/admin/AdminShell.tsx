@@ -85,6 +85,11 @@ const groups = [
         icon: Flag,
       },
       {
+        label: 'Partner Markets',
+        href: '/dashboard/partner-markets',
+        icon: Globe2,
+      },
+      {
         label: 'Email Marketing',
         href: '/dashboard/email-marketing',
         icon: Mail,
@@ -111,11 +116,6 @@ const groups = [
     label: 'Configuration',
     items: [
       { label: 'Home Banner', href: '/dashboard/home-banner', icon: Bell },
-      {
-        label: 'Partner Markets',
-        href: '/dashboard/partner-markets',
-        icon: Globe2,
-      },
       {
         label: 'Match Ranking',
         href: '/dashboard/match-ranking',

@@ -1,6 +1,6 @@
 # Partner markets admin screen
 
-`/dashboard/partner-markets` is the authenticated admin surface for the two
+Open **Growth → Partner Markets** (`/dashboard/partner-markets`) for the two
 backend-owned registries that authorize partner marketing:
 
 - **Jurisdiction rules** consumes `marketing_jurisdictions` through

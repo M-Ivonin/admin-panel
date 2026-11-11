@@ -36,6 +36,7 @@ import {
   placementLabels,
   platformLabels,
   type AppPartnerCampaign,
+  type AppPartnerCampaignCopy,
   type AppPartnerLocale,
 } from '@/modules/app-partner-campaigns/types';
 import {
@@ -57,6 +58,10 @@ interface Props {
   onSaved: (campaign: AppPartnerCampaign) => Promise<void>;
 }
 
+type CampaignEditorForm = Omit<CampaignForm, 'copyByLocale'> & {
+  copyByLocale: Record<string, Partial<AppPartnerCampaignCopy>>;
+};
+
 const steps = ['Campaign setup', 'Localized creative', 'Fixture preview'];
 
 const gridSx = {
@@ -73,7 +78,9 @@ export function CampaignEditor({
   onClose,
   onSaved,
 }: Props) {
-  const [form, setForm] = useState(() => campaignForm(campaign));
+  const [form, setForm] = useState<CampaignEditorForm>(() =>
+    campaignForm(campaign)
+  );
   const [step, setStep] = useState(0);
   const editor = useRef<HTMLElement>(null);
   const stepNavigation = useRef<HTMLDivElement>(null);
@@ -96,7 +103,29 @@ export function CampaignEditor({
   }, [error]);
   const market = markets.find((item) => item.id === form.partnerMarketConfigId);
   const rule = jurisdictionFor(market, jurisdictions);
-  const copy = form.copyByLocale[locale] ?? emptyCampaignCopy;
+  const partnerDisclosures: Partial<Record<string, string>> | null | undefined =
+    campaign ? undefined : market?.affiliateDisclosureByLocale;
+  const localizedCopy = (language: string): AppPartnerCampaignCopy => {
+    const savedCopy = form.copyByLocale[language];
+    return {
+      ...emptyCampaignCopy,
+      ...savedCopy,
+      affiliateDisclosure:
+        savedCopy?.affiliateDisclosure ?? partnerDisclosures?.[language] ?? '',
+    };
+  };
+  const copy = localizedCopy(locale);
+  // Suggestions alone do not create a translation that needs a label and button.
+  const campaignFormWithCopy: CampaignForm = {
+    ...form,
+    copyByLocale: Object.fromEntries(
+      Object.entries(form.copyByLocale)
+        .filter(([, editedCopy]) =>
+          Object.values(editedCopy).some((value) => value?.trim())
+        )
+        .map(([language]) => [language, localizedCopy(language)])
+    ),
+  };
   const busy = saving || uploading;
   const title = campaign
     ? 'Edit app partner campaign'
@@ -126,16 +155,16 @@ export function CampaignEditor({
     stepNavigation.current?.focus();
   }
 
-  const set = <K extends keyof CampaignForm>(
+  const set = <K extends keyof CampaignEditorForm>(
     key: K,
-    value: CampaignForm[K]
+    value: CampaignEditorForm[K]
   ) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
   async function submit() {
     setError(null);
     try {
-      const input = campaignInput(form, market, rule);
+      const input = campaignInput(campaignFormWithCopy, market, rule);
       setSaving(true);
       const saved = await saveAppPartnerCampaign(input, campaign);
       await onSaved(saved);
@@ -504,7 +533,7 @@ export function CampaignEditor({
                             set('copyByLocale', {
                               ...form.copyByLocale,
                               [locale]: {
-                                ...copy,
+                                ...form.copyByLocale[locale],
                                 [field]: event.target.value,
                               },
                             })
@@ -591,7 +620,7 @@ export function CampaignEditor({
             {step === 2 ? (
               <SectionCard title="Fixture preview">
                 <CampaignFixturePreview
-                  form={form}
+                  form={campaignFormWithCopy}
                   editing={campaign}
                   campaigns={campaigns}
                   markets={markets}

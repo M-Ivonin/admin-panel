@@ -13,15 +13,21 @@ jest.mock('next/navigation', () => ({
 }));
 
 describe('partner markets navigation', () => {
-  it('links the sidebar to the partner markets route', () => {
+  it('links to Partner Markets next to App Partner Campaigns in Growth', () => {
     render(
       <AdminShell>
         <div>Dashboard content</div>
       </AdminShell>
     );
+    const markets = screen.getByRole('link', { name: 'Partner Markets' });
+    const campaigns = screen.getByRole('link', {
+      name: 'App Partner Campaigns',
+    });
+    expect(markets).toHaveAttribute('href', '/dashboard/partner-markets');
     expect(
-      screen.getByRole('link', { name: /Partner markets/i })
-    ).toHaveAttribute('href', '/dashboard/partner-markets');
+      screen.getByText('Growth', { exact: true }).parentElement
+    ).toContainElement(markets);
+    expect(campaigns.nextElementSibling).toBe(markets);
   });
 
   it('links Email Marketing separately while preserving Campaigns', () => {

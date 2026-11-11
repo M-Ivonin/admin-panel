@@ -286,6 +286,80 @@ it('saves a disabled draft with explicit timezone and rejects a one-session mini
   );
 });
 
+it('prefills partner disclosures for new creative without requiring unused translations', async () => {
+  const firstMarket = {
+    ...market,
+    affiliateDisclosureByLocale: {
+      en: 'Partner EN',
+      es: 'Partner ES',
+      pt: 'Partner PT',
+    },
+  };
+  const secondMarket = {
+    ...firstMarket,
+    id: 'other-market',
+    operatorDisplayName: 'Other Bet',
+    affiliateDisclosureByLocale: {
+      en: 'Other EN',
+      es: 'Other ES',
+      pt: 'Other PT',
+    },
+  };
+  jest
+    .mocked(getPartnerMarketConfigs)
+    .mockResolvedValue([firstMarket, secondMarket]);
+  jest.mocked(saveAppPartnerCampaign).mockResolvedValue(campaign);
+  render(<AppPartnerCampaignsPage />);
+  await screen.findByText('No app partner campaigns found');
+  fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }));
+  const editor = screen.getByRole('region', {
+    name: 'Create app partner campaign',
+  });
+  change(editor, 'Campaign name', 'Sweden fixture');
+  choose(
+    editor,
+    'Operator-market configuration',
+    'Example Bet · SE · In-app on'
+  );
+  change(editor, 'Starts at', '2026-11-09T13:30');
+  change(editor, 'Ends at', '2026-11-10T13:30');
+  click(editor, 'button', 'Localized creative');
+  const disclosure = () =>
+    within(editor).getByLabelText('Affiliate disclosure');
+  expect(disclosure()).toHaveValue('Partner EN');
+  expect(within(editor).getByLabelText('Advertising label')).toHaveValue('');
+  choose(editor, 'Creative locale', 'ES');
+  expect(disclosure()).toHaveValue('Partner ES');
+  change(editor, 'Affiliate disclosure', '');
+  choose(editor, 'Creative locale', 'PT');
+  expect(disclosure()).toHaveValue('Partner PT');
+  click(editor, 'button', 'Campaign setup');
+  choose(editor, 'Operator-market configuration', 'Other Bet · SE · In-app on');
+  click(editor, 'button', 'Localized creative');
+  expect(disclosure()).toHaveValue('Other PT');
+  choose(editor, 'Creative locale', 'ES');
+  expect(disclosure()).toHaveValue('');
+  choose(editor, 'Creative locale', 'EN');
+  expect(disclosure()).toHaveValue('Other EN');
+  change(editor, 'Advertising label', 'Sponsored');
+  change(editor, 'Button text', 'Visit Other Bet');
+  click(editor, 'button', 'Save draft');
+  await screen.findByText('Sweden fixture saved.');
+  expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
+    expect.objectContaining({
+      partnerMarketConfigId: secondMarket.id,
+      copyByLocale: {
+        en: {
+          adLabel: 'Sponsored',
+          cta: 'Visit Other Bet',
+          affiliateDisclosure: 'Other EN',
+        },
+      },
+    }),
+    undefined
+  );
+}, 15_000);
+
 it('previews a sample campaign, age prompt, localized fallback and ad-free suppression without writes', async () => {
   const competitor = {
     ...campaign,
