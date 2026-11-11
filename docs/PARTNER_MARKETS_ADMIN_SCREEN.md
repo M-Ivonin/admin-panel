@@ -47,10 +47,11 @@ EN/ES/PT email affiliate disclosures. The save leaves previously stored values
 in place, so they are available when Email is enabled again. App Partner
 Campaigns still require their own creative disclosure and use warning, support,
 and terms from the in-app jurisdiction policy.
-Pause and the kill switch apply across both channels. **In-app banner affiliate
-link** is the optional HTTPS link for the Matches banner. It must use an approved
-hostname. Clearing it removes that banner destination. The **Exact operator
-destination URL** remains the destination for the email offer flow. When a
+Pause and the kill switch apply across both channels. Saving with **In-app**
+enabled requires the HTTPS **In-app banner affiliate link** and at least one
+**Final operator hostname**. Both fields are optional with **In-app** disabled.
+The link must use an approved hostname. The **Exact operator destination URL**
+remains the destination for the email offer flow. When a
 configuration changes while its editor is open, reload the list and reopen
 the latest record before saving.
 

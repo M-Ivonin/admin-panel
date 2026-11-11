@@ -220,7 +220,10 @@ export function validatePartnerMarketConfigForm(
     }
   }
   const finalHosts = input.inAppFinalDestinationHosts ?? [];
-  if (finalHosts.length > 10) {
+  if (input.inAppEnabled && finalHosts.length === 0) {
+    errors.inAppFinalDestinationHosts =
+      'Add at least one final operator hostname when In-app is enabled.';
+  } else if (finalHosts.length > 10) {
     errors.inAppFinalDestinationHosts = 'Enter up to 10 final operator hostnames.';
   } else if (
     finalHosts.some((host) => !input.approvedDestinationHosts.includes(host))
@@ -228,7 +231,10 @@ export function validatePartnerMarketConfigForm(
     errors.inAppFinalDestinationHosts =
       'Every final operator hostname must also be an approved hostname.';
   }
-  if (input.inAppBannerAffiliateUrl) {
+  if (input.inAppEnabled && !input.inAppBannerAffiliateUrl) {
+    errors.inAppBannerAffiliateUrl =
+      'Enter an in-app banner affiliate link when In-app is enabled.';
+  } else if (input.inAppBannerAffiliateUrl) {
     const bannerHost = getStandardHttpsHostname(input.inAppBannerAffiliateUrl);
     if (!bannerHost) {
       errors.inAppBannerAffiliateUrl = 'Enter a valid HTTPS banner link.';

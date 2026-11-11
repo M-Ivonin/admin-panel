@@ -700,7 +700,15 @@ function PartnerMarketFormDialog({
               control={
                 <Switch
                   checked={values.inAppEnabled}
-                  onChange={(e) => set('inAppEnabled', e.target.checked)}
+                  onChange={(e) => {
+                    set('inAppEnabled', e.target.checked);
+                    setErrors((current) => {
+                      const next = { ...current };
+                      delete next.inAppBannerAffiliateUrl;
+                      delete next.inAppFinalDestinationHosts;
+                      return next;
+                    });
+                  }}
                 />
               }
               label="In-app"
@@ -709,14 +717,16 @@ function PartnerMarketFormDialog({
               <FormText
                 label="In-app banner affiliate link"
                 field="inAppBannerAffiliateUrl"
+                required={values.inAppEnabled}
                 values={values}
                 errors={errors}
                 set={set}
-                helper="HTTPS affiliate link to the operator homepage for all app banners. Leave blank to disable app banner destinations."
+                helper="HTTPS affiliate link to the operator homepage for all app banners."
               />
               <FormText
                 label="Final operator hostnames"
                 field="inAppFinalDestinationHosts"
+                required={values.inAppEnabled}
                 values={values}
                 errors={errors}
                 set={set}
@@ -1063,6 +1073,7 @@ type FormTextProps = {
     value: PartnerMarketConfigFormValues[K]
   ) => void;
   disabled?: boolean;
+  required?: boolean;
   multiline?: boolean;
   helper?: string;
   type?: string;
@@ -1076,6 +1087,7 @@ function FormText({
   errors,
   set,
   disabled,
+  required,
   multiline,
   helper,
   type,
@@ -1090,6 +1102,7 @@ function FormText({
       error={Boolean(errors[field])}
       helperText={errors[field] ?? helper}
       disabled={disabled}
+      required={required}
       multiline={multiline}
       minRows={multiline ? 2 : undefined}
       type={type}

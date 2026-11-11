@@ -550,7 +550,7 @@ describe('PartnerMarketsPage', () => {
     expect(dialog.getByText('Jurisdiction platforms: iOS')).toBeVisible();
     expect(dialog.getByText('Android is not allowed by this jurisdiction.')).toBeVisible();
     expect(dialog.getByText('An in-app banner affiliate link is required.')).toBeVisible();
-    const bannerLink = dialog.getByLabelText('In-app banner affiliate link');
+    const bannerLink = dialog.getByRole('textbox', { name: 'In-app banner affiliate link' });
     for (const value of [
       'https://unapproved.example/banner',
       'https://example.bet/banner#offer',
@@ -575,6 +575,10 @@ describe('PartnerMarketsPage', () => {
     expect(await dialog.findByText('Enter a whole number above 21, up to 125.')).toBeVisible();
     expect(savePartnerMarketConfig).not.toHaveBeenCalled();
     fireEvent.change(age, { target: { value: '23' } });
+    fireEvent.change(bannerLink, { target: { value: 'https://example.bet/' } });
+    fireEvent.change(dialog.getByRole('textbox', { name: 'Final operator hostnames' }), {
+      target: { value: 'example.bet' },
+    });
     fireEvent.click(save);
     await screen.findByText('Example Bet configuration saved.');
     expect(savePartnerMarketConfig).toHaveBeenCalledWith(expect.objectContaining({
@@ -614,6 +618,7 @@ describe('PartnerMarketsPage', () => {
         emailEnabled,
         inAppEnabled,
         inAppBannerAffiliateUrl,
+        inAppFinalDestinationHosts: inAppEnabled ? ['example.bet'] : [],
       };
       (getPartnerMarketConfigs as jest.Mock)
         .mockResolvedValueOnce([legacyConfig])
@@ -630,10 +635,22 @@ describe('PartnerMarketsPage', () => {
       await within(editDialog).findByText('Inherited from Jurisdiction Rules');
       if (!emailEnabled)
         fireEvent.click(within(editDialog).getByLabelText('Email'));
-      if (inAppEnabled)
+      if (inAppEnabled) {
         fireEvent.click(within(editDialog).getByLabelText('In-app'));
+        fireEvent.click(
+          within(editDialog).getByRole('button', { name: 'Save configuration' })
+        );
+        expect(within(editDialog).getByRole('textbox', { name: 'In-app banner affiliate link' }))
+          .toHaveAccessibleDescription('Enter an in-app banner affiliate link when In-app is enabled.');
+        expect(within(editDialog).getByRole('textbox', { name: 'Final operator hostnames' }))
+          .toHaveAccessibleDescription('Add at least one final operator hostname when In-app is enabled.');
+        expect(savePartnerMarketConfig).not.toHaveBeenCalled();
+        fireEvent.change(within(editDialog).getByRole('textbox', { name: 'Final operator hostnames' }), {
+          target: { value: 'example.bet' },
+        });
+      }
       fireEvent.change(
-        within(editDialog).getByLabelText('In-app banner affiliate link'),
+        within(editDialog).getByRole('textbox', { name: 'In-app banner affiliate link' }),
         {
           target: { value: inAppBannerAffiliateUrl },
         }
@@ -648,6 +665,7 @@ describe('PartnerMarketsPage', () => {
           emailEnabled,
           inAppEnabled,
           inAppBannerAffiliateUrl,
+          inAppFinalDestinationHosts: saved.inAppFinalDestinationHosts,
           ...(emailEnabled ? { operatorDestinationUrl: legacyConfig.operatorDestinationUrl } : {}),
           legalReviewedAt: legacyConfig.legalReviewedAt,
           configVersion: legacyConfig.configVersion,
@@ -668,10 +686,16 @@ describe('PartnerMarketsPage', () => {
       });
       await within(reopenedDialog).findByText('Inherited from Jurisdiction Rules');
       expect(
-        within(reopenedDialog).getByLabelText('In-app banner affiliate link')
+        within(reopenedDialog).getByRole('textbox', { name: 'In-app banner affiliate link' })
       ).toHaveValue(inAppBannerAffiliateUrl);
+      if (inAppEnabled) {
+        fireEvent.click(within(reopenedDialog).getByLabelText('In-app'));
+      }
+      fireEvent.change(within(reopenedDialog).getByRole('textbox', { name: 'Final operator hostnames' }), {
+        target: { value: '' },
+      });
       fireEvent.change(
-        within(reopenedDialog).getByLabelText('In-app banner affiliate link'),
+        within(reopenedDialog).getByRole('textbox', { name: 'In-app banner affiliate link' }),
         {
           target: { value: '' },
         }
@@ -683,7 +707,11 @@ describe('PartnerMarketsPage', () => {
       );
       await waitFor(() =>
         expect(savePartnerMarketConfig).toHaveBeenLastCalledWith(
-          expect.objectContaining({ inAppBannerAffiliateUrl: null })
+          expect.objectContaining({
+            inAppEnabled: false,
+            inAppBannerAffiliateUrl: null,
+            inAppFinalDestinationHosts: [],
+          })
         )
       );
     }
@@ -806,6 +834,7 @@ describe('PartnerMarketsPage', () => {
       emailEnabled: false,
       inAppEnabled: true,
       inAppBannerAffiliateUrl: 'https://example.bet/banner',
+      inAppFinalDestinationHosts: ['example.bet'],
       operatorDestinationUrl: null,
       operatorTermsUrl: null,
       affiliateDisclosureByLocale: null,
