@@ -430,12 +430,15 @@ it('activates a campaign in a new country using its approved configuration', asy
   const editor = screen.getByRole('region', { name: 'Edit app partner campaign' });
   expect(within(editor).getByText('iOS age assurance: Self-declaration')).toBeVisible();
   expect(within(editor).queryByRole('combobox', { name: /age assurance/i })).toBeNull();
+  const skip = within(editor).getByRole('checkbox', { name: 'Skip redirect verification' });
+  expect(skip).not.toBeChecked();
+  fireEvent.click(skip);
   choose(editor, 'Status', 'Active');
   click(editor, 'button', 'Continue');
   click(editor, 'button', 'Activate campaign');
   await screen.findByText('Brazil fixture saved.');
   expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
-    expect.objectContaining({ status: 'active', partnerMarketConfigId: market.id, platforms: ['ios'] }),
+    expect.objectContaining({ status: 'active', partnerMarketConfigId: market.id, platforms: ['ios'], skipRedirectVerification: true }),
     expect.objectContaining({ id: campaign.id, version: campaign.version })
   );
 });

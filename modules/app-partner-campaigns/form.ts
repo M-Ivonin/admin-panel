@@ -56,6 +56,7 @@ export function campaignForm(campaign?: AppPartnerCampaign): CampaignForm {
     endsAt: campaign
       ? new Date(campaign.endsAt).toISOString().slice(0, -1)
       : '',
+    skipRedirectVerification: campaign?.skipRedirectVerification ?? false,
     minimumSessions: String(campaign?.minimumSessions ?? 2),
     minimumAge: String(campaign?.minimumAge ?? 18),
     priority: String(campaign?.priority ?? 0),
@@ -174,6 +175,7 @@ export function campaignInput(
     startsAt,
     endsAt,
     minimumSessions,
+    skipRedirectVerification: form.skipRedirectVerification ?? false,
     minimumAge,
     priority,
     copyByLocale,

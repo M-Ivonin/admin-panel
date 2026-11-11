@@ -44,6 +44,7 @@ export interface AppPartnerCampaignInput {
   startsAt: string;
   endsAt: string;
   minimumSessions: number;
+  skipRedirectVerification?: boolean;
   minimumAge: number;
   priority: number;
   copyByLocale: Record<string, AppPartnerCampaignCopy>;

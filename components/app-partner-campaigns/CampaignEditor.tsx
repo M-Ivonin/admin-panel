@@ -489,12 +489,26 @@ export function CampaignEditor({
                 <SectionCard title="Destinations">
                   <Stack spacing={2}>
                     <TextField
-                      label="Operator homepage affiliate link"
+                      label="Operator affiliate link"
                       value={market?.inAppBannerAffiliateUrl ?? ''}
                       InputProps={{ readOnly: true }}
                       InputLabelProps={{ shrink: true }}
                       helperText="All placements use this link from the selected Partner Markets configuration."
                     />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={form.skipRedirectVerification ?? false}
+                          onChange={(event) => set('skipRedirectVerification', event.target.checked)}
+                        />
+                      }
+                      label="Skip redirect verification"
+                    />
+                    {form.skipRedirectVerification && (
+                      <Alert severity="warning">
+                        Users will open the original affiliate link. The server will not verify where it redirects.
+                      </Alert>
+                    )}
                     <Typography variant="caption" color="text.secondary">
                       Final operator hostnames ·{' '}
                       {market?.inAppFinalDestinationHosts?.join(', ') ||
