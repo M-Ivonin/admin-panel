@@ -227,22 +227,27 @@ export function AppPartnerCampaignsDashboard() {
             <Box component="li">
               <Typography variant="subtitle2">Configure the partner for that market</Typography>
               <Typography variant="body2">
-                In <strong>Partner configurations</strong>, create or reuse an
-                approved configuration for the operator in the same market.
-                Turn on <strong>In-app</strong> and add the HTTPS banner
-                affiliate link. In <strong>Approved destination hosts</strong>,
-                include every hostname in the redirect chain to the operator’s
-                homepage. In <strong>Final operator hostnames</strong>, enter
-                the homepage hostname reached after redirects.
+                In <strong>Partner Markets → Partner configurations</strong>,
+                create or reuse an approved configuration for the operator in
+                the same market. Turn on <strong>In-app</strong> and fill in{' '}
+                <strong>In-app banner affiliate link</strong> and{' '}
+                <strong>Final operator hostnames</strong> together. Use an
+                HTTPS affiliate link and enter the operator homepage hostnames
+                it reaches after redirects. Include those hostnames and every
+                intermediate hostname in{' '}
+                <strong>Approved destination hosts</strong>.
               </Typography>
             </Box>
             <Box component="li">
               <Typography variant="subtitle2">Create and activate the campaign</Typography>
               <Typography variant="body2">
                 Select <strong>Create campaign</strong> and choose the partner
-                configuration, platforms, placements, and schedule. Add the
-                English ad copy and check <strong>Fixture preview</strong>. Then set the status to{' '}
-                <strong>Active</strong> and select <strong>Activate campaign</strong>.
+                configuration. The campaign uses its affiliate link and final
+                operator hostnames. Choose the platforms, placements, and
+                schedule. Add the English ad copy and check{' '}
+                <strong>Fixture preview</strong>. Then set the status to{' '}
+                <strong>Active</strong> and select{' '}
+                <strong>Activate campaign</strong>.
               </Typography>
             </Box>
           </Stack>
