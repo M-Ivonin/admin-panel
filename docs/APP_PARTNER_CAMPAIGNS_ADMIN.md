@@ -2,6 +2,8 @@
 
 Open **Growth → App Partner Campaigns** to configure the large Matches banner,
 the banner on a match’s Predictions tab, and the fixed Full Analysis banner.
+The question mark next to the page title opens the setup guide, from approving
+a jurisdiction and configuring the partner market to activating the campaign.
 **Create campaign** opens the campaign builder with **Campaign setup**,
 **Localized creative**, and **Fixture preview**. Use the step buttons or
 **Back** and **Continue** to move through the builder. **Save draft** stores a

@@ -13,12 +13,23 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Link,
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import { Add, Campaign, Edit, PauseCircle, Refresh } from '@mui/icons-material';
+import {
+  Add,
+  Campaign,
+  Edit,
+  HelpOutline,
+  PauseCircle,
+  Refresh,
+} from '@mui/icons-material';
+import NextLink from 'next/link';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import {
   getAppPartnerCampaigns,
@@ -59,6 +70,7 @@ export function AppPartnerCampaignsDashboard() {
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
   const latestLoadId = useRef(0);
   const returnFocusId = useRef<string | null>(null);
 
@@ -146,6 +158,18 @@ export function AppPartnerCampaignsDashboard() {
             : 'Track impressions, taps and click-through rates for in-app partner placements.'
         }
         icon={<Campaign color="primary" />}
+        titleAddon={
+          <Tooltip title="Campaign setup guide">
+            <IconButton
+              size="small"
+              aria-label="Campaign setup guide"
+              aria-haspopup="dialog"
+              onClick={() => setHelpOpen(true)}
+            >
+              <HelpOutline fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        }
         actions={
           activeTab === 0 ? (
             <Button
@@ -162,6 +186,80 @@ export function AppPartnerCampaignsDashboard() {
           ) : null
         }
       />
+      <Dialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        aria-labelledby="app-partner-campaign-help-title"
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle id="app-partner-campaign-help-title">
+          Set up in-app partner ads
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2">
+            Set up the market first, then create and activate the campaign.
+          </Typography>
+          <Stack
+            component="ol"
+            spacing={2}
+            sx={{ listStyleType: 'decimal', pl: 3, my: 2 }}
+          >
+            <Box component="li">
+              <Typography variant="subtitle2">Approve the jurisdiction</Typography>
+              <Typography variant="body2">
+                Open{' '}
+                <Link
+                  component={NextLink}
+                  href="/dashboard/partner-markets"
+                  color="inherit"
+                  underline="always"
+                >
+                  Partner Markets
+                </Link>
+                {' → Jurisdiction rules. '}Create or reuse an approved rule for
+                the target country and region. In <strong>In-app partner ads</strong>,
+                set the expiry, allowed platforms, and minimum age. Choose{' '}
+                <strong>Self-declaration</strong> for age confirmation. Add the
+                warning, support link, and terms in English as the fallback.
+              </Typography>
+            </Box>
+            <Box component="li">
+              <Typography variant="subtitle2">Configure the partner for that market</Typography>
+              <Typography variant="body2">
+                In <strong>Partner configurations</strong>, create or reuse an
+                approved configuration for the operator in the same market.
+                Turn on <strong>In-app</strong> and add the HTTPS banner
+                affiliate link. In <strong>Approved destination hosts</strong>,
+                include every hostname in the redirect chain to the operator’s
+                homepage.
+              </Typography>
+            </Box>
+            <Box component="li">
+              <Typography variant="subtitle2">Create and activate the campaign</Typography>
+              <Typography variant="body2">
+                Select <strong>Create campaign</strong> and choose the partner
+                configuration, platforms, placements, and schedule. In{' '}
+                <strong>Final operator hostnames</strong>, enter the homepage
+                hostname reached after redirects. Add the English ad copy and
+                check <strong>Fixture preview</strong>. Then set the status to{' '}
+                <strong>Active</strong> and select <strong>Activate campaign</strong>.
+              </Typography>
+            </Box>
+          </Stack>
+          <Alert severity="info">
+            Drafts never show. Once an active campaign reaches its start time,
+            check it in the configured market on a supported app version. Use a
+            Free account that meets the age requirement and has reached the
+            campaign’s minimum number of app visits.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus color="inherit" onClick={() => setHelpOpen(false)}>
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Stack
         spacing={2}
         sx={{ maxWidth: 1280, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}
