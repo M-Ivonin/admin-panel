@@ -39,6 +39,9 @@ import {
 } from '@/modules/marketing-jurisdictions/validation';
 import { JurisdictionLocationFields } from '@/components/partner-markets/JurisdictionLocationFields';
 
+import { InAppJurisdictionFields } from './InAppJurisdictionFields';
+import { readInAppPolicy, toInAppPolicyDraft } from '@/modules/marketing-jurisdictions/in-app-policy-form';
+
 const statuses: MarketingJurisdictionStatus[] = [
   'legal_review_required',
   'approved',
@@ -158,17 +161,32 @@ function JurisdictionCard({ item, onEdit, onPause }: { item: MarketingJurisdicti
 
 function JurisdictionFormDialog({ rule, onClose, onSaved }: { rule: MarketingJurisdiction | null; onClose: () => void; onSaved: (saved: MarketingJurisdiction) => Promise<void> }) {
   const [values, setValues] = useState<MarketingJurisdictionFormValues>(() => rule ? toForm(rule) : { ...emptyMarketingJurisdictionForm });
+  const [appPolicy, setAppPolicy] = useState(() => toInAppPolicyDraft(rule?.inAppPartnerPolicy));
+  const [appPolicyError, setAppPolicyError] = useState<string | null>(null);
   const [errors, setErrors] = useState<MarketingJurisdictionFormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const set = <K extends keyof MarketingJurisdictionFormValues>(key: K, value: MarketingJurisdictionFormValues[K]) => setValues((current) => ({ ...current, [key]: value }));
   const submit = async () => {
-    const nextErrors = validateMarketingJurisdictionForm(values);
+    const input = normalizeMarketingJurisdictionForm(values);
+    if (rule) {
+      for (const field of ['rulesVersion', 'requiredWarningText', 'responsibleGamblingUrl', 'regulatorSourceUrl'] as const) {
+        if (values[field] === rule[field]) input[field] = rule[field];
+      }
+      for (const field of ['legalReviewedAt', 'legalReviewExpiresAt', 'effectiveFrom', 'effectiveUntil'] as const) {
+        const original = rule[field];
+        if (original && values[field] === toLocalDateTime(original)) input[field] = original;
+      }
+    }
+    const nextErrors = validateMarketingJurisdictionForm(values, input);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    const policy = readInAppPolicy(appPolicy);
+    setAppPolicyError(typeof policy === 'string' ? policy : null);
+    if (Object.keys(nextErrors).length || typeof policy === 'string') return;
     setSaving(true); setSubmitError(null);
     try { await onSaved(await saveMarketingJurisdiction({
-      ...normalizeMarketingJurisdictionForm(values),
+      ...input,
+      ...(policy || rule?.inAppPartnerPolicy ? { inAppPartnerPolicy: policy } : {}),
       ...(rule ? { expectedUpdatedAt: rule.updatedAt } : {}),
     })); }
     catch (caught) { setSubmitError(messageOf(caught)); }
@@ -189,6 +207,10 @@ function JurisdictionFormDialog({ rule, onClose, onSaved }: { rule: MarketingJur
       </Stack>
       <Typography variant="subtitle2">Allowed communication types</Typography>
       {permissionLabels.map(([key, label]) => <FormControlLabel key={key} control={<Switch checked={values[key]} onChange={(event) => set(key, event.target.checked)} />} label={label} />)}
+      <InAppJurisdictionFields value={appPolicy} error={appPolicyError} onChange={(next) => {
+        setAppPolicy(next);
+        setAppPolicyError(null);
+      }} />
       <FormText label="Required warning text" field="requiredWarningText" values={values} errors={errors} set={set} multiline />
       <FormText label="Warning layout rules (JSON)" field="warningLayoutRules" values={values} errors={errors} set={set} multiline helper="Use {} when no special layout rule applies." />
       <FormText label="Responsible gambling URL" field="responsibleGamblingUrl" values={values} errors={errors} set={set} />
@@ -246,7 +268,19 @@ function PauseJurisdictionDialog({ rule, onClose, onPaused }: { rule: MarketingJ
 
 function toForm(rule: MarketingJurisdiction): MarketingJurisdictionFormValues {
   return {
-    ...rule,
+    ...emptyMarketingJurisdictionForm,
+    countryCode: rule.countryCode,
+    status: rule.status,
+    predictionsEmailAllowed: rule.predictionsEmailAllowed,
+    productEmailAllowed: rule.productEmailAllowed,
+    partnerOfferEmailAllowed: rule.partnerOfferEmailAllowed,
+    combinedPredictionOfferAllowed: rule.combinedPredictionOfferAllowed,
+    bonusAdvertisingAllowed: rule.bonusAdvertisingAllowed,
+    matchSpecificPromotionAllowed: rule.matchSpecificPromotionAllowed,
+    requiredWarningText: rule.requiredWarningText,
+    responsibleGamblingUrl: rule.responsibleGamblingUrl,
+    regulatorSourceUrl: rule.regulatorSourceUrl,
+    rulesVersion: rule.rulesVersion,
     regionCode: rule.regionCode ?? '',
     minimumAge: String(rule.minimumAge),
     warningLayoutRules: JSON.stringify(rule.warningLayoutRules, null, 2),

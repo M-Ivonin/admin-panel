@@ -20,6 +20,7 @@ export interface InAppPartnerPolicy {
 
 export interface MarketingJurisdictionInput {
   expectedUpdatedAt?: string;
+  inAppPartnerPolicy?: InAppPartnerPolicy | null;
   countryCode: string;
   regionCode?: string;
   status: MarketingJurisdictionStatus;
@@ -46,7 +47,6 @@ export interface MarketingJurisdiction extends Omit<MarketingJurisdictionInput, 
   regionCode: string | null;
   effectiveUntil: string | null;
   statusReason: string | null;
-  inAppPartnerPolicy?: InAppPartnerPolicy | null;
   inAppRulesVersion?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -57,7 +57,7 @@ export interface MarketingJurisdictionFilters {
 }
 
 export interface MarketingJurisdictionFormValues
-  extends Omit<MarketingJurisdictionInput, 'minimumAge' | 'warningLayoutRules'> {
+  extends Omit<MarketingJurisdictionInput, 'minimumAge' | 'warningLayoutRules' | 'inAppPartnerPolicy'> {
   minimumAge: string;
   warningLayoutRules: string;
 }

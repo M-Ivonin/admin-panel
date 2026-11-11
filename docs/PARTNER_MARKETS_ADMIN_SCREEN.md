@@ -36,6 +36,13 @@ an immediate confirmed pause through
 communication types, minimum age, required warning/layout facts, regulatory
 sources, legal-review dates, effective dates, and an explicit rules version.
 
+Use **In-app partner ads** in the jurisdiction editor to configure the
+policy expiry, permitted platforms, each platform's minimum age and age
+assurance, and localized warning, support and terms. English is required as
+the fallback. Turning off **Configure in-app partner ads** and saving clears
+the policy. In-app eligibility also requires an effective approved rule and an
+eligible partner configuration. The backend owns the in-app policy version.
+
 The UI records legal and regulatory facts and restrictions. A draft never permits sending, and
 an approved record does not independently authorize a campaign: backend eligibility still combines
 recipient consent, age and geography, jurisdiction, partner-market configuration, campaign, offer,

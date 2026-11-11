@@ -52,10 +52,10 @@ export function normalizeMarketingJurisdictionForm(
 }
 
 export function validateMarketingJurisdictionForm(
-  values: MarketingJurisdictionFormValues
+  values: MarketingJurisdictionFormValues,
+  input = normalizeMarketingJurisdictionForm(values)
 ): MarketingJurisdictionFormErrors {
   const errors: MarketingJurisdictionFormErrors = {};
-  const input = normalizeMarketingJurisdictionForm(values);
   if (!COUNTRY_CODE_PATTERN.test(input.countryCode)) errors.countryCode = 'Enter a two-letter country code.';
   if (requiresMarketingRegion(input.countryCode) && !input.regionCode) {
     errors.regionCode = 'Region is required for this country.';
@@ -65,7 +65,7 @@ export function validateMarketingJurisdictionForm(
     errors.minimumAge = 'Enter a whole number from 1 to 125.';
   }
   if (!input.requiredWarningText) errors.requiredWarningText = 'Required.';
-  if (!input.rulesVersion || input.rulesVersion.length > 80) errors.rulesVersion = 'Required, up to 80 characters.';
+  if (!input.rulesVersion || Array.from(input.rulesVersion).length > 80) errors.rulesVersion = 'Required, up to 80 characters.';
   if (!isBackendUrl(input.responsibleGamblingUrl)) errors.responsibleGamblingUrl = 'Enter a valid URL.';
   if (!isBackendUrl(input.regulatorSourceUrl)) errors.regulatorSourceUrl = 'Enter a valid URL.';
   try {
@@ -78,10 +78,10 @@ export function validateMarketingJurisdictionForm(
   validateDate(errors, 'legalReviewExpiresAt', input.legalReviewExpiresAt);
   validateDate(errors, 'effectiveFrom', input.effectiveFrom);
   if (input.effectiveUntil) validateDate(errors, 'effectiveUntil', input.effectiveUntil);
-  if (!errors.legalReviewedAt && !errors.legalReviewExpiresAt && input.legalReviewExpiresAt <= input.legalReviewedAt) {
+  if (!errors.legalReviewedAt && !errors.legalReviewExpiresAt && Date.parse(input.legalReviewExpiresAt) <= Date.parse(input.legalReviewedAt)) {
     errors.legalReviewExpiresAt = 'Expiry must be after the legal review date.';
   }
-  if (!errors.effectiveFrom && !errors.effectiveUntil && input.effectiveUntil && input.effectiveUntil <= input.effectiveFrom) {
+  if (!errors.effectiveFrom && !errors.effectiveUntil && input.effectiveUntil && Date.parse(input.effectiveUntil) <= Date.parse(input.effectiveFrom)) {
     errors.effectiveUntil = 'End date must be after the effective start.';
   }
   return errors;

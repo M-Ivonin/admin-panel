@@ -159,6 +159,74 @@ describe('PartnerMarketsPage', () => {
     expect(getMarketingJurisdictions).toHaveBeenCalledWith({ countryCode: '' });
   });
 
+  it('edits and removes the in-app policy through the jurisdiction dialog', async () => {
+    const policy = {
+      expiresAt: '2027-07-01T12:00:30.000Z',
+      platforms: { ios: { minimumAge: 21, assurance: 'verified' } },
+      disclosureByLocale: {
+        en: {
+          warning: 'Play responsibly.',
+          supportUrl: 'https://example.fr/support',
+          termsUrl: 'https://example.fr/terms',
+        },
+      },
+    };
+    const rule = {
+      ...frJurisdiction,
+      rulesVersion: `${'r'.repeat(78)}😀 `,
+      requiredWarningText: '18+. Play responsibly. ',
+      legalReviewedAt: '2026-08-01T00:00:05.000Z',
+      legalReviewExpiresAt: '2026-08-01T00:00:55.000Z',
+      inAppPartnerPolicy: policy,
+    };
+    const updated = {
+      ...rule,
+      inAppPartnerPolicy: {
+        ...policy,
+        platforms: { ios: { ...policy.platforms.ios, minimumAge: 22 } },
+      },
+    };
+    (getPartnerMarketConfigs as jest.Mock).mockResolvedValue([]);
+    (getMarketingJurisdictions as jest.Mock)
+      .mockResolvedValueOnce([rule])
+      .mockResolvedValueOnce([updated])
+      .mockResolvedValue([{ ...updated, inAppPartnerPolicy: null }]);
+    (saveMarketingJurisdiction as jest.Mock)
+      .mockResolvedValueOnce(updated)
+      .mockResolvedValue({ ...updated, inAppPartnerPolicy: null });
+
+    render(<PartnerMarketsPage />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Jurisdiction rules' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    const age = screen.getByRole('spinbutton', { name: 'iOS minimum age' });
+    expect(age).toHaveValue(21);
+    fireEvent.change(age, { target: { value: '17' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
+    expect(await screen.findByText('iOS minimum age must be a whole number from 18 to 125.')).toBeVisible();
+    expect(saveMarketingJurisdiction).not.toHaveBeenCalled();
+
+    fireEvent.change(age, { target: { value: '22' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
+    await screen.findByText('FR jurisdiction rule saved.');
+    expect(saveMarketingJurisdiction).toHaveBeenLastCalledWith(expect.objectContaining({
+      inAppPartnerPolicy: updated.inAppPartnerPolicy,
+      expectedUpdatedAt: rule.updatedAt,
+      rulesVersion: rule.rulesVersion,
+      requiredWarningText: rule.requiredWarningText,
+      legalReviewedAt: rule.legalReviewedAt,
+      legalReviewExpiresAt: rule.legalReviewExpiresAt,
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByRole('spinbutton', { name: 'iOS minimum age' })).toHaveValue(22);
+    fireEvent.click(screen.getByLabelText('Configure in-app partner ads'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rule' }));
+    await waitFor(() => expect(saveMarketingJurisdiction).toHaveBeenLastCalledWith(
+      expect.objectContaining({ inAppPartnerPolicy: null })
+    ));
+  });
+
   it('keeps jurisdiction creation independent from a pending partner request', async () => {
     (getPartnerMarketConfigs as jest.Mock).mockReturnValue(
       new Promise(() => undefined)
