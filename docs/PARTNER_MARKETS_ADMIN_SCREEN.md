@@ -19,6 +19,18 @@ allowlist. The five core values (`registration`, `ftd`, `deposit`,
 `commission`, and `reversal`) are always preserved; operators may add only
 normalized, backend-valid extra values through the same configuration command.
 
+The partner editor shows the matched jurisdiction's warning and responsible
+gambling URL as read-only values. Saving copies those values into the
+existing partner API fields. The optional higher partner minimum age must
+exceed the market minimum. Clearing an entered override removes the extra
+partner threshold. Existing stored ages at or below the market minimum are
+preserved on unrelated edits.
+
+The In-app switch shows the platforms the current jurisdiction permits
+and configuration-level blockers. Campaign and app rollout checks still
+apply. Creating or editing a configuration requires its exact jurisdiction
+rule to be available. The dedicated pause action remains available separately.
+
 The configuration editor and summary show independent **Email** and **In-app**
 channel permissions. Email defaults to enabled and In-app defaults to disabled.
 Disabling Email removes that configuration from affiliate email authoring.

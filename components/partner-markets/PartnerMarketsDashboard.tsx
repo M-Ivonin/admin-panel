@@ -44,6 +44,8 @@ import {
   validatePartnerMarketConfigForm,
 } from '@/modules/partner-market-configs/validation';
 
+import { inAppSummary } from '@/modules/partner-market-configs/in-app-summary';
+
 const statuses: PartnerMarketConfigStatus[] = [
   'draft',
   'approved',
@@ -440,14 +442,27 @@ function PartnerMarketFormDialog({
   const [jurisdictions, setJurisdictions] = useState<MarketingJurisdiction[]>(
     []
   );
-  const [jurisdictionsLoading, setJurisdictionsLoading] = useState(!config);
+  const [jurisdictionsLoading, setJurisdictionsLoading] = useState(true);
   const [jurisdictionsError, setJurisdictionsError] = useState<string | null>(
     null
   );
   const [jurisdictionId, setJurisdictionId] = useState('');
+  const [ageOverride, setAgeOverride] = useState<string | null>(null);
+  const jurisdiction = jurisdictions.find((rule) =>
+    config
+      ? rule.countryCode === config.countryCode &&
+        rule.regionCode === config.regionCode
+      : rule.id === jurisdictionId
+  );
+  const marketAge = Math.max(18, jurisdiction?.minimumAge ?? 18);
+  const displayedAge =
+    ageOverride ??
+    (config && config.minimumAge > marketAge ? String(config.minimumAge) : '');
+  const inApp = jurisdiction
+    ? inAppSummary(values, jurisdiction, Date.now())
+    : null;
 
   useEffect(() => {
-    if (config) return;
     let active = true;
     setJurisdictionsLoading(true);
     setJurisdictionsError(null);
@@ -464,19 +479,41 @@ function PartnerMarketFormDialog({
     return () => {
       active = false;
     };
-  }, [config]);
+  }, []);
   const set = <K extends keyof PartnerMarketConfigFormValues>(
     key: K,
     value: PartnerMarketConfigFormValues[K]
   ) => setValues((current) => ({ ...current, [key]: value }));
   const submit = async () => {
-    const nextErrors = validatePartnerMarketConfigForm(values);
+    if (!jurisdiction || jurisdictionsLoading || jurisdictionsError) return;
+    setSubmitError(null);
+    const inheritedValues = {
+      ...values,
+      minimumAge:
+        displayedAge ||
+        String(ageOverride === null ? (config?.minimumAge ?? 18) : 18),
+      requiredWarningText: jurisdiction.requiredWarningText,
+      responsibleGamblingUrl: jurisdiction.responsibleGamblingUrl,
+    };
+    const nextErrors = validatePartnerMarketConfigForm(inheritedValues);
+    if (
+      displayedAge &&
+      (!/^\d+$/.test(displayedAge) ||
+        nextErrors.minimumAge ||
+        Number(displayedAge) <= marketAge)
+    ) {
+      nextErrors.minimumAge = `Enter a whole number above ${marketAge}, up to 125.`;
+    }
+    if (nextErrors.requiredWarningText || nextErrors.responsibleGamblingUrl) {
+      setSubmitError(
+        'Complete the warning and responsible gambling URL in Jurisdiction Rules before saving.'
+      );
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setSaving(true);
-    setSubmitError(null);
     try {
-      const input = normalizePartnerMarketConfigForm(values);
+      const input = normalizePartnerMarketConfigForm(inheritedValues);
       if (config) {
         input.expectedUpdatedAt = config.updatedAt;
         for (const field of [
@@ -603,6 +640,7 @@ function PartnerMarketFormDialog({
                     (item) => item.id === event.target.value
                   );
                   setJurisdictionId(event.target.value);
+                  setAgeOverride(null);
                   if (!selected) return;
                   set('countryCode', selected.countryCode);
                   set('regionCode', selected.regionCode ?? '');
@@ -655,13 +693,43 @@ function PartnerMarketFormDialog({
             errors={errors}
             set={set}
           />
-          <FormText
-            label="Minimum age"
-            field="minimumAge"
-            values={values}
-            errors={errors}
-            set={set}
-            type="number"
+          {config &&
+            !jurisdiction &&
+            !jurisdictionsLoading &&
+            !jurisdictionsError && (
+              <Alert severity="warning">
+                No jurisdiction rule exists for this location. Add the matching
+                rule before saving.
+              </Alert>
+            )}
+          {jurisdiction && (
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">
+                Inherited from Jurisdiction Rules
+              </Typography>
+              <Detail
+                label="Jurisdiction warning"
+                value={jurisdiction.requiredWarningText}
+              />
+              <Detail
+                label="Responsible gambling URL"
+                value={jurisdiction.responsibleGamblingUrl}
+              />
+            </Stack>
+          )}
+          <TextField
+            label="Higher partner minimum age"
+            slotProps={{ htmlInput: { inputMode: 'numeric' } }}
+            value={displayedAge}
+            disabled={!jurisdiction || marketAge >= 125}
+            error={Boolean(errors.minimumAge)}
+            helperText={
+              errors.minimumAge ??
+              (jurisdiction
+                ? `Base minimum: ${marketAge}+. Leave blank to use it.`
+                : 'Select a jurisdiction rule to see the market minimum.')
+            }
+            onChange={(event) => setAgeOverride(event.target.value)}
           />
           <Stack>
             <Typography variant="subtitle2">Advertising channels</Typography>
@@ -686,6 +754,34 @@ function PartnerMarketFormDialog({
               }
               label="In-app"
             />
+            <Stack spacing={0.5} sx={{ pl: 1, overflowWrap: 'anywhere' }}>
+              <Typography variant="body2">
+                Jurisdiction platforms:{' '}
+                {inApp ? inApp.platforms.join(', ') || 'None' : '—'}
+              </Typography>
+              {(
+                inApp?.messages ?? [
+                  jurisdictionsLoading
+                    ? 'Loading jurisdiction rules…'
+                    : jurisdictionsError
+                      ? 'Jurisdiction rules could not be loaded.'
+                      : 'A matching jurisdiction rule is required.',
+                ]
+              ).map((message) => (
+                <Typography
+                  key={message}
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  {message}
+                </Typography>
+              ))}
+              {inApp?.platforms.length ? (
+                <Typography variant="caption" color="text.secondary">
+                  Campaign and app rollout checks also apply.
+                </Typography>
+              ) : null}
+            </Stack>
           </Stack>
           <Stack>
             <Typography variant="subtitle2">Allowed promotion types</Typography>
@@ -732,21 +828,6 @@ function PartnerMarketFormDialog({
               label="Match-specific promotion"
             />
           </Stack>
-          <FormText
-            label="Required warning text"
-            field="requiredWarningText"
-            values={values}
-            errors={errors}
-            set={set}
-            multiline
-          />
-          <FormText
-            label="Responsible gambling URL"
-            field="responsibleGamblingUrl"
-            values={values}
-            errors={errors}
-            set={set}
-          />
           <FormText
             label="Full operator terms URL"
             field="operatorTermsUrl"
@@ -863,7 +944,7 @@ function PartnerMarketFormDialog({
         <Button
           variant="contained"
           onClick={() => void submit()}
-          disabled={saving}
+          disabled={saving || jurisdictionsLoading || !jurisdiction}
         >
           {saving ? 'Saving…' : 'Save configuration'}
         </Button>

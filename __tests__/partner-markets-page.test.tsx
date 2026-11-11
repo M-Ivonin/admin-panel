@@ -508,6 +508,92 @@ describe('PartnerMarketsPage', () => {
     ).toBeInTheDocument();
   }, 15_000);
 
+  it('inherits jurisdiction disclosures and only accepts a stricter partner age', async () => {
+    const market = {
+      ...config,
+      countryCode: 'SE',
+      inAppEnabled: true,
+      legalReviewedAt: '2020-01-01T00:00:00Z',
+      effectiveFrom: '2020-01-01T00:00:00Z',
+      legalReviewExpiresAt: '2090-01-01T00:00:00Z',
+    };
+    const jurisdiction = {
+      ...frJurisdiction,
+      countryCode: 'SE',
+      minimumAge: 21,
+      requiredWarningText: 'Market-specific warning.',
+      responsibleGamblingUrl: 'https://example.se/support',
+      legalReviewedAt: '2020-01-01T00:00:00Z',
+      effectiveFrom: '2020-01-01T00:00:00Z',
+      legalReviewExpiresAt: '2090-01-01T00:00:00Z',
+      inAppRulesVersion: 'app-1',
+      inAppPartnerPolicy: {
+        expiresAt: '2090-01-01T00:00:00Z',
+        platforms: { ios: { minimumAge: 21, assurance: 'self_declaration' } },
+        disclosureByLocale: {
+          en: { warning: 'Warning', supportUrl: 'https://example.se/support', termsUrl: 'https://example.se/terms' },
+        },
+      },
+    };
+    (getPartnerMarketConfigs as jest.Mock)
+      .mockResolvedValueOnce([market])
+      .mockResolvedValue([{ ...market, minimumAge: 23 }]);
+    (getMarketingJurisdictions as jest.Mock).mockResolvedValue([jurisdiction]);
+    (savePartnerMarketConfig as jest.Mock).mockResolvedValue({ ...market, minimumAge: 23 });
+
+    render(<PartnerMarketsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    expect(await dialog.findByText('Market-specific warning.')).toBeVisible();
+    expect(dialog.getByText('https://example.se/support')).toBeVisible();
+    expect(dialog.getByText('Jurisdiction platforms: iOS')).toBeVisible();
+    expect(dialog.getByText('Android is not allowed by this jurisdiction.')).toBeVisible();
+    expect(dialog.getByText('An in-app banner affiliate link is required.')).toBeVisible();
+    const bannerLink = dialog.getByLabelText('In-app banner affiliate link');
+    for (const value of [
+      'https://unapproved.example/banner',
+      'https://example.bet/banner#offer',
+      `https://example.bet/${'a'.repeat(2029)}`,
+    ]) {
+      fireEvent.change(bannerLink, { target: { value } });
+      expect(dialog.getByText(/must be a valid HTTPS URL on an approved hostname/)).toBeVisible();
+    }
+    fireEvent.change(bannerLink, { target: { value: 'HTTPS://example.bet/' } });
+    expect(dialog.queryByText(/must be a valid HTTPS URL on an approved hostname/)).not.toBeInTheDocument();
+    fireEvent.change(bannerLink, { target: { value: '' } });
+    const inApp = dialog.getByLabelText('In-app', { exact: true });
+    fireEvent.click(inApp);
+    expect(dialog.getByText('In-app is switched off for this partner.')).toBeVisible();
+    fireEvent.click(inApp);
+    expect(dialog.queryByRole('textbox', { name: 'Required warning text' })).not.toBeInTheDocument();
+    const age = dialog.getByRole('textbox', { name: 'Higher partner minimum age' });
+    expect(age).toHaveValue('');
+    const save = dialog.getByRole('button', { name: 'Save configuration' });
+    fireEvent.change(age, { target: { value: '21' } });
+    fireEvent.click(save);
+    expect(await dialog.findByText('Enter a whole number above 21, up to 125.')).toBeVisible();
+    expect(savePartnerMarketConfig).not.toHaveBeenCalled();
+    fireEvent.change(age, { target: { value: '23' } });
+    fireEvent.click(save);
+    await screen.findByText('Example Bet configuration saved.');
+    expect(savePartnerMarketConfig).toHaveBeenCalledWith(expect.objectContaining({
+      minimumAge: 23,
+      requiredWarningText: jurisdiction.requiredWarningText,
+      responsibleGamblingUrl: jurisdiction.responsibleGamblingUrl,
+      inAppEnabled: true,
+    }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    const reopened = within(screen.getByRole('dialog', { name: 'Edit partner market' }));
+    await reopened.findByText('Inherited from Jurisdiction Rules');
+    const savedAge = reopened.getByRole('textbox', { name: 'Higher partner minimum age' });
+    expect(savedAge).toHaveValue('23');
+    fireEvent.change(savedAge, { target: { value: '2e' } });
+    fireEvent.click(reopened.getByRole('button', { name: 'Save configuration' }));
+    expect(await reopened.findByText('Enter a whole number above 21, up to 125.')).toBeVisible();
+    expect(savePartnerMarketConfig).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     [true, true],
     [true, false],
@@ -539,6 +625,7 @@ describe('PartnerMarketsPage', () => {
       const editDialog = screen.getByRole('dialog', {
         name: 'Edit partner market',
       });
+      await within(editDialog).findByText('Inherited from Jurisdiction Rules');
       if (!emailEnabled)
         fireEvent.click(within(editDialog).getByLabelText('Email'));
       if (inAppEnabled)
@@ -577,6 +664,7 @@ describe('PartnerMarketsPage', () => {
       const reopenedDialog = screen.getByRole('dialog', {
         name: 'Edit partner market',
       });
+      await within(reopenedDialog).findByText('Inherited from Jurisdiction Rules');
       expect(
         within(reopenedDialog).getByLabelText('In-app banner affiliate link')
       ).toHaveValue(inAppBannerAffiliateUrl);
@@ -615,6 +703,7 @@ describe('PartnerMarketsPage', () => {
     const editDialog = screen.getByRole('dialog', {
       name: 'Edit partner market',
     });
+    await within(editDialog).findByText('Inherited from Jurisdiction Rules');
     fireEvent.mouseDown(within(editDialog).getByLabelText('Status'));
     expect(
       screen.queryByRole('option', { name: /^paused$/ })
@@ -680,6 +769,7 @@ describe('PartnerMarketsPage', () => {
     const editDialog = screen.getByRole('dialog', {
       name: 'Edit partner market',
     });
+    await within(editDialog).findByText('Inherited from Jurisdiction Rules');
     expect(within(editDialog).getByLabelText('Operator logo URL')).toHaveValue(
       ''
     );
@@ -724,8 +814,6 @@ function fillRequiredForm(container: HTMLElement): void {
     'Operator logo URL': 'https://cdn.example/logo.png',
     'Licence reference': 'LIC-1',
     'Evidence URL': 'https://regulator.example/evidence',
-    'Required warning text': '18+. Play responsibly.',
-    'Responsible gambling URL': 'https://example.bet/responsible',
     'Full operator terms URL': 'https://example.bet/terms',
     'Exact operator destination URL': 'https://example.bet/offer',
     'Approved destination hosts': 'EXAMPLE.BET',

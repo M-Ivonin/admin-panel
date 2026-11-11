@@ -55,14 +55,6 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
 export function normalizePartnerMarketConfigForm(
   values: PartnerMarketConfigFormValues
 ): PartnerMarketConfigInput {
-  const hosts = Array.from(
-    new Set(
-      values.approvedDestinationHosts
-        .split(/[\n,]/)
-        .map((host) => host.trim().toLowerCase().replace(/\.$/, ''))
-        .filter(Boolean)
-    )
-  ).sort();
   const effectiveUntil = values.effectiveUntil?.trim() ?? '';
   const killSwitchReason = values.killSwitchReason?.trim();
   const affiliateConversionTypes = Array.from(
@@ -102,7 +94,9 @@ export function normalizePartnerMarketConfigForm(
     operatorTermsUrl: values.operatorTermsUrl.trim(),
     operatorDestinationUrl: values.operatorDestinationUrl.trim(),
     inAppBannerAffiliateUrl: values.inAppBannerAffiliateUrl.trim() || null,
-    approvedDestinationHosts: hosts,
+    approvedDestinationHosts: normalizeApprovedDestinationHosts(
+      values.approvedDestinationHosts
+    ),
     affiliateConversionTypes,
     legalReviewedAt: toIso(values.legalReviewedAt),
     legalReviewExpiresAt: toIso(values.legalReviewExpiresAt),
@@ -224,7 +218,9 @@ export function validatePartnerMarketConfigForm(
     .split(/[\n,]/)
     .map((type) => type.trim().toLowerCase())
     .filter(Boolean);
-  if (suppliedConversionTypes.some((type) => !CONVERSION_TYPE_PATTERN.test(type))) {
+  if (
+    suppliedConversionTypes.some((type) => !CONVERSION_TYPE_PATTERN.test(type))
+  ) {
     errors.affiliateConversionTypes =
       'Use lowercase letters, numbers, underscores, or hyphens (up to 64 characters).';
   }
@@ -284,7 +280,7 @@ function isBackendUrl(value: string): boolean {
 
 export function getStandardHttpsHostname(value: string): string | undefined {
   if (
-    !value.startsWith('https://') ||
+    !/^https:\/\//i.test(value) ||
     !isURL(value, {
       protocols: ['https'],
       require_protocol: true,
@@ -299,6 +295,45 @@ export function getStandardHttpsHostname(value: string): string | undefined {
   } catch {
     return;
   }
+}
+
+export function isApprovedAppBannerDestination(
+  value: string | null | undefined,
+  approvedHosts: readonly string[]
+): boolean {
+  if (
+    !value ||
+    value.length > 2048 ||
+    !/^https:\/\//i.test(value) ||
+    /[\s\\]/.test(value)
+  )
+    return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      !url.hash &&
+      /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]+$/.test(url.hostname) &&
+      !/^(?:\d+\.){3}\d+$/.test(url.hostname) &&
+      approvedHosts.includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function normalizeApprovedDestinationHosts(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .split(/[\n,]/)
+        .map((host) => host.trim().toLowerCase().replace(/\.$/, ''))
+        .filter(Boolean)
+    ),
+  ].sort();
 }
 
 function hasNormalizedHostDuplicates(value: string): boolean {

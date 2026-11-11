@@ -1,6 +1,9 @@
 import type { MarketingJurisdiction } from '@/modules/marketing-jurisdictions/types';
 import type { PartnerMarketConfig } from '@/modules/partner-market-configs/types';
-import { getStandardHttpsHostname } from '@/modules/partner-market-configs/validation';
+import {
+  getStandardHttpsHostname,
+  isApprovedAppBannerDestination,
+} from '@/modules/partner-market-configs/validation';
 import {
   platformLabels,
   type AppPartnerCampaign,
@@ -287,11 +290,7 @@ export function isApprovedDestination(
   url: string | null | undefined,
   market: PartnerMarketConfig
 ): boolean {
-  if (!url || url.length > 2048) return false;
-  const hostname = getStandardHttpsHostname(url);
-  return Boolean(
-    hostname && market.approvedDestinationHosts.includes(hostname)
-  );
+  return isApprovedAppBannerDestination(url, market.approvedDestinationHosts);
 }
 
 function scheduleIso(local: string, offset: string): string {
