@@ -368,7 +368,11 @@ it('previews a sample campaign, age prompt, localized fallback and ad-free suppr
     status: 'active' as const,
     copyByLocale: {
       ...campaign.copyByLocale,
-      pt: { ...campaign.copyByLocale.en, headline: 'Oferta da campanha' },
+      pt: {
+        ...campaign.copyByLocale.en,
+        adLabel: 'example bet',
+        headline: 'Oferta da campanha',
+      },
     },
   };
   jest.mocked(getAppPartnerCampaigns).mockResolvedValue([campaign, competitor]);
@@ -405,12 +409,18 @@ it('previews a sample campaign, age prompt, localized fallback and ad-free suppr
   ).toHaveLength(0);
   choose(editor, 'Preview locale', 'PT');
   expect(within(editor).getByText('Oferta da campanha')).toBeInTheDocument();
+  expect(within(editor).queryByText(/^example bet(?: ·|$)/)).toBeNull();
+  expect(within(editor).getByText('Anúncio')).toBeInTheDocument();
   choose(editor, 'Preview placement', 'Match · Predictions banner');
   expect(within(editor).queryByRole('img')).not.toBeInTheDocument();
   expect(
     within(editor).getByRole('button', { name: 'Visit Example Bet' })
   ).toBeDisabled();
   expect(within(editor).getByText('Oferta da campanha')).toBeInTheDocument();
+  expect(within(editor).queryByText(/^example bet(?: ·|$)/)).toBeNull();
+  expect(
+    within(editor).getByText('Anúncio · Affiliate disclosure fixture')
+  ).toBeInTheDocument();
   choose(editor, 'Preview locale', 'ES');
   expect(within(editor).queryByText(/Tu partido|Tu jugada/)).toBeNull();
   choose(editor, 'Preview placement', 'Full Analysis · Fixed banner');

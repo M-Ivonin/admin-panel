@@ -41,6 +41,12 @@ import {
 const previewButtonSx = {
   '&.Mui-disabled': { color: 'text.primary', borderColor: 'divider' },
 };
+// Match the localized fallback used by the mobile partner ad.
+const defaultAdLabels: Record<PreviewFixture['locale'], string> = {
+  en: 'Ad',
+  es: 'Anuncio',
+  pt: 'Anúncio',
+};
 const stadiumArtwork = 'url(/assets/partner_matchday_stadium.png)';
 const finePrintSx = { color: '#c2c2c2', fontSize: 12, lineHeight: '18px' };
 const headlineSx = { fontWeight: 700, whiteSpace: 'pre-line' };
@@ -310,6 +316,7 @@ export function CampaignFixturePreview({
             <CampaignCreativePreview
               winner={preview.winner}
               isBanner={fixture.placement === 'matches_banner'}
+              locale={fixture.locale}
             />
           )}
         </Stack>
@@ -326,11 +333,19 @@ export function CampaignFixturePreview({
 function CampaignCreativePreview({
   winner,
   isBanner,
+  locale,
 }: {
   winner: Extract<CampaignPreview, { winner: unknown }>['winner'];
   isBanner: boolean;
+  locale: PreviewFixture['locale'];
 }) {
   const { copy, imageUrl, market, minimumAge, warning } = winner;
+  const operator = market.operatorDisplayName.trim();
+  const adLabel = copy.adLabel.trim();
+  const advertisingLabel =
+    !adLabel || adLabel.toLowerCase() === operator.toLowerCase()
+      ? defaultAdLabels[locale]
+      : adLabel;
   const age = `${minimumAge}+`;
   const warningWithAge = new RegExp(`(?:^|[^0-9])${minimumAge}\\+`).test(warning)
     ? warning
@@ -419,7 +434,7 @@ function CampaignCreativePreview({
               <Typography
                 sx={{ fontSize: 13, fontWeight: 600, letterSpacing: 1 }}
               >
-                {market.operatorDisplayName}
+                {operator}
               </Typography>
               <Typography
                 sx={{
@@ -430,7 +445,7 @@ function CampaignCreativePreview({
                   py: 0.5,
                 }}
               >
-                {copy.adLabel}
+                {advertisingLabel}
               </Typography>
             </Stack>
             {copy.headline ? (
@@ -476,7 +491,7 @@ function CampaignCreativePreview({
             }}
           >
             <Typography noWrap sx={finePrintSx}>
-              {copy.adLabel} · {copy.affiliateDisclosure}
+              {advertisingLabel} · {copy.affiliateDisclosure}
             </Typography>
             <Typography
               noWrap
@@ -487,7 +502,7 @@ function CampaignCreativePreview({
                 textAlign: 'right',
               }}
             >
-              {market.operatorDisplayName}
+              {operator}
             </Typography>
           </Box>
           <Box
