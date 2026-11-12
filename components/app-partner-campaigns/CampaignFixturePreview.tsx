@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import NorthEastIcon from '@mui/icons-material/NorthEast';
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Chip,
   FormControlLabel,
   MenuItem,
   Stack,
@@ -27,6 +27,7 @@ import {
 } from '@/modules/app-partner-campaigns/types';
 import {
   resolveFixturePreview,
+  type CampaignPreview,
   type PreviewAccess,
   type PreviewAge,
   type PreviewFixture,
@@ -40,35 +41,9 @@ import {
 const previewButtonSx = {
   '&.Mui-disabled': { color: 'text.primary', borderColor: 'divider' },
 };
-const previewPartnerActionSx = {
-  '&.Mui-disabled': { bgcolor: '#d4ff50', color: '#111811' },
-};
-const stadiumBackground = {
-  bgcolor: '#0d1716',
-  backgroundImage:
-    'linear-gradient(#0d1716c7, #0d1716c7), url(/assets/partner_matchday_stadium.png)',
-  backgroundSize: 'cover',
-  backgroundPosition: 'right center',
-  borderRadius: 1.5,
-  color: 'common.white',
-};
-const stadiumTitles = {
-  en: {
-    banner: 'YOUR MATCH.\nYOUR CALL.',
-    footer: 'Your match.\nYour move.',
-    subtitle: 'Make it your matchday.',
-  },
-  es: {
-    banner: 'TU PARTIDO.\nTU DECISIÓN.',
-    footer: 'Tu partido.\nTu jugada.',
-    subtitle: 'Vive tu día de partido.',
-  },
-  pt: {
-    banner: 'SEU JOGO.\nSUA DECISÃO.',
-    footer: 'Seu jogo.\nSua jogada.',
-    subtitle: 'Viva o dia de jogo.',
-  },
-};
+const stadiumArtwork = 'url(/assets/partner_matchday_stadium.png)';
+const finePrintSx = { color: '#c2c2c2', fontSize: 12, lineHeight: '18px' };
+const headlineSx = { fontWeight: 700, whiteSpace: 'pre-line' };
 
 interface Props {
   form: CampaignForm;
@@ -306,7 +281,7 @@ export function CampaignFixturePreview({
           spacing={1.5}
           sx={{
             width: '100%',
-            maxWidth: fixture.device === 'phone' ? 360 : 720,
+            maxWidth: fixture.device === 'phone' ? 420 : 720,
             alignSelf: 'center',
           }}
         >
@@ -314,15 +289,9 @@ export function CampaignFixturePreview({
             Sample campaign · {preview.winner.campaign.name} · Priority{' '}
             {preview.winner.campaign.priority}
           </Typography>
-          <Card variant="outlined">
-            <CardContent
-              sx={
-                fixture.placement === 'matches_banner'
-                  ? undefined
-                  : { px: { xs: 0.5, sm: 2 } }
-              }
-            >
-              {preview.status === 'prompt' ? (
+          {preview.status === 'prompt' ? (
+            <Card variant="outlined">
+              <CardContent>
                 <Stack spacing={1}>
                   <Typography variant="h6">
                     {agePrompt(fixture.locale, preview.winner.minimumAge)}
@@ -335,183 +304,14 @@ export function CampaignFixturePreview({
                     ))}
                   </Stack>
                 </Stack>
-              ) : fixture.placement !== 'matches_banner' ? (
-                <Stack
-                  sx={{
-                    ...stadiumBackground,
-                    p: '8px 12px',
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  <Stack direction="row" justifyContent="space-between" gap={1}>
-                    <Typography
-                      noWrap
-                      sx={{ fontSize: 12, lineHeight: '18px' }}
-                    >
-                      {preview.winner.copy.adLabel} ·{' '}
-                      {preview.winner.copy.affiliateDisclosure}
-                    </Typography>
-                    <Typography
-                      noWrap
-                      sx={{ fontSize: 13, lineHeight: '18px', fontWeight: 600 }}
-                    >
-                      {preview.winner.market.operatorDisplayName}
-                    </Typography>
-                  </Stack>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: '6fr 5fr',
-                      gap: 1,
-                      alignItems: 'center',
-                      minHeight: 48,
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        fontSize: 16,
-                        lineHeight: '18px',
-                        fontWeight: 700,
-                        whiteSpace: 'pre-line',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {preview.winner.copy.headline ??
-                        stadiumTitles[fixture.locale].footer}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      disabled
-                      endIcon={<span aria-hidden>↗</span>}
-                      sx={{
-                        ...previewPartnerActionSx,
-                        minWidth: 0,
-                        minHeight: 40,
-                        px: 1,
-                        fontSize: 13,
-                        textTransform: 'none',
-                        justifyContent: 'space-between',
-                        borderRadius: 2,
-                        lineHeight: 1.2,
-                        '& .MuiButton-endIcon': {
-                          '@media (max-width: 400px)': { display: 'none' },
-                        },
-                      }}
-                    >
-                      <Box
-                        component="span"
-                        sx={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {preview.winner.copy.cta}
-                      </Box>
-                    </Button>
-                  </Box>
-                  <Stack direction="row" sx={{ whiteSpace: 'pre' }}>
-                    <Typography sx={{ fontSize: 12, lineHeight: '16px' }}>
-                      {preview.winner.minimumAge}+ ·{' '}
-                    </Typography>
-                    <Typography
-                      noWrap
-                      sx={{ fontSize: 12, lineHeight: '16px', minWidth: 0 }}
-                    >
-                      {preview.winner.warning}
-                    </Typography>
-                    <Typography
-                      noWrap
-                      sx={{ fontSize: 12, lineHeight: '16px', minWidth: 0 }}
-                    >
-                      {' · '}
-                      {new URL(preview.winner.supportUrl).hostname.replace(
-                        /^www\./,
-                        ''
-                      )}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              ) : (
-                <Stack spacing={1}>
-                  <Stack
-                    spacing={1}
-                    useFlexGap
-                    sx={{
-                      ...stadiumBackground,
-                      minHeight: 194,
-                      p: 2,
-                      position: 'relative',
-                      overflow: 'hidden',
-                      isolation: 'isolate',
-                    }}
-                  >
-                    {preview.winner.imageUrl ? (
-                      <Box
-                        component="img"
-                        key={preview.winner.imageUrl}
-                        src={preview.winner.imageUrl}
-                        alt={preview.winner.copy.imageAlt ?? ''}
-                        onError={(event) => {
-                          event.currentTarget.hidden = true;
-                        }}
-                        sx={{
-                          position: 'absolute',
-                          inset: 0,
-                          zIndex: -1,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          filter: 'brightness(60%)',
-                        }}
-                      />
-                    ) : null}
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Chip size="small" label={preview.winner.copy.adLabel} />
-                      <Typography variant="subtitle2">
-                        {preview.winner.market.operatorDisplayName}
-                      </Typography>
-                    </Stack>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ whiteSpace: 'pre-line' }}
-                    >
-                      {preview.winner.copy.headline ??
-                        stadiumTitles[fixture.locale].banner}
-                    </Typography>
-                    <Typography variant="body2">
-                      {stadiumTitles[fixture.locale].subtitle}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="body2">
-                    {preview.winner.copy.affiliateDisclosure}
-                  </Typography>
-                  <Typography variant="body2">
-                    {preview.winner.minimumAge}+ · {preview.winner.warning}
-                  </Typography>
-                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    <Button variant="outlined" disabled sx={previewButtonSx}>
-                      {policyActions[fixture.locale][0]}
-                    </Button>
-                    <Button variant="outlined" disabled sx={previewButtonSx}>
-                      {policyActions[fixture.locale][1]}
-                    </Button>
-                  </Stack>
-                  <Button
-                    variant="contained"
-                    disabled
-                    sx={previewPartnerActionSx}
-                  >
-                    {preview.winner.copy.cta}
-                  </Button>
-                </Stack>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <CampaignCreativePreview
+              winner={preview.winner}
+              isBanner={fixture.placement === 'matches_banner'}
+            />
+          )}
         </Stack>
       ) : null}
       {!market ? (
@@ -523,17 +323,216 @@ export function CampaignFixturePreview({
   );
 }
 
+function CampaignCreativePreview({
+  winner,
+  isBanner,
+}: {
+  winner: Extract<CampaignPreview, { winner: unknown }>['winner'];
+  isBanner: boolean;
+}) {
+  const { copy, imageUrl, market, minimumAge, warning } = winner;
+  const age = `${minimumAge}+`;
+  const warningWithAge = new RegExp(`(?:^|[^0-9])${minimumAge}\\+`).test(warning)
+    ? warning
+    : `${age} · ${warning}`;
+  const action = (
+    <Button
+      variant="contained"
+      disabled
+      endIcon={<NorthEastIcon />}
+      sx={{
+        minWidth: 0,
+        minHeight: 48,
+        px: { xs: 1, sm: 1.5 },
+        py: 0.75,
+        borderRadius: '12px',
+        justifyContent: 'space-between',
+        textAlign: 'left',
+        textTransform: 'none',
+        fontSize: 14,
+        fontWeight: 600,
+        lineHeight: '20px',
+        '&.Mui-disabled': { bgcolor: '#d4ff50', color: '#111811' },
+        '& .MuiButton-endIcon': { ml: 0.5, mr: 0 },
+        '& .MuiButton-endIcon > svg': { fontSize: 16 },
+      }}
+    >
+      <Box component="span" sx={{ overflowWrap: 'anywhere' }}>
+        {copy.cta}
+      </Box>
+    </Button>
+  );
+
+  return (
+    <Box
+      sx={{
+        bgcolor: '#0d1716',
+        color: 'common.white',
+        border: '1px solid #3a4d3e',
+        borderRadius: isBanner ? '20px' : '12px',
+        overflow: 'hidden',
+        overflowWrap: 'anywhere',
+        containerType: 'inline-size',
+      }}
+    >
+      {isBanner ? (
+        <>
+          <Stack
+            spacing={1.5}
+            useFlexGap
+            sx={{
+              minHeight: 194,
+              p: 2,
+              position: 'relative',
+              isolation: 'isolate',
+              backgroundImage: stadiumArtwork,
+              backgroundSize: 'cover',
+              backgroundPosition: 'right center',
+            }}
+          >
+            {imageUrl ? (
+              <Box
+                component="img"
+                key={imageUrl}
+                src={imageUrl}
+                alt={copy.imageAlt ?? ''}
+                onError={(event) => {
+                  event.currentTarget.hidden = true;
+                }}
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: -1,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'right center',
+                }}
+              />
+            ) : null}
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              gap={1}
+            >
+              <Typography
+                sx={{ fontSize: 13, fontWeight: 600, letterSpacing: 1 }}
+              >
+                {market.operatorDisplayName}
+              </Typography>
+              <Typography
+                sx={{
+                  ...finePrintSx,
+                  bgcolor: '#0d1716',
+                  borderRadius: '8px',
+                  px: 1.5,
+                  py: 0.5,
+                }}
+              >
+                {copy.adLabel}
+              </Typography>
+            </Stack>
+            {copy.headline ? (
+              <Typography
+                sx={{
+                  ...headlineSx,
+                  maxWidth: '62%',
+                  fontSize: 30,
+                  lineHeight: '32px',
+                  '@container (max-width: 320px)': {
+                    maxWidth: '100%',
+                    fontSize: 20,
+                    lineHeight: '24px',
+                  },
+                }}
+              >
+                {copy.headline}
+              </Typography>
+            ) : null}
+          </Stack>
+          <Stack spacing={1} sx={{ p: 2 }}>
+            {action}
+            <Typography sx={finePrintSx}>
+              {warningWithAge} · {copy.affiliateDisclosure}
+            </Typography>
+          </Stack>
+        </>
+      ) : (
+        <Stack
+          spacing={1}
+          sx={{
+            p: 1.5,
+            backgroundImage: `linear-gradient(#0d1716bf, #0d1716bf), ${stadiumArtwork}`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'right center',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
+              gap: 1,
+            }}
+          >
+            <Typography noWrap sx={finePrintSx}>
+              {copy.adLabel} · {copy.affiliateDisclosure}
+            </Typography>
+            <Typography
+              noWrap
+              sx={{
+                fontSize: 13,
+                lineHeight: '18px',
+                fontWeight: 600,
+                textAlign: 'right',
+              }}
+            >
+              {market.operatorDisplayName}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 6fr) minmax(0, 5fr)',
+              alignItems: 'center',
+              gap: 1,
+              '@container (max-width: 320px)': {
+                gridTemplateColumns: 'minmax(0, 1fr)',
+                '& > :last-child': { gridColumn: 1 },
+              },
+            }}
+          >
+            {copy.headline ? (
+              <Typography
+                sx={{
+                  ...headlineSx,
+                  fontSize: 18,
+                  lineHeight: '22px',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {copy.headline}
+              </Typography>
+            ) : null}
+            <Box sx={{ gridColumn: 2, display: 'grid' }}>{action}</Box>
+          </Box>
+          <Typography noWrap sx={{ ...finePrintSx, lineHeight: '16px' }}>
+            {warningWithAge}
+          </Typography>
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
 const promptActions = {
   en: ['Yes', 'No', 'Dismiss'],
   es: ['Sí', 'No', 'Cerrar'],
   pt: ['Sim', 'Não', 'Fechar'],
 };
-const policyActions = {
-  en: ['Support', 'Terms'],
-  es: ['Ayuda', 'Términos'],
-  pt: ['Apoio', 'Termos'],
-};
-
 function agePrompt(locale: PreviewFixture['locale'], age: number): string {
   if (locale === 'es') return `¿Tienes ${age} años o más?`;
   if (locale === 'pt') return `Você tem ${age} anos ou mais?`;
