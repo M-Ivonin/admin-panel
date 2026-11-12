@@ -168,6 +168,7 @@ describe('partner market config form validation', () => {
 
   it.each([
     ['http://example.bet/banner', /HTTPS/],
+    ['https:///example.bet/banner', /HTTPS/],
     ['https://user:pass@example.bet/banner', /HTTPS/],
     ['https://example.bet:444/banner', /HTTPS/],
     ['https://unapproved.example.bet/banner', /approved hostname/],
@@ -178,6 +179,27 @@ describe('partner market config form validation', () => {
         inAppBannerAffiliateUrl,
       }).inAppBannerAffiliateUrl
     ).toMatch(message);
+  });
+
+  it('allows affiliate query parameters but rejects a fragment when In-app is enabled', () => {
+    const inAppBannerAffiliateUrl = 'https://www.example.bet/banner?ref=sirbro';
+    const inAppConfig = {
+      ...valid,
+      inAppEnabled: true,
+      inAppFinalDestinationHosts: 'example.bet',
+    };
+    expect(
+      validatePartnerMarketConfigForm({ ...inAppConfig, inAppBannerAffiliateUrl })
+    ).toEqual({});
+    expect(
+      validatePartnerMarketConfigForm({
+        ...inAppConfig,
+        inAppBannerAffiliateUrl: `${inAppBannerAffiliateUrl}#offer`,
+      }).inAppBannerAffiliateUrl
+    ).toMatch(/without a fragment/);
+    expect(
+      validatePartnerMarketConfigForm(inAppConfig).inAppBannerAffiliateUrl
+    ).toMatch(/when In-app is enabled/);
   });
 
   it('normalizes a separate optional banner link, including an explicit clear', () => {
@@ -194,9 +216,12 @@ describe('partner market config form validation', () => {
       inAppBannerAffiliateUrl,
       operatorDestinationUrl: valid.operatorDestinationUrl,
     });
-    expect(
-      normalizePartnerMarketConfigForm({ ...valid, inAppBannerAffiliateUrl: ' ' })
-    ).toHaveProperty('inAppBannerAffiliateUrl', null);
+    const cleared = { ...valid, inAppEnabled: false, inAppBannerAffiliateUrl: ' ' };
+    expect(validatePartnerMarketConfigForm(cleared)).toEqual({});
+    expect(normalizePartnerMarketConfigForm(cleared)).toHaveProperty(
+      'inAppBannerAffiliateUrl',
+      null
+    );
   });
 
   it.each(['US', 'CA', 'AR'])(

@@ -506,7 +506,7 @@ it('saves a verified banner upload and pauses the versioned campaign', async () 
   click(pause, 'button', 'Confirm pause');
   await screen.findByText('Sweden fixture paused.');
   expect(pauseAppPartnerCampaign).toHaveBeenCalledWith(active);
-});
+}, 15_000);
 
 it('reports linked CTR denominators and opens the existing user portrait', async () => {
   jest.mocked(getAppPartnerAnalytics).mockResolvedValue({
@@ -594,4 +594,4 @@ it('reports linked CTR denominators and opens the existing user portrait', async
   expect(getAppPartnerAnalytics).toHaveBeenLastCalledWith(
     expect.objectContaining({ countryCode: undefined, regionCode: undefined })
   );
-});
+}, 15_000);

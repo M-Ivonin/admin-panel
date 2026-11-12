@@ -235,9 +235,12 @@ export function validatePartnerMarketConfigForm(
     errors.inAppBannerAffiliateUrl =
       'Enter an in-app banner affiliate link when In-app is enabled.';
   } else if (input.inAppBannerAffiliateUrl) {
-    const bannerHost = getStandardHttpsHostname(input.inAppBannerAffiliateUrl);
-    if (!bannerHost) {
-      errors.inAppBannerAffiliateUrl = 'Enter a valid HTTPS banner link.';
+    const bannerHost = getAppBannerDestinationHostname(
+      input.inAppBannerAffiliateUrl
+    );
+    if (!bannerHost || !hasHttpsUrlSyntax(input.inAppBannerAffiliateUrl)) {
+      errors.inAppBannerAffiliateUrl =
+        'Enter a valid HTTPS banner link without a fragment (up to 2,048 characters).';
     } else if (
       !errors.approvedDestinationHosts &&
       !input.approvedDestinationHosts.includes(bannerHost)
@@ -310,15 +313,16 @@ function isBackendUrl(value: string): boolean {
   return isURL(value, { require_tld: false });
 }
 
+function hasHttpsUrlSyntax(value: string): boolean {
+  return isURL(value, {
+    protocols: ['https'],
+    require_protocol: true,
+    disallow_auth: true,
+  });
+}
+
 export function getStandardHttpsHostname(value: string): string | undefined {
-  if (
-    !/^https:\/\//i.test(value) ||
-    !isURL(value, {
-      protocols: ['https'],
-      require_protocol: true,
-      disallow_auth: true,
-    })
-  ) {
+  if (!/^https:\/\//i.test(value) || !hasHttpsUrlSyntax(value)) {
     return;
   }
   try {
@@ -333,27 +337,35 @@ export function isApprovedAppBannerDestination(
   value: string | null | undefined,
   approvedHosts: readonly string[]
 ): boolean {
+  const hostname = getAppBannerDestinationHostname(value);
+  return hostname !== undefined && approvedHosts.includes(hostname);
+}
+
+function getAppBannerDestinationHostname(
+  value: string | null | undefined
+): string | undefined {
   if (
     !value ||
     value.length > 2048 ||
     !/^https:\/\//i.test(value) ||
     /[\s\\]/.test(value)
   )
-    return false;
+    return;
   try {
     const url = new URL(value);
-    return (
+    if (
       url.protocol === 'https:' &&
       !url.username &&
       !url.password &&
       !url.port &&
       !url.hash &&
       /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]+$/.test(url.hostname) &&
-      !/^(?:\d+\.){3}\d+$/.test(url.hostname) &&
-      approvedHosts.includes(url.hostname)
-    );
+      !/^(?:\d+\.){3}\d+$/.test(url.hostname)
+    ) {
+      return url.hostname;
+    }
   } catch {
-    return false;
+    return;
   }
 }
 
