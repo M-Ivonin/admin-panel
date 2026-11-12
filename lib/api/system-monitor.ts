@@ -22,7 +22,21 @@ export interface PersonalizationHealth {
   lastSuccessfulAt: string | null;
   lastRunMs: number | null;
 }
+export interface SqlInterval {
+  from: string;
+  to: string;
+  entries: {
+    queryId: string;
+    roleId: string;
+    topLevel: boolean;
+    sqlMs: number;
+    calls: number;
+    tempBytesWritten: number | null;
+  }[];
+}
+
 export interface PersonalizationLoad {
+  topSql?: SqlInterval;
   scope?: 'database';
   personalization?: PersonalizationHealth;
   measurement?: 'complete' | 'partial' | 'unavailable' | 'warmup';

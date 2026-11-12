@@ -13,6 +13,7 @@ import {
   type MonitorAspect,
 } from '@/lib/system-monitor-personalization-health';
 import { LoadActivityChart } from './LoadActivityChart';
+import { TopSqlTable } from './TopSqlTable';
 
 const number = (value: number | null | undefined, suffix = '') =>
   value == null
@@ -48,6 +49,7 @@ export function PersonalizationLoadPanel({
   sourceUnavailable: boolean;
   onSelect: (aspect?: MonitorAspect) => void;
 }) {
+  const [selectedSqlRunId, setSelectedSqlRunId] = useState<string>();
   const [runs, setRuns] = useState<MonitorRun[]>([]);
   const [historyUnavailable, setHistoryUnavailable] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -80,6 +82,13 @@ export function PersonalizationLoadPanel({
       active = false;
     };
   }, [runId]);
+  const recentRuns = runs.filter((run) => {
+    const at = Date.parse(run.endedAt ?? '');
+    return at >= now - 86_400_000 && at <= now;
+  });
+  const selectedSqlRun =
+    recentRuns.find((run) => run.runId === selectedSqlRunId) ??
+    recentRuns.find((run) => run.personalizationLoad?.topSql);
   const saved = check.lastRun?.personalizationLoad;
   const m = saved?.scope === 'database' ? saved : undefined;
   const work = m?.personalization;
@@ -309,7 +318,16 @@ export function PersonalizationLoadPanel({
             unavailable={historyUnavailable}
             loading={historyLoading}
             baseline={m?.baselineSqlMsPerMinute}
+            selectedRunId={personal ? undefined : selectedSqlRun?.runId}
+            onSelectRun={personal ? undefined : setSelectedSqlRunId}
           />
+          {!personal && (
+            <TopSqlTable
+              load={selectedSqlRun?.personalizationLoad}
+              unavailable={historyUnavailable}
+              loading={historyLoading}
+            />
+          )}
         </Box>
         <Stack
           direction="row"

@@ -155,8 +155,8 @@ process-counter warmup never appear as healthy zero work. Backend process restar
 warm work counters independently of the database baseline.
 
 The existing System Monitor route, controls, incident history and auth are retained.
-The backend sends only allowlisted aggregates to admin, never statement identifiers
-or SQL text. Release backend and collector before this UI.
+The backend sends allowlisted aggregates and a bounded numeric SQL ranking to admin.
+SQL text stays outside the admin API. Release collector, backend, then this UI.
 
 ### Compact dashboard cards
 
@@ -174,3 +174,11 @@ their respective charts. Query-time lines break across missing intervals; histor
 points never turn a current unavailable or stale status healthy.
 
 The [dashboard tests](../__tests__/system-monitor-dashboard.test.tsx) cover the monitoring view.
+
+The Database load chart opens **Top SQL for interval** when an operator selects a
+point. The table shows the ten recorded statements with the most PostgreSQL
+execution time for that sample interval, plus calls and temporary bytes written.
+Query IDs and PostgreSQL role IDs identify statements without exposing SQL text
+or assuming an API route. A dash means the older source did not supply a usable
+temporary-write counter. Partial intervals are marked, and older history may
+have no statement breakdown.

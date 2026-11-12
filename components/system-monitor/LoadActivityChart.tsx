@@ -17,6 +17,8 @@ export function LoadActivityChart({
   unavailable,
   loading,
   baseline,
+  selectedRunId,
+  onSelectRun,
 }: {
   runs: MonitorRun[];
   now: number;
@@ -25,6 +27,8 @@ export function LoadActivityChart({
   unavailable: boolean;
   loading: boolean;
   baseline?: number | null;
+  selectedRunId?: string;
+  onSelectRun?: (runId: string) => void;
 }) {
   const start = now - day;
   const points = runs
@@ -51,6 +55,7 @@ export function LoadActivityChart({
         return [
           {
             at,
+            runId: run.runId,
             value: work.checked / work.intervalMinutes,
             reused: work.reused / work.intervalMinutes,
             interval: work.intervalMinutes * 60_000,
@@ -61,6 +66,7 @@ export function LoadActivityChart({
         ? [
             {
               at,
+              runId: run.runId,
               value: m.sqlMsPerMinute / 1000,
               reused: 0,
               interval: intervalMs,
@@ -75,7 +81,7 @@ export function LoadActivityChart({
     personal ? 0 : (baseline ?? 0) / 1000
   );
   const x = (at: number) => ((at - start) / day) * 100;
-  const y = (value: number) => 78 - (value / max) * 72;
+  const y = (value: number) => 78 - (value / max) * (personal ? 72 : 68);
   const colors = personal ? ['#A89AFF', '#5F769B'] : ['#76B8FA', '#718098'];
   const labels = personal
     ? ['Refreshed', 'Reused']
@@ -167,17 +173,40 @@ export function LoadActivityChart({
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Box
               component="svg"
-              role="img"
+              role={onSelectRun ? 'group' : 'img'}
               aria-label={
                 personal
                   ? 'Profile activity over the last 24 hours'
                   : 'Database SQL execution time over the last 24 hours'
               }
+              onClick={
+                onSelectRun
+                  ? (event: React.MouseEvent<SVGSVGElement>) => {
+                      if (event.detail === 0) return;
+                      const bounds =
+                        event.currentTarget.getBoundingClientRect();
+                      const distance = (point: (typeof points)[number]) =>
+                        Math.hypot(
+                          (x(point.at) / 100) * bounds.width -
+                            (event.clientX - bounds.left),
+                          y(point.value) - (event.clientY - bounds.top)
+                        );
+                      const nearest = points.reduce((best, point) =>
+                        distance(point) < distance(best) ? point : best
+                      );
+                      onSelectRun(nearest.runId);
+                    }
+                  : undefined
+              }
               sx={{
                 width: '100%',
                 height: 80,
                 display: 'block',
-                overflow: 'hidden',
+                '& circle[role=button]:focus-visible': {
+                  stroke: colors[0],
+                  outline: 'none',
+                },
+                overflow: onSelectRun ? 'visible' : 'hidden',
               }}
             >
               {[6, 42, 78].map((at) => (
@@ -222,9 +251,31 @@ export function LoadActivityChart({
                       <circle
                         cx={`${x(point.at)}%`}
                         cy={y(point.value)}
-                        r={2}
+                        r={selectedRunId === point.runId ? 4 : 2}
                         fill={colors[0]}
                       />
+                      {onSelectRun && (
+                        <circle
+                          cx={`${x(point.at)}%`}
+                          cy={y(point.value)}
+                          r={8}
+                          fill="transparent"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Show top SQL for ${title}`}
+                          aria-pressed={selectedRunId === point.runId}
+                          onClick={(event) => {
+                            if (event.detail === 0) onSelectRun(point.runId);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onSelectRun(point.runId);
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      )}
                     </g>
                   );
                 const width = Math.min((point.interval / day) * 100, 3);

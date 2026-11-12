@@ -1510,3 +1510,84 @@ it.each([
     );
   }
 );
+
+it('shows the SQL totals for the Database load point selected on the chart', async () => {
+  const now = Date.now();
+  const sample = (runId: string, minutesAgo: number, sqlMs: number): MonitorRun => {
+    const at = now - minutesAgo * 60_000;
+    const endedAt = new Date(at).toISOString();
+    return {
+      ...overview.checks[0].lastRun!,
+      runId,
+      checkId: 'backend.personalization.load',
+      scheduledAt: endedAt,
+      startedAt: endedAt,
+      endedAt,
+      personalizationLoad: {
+        scope: 'database',
+        measurement: 'complete',
+        sqlMsPerMinute: sqlMs / 15,
+        callsPerMinute: 1,
+        sharedBlocksPerMinute: 10,
+        writesPerMinute: 0,
+        totalPortraits: 100,
+        overduePortraits: 0,
+        lastCheckedAt: endedAt,
+        baselineSqlMsPerMinute: 400,
+        baselineHours: 24,
+        loadRatio: 1,
+        topSql: {
+          from: new Date(at - 900_000).toISOString(),
+          to: endedAt,
+          entries: [{
+            queryId: minutesAgo === 16 ? '908765432109876543' : '123456789',
+            roleId: '10',
+            topLevel: true,
+            sqlMs,
+            calls: minutesAgo === 16 ? 37 : 3,
+            tempBytesWritten: minutesAgo === 16 ? 2_097_152 : null,
+          }],
+        },
+      },
+    };
+  };
+  const spike = sample('run-spike', 16, 96_000);
+  const latest = sample('run-latest', 1, 4500);
+  api.overview.mockResolvedValue({
+    ...overview,
+    checks: [{
+      ...overview.checks[0],
+      checkId: latest.checkId,
+      intervalMs: 900_000,
+      lastRun: latest,
+    }],
+  });
+  api.history.mockResolvedValue({
+    items: [latest, spike], total: 2, offset: 0, limit: 100, buckets: [],
+  });
+  render(<SystemMonitorDashboard />);
+  const panel = within(await screen.findByRole('region', { name: 'Database load' }));
+  const table = within(await panel.findByRole('table', { name: 'Top SQL for interval' }));
+  expect(table.getByText('123456789')).toBeInTheDocument();
+  const point = panel.getByRole('button', { name: /Show top SQL for .*6\.4 s\/min/ });
+  const chart = panel.getByRole('group', {
+    name: 'Database SQL execution time over the last 24 hours',
+  });
+  jest.spyOn(chart, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 300, bottom: 80, width: 300, height: 80,
+    toJSON: () => ({}),
+  });
+  const latestPoint = panel.getByRole('button', { name: /Show top SQL for .*0.3 s\/min/ });
+  // A later transparent hit circle can receive the pointer over an earlier sample.
+  fireEvent.click(latestPoint, {
+    detail: 1,
+    clientX: (parseFloat(point.getAttribute('cx')!) / 100) * 300,
+    clientY: Number(point.getAttribute('cy')),
+  });
+  expect(point).toHaveAttribute('aria-pressed', 'true');
+  expect(table.getByText('908765432109876543')).toBeInTheDocument();
+  expect(table.getByText('96 s')).toBeInTheDocument();
+  expect(table.getByText('37')).toBeInTheDocument();
+  expect(table.getByText('2 MiB')).toBeInTheDocument();
+  expect(table.queryByText('123456789')).not.toBeInTheDocument();
+});
