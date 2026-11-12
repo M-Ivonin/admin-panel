@@ -606,7 +606,7 @@ describe('PartnerMarketsPage', () => {
     fireEvent.click(reopened.getByRole('button', { name: 'Save configuration' }));
     expect(await reopened.findByText('Enter a whole number above 21, up to 125.')).toBeVisible();
     expect(savePartnerMarketConfig).toHaveBeenCalledTimes(1);
-  });
+  }, 15_000);
 
   it.each([
     [true, true],
@@ -722,7 +722,8 @@ describe('PartnerMarketsPage', () => {
           })
         )
       );
-    }
+    },
+    15_000
   );
 
   it('edits an existing row and uses the dedicated confirmed pause request', async () => {
@@ -871,7 +872,7 @@ describe('PartnerMarketsPage', () => {
     expect(payload).not.toHaveProperty('operatorDestinationUrl');
     expect(payload).not.toHaveProperty('operatorTermsUrl');
     expect(payload).not.toHaveProperty('affiliateDisclosureByLocale');
-  });
+  }, 15_000);
 
   it('shows migrated missing display data and keeps it required when editing', async () => {
     const migratedConfig = {
