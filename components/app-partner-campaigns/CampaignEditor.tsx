@@ -470,7 +470,7 @@ export function CampaignEditor({
                       onChange={(event) =>
                         set('minimumSessions', event.target.value)
                       }
-                      inputProps={{ min: 2, step: 1 }}
+                      inputProps={{ min: 1, step: 1 }}
                       required
                     />
                     <TextField

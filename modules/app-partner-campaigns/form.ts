@@ -130,7 +130,7 @@ export function campaignInput(
 
   const minimumSessions = integer(
     form.minimumSessions,
-    2,
+    1,
     2_147_483_647,
     'Minimum sessions'
   );

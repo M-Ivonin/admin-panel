@@ -73,10 +73,10 @@ export function resolveFixturePreview(
       reason: 'The fixture has ad-free access or unresolved purchases.',
     };
   }
-  if (fixture.sessions < 2) {
+  if (fixture.sessions < 1) {
     return {
       status: 'hidden',
-      reason: 'Partner placements start with a second genuine visit.',
+      reason: 'Partner placements require a genuine foreground visit.',
     };
   }
   const sorted = [...candidates].sort(
@@ -137,7 +137,7 @@ function matchCandidate(
     campaign.status !== 'active' ||
     !campaign.platforms.includes(fixture.platform) ||
     !campaign.placements.includes(fixture.placement) ||
-    campaign.minimumSessions < 2 ||
+    campaign.minimumSessions < 1 ||
     fixture.sessions < campaign.minimumSessions ||
     Date.parse(campaign.startsAt) > fixture.at ||
     Date.parse(campaign.endsAt) <= fixture.at ||

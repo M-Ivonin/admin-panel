@@ -10,7 +10,7 @@ a jurisdiction and configuring the partner market to activating the campaign.
 new draft, and **Back to campaigns** returns to the list.
 
 In Campaign setup, select one operator market, independent placements and
-platforms, a minimum age and a minimum of two genuine foreground visits.
+platforms, a minimum age and a configurable minimum of one or more genuine foreground visits.
 Enter both schedule times with a shared UTC offset. Use UTC for schedules that cross a daylight-saving change.
 The backend receives UTC instants.
 

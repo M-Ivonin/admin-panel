@@ -247,7 +247,7 @@ it('keeps the retry loading and hides a superseded campaign error', async () => 
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
 });
 
-it('saves a disabled draft with explicit timezone and rejects a one-session minimum', async () => {
+it('saves a disabled draft with explicit timezone and accepts one session and rejects zero', async () => {
   jest.mocked(saveAppPartnerCampaign).mockResolvedValue(campaign);
   render(<AppPartnerCampaignsPage />);
   await screen.findByText('No app partner campaigns found');
@@ -264,14 +264,14 @@ it('saves a disabled draft with explicit timezone and rejects a one-session mini
   change(editor, 'Starts at', '2026-11-09T13:30');
   change(editor, 'Ends at', '2026-11-10T13:30');
   change(editor, 'UTC offset', '+01:30');
-  change(editor, 'Minimum sessions', '1');
+  change(editor, 'Minimum sessions', '0');
   click(editor, 'button', 'Save draft');
   expect(
     within(editor).getByText(/minimum sessions must be/i)
   ).toBeInTheDocument();
   expect(saveAppPartnerCampaign).not.toHaveBeenCalled();
 
-  change(editor, 'Minimum sessions', '2');
+  change(editor, 'Minimum sessions', '1');
   click(editor, 'button', 'Save draft');
   await screen.findByText('Sweden fixture saved.');
   expect(saveAppPartnerCampaign).toHaveBeenCalledWith(
@@ -280,7 +280,7 @@ it('saves a disabled draft with explicit timezone and rejects a one-session mini
       placements: [],
       platforms: [],
       startsAt: '2026-11-09T12:00:00.000Z',
-      minimumSessions: 2,
+      minimumSessions: 1,
     }),
     undefined
   );
@@ -391,7 +391,7 @@ it('previews a sample campaign, age prompt, localized fallback and ad-free suppr
   ).toBeInTheDocument();
   expect(within(editor).queryByRole('img')).not.toBeInTheDocument();
   change(editor, 'Foreground visits', '1');
-  expect(within(editor).getByText(/second genuine visit/)).toBeInTheDocument();
+  expect(within(editor).getByText(/No configured campaign is eligible/)).toBeInTheDocument();
   change(editor, 'Foreground visits', '2');
   choose(editor, 'Age fixture', 'Self-declared threshold');
   change(editor, 'Evidence threshold', '21');
