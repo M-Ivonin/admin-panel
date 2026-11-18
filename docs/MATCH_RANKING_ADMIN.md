@@ -24,7 +24,8 @@ operator contracts below.
 ## Operator contracts
 
 Choose **Basketball** in the page's sport selector to work with the imported
-basketball catalog. Assign optional league tiers in a draft configuration.
+basketball catalog. Use **Configurations → New configuration** to create a draft
+with optional league tiers.
 Tiers 1–4 sort rated leagues before unrated leagues and contribute 40, 28, 16
 and 6 points toward Top Matches. Preview a draft for a local date and timezone
 to see the Top selection, the league order and each game's points and

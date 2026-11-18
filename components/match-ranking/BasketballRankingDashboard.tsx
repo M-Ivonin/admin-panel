@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { SportsBasketball } from '@mui/icons-material';
+import { Add, SportsBasketball } from '@mui/icons-material';
 import {
   Alert,
   Box,
@@ -81,6 +81,7 @@ export function BasketballRankingDashboard({
   const [leagueTiers, setLeagueTiers] = useState<
     Record<string, BasketballLeagueTier>
   >({});
+  const [creating, setCreating] = useState(false);
   const [version, setVersion] = useState('');
   const [draftReason, setDraftReason] = useState('');
   const [activation, setActivation] = useState<Activation | null>(null);
@@ -145,6 +146,7 @@ export function BasketballRankingDashboard({
       setVersion('');
       setDraftReason('');
       setSuccess(`Draft "${saved.version}" saved.`);
+      setCreating(false);
       setTab('configurations');
     });
   }
@@ -195,6 +197,110 @@ export function BasketballRankingDashboard({
     league.name.toLowerCase().includes(query.trim().toLowerCase())
   );
 
+  function openDraft(baseTiers = leagueTiers) {
+    setLeagueTiers(baseTiers);
+    setQuery('');
+    setVersion('');
+    setDraftReason('');
+    setError('');
+    setCreating(true);
+  }
+
+  function closeDraft() {
+    if (pending) return;
+    setCreating(false);
+    setError('');
+  }
+
+  const tierEditor = (
+    <>
+      <TextField
+        label="Search leagues"
+        size="small"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      <TableContainer sx={{ maxHeight: 480 }}>
+        <Table stickyHeader size="small" aria-label="Basketball league tiers">
+          <TableHead>
+            <TableRow>
+              <TableCell>League</TableCell>
+              <TableCell>Tier</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {visibleLeagues.map((league) => (
+              <TableRow key={league.id}>
+                <TableCell component="th" scope="row">
+                  {league.name}
+                </TableCell>
+                <TableCell sx={{ width: 150 }}>
+                  <TextField
+                    select
+                    size="small"
+                    fullWidth
+                    value={leagueTiers[league.id] ?? ''}
+                    slotProps={{
+                      select: {
+                        native: true,
+                        inputProps: {
+                          'aria-label': `Tier for ${league.name}`,
+                        },
+                      },
+                    }}
+                    disabled={pending}
+                    onChange={(event) => {
+                      const tier = tiers.find(
+                        (value) => String(value) === event.target.value
+                      );
+                      setLeagueTiers((current) => {
+                        const next = { ...current };
+                        if (tier) next[league.id] = tier;
+                        else delete next[league.id];
+                        return next;
+                      });
+                    }}
+                  >
+                    <option value="">Unrated</option>
+                    {tiers.map((tier) => (
+                      <option key={tier} value={tier}>
+                        {tier}
+                      </option>
+                    ))}
+                  </TextField>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {visibleLeagues.length === 0 ? (
+        <Typography color="text.secondary">No leagues found.</Typography>
+      ) : null}
+    </>
+  );
+  const draftFields = (
+    <>
+      <TextField
+        required
+        label="Version"
+        size="small"
+        value={version}
+        onChange={(event) => setVersion(event.target.value)}
+        disabled={pending}
+      />
+      <TextField
+        required
+        label="Change reason"
+        size="small"
+        value={draftReason}
+        onChange={(event) => setDraftReason(event.target.value)}
+        disabled={pending}
+        fullWidth
+      />
+    </>
+  );
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AdminPageHeader
@@ -222,7 +328,9 @@ export function BasketballRankingDashboard({
           <Tab value="preview" label="Preview" />
         </Tabs>
 
-        {error && !activation ? <Alert severity="error">{error}</Alert> : null}
+        {error && !activation && !creating ? (
+          <Alert severity="error">{error}</Alert>
+        ) : null}
         {success ? (
           <Alert severity="success" onClose={() => setSuccess('')}>
             {success}
@@ -255,94 +363,9 @@ export function BasketballRankingDashboard({
             <CardContent component="form" onSubmit={saveDraft}>
               <Stack spacing={2}>
                 <Typography variant="h6">League tiers</Typography>
-                <TextField
-                  label="Search leagues"
-                  size="small"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-                <TableContainer sx={{ maxHeight: 480 }}>
-                  <Table
-                    stickyHeader
-                    size="small"
-                    aria-label="Basketball league tiers"
-                  >
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>League</TableCell>
-                        <TableCell>Tier</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {visibleLeagues.map((league) => (
-                        <TableRow key={league.id}>
-                          <TableCell component="th" scope="row">
-                            {league.name}
-                          </TableCell>
-                          <TableCell sx={{ width: 150 }}>
-                            <TextField
-                              select
-                              size="small"
-                              fullWidth
-                              value={leagueTiers[league.id] ?? ''}
-                              slotProps={{
-                                select: {
-                                  native: true,
-                                  inputProps: {
-                                    'aria-label': `Tier for ${league.name}`,
-                                  },
-                                },
-                              }}
-                              disabled={pending}
-                              onChange={(event) => {
-                                const tier = tiers.find(
-                                  (value) =>
-                                    String(value) === event.target.value
-                                );
-                                setLeagueTiers((current) => {
-                                  const next = { ...current };
-                                  if (tier) next[league.id] = tier;
-                                  else delete next[league.id];
-                                  return next;
-                                });
-                              }}
-                            >
-                              <option value="">Unrated</option>
-                              {tiers.map((tier) => (
-                                <option key={tier} value={tier}>
-                                  {tier}
-                                </option>
-                              ))}
-                            </TextField>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                {visibleLeagues.length === 0 ? (
-                  <Typography color="text.secondary">
-                    No leagues found.
-                  </Typography>
-                ) : null}
+                {tierEditor}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <TextField
-                    required
-                    label="Version"
-                    size="small"
-                    value={version}
-                    onChange={(event) => setVersion(event.target.value)}
-                    disabled={pending}
-                  />
-                  <TextField
-                    required
-                    label="Change reason"
-                    size="small"
-                    value={draftReason}
-                    onChange={(event) => setDraftReason(event.target.value)}
-                    disabled={pending}
-                    fullWidth
-                  />
+                  {draftFields}
                   <Button
                     type="submit"
                     variant="contained"
@@ -361,6 +384,16 @@ export function BasketballRankingDashboard({
           <Card variant="outlined">
             <CardContent>
               <Stack spacing={2}>
+                <Stack direction="row" justifyContent="flex-end">
+                  <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    disabled={pending}
+                    onClick={() => openDraft()}
+                  >
+                    New configuration
+                  </Button>
+                </Stack>
                 <Typography variant="h6">Basketball versions</Typography>
                 {!active ? (
                   <Alert severity="info">
@@ -404,11 +437,7 @@ export function BasketballRankingDashboard({
                                 <Button
                                   size="small"
                                   disabled={pending}
-                                  onClick={() => {
-                                    setLeagueTiers(row.leagueTiers);
-                                    setQuery('');
-                                    setTab('catalog');
-                                  }}
+                                  onClick={() => openDraft(row.leagueTiers)}
                                 >
                                   Copy tiers
                                 </Button>
@@ -521,6 +550,31 @@ export function BasketballRankingDashboard({
           </Stack>
         ) : null}
       </Stack>
+
+      <Dialog open={creating} onClose={closeDraft} maxWidth="md" fullWidth>
+        <Box component="form" onSubmit={saveDraft}>
+          <DialogTitle>New configuration</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} pt={1}>
+              {error ? <Alert severity="error">{error}</Alert> : null}
+              {draftFields}
+              {tierEditor}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeDraft} disabled={pending}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={pending || !version.trim() || !draftReason.trim()}
+            >
+              Create configuration
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
 
       <Dialog
         open={activation !== null}

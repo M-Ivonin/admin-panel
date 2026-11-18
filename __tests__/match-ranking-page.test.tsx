@@ -315,7 +315,13 @@ describe('MatchRankingPage', () => {
     render(<MatchRankingPage />);
     await screen.findByText('Copa Libertadores');
     fireEvent.click(screen.getByRole('button', { name: 'Basketball' }));
-    expect(screen.getByRole('tab', { name: 'League catalog' })).toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Configurations' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'New configuration' })
+    );
+    expect(
+      screen.getByRole('dialog', { name: 'New configuration' })
+    ).toBeVisible();
     fireEvent.change(
       await screen.findByRole('combobox', { name: 'Tier for NBA' }),
       { target: { value: '1' } }
@@ -323,11 +329,15 @@ describe('MatchRankingPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Version' }), {
       target: { value: configuration.version },
     });
-    expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Create configuration' })
+    ).toBeDisabled();
     fireEvent.change(screen.getByRole('textbox', { name: 'Change reason' }), {
       target: { value: 'Set NBA tier' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Create configuration' })
+    );
 
     await screen.findByText(
       'No active version. The app shows the chronological calendar.'
@@ -338,7 +348,9 @@ describe('MatchRankingPage', () => {
       reason: 'Set NBA tier',
     });
     expect(activateBasketballRanking).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Activate', exact: true })
+    );
     const dialog = screen.getByRole('dialog');
     expect(
       within(dialog).getByRole('button', { name: 'Confirm activation' })
@@ -357,6 +369,16 @@ describe('MatchRankingPage', () => {
       configuration.id,
       'Reviewed preview'
     );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Copy tiers' }));
+    const copyDialog = await screen.findByRole('dialog', {
+      name: 'New configuration',
+    });
+    expect(
+      within(copyDialog).getByRole('combobox', { name: 'Tier for NBA' })
+    ).toHaveValue('1');
+    fireEvent.click(within(copyDialog).getByRole('button', { name: 'Cancel' }));
+    expect(createBasketballRankingDraft).toHaveBeenCalledTimes(1);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Deactivate' }));
     const deactivateDialog = screen.getByRole('dialog');
