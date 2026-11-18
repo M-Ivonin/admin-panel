@@ -8,7 +8,13 @@ import {
 } from '@testing-library/react';
 import MatchRankingPage from '@/app/(admin)/dashboard/match-ranking/page';
 import {
+  activateBasketballRanking,
   activateMatchRankingConfiguration,
+  createBasketballRankingDraft,
+  deactivateBasketballRanking,
+  getBasketballRankingConfigurations,
+  getBasketballRankingLeagues,
+  previewBasketballRanking,
   bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
   createMatchRankingOverride,
@@ -36,7 +42,13 @@ jest.mock('@/components/auth/ProtectedRoute', () => ({
   ProtectedRoute: ({ children }: { children: React.ReactNode }) => children,
 }));
 jest.mock('@/lib/api/match-ranking', () => ({
+  activateBasketballRanking: jest.fn(),
   activateMatchRankingConfiguration: jest.fn(),
+  createBasketballRankingDraft: jest.fn(),
+  deactivateBasketballRanking: jest.fn(),
+  getBasketballRankingConfigurations: jest.fn(),
+  getBasketballRankingLeagues: jest.fn(),
+  previewBasketballRanking: jest.fn(),
   bulkReviewMatchRankingCompetitions: jest.fn(),
   createMatchRankingConfiguration: jest.fn(),
   createMatchRankingOverride: jest.fn(),
@@ -283,6 +295,225 @@ describe('MatchRankingPage', () => {
       { id: 42, name: 'Palmeiras', country: 'Brazil' },
     ]);
   });
+
+  it('saves basketball tiers as a draft and toggles it without football writes', async () => {
+    const configuration = {
+      id: 'basketball-v1-id',
+      version: 'basketball-v1',
+      active: false,
+      leagueTiers: { '12': 1 as const },
+      createdAt: '2026-11-18T09:00:00Z',
+    };
+    jest
+      .mocked(getBasketballRankingLeagues)
+      .mockResolvedValue([{ id: 12, name: 'NBA', logoUrl: null }]);
+    jest.mocked(getBasketballRankingConfigurations).mockResolvedValue([]);
+    jest.mocked(createBasketballRankingDraft).mockResolvedValue(configuration);
+    jest.mocked(activateBasketballRanking).mockResolvedValue({ ok: true });
+    jest.mocked(deactivateBasketballRanking).mockResolvedValue({ ok: true });
+
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('button', { name: 'Basketball' }));
+    expect(screen.getByRole('tab', { name: 'League catalog' })).toBeVisible();
+    fireEvent.change(
+      await screen.findByRole('combobox', { name: 'Tier for NBA' }),
+      { target: { value: '1' } }
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Version' }), {
+      target: { value: configuration.version },
+    });
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Change reason' }), {
+      target: { value: 'Set NBA tier' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await screen.findByText(
+      'No active version. The app shows the chronological calendar.'
+    );
+    expect(createBasketballRankingDraft).toHaveBeenCalledWith({
+      version: 'basketball-v1',
+      leagueTiers: { '12': 1 },
+      reason: 'Set NBA tier',
+    });
+    expect(activateBasketballRanking).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Activate' }));
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByRole('button', { name: 'Confirm activation' })
+    ).toBeDisabled();
+    fireEvent.change(
+      within(dialog).getByRole('textbox', { name: 'Change reason' }),
+      {
+        target: { value: 'Reviewed preview' },
+      }
+    );
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Confirm activation' })
+    );
+    await screen.findByText('Version "basketball-v1" activated.');
+    expect(activateBasketballRanking).toHaveBeenCalledWith(
+      configuration.id,
+      'Reviewed preview'
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Deactivate' }));
+    const deactivateDialog = screen.getByRole('dialog');
+    fireEvent.change(
+      within(deactivateDialog).getByRole('textbox', { name: 'Change reason' }),
+      {
+        target: { value: 'Roll back' },
+      }
+    );
+    fireEvent.click(
+      within(deactivateDialog).getByRole('button', {
+        name: 'Confirm deactivation',
+      })
+    );
+    await screen.findByText('Basketball ranking disabled.');
+    expect(deactivateBasketballRanking).toHaveBeenCalledWith('Roll back');
+    expect(createMatchRankingConfiguration).not.toHaveBeenCalled();
+    expect(activateMatchRankingConfiguration).not.toHaveBeenCalled();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Football' }));
+    expect(await screen.findByText('Copa Libertadores')).toBeVisible();
+  });
+
+  it.each([
+    { stage: null, stageScore: 0, timingScore: 0, total: 40 },
+    { stage: null, stageScore: 0, timingScore: 3, total: 43 },
+    { stage: 'Final', stageScore: 20, timingScore: -10, total: 50 },
+  ])(
+    'shows score columns that contribute to the basketball preview ($total points)',
+    async ({ stage, stageScore, timingScore, total }) => {
+      const nba = { id: 12, name: 'NBA', logoUrl: null, flagUrl: null };
+      const acb = { id: 117, name: 'ACB', logoUrl: null, flagUrl: null };
+      const first = {
+        id: 8,
+        startsAt: '2026-11-18T23:00:00Z',
+        status: 'NS',
+        stage,
+        season: '2026',
+        homeScore: null,
+        awayScore: null,
+        league: nba,
+        homeTeam: { id: 1, name: 'Celtics', logoUrl: null },
+        awayTeam: { id: 2, name: 'Bulls', logoUrl: null },
+      };
+      const second = {
+        ...first,
+        id: 9,
+        startsAt: '2026-11-18T16:00:00Z',
+        league: acb,
+        stage: null,
+        homeTeam: { id: 3, name: 'Barcelona', logoUrl: null },
+        awayTeam: { id: 4, name: 'Valencia', logoUrl: null },
+      };
+      jest.mocked(getBasketballRankingLeagues).mockResolvedValue([nba, acb]);
+      jest.mocked(getBasketballRankingConfigurations).mockResolvedValue([
+        {
+          id: 'basketball-preview',
+          version: 'candidate',
+          active: false,
+          leagueTiers: { '12': 1 },
+          createdAt: '2026-11-18T09:00:00Z',
+        },
+      ]);
+      jest.mocked(previewBasketballRanking).mockResolvedValue({
+        configurationId: 'basketball-preview',
+        version: 'candidate',
+        topMatches: [first],
+        groups: [
+          {
+            league: nba,
+            matches: [
+              {
+                game: first,
+                tier: 1,
+                leagueScore: 40,
+                stageScore,
+                timingScore,
+                total,
+                exclusionReason: null,
+              },
+            ],
+          },
+          {
+            league: acb,
+            matches: [
+              {
+                game: second,
+                tier: null,
+                leagueScore: 0,
+                stageScore: 0,
+                timingScore: 0,
+                total: 0,
+                exclusionReason: 'unrated_league',
+              },
+            ],
+          },
+        ],
+      });
+      render(<MatchRankingPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Basketball' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
+      fireEvent.change(await screen.findByLabelText(/^Date/), {
+        target: { value: '2026-11-18' },
+      });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Timezone' }), {
+        target: { value: 'UTC' },
+      });
+      fireEvent.mouseDown(
+        screen.getByRole('combobox', { name: 'Ranking version' })
+      );
+      fireEvent.click(screen.getByRole('option', { name: 'candidate' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+
+      expect(await screen.findByText('Version: candidate')).toBeVisible();
+      expect(previewBasketballRanking).toHaveBeenCalledWith({
+        date: '2026-11-18',
+        timezone: 'UTC',
+        configurationId: 'basketball-preview',
+      });
+      expect(screen.getByRole('listitem', { name: '' })).toHaveTextContent(
+        'Celtics vs Bulls'
+      );
+      expect(
+        screen
+          .getAllByRole('table')
+          .map((table) => table.getAttribute('aria-label'))
+      ).toEqual(['Ranking for NBA', 'Ranking for ACB']);
+      const nbaTable = within(
+        screen.getByRole('table', { name: 'Ranking for NBA' })
+      );
+      const columns = [
+        'Match',
+        'Start',
+        'League',
+        ...(stageScore ? ['Stage'] : []),
+        ...(timingScore ? ['Timing'] : []),
+        'Total',
+        'Top eligibility',
+      ];
+      for (const table of screen.getAllByRole('table')) {
+        expect(
+          within(table)
+            .getAllByRole('columnheader')
+            .map((cell) => cell.textContent)
+        ).toEqual(columns);
+      }
+      expect(
+        nbaTable.getByText(String(total), { selector: 'td:nth-last-child(2)' })
+      ).toBeVisible();
+      if (stageScore) expect(nbaTable.getByText('Final +20')).toBeVisible();
+      if (timingScore)
+        expect(
+          nbaTable.getByText(timingScore > 0 ? '+3' : '−10')
+        ).toBeVisible();
+      expect(screen.getByText('League has no tier')).toBeVisible();
+    }
+  );
 
   it('lets an operator include Legacy competitions in the catalogue', async () => {
     render(<MatchRankingPage />);

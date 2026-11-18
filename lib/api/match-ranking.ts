@@ -18,7 +18,16 @@ import type {
   MatchFixtureOption,
 } from '@/modules/match-ranking/types';
 
+import type {
+  BasketballLeague,
+  BasketballRankingConfiguration,
+  BasketballRankingDraft,
+  BasketballRankingPreview,
+  BasketballRankingPreviewInput,
+} from '@/modules/match-ranking/basketball-types';
+
 const BASE_PATH = '/admin/match-ranking';
+const BASKETBALL_PATH = `${BASE_PATH}/basketball`;
 
 export async function getMatchRankingCompetitions(
   filters: {
@@ -284,5 +293,68 @@ export async function getMatchRankingRuleDefaults(): Promise<
 > {
   return readJson(
     await adminAuthFetch({ path: `${BASE_PATH}/rule-defaults`, method: 'GET' })
+  );
+}
+
+export async function getBasketballRankingLeagues(): Promise<
+  BasketballLeague[]
+> {
+  return readList(
+    await adminAuthFetch({ path: `${BASKETBALL_PATH}/leagues`, method: 'GET' })
+  );
+}
+
+export async function getBasketballRankingConfigurations(): Promise<
+  BasketballRankingConfiguration[]
+> {
+  return readList(
+    await adminAuthFetch({
+      path: `${BASKETBALL_PATH}/configurations`,
+      method: 'GET',
+    })
+  );
+}
+
+export async function createBasketballRankingDraft(
+  input: BasketballRankingDraft
+): Promise<BasketballRankingConfiguration> {
+  return postBasketballRanking('/configurations', input);
+}
+
+export async function activateBasketballRanking(
+  id: string,
+  reason: string
+): Promise<{ ok: true }> {
+  return postBasketballRanking(
+    `/configurations/${encodeURIComponent(id)}/activate`,
+    { reason }
+  );
+}
+
+export async function deactivateBasketballRanking(
+  reason: string
+): Promise<{ ok: true }> {
+  return postBasketballRanking('/deactivate', { reason });
+}
+
+export async function previewBasketballRanking(
+  input: BasketballRankingPreviewInput
+): Promise<BasketballRankingPreview> {
+  return postBasketballRanking('/preview', input);
+}
+
+async function postBasketballRanking<T>(
+  path: string,
+  input:
+    | BasketballRankingDraft
+    | BasketballRankingPreviewInput
+    | { reason: string }
+): Promise<T> {
+  return readJson(
+    await adminAuthFetch({
+      path: `${BASKETBALL_PATH}${path}`,
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
   );
 }

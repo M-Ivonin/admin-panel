@@ -23,6 +23,22 @@ operator contracts below.
 
 ## Operator contracts
 
+Choose **Basketball** in the page's sport selector to work with the imported
+basketball catalog. Assign optional league tiers in a draft configuration.
+Tiers 1–4 sort rated leagues before unrated leagues and contribute 40, 28, 16
+and 6 points toward Top Matches. Preview a draft for a local date and timezone
+to see the Top selection, the league order and each game's points and
+eligibility. The stage and timing columns appear only when they contribute
+points to at least one game in the selected day. Save a reason with
+configuration changes.
+
+Activate a reviewed version to turn on ranked Basketball calendars in compatible
+clients. Deactivating returns those calendars to chronological order. Each
+action affects Basketball independently of the Football configuration. An
+unrated league stays in the calendar and is ineligible for Top Matches.
+
+### Football
+
 - The Competition Catalog defaults to SportMonks. Use Catalog source to include
   Legacy rows. `Ready for review` means provider metadata was fetched;
   `Reviewed` means an operator accepted it.

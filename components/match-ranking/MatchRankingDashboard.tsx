@@ -1,7 +1,9 @@
 'use client';
 
+import { BasketballRankingDashboard } from './BasketballRankingDashboard';
 import { RankingWeightsPanel } from './RankingWeightsPanel';
 import {
+  type ReactNode,
   SyntheticEvent,
   useCallback,
   useEffect,
@@ -36,6 +38,8 @@ import {
   TableRow,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -224,6 +228,28 @@ const classifications: CompetitionClassification[] = [
 const prominenceValues = [0, 10, 20] as const;
 
 export function MatchRankingDashboard() {
+  const [sport, setSport] = useState<'football' | 'basketball'>('football');
+  const sportControl = (
+    <ToggleButtonGroup
+      exclusive
+      aria-label="Ranking sport"
+      value={sport}
+      onChange={(_, next: typeof sport | null) => {
+        if (next) setSport(next);
+      }}
+      size="small"
+    >
+      <ToggleButton value="football">Football</ToggleButton>
+      <ToggleButton value="basketball">Basketball</ToggleButton>
+    </ToggleButtonGroup>
+  );
+
+  return sport === 'basketball'
+    ? <BasketballRankingDashboard sportControl={sportControl} />
+    : <FootballRankingDashboard sportControl={sportControl} />;
+}
+
+function FootballRankingDashboard({ sportControl }: { sportControl: ReactNode }) {
   const [tab, setTab] = useState(0);
   const [helpTopic, setHelpTopic] = useState<HelpTopic | null>(null);
   const [competitions, setCompetitions] = useState<MatchRankingCompetition[]>(
@@ -318,14 +344,17 @@ export function MatchRankingDashboard() {
         subtitle="Review ranking inputs, activate versioned rules, and inspect deterministic Top Matches previews."
         icon={<SportsSoccer color="primary" />}
         actions={
-          <Button
-            variant="outlined"
-            startIcon={<HelpOutline />}
-            onClick={() => setHelpTopic('general')}
-            aria-label="About match ranking"
-          >
-            Help
-          </Button>
+          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+            {sportControl}
+            <Button
+              variant="outlined"
+              startIcon={<HelpOutline />}
+              onClick={() => setHelpTopic('general')}
+              aria-label="About match ranking"
+            >
+              Help
+            </Button>
+          </Stack>
         }
       />
       <Box sx={{ maxWidth: 1280, mx: 'auto', p: { xs: 2, sm: 3, lg: 4 } }}>
