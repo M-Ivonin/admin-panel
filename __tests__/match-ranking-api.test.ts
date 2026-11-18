@@ -1,6 +1,12 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 import {
+  activateBasketballRanking,
   activateMatchRankingConfiguration,
+  createBasketballRankingDraft,
+  deactivateBasketballRanking,
+  getBasketballRankingConfigurations,
+  getBasketballRankingLeagues,
+  previewBasketballRanking,
   bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
   createMatchRankingOverride,
@@ -32,6 +38,58 @@ const ok = (payload: unknown = {}) => ({
 
 describe('match ranking API', () => {
   beforeEach(() => (adminAuthFetch as jest.Mock).mockReset());
+
+  it('uses sport-specific authenticated routes and accepts the basketball list envelope', async () => {
+    const request = jest.mocked(adminAuthFetch);
+    const league = { id: 12, name: 'NBA', logoUrl: null };
+    const draft = {
+      version: 'basketball-1',
+      leagueTiers: { '12': 1 } as const,
+      reason: 'Seed tiers',
+    };
+    const config = {
+      ...draft,
+      id: 'config-1',
+      createdAt: '2026-11-18T00:00:00Z',
+      active: false,
+    };
+    request
+      .mockResolvedValueOnce(ok({ items: [league] }) as Response)
+      .mockResolvedValueOnce(ok({ items: [config] }) as Response)
+      .mockResolvedValue(ok({ ok: true }) as Response);
+    expect(await getBasketballRankingLeagues()).toEqual([league]);
+    expect(await getBasketballRankingConfigurations()).toEqual([config]);
+    await createBasketballRankingDraft(draft);
+    await activateBasketballRanking('config-1', 'Reviewed');
+    await deactivateBasketballRanking('Roll back');
+    await previewBasketballRanking({ date: '2026-11-18', timezone: 'UTC' });
+    expect(
+      request.mock.calls.map(([options]) => [
+        options.method,
+        options.path,
+        options.body ? JSON.parse(String(options.body)) : null,
+      ])
+    ).toEqual([
+      ['GET', '/admin/match-ranking/basketball/leagues', null],
+      ['GET', '/admin/match-ranking/basketball/configurations', null],
+      ['POST', '/admin/match-ranking/basketball/configurations', draft],
+      [
+        'POST',
+        '/admin/match-ranking/basketball/configurations/config-1/activate',
+        { reason: 'Reviewed' },
+      ],
+      [
+        'POST',
+        '/admin/match-ranking/basketball/deactivate',
+        { reason: 'Roll back' },
+      ],
+      [
+        'POST',
+        '/admin/match-ranking/basketball/preview',
+        { date: '2026-11-18', timezone: 'UTC' },
+      ],
+    ]);
+  });
 
   it('uses the authenticated Legacy discovery, details and link endpoints', async () => {
     (adminAuthFetch as jest.Mock).mockResolvedValue(ok([]));
