@@ -6,23 +6,53 @@ export type BasketballLeague = {
   logoUrl: string | null;
 };
 
+export type BasketballRankingRules = {
+  tier1: number;
+  tier2: number;
+  tier3: number;
+  tier4: number;
+  final: number;
+  semifinal: number;
+  quarterfinal: number;
+  playoff: number;
+  live: number;
+  upcoming: number;
+  completed: number;
+  upcomingMinutes: number;
+  topThreshold: number;
+  topLimit: number;
+  leagueCap: number;
+  interestEnabled: boolean;
+  interestWindowDays: number;
+  interestRecentDays: number;
+  interestRecentWeight: number;
+  interestOlderWeight: number;
+  interestTeamFactor: number;
+  interestMinimumGames: number;
+  interestMinimumDays: number;
+  interestMultiplier: number;
+  interestCap: number;
+};
+
 export type BasketballRankingConfiguration = {
   id: string;
   version: string;
   leagueTiers: Record<string, BasketballLeagueTier>;
   active: boolean;
+  rules?: BasketballRankingRules;
   createdAt: string;
 };
 
 export type BasketballRankingDraft = Pick<
   BasketballRankingConfiguration,
-  'version' | 'leagueTiers'
+  'version' | 'leagueTiers' | 'rules'
 > & { reason: string };
 
 export type BasketballRankingPreviewInput = {
   date: string;
   timezone: string;
   configurationId?: string;
+  userId?: string;
 };
 
 type BasketballRankingGame = {
@@ -44,6 +74,7 @@ export type BasketballRankingPreviewGame = {
   leagueScore: number;
   stageScore: number;
   timingScore: number;
+  interestScore?: number;
   total: number;
   exclusionReason:
     | 'unrated_league'
@@ -55,6 +86,7 @@ export type BasketballRankingPreviewGame = {
 export type BasketballRankingPreview = {
   configurationId: string | null;
   version: string | null;
+  previewUser?: { id: string; email?: string | null };
   topMatches: BasketballRankingGame[];
   groups: {
     league: BasketballRankingGame['league'];

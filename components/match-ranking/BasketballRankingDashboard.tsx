@@ -1,9 +1,17 @@
 'use client';
 
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 import { Add, SportsBasketball } from '@mui/icons-material';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -28,6 +36,8 @@ import {
   Typography,
 } from '@mui/material';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { getUsers, type PaginatedUser } from '@/lib/api/users';
+import { BasketballRankingWeightsPanel } from './BasketballRankingWeightsPanel';
 import {
   activateBasketballRanking,
   createBasketballRankingDraft,
@@ -39,6 +49,8 @@ import {
 import type {
   BasketballLeagueTier,
   BasketballRankingConfiguration,
+  BasketballRankingDraft,
+  BasketballRankingRules,
   BasketballRankingPreview,
   BasketballRankingPreviewGame,
 } from '@/modules/match-ranking/basketball-types';
@@ -46,6 +58,26 @@ import type {
 type Activation =
   | { type: 'activate'; config: BasketballRankingConfiguration }
   | { type: 'deactivate' };
+
+type LeagueTierDraft = {
+  query: string;
+  version: string;
+  reason: string;
+  leagueTiers: Record<string, BasketballLeagueTier>;
+  rules?: BasketballRankingRules;
+};
+
+function fromConfiguration(
+  base?: BasketballRankingConfiguration
+): LeagueTierDraft {
+  return {
+    query: '',
+    version: '',
+    reason: '',
+    leagueTiers: base?.leagueTiers ?? {},
+    rules: base?.rules,
+  };
+}
 
 const tiers = [1, 2, 3, 4] as const;
 const exclusions: Record<
@@ -62,9 +94,9 @@ export function BasketballRankingDashboard({
 }: {
   sportControl: ReactNode;
 }) {
-  const [tab, setTab] = useState<'catalog' | 'configurations' | 'preview'>(
-    'catalog'
-  );
+  const [tab, setTab] = useState<
+    'catalog' | 'configurations' | 'preview' | 'weights'
+  >('catalog');
   const [catalog, setCatalog] = useState<
     Awaited<ReturnType<typeof getBasketballRankingLeagues>>
   >([]);
@@ -77,13 +109,10 @@ export function BasketballRankingDashboard({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [query, setQuery] = useState('');
-  const [leagueTiers, setLeagueTiers] = useState<
-    Record<string, BasketballLeagueTier>
-  >({});
+  const [catalogDraft, setCatalogDraft] = useState(fromConfiguration);
+  const [dialogDraft, setDialogDraft] = useState(fromConfiguration);
   const [creating, setCreating] = useState(false);
-  const [version, setVersion] = useState('');
-  const [draftReason, setDraftReason] = useState('');
+  const [previewUser, setPreviewUser] = useState<PaginatedUser | null>(null);
   const [activation, setActivation] = useState<Activation | null>(null);
   const [activationReason, setActivationReason] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -101,9 +130,10 @@ export function BasketballRankingDashboard({
         if (!mounted) return;
         setCatalog(leagues);
         setConfigurations(configurations);
-        setLeagueTiers(
-          configurations.find((configuration) => configuration.active)
-            ?.leagueTiers ?? {}
+        setCatalogDraft(
+          fromConfiguration(
+            configurations.find((configuration) => configuration.active)
+          )
         );
         setLoadFailed(false);
       })
@@ -133,22 +163,42 @@ export function BasketballRankingDashboard({
     }
   }
 
-  function saveDraft(event: FormEvent) {
-    event.preventDefault();
-    if (pending || !version.trim() || !draftReason.trim()) return;
+  function persistDraft(
+    draft: BasketballRankingDraft,
+    next: 'configurations' | 'preview',
+    onSaved?: () => void
+  ) {
     void perform(async () => {
-      const saved = await createBasketballRankingDraft({
-        version: version.trim(),
-        leagueTiers,
-        reason: draftReason.trim(),
-      });
+      const saved = await createBasketballRankingDraft(draft);
       setConfigurations((rows) => [saved, ...rows]);
-      setVersion('');
-      setDraftReason('');
+      onSaved?.();
       setSuccess(`Draft "${saved.version}" saved.`);
       setCreating(false);
-      setTab('configurations');
+      if (next === 'preview') {
+        setPreviewVersion(saved.id);
+        setPreview(null);
+      }
+      setTab(next);
     });
+  }
+
+  function saveDraft(
+    event: FormEvent,
+    draft: LeagueTierDraft,
+    onSaved?: () => void
+  ) {
+    event.preventDefault();
+    if (pending || !draft.version.trim() || !draft.reason.trim()) return;
+    persistDraft(
+      {
+        version: draft.version.trim(),
+        leagueTiers: draft.leagueTiers,
+        reason: draft.reason.trim(),
+        ...(draft.rules ? { rules: draft.rules } : {}),
+      },
+      'configurations',
+      onSaved
+    );
   }
 
   function applyActivation(event: FormEvent) {
@@ -164,12 +214,14 @@ export function BasketballRankingDashboard({
             active: row.id === activation.config.id,
           }))
         );
+        setCatalogDraft(fromConfiguration(activation.config));
         setSuccess(`Version "${activation.config.version}" activated.`);
       } else {
         await deactivateBasketballRanking(reason);
         setConfigurations((rows) =>
           rows.map((row) => ({ ...row, active: false }))
         );
+        setCatalogDraft(fromConfiguration());
         setSuccess('Basketball ranking disabled.');
       }
       setActivation(null);
@@ -182,26 +234,25 @@ export function BasketballRankingDashboard({
     if (pending || !date || !timezone.trim()) return;
     setPreview(null);
     void perform(async () => {
-      setPreview(
-        await previewBasketballRanking({
-          date,
-          timezone: timezone.trim(),
-          ...(previewVersion ? { configurationId: previewVersion } : {}),
-        })
-      );
+      const result = await previewBasketballRanking({
+        date,
+        timezone: timezone.trim(),
+        ...(previewVersion ? { configurationId: previewVersion } : {}),
+        ...(previewUser ? { userId: previewUser.id } : {}),
+      });
+      if (previewUser && result.previewUser?.id !== previewUser.id) {
+        throw new Error(
+          'The selected user’s preview is unavailable. Please try again later.'
+        );
+      }
+      setPreview(result);
     });
   }
 
   const active = configurations.find((row) => row.active);
-  const visibleLeagues = catalog.filter((league) =>
-    league.name.toLowerCase().includes(query.trim().toLowerCase())
-  );
 
-  function openDraft(baseTiers = leagueTiers) {
-    setLeagueTiers(baseTiers);
-    setQuery('');
-    setVersion('');
-    setDraftReason('');
+  function openDraft(base = active) {
+    setDialogDraft(fromConfiguration(base));
     setError('');
     setCreating(true);
   }
@@ -212,94 +263,118 @@ export function BasketballRankingDashboard({
     setError('');
   }
 
-  const tierEditor = (
-    <>
-      <TextField
-        label="Search leagues"
-        size="small"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      <TableContainer sx={{ maxHeight: 480 }}>
-        <Table stickyHeader size="small" aria-label="Basketball league tiers">
-          <TableHead>
-            <TableRow>
-              <TableCell>League</TableCell>
-              <TableCell>Tier</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {visibleLeagues.map((league) => (
-              <TableRow key={league.id}>
-                <TableCell component="th" scope="row">
-                  {league.name}
-                </TableCell>
-                <TableCell sx={{ width: 150 }}>
-                  <TextField
-                    select
-                    size="small"
-                    fullWidth
-                    value={leagueTiers[league.id] ?? ''}
-                    slotProps={{
-                      select: {
-                        native: true,
-                        inputProps: {
-                          'aria-label': `Tier for ${league.name}`,
-                        },
-                      },
-                    }}
-                    disabled={pending}
-                    onChange={(event) => {
-                      const tier = tiers.find(
-                        (value) => String(value) === event.target.value
-                      );
-                      setLeagueTiers((current) => {
-                        const next = { ...current };
-                        if (tier) next[league.id] = tier;
-                        else delete next[league.id];
-                        return next;
-                      });
-                    }}
-                  >
-                    <option value="">Unrated</option>
-                    {tiers.map((tier) => (
-                      <option key={tier} value={tier}>
-                        {tier}
-                      </option>
-                    ))}
-                  </TextField>
-                </TableCell>
+  function tierEditor(
+    draft: LeagueTierDraft,
+    updateDraft: Dispatch<SetStateAction<LeagueTierDraft>>
+  ) {
+    const search = draft.query.trim().toLowerCase();
+    const visibleLeagues = catalog.filter((league) =>
+      league.name.toLowerCase().includes(search)
+    );
+    return (
+      <>
+        <TextField
+          label="Search leagues"
+          size="small"
+          value={draft.query}
+          onChange={(event) => {
+            const query = event.target.value;
+            updateDraft((current) => ({ ...current, query }));
+          }}
+        />
+        <TableContainer sx={{ maxHeight: 480 }}>
+          <Table stickyHeader size="small" aria-label="Basketball league tiers">
+            <TableHead>
+              <TableRow>
+                <TableCell>League</TableCell>
+                <TableCell>Tier</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {visibleLeagues.length === 0 ? (
-        <Typography color="text.secondary">No leagues found.</Typography>
-      ) : null}
-    </>
-  );
-  const draftFields = (
-    <>
-      <TextField
-        required
-        label="Version"
-        size="small"
-        value={version}
-        onChange={(event) => setVersion(event.target.value)}
-        disabled={pending}
-      />
-      <TextField
-        required
-        label="Change reason"
-        size="small"
-        value={draftReason}
-        onChange={(event) => setDraftReason(event.target.value)}
-        disabled={pending}
-        fullWidth
-      />
-    </>
-  );
+            </TableHead>
+            <TableBody>
+              {visibleLeagues.map((league) => (
+                <TableRow key={league.id}>
+                  <TableCell component="th" scope="row">
+                    {league.name}
+                  </TableCell>
+                  <TableCell sx={{ width: 150 }}>
+                    <TextField
+                      select
+                      size="small"
+                      fullWidth
+                      value={draft.leagueTiers[league.id] ?? ''}
+                      slotProps={{
+                        select: {
+                          native: true,
+                          inputProps: {
+                            'aria-label': `Tier for ${league.name}`,
+                          },
+                        },
+                      }}
+                      disabled={pending}
+                      onChange={(event) => {
+                        const tier = tiers.find(
+                          (value) => String(value) === event.target.value
+                        );
+                        updateDraft((current) => {
+                          const leagueTiers = { ...current.leagueTiers };
+                          if (tier) leagueTiers[league.id] = tier;
+                          else delete leagueTiers[league.id];
+                          return { ...current, leagueTiers };
+                        });
+                      }}
+                    >
+                      <option value="">Unrated</option>
+                      {tiers.map((tier) => (
+                        <option key={tier} value={tier}>
+                          {tier}
+                        </option>
+                      ))}
+                    </TextField>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {visibleLeagues.length === 0 ? (
+          <Typography color="text.secondary">No leagues found.</Typography>
+        ) : null}
+      </>
+    );
+  }
+
+  function draftFields(
+    draft: LeagueTierDraft,
+    updateDraft: Dispatch<SetStateAction<LeagueTierDraft>>
+  ) {
+    return (
+      <>
+        <TextField
+          required
+          label="Version"
+          size="small"
+          value={draft.version}
+          onChange={(event) => {
+            const version = event.target.value;
+            updateDraft((current) => ({ ...current, version }));
+          }}
+          disabled={pending}
+        />
+        <TextField
+          required
+          label="Change reason"
+          size="small"
+          value={draft.reason}
+          onChange={(event) => {
+            const reason = event.target.value;
+            updateDraft((current) => ({ ...current, reason }));
+          }}
+          disabled={pending}
+          fullWidth
+        />
+      </>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -326,6 +401,7 @@ export function BasketballRankingDashboard({
           <Tab value="catalog" label="League catalog" />
           <Tab value="configurations" label="Configurations" />
           <Tab value="preview" label="Preview" />
+          <Tab value="weights" label="Weights & formula" />
         </Tabs>
 
         {error && !activation && !creating ? (
@@ -360,17 +436,32 @@ export function BasketballRankingDashboard({
 
         {!loading && !loadFailed && tab === 'catalog' ? (
           <Card variant="outlined">
-            <CardContent component="form" onSubmit={saveDraft}>
+            <CardContent
+              component="form"
+              onSubmit={(event) =>
+                saveDraft(event, catalogDraft, () => {
+                  setCatalogDraft((current) => ({
+                    ...current,
+                    version: '',
+                    reason: '',
+                  }));
+                })
+              }
+            >
               <Stack spacing={2}>
                 <Typography variant="h6">League tiers</Typography>
-                {tierEditor}
+                {tierEditor(catalogDraft, setCatalogDraft)}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  {draftFields}
+                  {draftFields(catalogDraft, setCatalogDraft)}
                   <Button
                     type="submit"
                     variant="contained"
                     sx={{ flexShrink: 0 }}
-                    disabled={pending || !version.trim() || !draftReason.trim()}
+                    disabled={
+                      pending ||
+                      !catalogDraft.version.trim() ||
+                      !catalogDraft.reason.trim()
+                    }
                   >
                     Save draft
                   </Button>
@@ -437,7 +528,7 @@ export function BasketballRankingDashboard({
                                 <Button
                                   size="small"
                                   disabled={pending}
-                                  onClick={() => openDraft(row.leagueTiers)}
+                                  onClick={() => openDraft(row)}
                                 >
                                   Copy tiers
                                 </Button>
@@ -473,11 +564,39 @@ export function BasketballRankingDashboard({
           </Card>
         ) : null}
 
+        {!loading && !loadFailed && tab === 'weights' ? (
+          <BasketballRankingWeightsPanel
+            configurations={configurations}
+            pending={pending}
+            onSave={(draft) => persistDraft(draft, 'preview')}
+          />
+        ) : null}
+
         {!loading && !loadFailed && tab === 'preview' ? (
           <Stack spacing={2}>
             <Card variant="outlined">
               <CardContent component="form" onSubmit={runPreview}>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: 'minmax(0, 1fr)',
+                      sm: 'repeat(2, minmax(0, 1fr))',
+                      lg: 'minmax(0, 1.5fr) minmax(135px, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto',
+                    },
+                    alignItems: 'start',
+                    gap: 2,
+                    '& > *': { minWidth: 0 },
+                  }}
+                >
+                  <BasketballPreviewUserField
+                    user={previewUser}
+                    disabled={pending}
+                    onChange={(user) => {
+                      setPreviewUser(user);
+                      setPreview(null);
+                    }}
+                  />
                   <TextField
                     required
                     type="date"
@@ -512,7 +631,6 @@ export function BasketballRankingDashboard({
                       setPreviewVersion(event.target.value);
                       setPreview(null);
                     }}
-                    sx={{ minWidth: 180 }}
                   >
                     <MenuItem value="">
                       <em>Active version</em>
@@ -530,7 +648,7 @@ export function BasketballRankingDashboard({
                   >
                     Run preview
                   </Button>
-                </Stack>
+                </Box>
               </CardContent>
             </Card>
             {pending ? (
@@ -552,13 +670,16 @@ export function BasketballRankingDashboard({
       </Stack>
 
       <Dialog open={creating} onClose={closeDraft} maxWidth="md" fullWidth>
-        <Box component="form" onSubmit={saveDraft}>
+        <Box
+          component="form"
+          onSubmit={(event) => saveDraft(event, dialogDraft)}
+        >
           <DialogTitle>New configuration</DialogTitle>
           <DialogContent>
             <Stack spacing={2} pt={1}>
               {error ? <Alert severity="error">{error}</Alert> : null}
-              {draftFields}
-              {tierEditor}
+              {draftFields(dialogDraft, setDialogDraft)}
+              {tierEditor(dialogDraft, setDialogDraft)}
             </Stack>
           </DialogContent>
           <DialogActions>
@@ -568,7 +689,11 @@ export function BasketballRankingDashboard({
             <Button
               type="submit"
               variant="contained"
-              disabled={pending || !version.trim() || !draftReason.trim()}
+              disabled={
+                pending ||
+                !dialogDraft.version.trim() ||
+                !dialogDraft.reason.trim()
+              }
             >
               Create configuration
             </Button>
@@ -630,6 +755,87 @@ export function BasketballRankingDashboard({
   );
 }
 
+function BasketballPreviewUserField({
+  user,
+  disabled,
+  onChange,
+}: {
+  user: PaginatedUser | null;
+  disabled: boolean;
+  onChange: (user: PaginatedUser | null) => void;
+}) {
+  const [query, setQuery] = useState(user?.email ?? '');
+  const [options, setOptions] = useState<PaginatedUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const search = query.trim();
+    setOptions([]);
+    setFailed(false);
+    if (user || search.length < 2) {
+      setLoading(false);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    const timer = window.setTimeout(() => {
+      void getUsers({ page: 1, limit: 25, search })
+        .then(
+          (response) => {
+            if (active)
+              setOptions(
+                response.users.filter((candidate) => Boolean(candidate.email))
+              );
+          },
+          () => {
+            if (active) setFailed(true);
+          }
+        )
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [query, user]);
+
+  return (
+    <Autocomplete
+      options={user ? [user] : options}
+      value={user}
+      inputValue={query}
+      disabled={disabled}
+      loading={loading}
+      filterOptions={(options) => options}
+      isOptionEqualToValue={(option, selected) => option.id === selected.id}
+      getOptionLabel={(option) => option.email ?? option.id}
+      onInputChange={(_event, value, reason) => {
+        if (reason === 'input') {
+          setQuery(value);
+          onChange(null);
+        }
+      }}
+      onChange={(_event, selected) => {
+        setQuery(selected?.email ?? '');
+        onChange(selected);
+      }}
+      noOptionsText={
+        failed
+          ? 'User search failed. Edit the email to retry.'
+          : query.trim().length < 2
+            ? 'Type at least two email characters.'
+            : 'No users found.'
+      }
+      renderInput={(params) => (
+        <TextField {...params} size="small" label="Preview user email" />
+      )}
+    />
+  );
+}
+
 function PreviewResults({
   result,
   timezone,
@@ -643,7 +849,16 @@ function PreviewResults({
   const showTiming = result.groups.some((group) =>
     group.matches.some((match) => match.timingScore !== 0)
   );
-  const tableMinWidth = 550 + (showStage ? 150 : 0) + (showTiming ? 85 : 0);
+  const showInterest =
+    Boolean(result.previewUser) ||
+    result.groups.some((group) =>
+      group.matches.some((match) => Boolean(match.interestScore))
+    );
+  const tableMinWidth =
+    550 +
+    (showStage ? 150 : 0) +
+    (showTiming ? 85 : 0) +
+    (showInterest ? 100 : 0);
   const startTime = new Intl.DateTimeFormat(undefined, {
     timeZone: timezone,
     hour: '2-digit',
@@ -657,6 +872,11 @@ function PreviewResults({
           <Typography color="text.secondary">
             Version: {result.version ?? 'No active version'}
           </Typography>
+          {result.previewUser ? (
+            <Typography color="text.secondary">
+              Preview for {result.previewUser.email ?? result.previewUser.id}
+            </Typography>
+          ) : null}
           <Typography variant="h6">Top Matches</Typography>
           {result.topMatches.length ? (
             <Box component="ol" sx={{ my: 0, pl: 3 }}>
@@ -698,6 +918,9 @@ function PreviewResults({
                       {showTiming ? (
                         <TableCell align="right">Timing</TableCell>
                       ) : null}
+                      {showInterest ? (
+                        <TableCell align="right">Interest</TableCell>
+                      ) : null}
                       <TableCell align="right">Total</TableCell>
                       <TableCell sx={{ width: '19%' }}>
                         Top eligibility
@@ -711,6 +934,7 @@ function PreviewResults({
                         leagueScore,
                         stageScore,
                         timingScore,
+                        interestScore = 0,
                         total,
                         exclusionReason,
                       }) => (
@@ -736,6 +960,11 @@ function PreviewResults({
                           {showTiming ? (
                             <TableCell align="right">
                               {signedPoints(timingScore)}
+                            </TableCell>
+                          ) : null}
+                          {showInterest ? (
+                            <TableCell align="right">
+                              {signedPoints(interestScore)}
                             </TableCell>
                           ) : null}
                           <TableCell align="right">{total}</TableCell>

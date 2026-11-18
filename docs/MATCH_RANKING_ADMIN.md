@@ -25,13 +25,20 @@ operator contracts below.
 
 Choose **Basketball** in the page's sport selector to work with the imported
 basketball catalog. Use **Configurations → New configuration** to create a draft
-with optional league tiers.
-Tiers 1–4 sort rated leagues before unrated leagues and contribute 40, 28, 16
-and 6 points toward Top Matches. Preview a draft for a local date and timezone
-to see the Top selection, the league order and each game's points and
-eligibility. The stage and timing columns appear only when they contribute
-points to at least one game in the selected day. Save a reason with
-configuration changes.
+with optional league tiers. Tiers 1–4 sort rated leagues before unrated leagues
+and contribute 40, 28, 16 and 6 points toward Top Matches by default.
+
+In **Weights & formula**, choose a base version to carry over its league tiers
+and formula. Edit tier, stage and timing points, the Top Matches threshold and
+selection limits. Save with a new version name and a reason. The saved draft
+opens in **Preview** and remains inactive until explicitly activated in
+**Configurations**.
+
+Preview a draft for a local date and timezone to see Top Matches, league
+order, and each game's score and eligibility. **Enable personalization** to
+score interest from basketball match openings. Search by email and select a
+user in Preview to see their interest points. An account without qualifying
+history receives the ordinary formula.
 
 Activate a reviewed version to turn on ranked Basketball calendars in compatible
 clients. Deactivating returns those calendars to chronological order. Each

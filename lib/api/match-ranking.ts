@@ -24,6 +24,7 @@ import type {
   BasketballRankingDraft,
   BasketballRankingPreview,
   BasketballRankingPreviewInput,
+  BasketballRankingRules,
 } from '@/modules/match-ranking/basketball-types';
 
 const BASE_PATH = '/admin/match-ranking';
@@ -294,6 +295,16 @@ export async function getMatchRankingRuleDefaults(): Promise<
   return readJson(
     await adminAuthFetch({ path: `${BASE_PATH}/rule-defaults`, method: 'GET' })
   );
+}
+
+export async function getBasketballRankingRuleDefaults(): Promise<BasketballRankingRules> {
+  const { rules } = await readJson<{ rules: BasketballRankingRules }>(
+    await adminAuthFetch({
+      path: `${BASKETBALL_PATH}/rule-defaults`,
+      method: 'GET',
+    })
+  );
+  return rules;
 }
 
 export async function getBasketballRankingLeagues(): Promise<

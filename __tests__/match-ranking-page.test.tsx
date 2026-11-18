@@ -14,6 +14,7 @@ import {
   deactivateBasketballRanking,
   getBasketballRankingConfigurations,
   getBasketballRankingLeagues,
+  getBasketballRankingRuleDefaults,
   previewBasketballRanking,
   bulkReviewMatchRankingCompetitions,
   createMatchRankingConfiguration,
@@ -48,6 +49,7 @@ jest.mock('@/lib/api/match-ranking', () => ({
   deactivateBasketballRanking: jest.fn(),
   getBasketballRankingConfigurations: jest.fn(),
   getBasketballRankingLeagues: jest.fn(),
+  getBasketballRankingRuleDefaults: jest.fn(),
   previewBasketballRanking: jest.fn(),
   bulkReviewMatchRankingCompetitions: jest.fn(),
   createMatchRankingConfiguration: jest.fn(),
@@ -69,6 +71,34 @@ jest.mock('@/lib/api/match-ranking', () => ({
   updateMatchRankingOverride: jest.fn(),
   upsertTeamProminence: jest.fn(),
 }));
+
+const basketballRules = {
+  tier1: 40,
+  tier2: 28,
+  tier3: 16,
+  tier4: 6,
+  final: 20,
+  semifinal: 12,
+  quarterfinal: 6,
+  playoff: 3,
+  live: 5,
+  upcoming: 3,
+  completed: -10,
+  upcomingMinutes: 120,
+  topThreshold: 28,
+  topLimit: 3,
+  leagueCap: 2,
+  interestEnabled: false,
+  interestWindowDays: 30,
+  interestRecentDays: 7,
+  interestRecentWeight: 1,
+  interestOlderWeight: 0.5,
+  interestTeamFactor: 0.5,
+  interestMinimumGames: 3,
+  interestMinimumDays: 2,
+  interestMultiplier: 10,
+  interestCap: 20,
+};
 
 const competition = {
   id: 'league-1',
@@ -296,6 +326,111 @@ describe('MatchRankingPage', () => {
     ]);
   });
 
+  it('saves basketball formula and personalization as an inactive draft and previews it for a user', async () => {
+    const rules = basketballRules;
+    const active = {
+      id: 'basketball-active',
+      version: 'basketball-v1',
+      active: true,
+      leagueTiers: { '12': 1 as const },
+      rules: { ...rules, interestMinimumDays: 4 },
+      createdAt: '2026-11-18T09:00:00Z',
+    };
+    const draft = {
+      ...active,
+      id: 'basketball-draft',
+      version: 'basketball-v2',
+      active: false,
+      rules: {
+        ...rules,
+        topThreshold: 35,
+        interestEnabled: true,
+        interestWindowDays: 1,
+        interestRecentDays: 1,
+        interestMinimumDays: 2,
+      },
+    };
+    jest.mocked(getBasketballRankingLeagues).mockResolvedValue([]);
+    jest.mocked(getBasketballRankingConfigurations).mockResolvedValue([active]);
+    jest.mocked(getBasketballRankingRuleDefaults).mockResolvedValue(rules);
+    jest.mocked(createBasketballRankingDraft).mockResolvedValue(draft);
+    const user = {
+      id: 'preview-account',
+      email: 'basketball@example.com',
+    };
+    jest
+      .mocked(getUsers)
+      .mockResolvedValue({ users: [user] } as Awaited<
+        ReturnType<typeof getUsers>
+      >);
+    jest.mocked(previewBasketballRanking).mockResolvedValue({
+      configurationId: draft.id,
+      version: draft.version,
+      topMatches: [],
+      groups: [],
+      previewUser: user,
+    });
+
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('button', { name: 'Basketball' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Weights & formula' }));
+    fireEvent.change(
+      await screen.findByRole('spinbutton', { name: 'Top Matches threshold' }),
+      {
+        target: { value: '35' },
+      }
+    );
+    const personalization = screen.getByRole('checkbox', {
+      name: 'Enable personalization',
+    });
+    const historyWindow = screen.getByRole('spinbutton', {
+      name: 'History window (days)',
+    });
+    expect(personalization).not.toBeChecked();
+    expect(historyWindow).toBeVisible();
+    fireEvent.click(personalization);
+    fireEvent.change(historyWindow, { target: { value: '' } });
+    fireEvent.click(personalization);
+    expect(historyWindow).toBeVisible();
+    expect(historyWindow).toBeInvalid();
+    fireEvent.click(personalization);
+    fireEvent.change(historyWindow, { target: { value: '1' } });
+    expect(
+      screen.getByRole('spinbutton', { name: 'Recent period (days)' })
+    ).toHaveValue(1);
+    expect(
+      screen.getByRole('spinbutton', { name: 'Minimum days with activity' })
+    ).toHaveValue(2);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Version' }), {
+      target: { value: draft.version },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Change reason' }), {
+      target: { value: 'Try personalized Top Matches' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Draft "basketball-v2" saved.');
+    expect(createBasketballRankingDraft).toHaveBeenCalledWith({
+      version: draft.version,
+      leagueTiers: active.leagueTiers,
+      reason: 'Try personalized Top Matches',
+      rules: draft.rules,
+    });
+    expect(activateBasketballRanking).not.toHaveBeenCalled();
+
+    const query = screen.getByRole('combobox', { name: 'Preview user email' });
+    fireEvent.change(query, { target: { value: 'basketball@' } });
+    fireEvent.click(await screen.findByRole('option', { name: user.email }));
+    fireEvent.click(screen.getByRole('button', { name: 'Run preview' }));
+    expect(await screen.findByText(`Preview for ${user.email}`)).toBeVisible();
+    expect(previewBasketballRanking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configurationId: draft.id,
+        userId: user.id,
+      })
+    );
+  });
+
   it('saves basketball tiers as a draft and toggles it without football writes', async () => {
     const configuration = {
       id: 'basketball-v1-id',
@@ -348,9 +483,7 @@ describe('MatchRankingPage', () => {
       reason: 'Set NBA tier',
     });
     expect(activateBasketballRanking).not.toHaveBeenCalled();
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Activate', exact: true })
-    );
+    fireEvent.click(await screen.findByRole('button', { name: /^Activate$/ }));
     const dialog = screen.getByRole('dialog');
     expect(
       within(dialog).getByRole('button', { name: 'Confirm activation' })
@@ -400,6 +533,111 @@ describe('MatchRankingPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Football' }));
     expect(await screen.findByText('Copa Libertadores')).toBeVisible();
+  });
+
+  it('keeps catalog drafts separate from the copied version and refreshes the active tier and formula pair', async () => {
+    const active = {
+      id: 'basketball-1',
+      version: 'basketball-v1',
+      active: true,
+      leagueTiers: { '12': 1 as const },
+      rules: basketballRules,
+      createdAt: '2026-11-18T09:00:00Z',
+    };
+    const other = {
+      ...active,
+      id: 'basketball-2',
+      version: 'basketball-v2',
+      active: false,
+      leagueTiers: { '12': 3 as const },
+      rules: { ...basketballRules, topThreshold: 42 },
+    };
+    jest
+      .mocked(getBasketballRankingLeagues)
+      .mockResolvedValue([{ id: 12, name: 'NBA', logoUrl: null }]);
+    jest
+      .mocked(getBasketballRankingConfigurations)
+      .mockResolvedValue([active, other]);
+    jest.mocked(activateBasketballRanking).mockResolvedValue({ ok: true });
+    jest.mocked(createBasketballRankingDraft).mockResolvedValue({
+      ...other,
+      id: 'basketball-3',
+      version: 'basketball-v3',
+    });
+
+    render(<MatchRankingPage />);
+    await screen.findByText('Copa Libertadores');
+    fireEvent.click(screen.getByRole('button', { name: 'Basketball' }));
+    fireEvent.change(
+      await screen.findByRole('combobox', { name: 'Tier for NBA' }),
+      {
+        target: { value: '2' },
+      }
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: 'Version' }), {
+      target: { value: 'unsaved-catalog' },
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Configurations' }));
+    const candidate = screen.getByRole('row', { name: /basketball-v2/ });
+    fireEvent.click(
+      within(candidate).getByRole('button', { name: 'Copy tiers' })
+    );
+    const copy = screen.getByRole('dialog', { name: 'New configuration' });
+    expect(
+      within(copy).getByRole('combobox', { name: 'Tier for NBA' })
+    ).toHaveValue('3');
+    fireEvent.change(
+      within(copy).getByRole('combobox', { name: 'Tier for NBA' }),
+      {
+        target: { value: '4' },
+      }
+    );
+    fireEvent.click(within(copy).getByRole('button', { name: 'Cancel' }));
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'League catalog' }));
+    expect(
+      await screen.findByRole('combobox', { name: 'Tier for NBA' })
+    ).toHaveValue('2');
+    expect(screen.getByRole('textbox', { name: 'Version' })).toHaveValue(
+      'unsaved-catalog'
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Configurations' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Activate$/ }));
+    const activate = screen.getByRole('dialog');
+    fireEvent.change(
+      within(activate).getByRole('textbox', { name: 'Change reason' }),
+      {
+        target: { value: 'Activate version two' },
+      }
+    );
+    fireEvent.click(
+      within(activate).getByRole('button', { name: 'Confirm activation' })
+    );
+    await screen.findByText('Version "basketball-v2" activated.');
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'League catalog' }));
+    expect(
+      await screen.findByRole('combobox', { name: 'Tier for NBA' })
+    ).toHaveValue('3');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Version' }), {
+      target: { value: 'basketball-v3' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Change reason' }), {
+      target: { value: 'Copy active version' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await screen.findByText('Draft "basketball-v3" saved.');
+    expect(createBasketballRankingDraft).toHaveBeenCalledWith({
+      version: 'basketball-v3',
+      leagueTiers: other.leagueTiers,
+      rules: other.rules,
+      reason: 'Copy active version',
+    });
   });
 
   it.each([
