@@ -224,6 +224,18 @@ describe('partner market config form validation', () => {
     );
   });
 
+  it('normalizes and clears the optional operator button label', () => {
+    const form = { ...valid, inAppOperatorLinkCta: '  Visit operator  ' };
+    expect(normalizePartnerMarketConfigForm(form).inAppOperatorLinkCta)
+      .toBe('Visit operator');
+    expect(normalizePartnerMarketConfigForm({
+      ...form, inAppOperatorLinkCta: ' ',
+    }).inAppOperatorLinkCta).toBeNull();
+    expect(validatePartnerMarketConfigForm({
+      ...form, inAppOperatorLinkCta: 'a'.repeat(81),
+    }).inAppOperatorLinkCta).toBeDefined();
+  });
+
   it.each(['US', 'CA', 'AR'])(
     'requires a region for %s partner configurations',
     (countryCode) => {

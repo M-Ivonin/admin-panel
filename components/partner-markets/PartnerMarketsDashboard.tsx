@@ -724,6 +724,14 @@ function PartnerMarketFormDialog({
                 helper="HTTPS affiliate link to the operator homepage for all app banners."
               />
               <FormText
+                label="Operator button label"
+                field="inAppOperatorLinkCta"
+                values={values}
+                errors={errors}
+                set={set}
+                helper="Optional. Leave blank to use the app’s translated default."
+              />
+              <FormText
                 label="Final operator hostnames"
                 field="inAppFinalDestinationHosts"
                 required={values.inAppEnabled}
@@ -1195,6 +1203,7 @@ function toForm(config: PartnerMarketConfig): PartnerMarketConfigFormValues {
     emailEnabled: config.emailEnabled ?? true,
     inAppEnabled: config.inAppEnabled ?? false,
     inAppBannerAffiliateUrl: config.inAppBannerAffiliateUrl ?? '',
+    inAppOperatorLinkCta: config.inAppOperatorLinkCta ?? '',
     inAppFinalDestinationHosts: config.inAppFinalDestinationHosts?.join('\n') ?? '',
     regionCode: config.regionCode ?? '',
     minimumAge: String(config.minimumAge),

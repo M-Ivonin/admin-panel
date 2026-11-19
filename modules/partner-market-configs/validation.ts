@@ -41,6 +41,7 @@ export const emptyPartnerMarketConfigForm: PartnerMarketConfigFormValues = {
   operatorTermsUrl: '',
   operatorDestinationUrl: '',
   inAppBannerAffiliateUrl: '',
+  inAppOperatorLinkCta: '',
   inAppFinalDestinationHosts: '',
   approvedDestinationHosts: '',
   affiliateConversionTypes: CORE_AFFILIATE_CONVERSION_TYPES.join('\n'),
@@ -99,6 +100,7 @@ export function normalizePartnerMarketConfigForm(
     requiredWarningText: values.requiredWarningText.trim(),
     responsibleGamblingUrl: values.responsibleGamblingUrl.trim(),
     inAppBannerAffiliateUrl: values.inAppBannerAffiliateUrl.trim() || null,
+    inAppOperatorLinkCta: values.inAppOperatorLinkCta.trim() || null,
     inAppFinalDestinationHosts: normalizeApprovedDestinationHosts(
       values.inAppFinalDestinationHosts
     ),
@@ -248,6 +250,9 @@ export function validatePartnerMarketConfigForm(
       errors.inAppBannerAffiliateUrl =
         'The banner link must use an approved hostname.';
     }
+  }
+  if (input.inAppOperatorLinkCta && input.inAppOperatorLinkCta.length > 80) {
+    errors.inAppOperatorLinkCta = 'Enter up to 80 characters.';
   }
   const suppliedConversionTypes = values.affiliateConversionTypes
     .split(/[\n,]/)

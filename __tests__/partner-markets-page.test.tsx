@@ -621,11 +621,13 @@ describe('PartnerMarketsPage', () => {
         legalReviewedAt: '2026-08-01T10:00:43.123Z',
       };
       const inAppBannerAffiliateUrl = 'https://example.bet/matches?ref=sirbro';
+      const inAppOperatorLinkCta = 'Visit Example Bet';
       const saved = {
         ...legacyConfig,
         emailEnabled,
         inAppEnabled,
         inAppBannerAffiliateUrl,
+        inAppOperatorLinkCta,
         inAppFinalDestinationHosts: inAppEnabled ? ['example.bet'] : [],
       };
       (getPartnerMarketConfigs as jest.Mock)
@@ -663,6 +665,10 @@ describe('PartnerMarketsPage', () => {
           target: { value: inAppBannerAffiliateUrl },
         }
       );
+      fireEvent.change(
+        within(editDialog).getByRole('textbox', { name: 'Operator button label' }),
+        { target: { value: inAppOperatorLinkCta } }
+      );
       fireEvent.click(
         within(editDialog).getByRole('button', { name: 'Save configuration' })
       );
@@ -673,6 +679,7 @@ describe('PartnerMarketsPage', () => {
           emailEnabled,
           inAppEnabled,
           inAppBannerAffiliateUrl,
+          inAppOperatorLinkCta,
           inAppFinalDestinationHosts: saved.inAppFinalDestinationHosts,
           ...(emailEnabled ? { operatorDestinationUrl: legacyConfig.operatorDestinationUrl } : {}),
           legalReviewedAt: legacyConfig.legalReviewedAt,
@@ -696,6 +703,9 @@ describe('PartnerMarketsPage', () => {
       expect(
         within(reopenedDialog).getByRole('textbox', { name: 'In-app banner affiliate link' })
       ).toHaveValue(inAppBannerAffiliateUrl);
+      expect(
+        within(reopenedDialog).getByRole('textbox', { name: 'Operator button label' })
+      ).toHaveValue(inAppOperatorLinkCta);
       if (inAppEnabled) {
         fireEvent.click(within(reopenedDialog).getByLabelText('In-app'));
       }

@@ -38,6 +38,9 @@ start collapsed. Saving with invalid fields opens the affected sections and
 focuses the first invalid field. The banner affiliate link sits directly below
 the **In-app** switch. Set **Final operator hostnames** there for all campaigns
 using that configuration. Each final hostname must also be approved.
+**Operator button label** sets the optional text of the link on SirBro
+prediction and parlay screens for that market. Clear it to use the app's
+translated default. The button uses the same in-app affiliate link.
 
 The configuration editor and summary show independent **Email** and **In-app**
 channel permissions. Email defaults to enabled and In-app defaults to disabled.
