@@ -62,6 +62,13 @@ const reasonLabels: Record<string, string> = {
   news_source_unavailable: 'News unavailable',
   no_opportunity: 'No suitable opportunity',
   model_silence: 'AI selected no contact',
+  crm_ineligible: 'Ineligible in CRM',
+  crm_dead: 'Inactive in CRM (DEAD)',
+  quiet_hours: 'Quiet hours',
+  no_channel: 'No available channel',
+  source_unavailable: 'Source unavailable',
+  in_app_expired: 'In-app expired before confirmation',
+  reservation_expired: 'Contact reservation expired',
 };
 const humanize = (value: string) =>
   reasonLabels[value] ?? value.replace(/_/g, ' ');
@@ -71,6 +78,223 @@ const selectedChannelLabels = {
   in_app: 'In-app',
   none: '—',
 };
+
+function RecoveryResults({
+  recovery,
+  names,
+}: {
+  recovery: NonNullable<Results['recovery']>;
+  names: Map<string, string>;
+}) {
+  const {
+    funnel,
+    admissionReasons,
+    blockedAccounts,
+    deliveryFailures,
+    scenarios,
+  } = recovery;
+  const counts = [
+    ['Admitted accounts', funnel.admitted],
+    ['AI calls', funnel.aiCalled],
+    ['Selected contacts', funnel.selected],
+    ['Selected without AI', funnel.selectedWithoutAI],
+    ['Planned deliveries', funnel.planned],
+    ['Push accepted', funnel.pushAccepted],
+    ['In-app published', funnel.inAppPublished],
+    ['Email accepted', funnel.emailAccepted],
+    ['Opened', funnel.opened],
+  ] as const;
+  return (
+    <Section title="Admission and delivery" icon={<TuneOutlinedIcon />}>
+      <Box
+        component="dl"
+        sx={{
+          m: 0,
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2,minmax(0,1fr))',
+            md: 'repeat(4,minmax(0,1fr))',
+          },
+          gap: 2,
+        }}
+      >
+        {counts.map(([label, value]) => (
+          <Box key={label}>
+            <Typography component="dt" variant="body2" color="text.secondary">
+              {label}
+            </Typography>
+            <Typography component="dd" fontWeight={600} sx={{ m: 0 }}>
+              {value.toLocaleString()}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+      {(
+        [
+          ['Account admission blocks', admissionReasons],
+          ['Unconfirmed deliveries', deliveryFailures],
+        ] as const
+      ).map(
+        ([title, reasons]) =>
+          reasons.length > 0 && (
+            <Box key={String(title)} sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                {title}
+              </Typography>
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {reasons.map((entry) => (
+                  <Chip
+                    key={entry.reason}
+                    size="small"
+                    label={`${humanize(entry.reason)}: ${entry.count.toLocaleString()}`}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )
+      )}
+      {scenarios.length > 0 && (
+        <>
+          <Stack
+            aria-label="Scenario delivery results"
+            spacing={2}
+            sx={{ mt: 2, display: { xs: 'flex', md: 'none' } }}
+          >
+            {scenarios.map((row) => (
+              <Paper
+                key={`${row.scenarioId}:${row.channel}`}
+                variant="outlined"
+                sx={{ p: 2 }}
+              >
+                <Typography variant="subtitle2">
+                  {names.get(row.scenarioId) ?? row.scenarioId}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedChannelLabels[row.channel]}
+                </Typography>
+                <Box
+                  component="dl"
+                  sx={{
+                    m: 0,
+                    mt: 1.5,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2,minmax(0,1fr))',
+                    gap: 1,
+                  }}
+                >
+                  {[
+                    ['Available', row.available],
+                    ['Selected', row.selected],
+                    ['Confirmed', row.published],
+                    ['Opened', row.opened],
+                    ['Goal reached', row.usefulActions],
+                  ].map(([label, value]) => (
+                    <Box key={label}>
+                      <Typography
+                        component="dt"
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        {label}
+                      </Typography>
+                      <Typography
+                        component="dd"
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{ m: 0 }}
+                      >
+                        {value.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+            ))}
+          </Stack>
+          <TableContainer sx={{ mt: 2, display: { xs: 'none', md: 'block' } }}>
+            <Table size="small" aria-label="Scenario delivery results">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Scenario</TableCell>
+                  {[
+                    'Channel',
+                    'Available',
+                    'Selected',
+                    'Confirmed',
+                    'Opened',
+                    'Goal reached',
+                  ].map((label, index) => (
+                    <TableCell key={label} align={index ? 'right' : 'left'}>
+                      {label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {scenarios.map((row) => (
+                  <TableRow key={`${row.scenarioId}:${row.channel}`}>
+                    <TableCell>
+                      {names.get(row.scenarioId) ?? row.scenarioId}
+                    </TableCell>
+                    <TableCell>{selectedChannelLabels[row.channel]}</TableCell>
+                    {[
+                      row.available,
+                      row.selected,
+                      row.published,
+                      row.opened,
+                      row.usefulActions,
+                    ].map((value, index) => (
+                      <TableCell key={index} align="right">
+                        {value.toLocaleString()}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
+      {blockedAccounts.length > 0 && (
+        <TableContainer sx={{ mt: 2 }}>
+          <Table size="small" aria-label="Recently blocked accounts">
+            <TableHead>
+              <TableRow>
+                <TableCell>Account</TableCell>
+                <TableCell>Reason</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                  Checked
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {blockedAccounts.map((account) => (
+                <TableRow key={account.userId}>
+                  <TableCell>
+                    <Link href={`/dashboard/users/${account.userId}/portrait`}>
+                      {account.accountLabel}
+                    </Link>
+                    <Typography
+                      display={{ xs: 'block', sm: 'none' }}
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      {stamp(account.checkedAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{humanize(account.reason)}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    {stamp(account.checkedAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Section>
+  );
+}
 
 function Info({
   label,
@@ -506,6 +730,20 @@ function Report({ report: r }: { report: Results }) {
         </Typography>
       </Paper>
       <Stack spacing={2}>
+        {r.recovery && (
+          <RecoveryResults
+            recovery={r.recovery}
+            names={
+              new Map(
+                (r.selectedActions ?? []).flatMap((row) =>
+                  row.scenarioId && row.scenarioTitle
+                    ? [[row.scenarioId, row.scenarioTitle] as const]
+                    : []
+                )
+              )
+            }
+          />
+        )}
         {selectedActions ? (
           <Section
             title="Selected actions"

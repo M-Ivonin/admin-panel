@@ -51,6 +51,36 @@ export interface PersonalizationResults {
   missingPurchaseAmounts: number;
   decisionReasons: Array<{ reason: string; count: number }>;
   deliveryStatuses: Array<{ status: string; count: number }>;
+  recovery?: {
+    funnel: {
+      admitted: number;
+      aiCalled: number;
+      selected: number;
+      selectedWithoutAI: number;
+      planned: number;
+      pushAccepted: number;
+      inAppPublished: number;
+      emailAccepted: number;
+      opened: number;
+    };
+    admissionReasons: Array<{ reason: string; count: number }>;
+    blockedAccounts: Array<{
+      userId: string;
+      accountLabel: string;
+      reason: string;
+      checkedAt: string;
+    }>;
+    deliveryFailures: Array<{ reason: string; count: number }>;
+    scenarios: Array<{
+      scenarioId: string;
+      channel: 'push' | 'email' | 'in_app';
+      available: number;
+      selected: number;
+      published: number;
+      opened: number;
+      usefulActions: number;
+    }>;
+  };
 }
 
 export async function getPersonalizationResults(
