@@ -39,6 +39,12 @@ export interface PersonalizationResults {
     lastDecisionAt: string | null;
   };
   dailyActivity?: PersonalizationActivityDay[];
+  selectedActions?: Array<{
+    scenarioId: string | null;
+    scenarioTitle: string | null;
+    channel: 'push' | 'email' | 'in_app' | 'none' | null;
+    count: number;
+  }>;
   accounts: PersonalizationAccountResults[];
   accountLimit: number;
   grossPurchases: Array<{ currency: string; amount: string }>;

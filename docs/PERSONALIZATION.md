@@ -64,13 +64,18 @@ there is no new cron, AI call, enrollment, or send. A failed refresh retains the
 last successful values with an explicit stale-data warning. Changing period
 clears the previous report and cancels its pending request.
 
-The default view follows the approved compact Results mockup: four account cards,
-one Messages strip, and closed How personalization works / Accounts / Metric
-definitions disclosures. Card values are unique contacted, opened, useful-action
+The default view has four account cards, one Messages strip and four closed
+disclosures: Selected actions, How personalization works, Accounts and Metric
+definitions. Card values are unique contacted, opened, useful-action
 and purchasing accounts. Repeated messages/events/purchases from one account do
 not increase a card. Message totals remain separate and count delivery records.
 Not sent counts failed/skipped messages without acceptance/display; pending work
 remains visible in diagnostics. Provider acceptance is not device delivery.
+
+Selected actions shows how many saved decisions chose each message scenario
+and channel, including a No contact row for decisions to stay silent. Each
+decision contributes once even if it has multiple delivery attempts or no
+delivery. Historical rows can show an unknown scenario or channel.
 
 The heading identifies unique accounts, with a visible note that the cards are
 independent counts and actions/purchases after contact do not require a recorded

@@ -65,6 +65,12 @@ const reasonLabels: Record<string, string> = {
 };
 const humanize = (value: string) =>
   reasonLabels[value] ?? value.replace(/_/g, ' ');
+const selectedChannelLabels = {
+  push: 'Push',
+  email: 'Email',
+  in_app: 'In-app',
+  none: '—',
+};
 
 function Info({
   label,
@@ -317,6 +323,7 @@ export function PersonalizationResults() {
 
 function Report({ report: r }: { report: Results }) {
   const s = r.summary;
+  const selectedActions = r.selectedActions;
   const definitions = [
     {
       name: 'Contacted accounts',
@@ -499,6 +506,72 @@ function Report({ report: r }: { report: Results }) {
         </Typography>
       </Paper>
       <Stack spacing={2}>
+        {selectedActions ? (
+          <Section
+            title="Selected actions"
+            summary={`${s.decisions.toLocaleString()} selections`}
+            icon={<BoltOutlinedIcon />}
+          >
+            {selectedActions.length ? (
+              <>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
+                  Each saved decision counts once, including decisions to make
+                  no contact. Delivery attempts are counted in Messages.
+                </Typography>
+                <TableContainer>
+                  <Table
+                    size="small"
+                    aria-label="Selected actions"
+                    sx={{ '& .MuiTableCell-root': { px: { xs: 1, sm: 2 } } }}
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Scenario</TableCell>
+                        <TableCell>Channel</TableCell>
+                        <TableCell align="right">Selections</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedActions.map(
+                        ({ scenarioId, scenarioTitle, channel, count }) => (
+                          <TableRow key={JSON.stringify([scenarioId, channel])}>
+                            <TableCell
+                              component="th"
+                              scope="row"
+                              sx={{ overflowWrap: 'anywhere' }}
+                            >
+                              {channel === 'none'
+                                ? 'No contact'
+                                : (scenarioTitle ??
+                                  scenarioId?.replace(/_/g, ' ') ??
+                                  'Unknown scenario')}
+                            </TableCell>
+                            <TableCell>
+                              {channel
+                                ? selectedChannelLabels[channel]
+                                : 'Unknown'}
+                            </TableCell>
+                            <TableCell align="right">
+                              {count.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No saved selections in this period.
+              </Typography>
+            )}
+          </Section>
+        ) : null}
         <Section title="How personalization works" icon={<TuneOutlinedIcon />}>
           <Box
             component="dl"

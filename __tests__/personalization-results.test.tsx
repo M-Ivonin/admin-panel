@@ -64,6 +64,66 @@ beforeEach(() => {
   read.mockResolvedValue(report);
 });
 
+it('shows the saved scenario and selected channel for each group', async () => {
+  const response: Results = {
+    ...report,
+    selectedActions: [
+      {
+        scenarioId: 'stored_news.v1',
+        scenarioTitle: 'Relevant unread news',
+        channel: 'push',
+        count: 12,
+      },
+      {
+        scenarioId: 'stored_news.v1',
+        scenarioTitle: 'Relevant unread news',
+        channel: 'email',
+        count: 4,
+      },
+      {
+        scenarioId: 'full_access_price.v1',
+        scenarioTitle: 'Full Access price',
+        channel: 'in_app',
+        count: 2,
+      },
+      {
+        scenarioId: 'silence.v1',
+        scenarioTitle: null,
+        channel: 'none',
+        count: 3,
+      },
+      { scenarioId: null, scenarioTitle: null, channel: 'push', count: 1 },
+    ],
+  };
+  read.mockResolvedValue(response);
+  render(<PersonalizationResults />);
+  fireEvent.click(await screen.findByText('Selected actions'));
+  const table = screen.getByRole('table', { name: 'Selected actions' });
+  expect(
+    within(table).getByRole('row', { name: 'Relevant unread news Push 12' })
+  ).toBeVisible();
+  expect(
+    within(table).getByRole('row', { name: 'Relevant unread news Email 4' })
+  ).toBeVisible();
+  expect(
+    within(table).getByRole('row', { name: 'Full Access price In-app 2' })
+  ).toBeVisible();
+  expect(
+    within(table).getByRole('row', { name: 'No contact — 3' })
+  ).toBeVisible();
+  expect(
+    within(table).getByRole('row', { name: 'Unknown scenario Push 1' })
+  ).toBeVisible();
+});
+
+it('shows an empty state when no selections were saved in the period', async () => {
+  const response = { ...report, selectedActions: [] };
+  read.mockResolvedValue(response);
+  render(<PersonalizationResults />);
+  fireEvent.click(await screen.findByText('Selected actions'));
+  expect(screen.getByText('No saved selections in this period.')).toBeVisible();
+});
+
 it('shows unique account outcomes and hides diagnostics and explanations until requested', async () => {
   render(<PersonalizationResults />);
   const contacted = await screen.findByRole('article', {
