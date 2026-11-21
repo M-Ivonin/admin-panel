@@ -1,0 +1,111 @@
+# Admin Panel Coding Standards
+
+Apply these standards when planning, implementing, or reviewing changes to the
+Levantem admin panel and the SirBro website. Use the
+[architecture core](docs/ADMIN_PANEL_ARCHITECTURE_CORE.md) for route and
+module boundaries and [contributing](CONTRIBUTING.md) for local checks.
+
+## App Router and module boundaries
+
+- **Keep each surface in its route group.** `app/(admin)` owns authenticated
+  operator pages, `app/(auth)` owns login and authentication pages,
+  `app/(public)` owns the localized SirBro website and public SEO routes,
+  and `app/(deeplink)` owns mobile fallbacks and association endpoints.
+  Keep route files focused on Next.js concerns such as request and route
+  parameters, metadata, redirects and composition. [Architecture core](docs/ADMIN_PANEL_ARCHITECTURE_CORE.md)
+- **Put decisions with their feature owner.** Keep rendering and interactions
+  in feature components, view state with the component or feature hook that
+  owns it, and policies, validation and transformations in the existing
+  feature modules. Reuse a typed contract at the boundary. For example,
+  campaign rendering uses the campaign module's reducer, selectors and
+  request mapping. [Campaign module](modules/campaigns/)
+- **Keep the client boundary narrow.** Use Server Components for route
+  composition and server-owned data where the feature allows it. Add
+  `'use client'` at the entry point that needs interaction, hooks, or browser
+  APIs. Keep props crossing that boundary serializable and server-only code
+  out of the client module graph. Preserve the client boundary for existing
+  operator flows that depend on browser session state.
+  [Next.js Server and Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components)
+- **Use strict TypeScript.** Keep feature and API contracts typed, narrow
+  untrusted inputs at the edge, and use discriminated unions when states have
+  different data or actions. Avoid type assertions that conceal a missing
+  field or invalid state. Do not introduce new explicit `any`.
+  [TypeScript config](tsconfig.json)
+
+## API, session and data ownership
+
+- **Keep backend calls behind typed feature adapters.** Use the existing
+  adapter in `lib/api` and the authenticated or public HTTP client that
+  matches the surface. Preserve bearer-token and expired-session handling on
+  admin requests. The backend owns permission checks on every operation.
+  Route guards and UI permissions control presentation.
+  [Admin HTTP client](modules/http/admin-auth-client.ts) ·
+  [Public HTTP client](modules/http/public-client.ts)
+- **Preserve the backend contract.** Verify paths, methods, request fields,
+  response shape, error behavior and default values against the owning API.
+  Keep persistence and canonical business rules with the backend. In the UI,
+  distinguish loading, empty results, permission errors and recoverable API
+  failures. Guard operator actions against duplicate submissions and preserve
+  input on failure when the operation can be retried.
+- **Use typed runtime configuration.** Resolve API targets and public settings
+  through `modules/config`. Check the actual target before testing with a real
+  account or sending writes. Keep credentials, session tokens and sensitive
+  operator data out of client-visible configuration, logs, fixtures and UI
+  evidence. [Runtime configuration](modules/config/runtime.ts)
+
+## UI, theme and readable layouts
+
+- **Start with a comparable screen in the same surface.** Admin work uses the
+  shared MUI theme, the existing `AdminShell` and shared components such as
+  `AdminPageHeader` where they fit. Use theme values for color, type, spacing
+  and breakpoints. For public work, use the owning screen's design reference,
+  shared styles and existing components. Extend the relevant shared token
+  when a change belongs across the surface.
+  [MUI theme](lib/theme/mui-theme.ts) ·
+  [Admin page header](components/admin/AdminPageHeader.tsx) ·
+  [Public style reference](docs/FIGMA_APP_STYLE_REFERENCE.md)
+- **Keep text and actions readable as space changes.** Check normal and
+  narrow widths, long realistic names and translations, and 200% browser
+  zoom. Keep labels and values that are intended to be single-line together
+  at normal widths. At smaller widths let surrounding controls stack and
+  prose wrap naturally, without shrinking the font or clipping text. Allow
+  long tokens to break where safe. If a dense table needs horizontal
+  scrolling, contain it within the table region. For intentional truncation,
+  keep the full value available by keyboard and touch.
+  [WCAG Resize Text](https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html) ·
+  [WCAG Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html)
+- **Keep workflows accessible.** Use semantic controls and visible keyboard
+  focus. Name icon-only controls, associate field errors with their inputs,
+  and keep dialog entry, keyboard operation and focus return usable. Use text
+  or icons as well as color for statuses. Verify rendered UI in a browser
+  against the supplied design or existing visual standard.
+
+## Public localization, SEO and deep links
+
+- Use the supported locales and existing translation and content owners.
+  Preserve `html lang`, localized URLs and metadata. For a new page family,
+  trace the content DTO, repository, adapter, metadata, indexability, sitemap
+  and smoke coverage through the existing architecture.
+  [Locales](lib/i18n/config.ts) · [Public content](modules/content/) ·
+  [SEO registry](modules/seo/route-registry.ts)
+- Keep auth, admin and deep-link routes out of the public sitemap. Preserve
+  `proxy.ts` bypass rules for association files, invites and app fallback
+  routes along with product-specific app identities. Check route status,
+  redirect behavior and indexability when changing these boundaries.
+  [Proxy](proxy.ts) · [Deep-link constants](modules/deeplink/constants.ts)
+
+## Verification by change type
+
+- **Documentation.** Compare edited claims, links and commands with their
+  sources and check the diff.
+- **Operator UI and behavior.** Use focused React Testing Library tests for
+  user-visible state and actions. Verify the rendered layout, keyboard flow,
+  and affected loading, error or empty states in the browser when relevant.
+- **API adapters and feature logic.** Use focused Jest tests at the changed
+  contract. Cover request construction, error handling and state transitions
+  that can break the workflow.
+- **Application wiring and public routing.** Verify type and build behavior.
+  Use the relevant route smoke profile for locale routing, SEO or deep links.
+
+Use the existing workflow and reuse verification results for the same revision.
+Run the checks in [contributing](CONTRIBUTING.md#choose-verification-for-the-change).

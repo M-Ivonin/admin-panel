@@ -21,14 +21,8 @@ For new public page types, preserve the architecture doc's required chain: conte
 
 ## Validation Commands
 
-Use `package.json` as the command source of truth.
-
-- Standard code change: `npm run lint`, `npm run typecheck`, and `npm run build`.
-- Behavior covered by tests: run the focused Jest suite first, or `npm test -- --runInBand` when the scope is broad.
-- Stage-level architectural work: `npm run verify:stage`.
-- Public route/deeplink/SEO changes: run the relevant smoke profile, for example `SMOKE_BASE_URL=http://127.0.0.1:3100 npm run smoke:routes deeplink` or `SMOKE_BASE_URL=http://127.0.0.1:3100 npm run smoke:routes seo`.
-
-If a dev server is already running, inspect existing terminal output or logs before starting another `next dev` or `next start`.
+Choose checks in [CONTRIBUTING.md](../../CONTRIBUTING.md#choose-verification-for-the-change).
+Use [package.json](../../package.json) as the command source of truth.
 
 ## Context7 And External Docs
 

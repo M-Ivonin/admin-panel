@@ -6,6 +6,8 @@ authentication pages, and mobile deep-link fallbacks.
 ## Start here
 
 - [`AGENTS.md`](AGENTS.md) contains repository boundaries and validation rules.
+- [`CODING_STANDARDS.md`](CODING_STANDARDS.md) describes code, UI, and verification standards.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) covers local setup and checks.
 - [`docs/README.md`](docs/README.md) routes to durable architecture, feature,
   design, and operational documentation.
 - [`docs/ADMIN_PANEL_ARCHITECTURE_CORE.md`](docs/ADMIN_PANEL_ARCHITECTURE_CORE.md)
@@ -13,30 +15,9 @@ authentication pages, and mobile deep-link fallbacks.
 - `package.json`, `tsconfig.json`, and the ESLint/Jest configuration are the
   authority for commands and quality checks.
 
-## Local development
-
-```sh
-npm install
-npm run dev
-```
-
-Environment variables and defaults are defined by `.env.example`, `lib/config.ts`,
-and `modules/config/`. Do not copy production values into documentation.
-
 ## Validation
 
-Choose checks proportional to the change:
-
-```sh
-npm run lint
-npm test -- --runInBand
-npm run typecheck
-npm run build
-```
-
-`npm run verify:stage` runs the repository's complete staging gate. Route smoke
-coverage is available through `npm run smoke:routes` when the affected routes
-can be exercised against the required environment.
+Use the [checks for the change](CONTRIBUTING.md#choose-verification-for-the-change).
 
 Jest runs one worker because MUI/jsdom suites are CPU-heavy. Its Emotion
 cache uses CSSOM rule insertion, as in production, so accessibility queries still
