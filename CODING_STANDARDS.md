@@ -3,7 +3,8 @@
 Apply these standards when planning, implementing, or reviewing changes to the
 Levantem admin panel and the SirBro website. Use the
 [architecture core](docs/ADMIN_PANEL_ARCHITECTURE_CORE.md) for route and
-module boundaries and [contributing](CONTRIBUTING.md) for local checks.
+module boundaries, the [documentation index](docs/README.md) for feature
+contracts, and [contributing](CONTRIBUTING.md) for local checks.
 
 ## App Router and module boundaries
 
@@ -82,16 +83,15 @@ module boundaries and [contributing](CONTRIBUTING.md) for local checks.
 
 ## Public localization, SEO and deep links
 
-- Use the supported locales and existing translation and content owners.
-  Preserve `html lang`, localized URLs and metadata. For a new page family,
-  trace the content DTO, repository, adapter, metadata, indexability, sitemap
-  and smoke coverage through the existing architecture.
-  [Locales](lib/i18n/config.ts) · [Public content](modules/content/) ·
-  [SEO registry](modules/seo/route-registry.ts)
-- Keep auth, admin and deep-link routes out of the public sitemap. Preserve
-  `proxy.ts` bypass rules for association files, invites and app fallback
-  routes along with product-specific app identities. Check route status,
-  redirect behavior and indexability when changing these boundaries.
+- Keep locale resolution, translations, content, and metadata with their
+  existing owners. Check that the document language, URLs, and metadata agree.
+  Route indexability and sitemap decisions through the existing SEO policy.
+  [Locales](lib/i18n/config.ts) · [SEO registry](modules/seo/route-registry.ts) ·
+  [Site structure and indexing contract](docs/SITE_STRUCTURE_AND_SEO_IA.md)
+- Keep routing and deep-link policies with their existing owners. When
+  changing either, verify status, redirects, indexability, and the relevant
+  association routes against the owning contracts.
+  [Routing and deep-link contracts](docs/ADMIN_PANEL_ARCHITECTURE_CORE.md#независимые-контуры) ·
   [Proxy](proxy.ts) · [Deep-link constants](modules/deeplink/constants.ts)
 
 ## Verification by change type
