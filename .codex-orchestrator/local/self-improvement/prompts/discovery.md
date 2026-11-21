@@ -1,7 +1,7 @@
 Find at most one justified small improvement, investigating architecture first,
 then bugs, then performance. Apply the mandatory improve-codebase-architecture
 and codebase-design skills supplied below before architecture judgments.
-Read AGENTS.md, CONTEXT.md and relevant ADRs. Use the supplied recent discovery
+Read AGENTS.md, any applicable GLOSSARY.md, and relevant ADRs. Use the supplied recent discovery
 scopes to rotate inspection between runs. Choose a different primary area from
 the most recent completed inspection; prefer areas absent from the last five
 inspections, then the least recently inspected. Treat prior checked entries as
