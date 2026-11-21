@@ -33,6 +33,31 @@ contracts, and [contributing](CONTRIBUTING.md) for local checks.
   field or invalid state. Do not introduce new explicit `any`.
   [TypeScript config](tsconfig.json)
 
+## Dependency injection, dependency inversion, and Codebase Design
+
+- **Dependency injection.** Pass collaborators through a function parameter,
+  a factory, or typed React props. Choose the implementation where the
+  feature is assembled. Keep callable dependencies on their own side of
+  the Next.js server/client boundary. `EmailMarketingDashboard` accepts
+  a repository prop with a default adapter, and its tests pass a substitute
+  through the same prop.
+  [Dashboard](components/email-marketing/EmailMarketingDashboard.tsx) ·
+  [Dashboard tests](__tests__/email-marketing-page.test.tsx)
+- **Dependency inversion.** Express what the feature needs through a typed
+  contract. Let an adapter own transport details and translate its results
+  to the feature's types. The dashboard consumes `EmailMarketingRepository`.
+  The default adapter implements it through the shared admin HTTP client.
+  [Feature contract](modules/email-marketing/contracts.ts) ·
+  [HTTP adapter](modules/email-marketing/repository.ts)
+- **Codebase Design.** Apply `$codebase-design` when adding or changing a
+  module interface. Keep the interface focused on the operation, its results
+  and its failure modes. Keep URL construction, serialization and error
+  mapping inside the adapter. Introduce a new seam when it hides complexity
+  or supports a real substitution. Test using the same interface as callers.
+  For example, the email repository tests call its exported methods and
+  verify request construction and returned errors.
+  [Repository tests](__tests__/email-marketing-repository.test.ts)
+
 ## API, session and data ownership
 
 - **Keep backend calls behind typed feature adapters.** Use the existing
