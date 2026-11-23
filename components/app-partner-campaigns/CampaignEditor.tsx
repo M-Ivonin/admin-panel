@@ -581,9 +581,13 @@ export function CampaignEditor({
                       </Alert>
                     ) : null}
                     <Typography variant="body2" color="text.secondary">
-                      The stadium is the default Matches background. An optional
-                      PNG or JPEG up to 5 MiB replaces only the background on
-                      every device.
+                      Upload a PNG or JPEG up to 5 MiB to replace the default
+                      stadium background on all devices.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      For faster loading, aim for a JPEG at 836 × 388 px and
+                      around 100–150 KB. Use 1254 × 582 px if you need more
+                      detail.
                     </Typography>
                     <Stack
                       direction="row"
