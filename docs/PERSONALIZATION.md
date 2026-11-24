@@ -134,8 +134,8 @@ Changing settings does not enable a stopped pilot or reset its usage history.
 
 ## Scenario switches
 
-Settings exposes 77 AI personalization controls in two searchable groups: 72
-Behavioral events and five AI messages. Every row has an independent switch and
+Settings exposes AI personalization controls in two searchable groups,
+Behavioral events and AI messages. Every row has an independent switch and
 explicit When/React text. Search covers condition and reaction; hidden edits remain
 in the draft until Save changes. Saves retain frequency, AI quotas and optimistic
 revision protection, with explicit Reload on error.
@@ -145,5 +145,16 @@ messages. An event never requires a message. Disabling a signal leaves recorded
 portraits, analytics, ownership, pending purchases, consent and already-read News
 protections intact. Message switches restrict eligible templates. Unsent decisions
 that depend on a disabled signal or message are blocked before delivery.
+
+Each AI message also has a weight. By default all scenarios have an equal
+share of 100%. Editing one share redistributes the rest proportionally.
+**Reset to equal** restores the defaults in the draft. **Save changes** applies
+the draft using the current settings revision. A disabled scenario retains its
+share for when it is enabled again.
+
+SirBro uses the weights when two or more eligible message scenarios are equally
+useful. For example, if the only finalists have weights of 40% and 20%, their
+chances are about 67% and 33%. An eligible message with a clear advantage can
+still be selected regardless of its weight.
 
 The switches reuse the existing disabled-ID array and apply to personalization.

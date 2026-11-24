@@ -252,13 +252,11 @@ it('persists the two sports message controls independently across reload', async
     ],
   };
   jest.mocked(getPersonalizationSettings).mockResolvedValue(initial);
-  jest
-    .mocked(savePersonalizationSettings)
-    .mockResolvedValue({
-      ...initial,
-      revision: 2,
-      disabledScenarioIds: ['resume_collection.v1'],
-    });
+  jest.mocked(savePersonalizationSettings).mockResolvedValue({
+    ...initial,
+    revision: 2,
+    disabledScenarioIds: ['resume_collection.v1'],
+  });
   const { unmount } = render(<PersonalizationSettingsForm />);
   const prediction = await screen.findByRole('switch', {
     name: /Current prediction for a favorite team/,
@@ -277,13 +275,11 @@ it('persists the two sports message controls independently across reload', async
     expect.objectContaining({ disabledScenarioIds: ['resume_collection.v1'] })
   );
   unmount();
-  jest
-    .mocked(getPersonalizationSettings)
-    .mockResolvedValue({
-      ...initial,
-      revision: 2,
-      disabledScenarioIds: ['resume_collection.v1'],
-    });
+  jest.mocked(getPersonalizationSettings).mockResolvedValue({
+    ...initial,
+    revision: 2,
+    disabledScenarioIds: ['resume_collection.v1'],
+  });
   render(<PersonalizationSettingsForm />);
   expect(
     await screen.findByRole('switch', {
@@ -293,4 +289,60 @@ it('persists the two sports message controls independently across reload', async
   expect(
     screen.getByRole('switch', { name: /Continue a viewed Collection/ })
   ).not.toBeChecked();
+});
+
+it('redistributes edited message weights, retains disabled shares, and resets to equal', async () => {
+  const news = saved.scenarios[0];
+  const preview = { ...news, id: 'preview', title: 'Match preview' };
+  const chat = { ...news, id: 'chat', title: 'Context Chat', enabled: false };
+  const initial = {
+    ...saved,
+    scenarios: [news, preview, chat],
+    disabledScenarioIds: ['chat'],
+    messageWeightsBps: null,
+  };
+  const weights = { [news.id]: 6000, preview: 2000, chat: 2000 };
+  jest.mocked(getPersonalizationSettings).mockResolvedValue(initial);
+  jest.mocked(savePersonalizationSettings).mockResolvedValueOnce({
+    ...initial,
+    revision: 2,
+    messageWeightsBps: weights,
+  });
+  render(<PersonalizationSettingsForm />);
+  const newsWeight = await screen.findByRole('spinbutton', {
+    name: 'Weight for News by interests',
+  });
+  expect(newsWeight).toHaveValue(33.33);
+  fireEvent.change(newsWeight, { target: { value: '60' } });
+  fireEvent.blur(newsWeight);
+  expect(
+    screen.getByRole('spinbutton', { name: 'Weight for Match preview' })
+  ).toHaveValue(20);
+  expect(
+    screen.getByRole('spinbutton', { name: 'Weight for Context Chat' })
+  ).toHaveValue(20);
+  expect(
+    screen.getByRole('switch', { name: 'Context Chat' })
+  ).not.toBeChecked();
+  expect(screen.getByText('Total weight: 100%')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenCalledWith(
+    6,
+    1,
+    expect.objectContaining({ messageWeightsBps: weights })
+  );
+  jest
+    .mocked(savePersonalizationSettings)
+    .mockResolvedValueOnce({ ...initial, revision: 3 });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Reset to equal weights' })
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenLastCalledWith(
+    6,
+    2,
+    expect.objectContaining({ messageWeightsBps: null })
+  );
 });

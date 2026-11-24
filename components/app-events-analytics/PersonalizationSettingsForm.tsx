@@ -23,6 +23,14 @@ import {
   type PersonalizationSettings,
 } from '@/lib/api/user-engagement';
 
+import {
+  editWeight,
+  parseWeight,
+  reconcileWeights,
+  sameWeights,
+  totalWeight,
+} from './message-weights';
+
 /** Edits shared contact frequency and AI quotas with revision-protected saves. */
 export function PersonalizationSettingsForm() {
   const [saved, setSaved] = useState<PersonalizationSettings | null>(null);
@@ -30,6 +38,14 @@ export function PersonalizationSettingsForm() {
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['message']);
   const [disabledScenarios, setDisabledScenarios] = useState<string[]>([]);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const [messageWeights, setMessageWeights] = useState<Record<
+    string,
+    number
+  > | null>(null);
+  const [weightEdit, setWeightEdit] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
   const [hours, setHours] = useState('');
   const [aiPerUser, setAiPerUser] = useState('');
   const [aiPerDay, setAiPerDay] = useState('');
@@ -51,6 +67,15 @@ export function PersonalizationSettingsForm() {
       setSaved(value);
       setEmailEnabled(value.emailEnabled === true);
       setDisabledScenarios(value.disabledScenarioIds);
+      setMessageWeights(
+        reconcileWeights(
+          value.scenarios
+            .filter((scenario) => scenario.group === 'message')
+            .map(({ id }) => id),
+          value.messageWeightsBps
+        )
+      );
+      setWeightEdit(null);
       setHours(String(value.minimumContactIntervalHours));
       setAiPerUser(String(value.aiCallsPerUser24h));
       setAiPerDay(String(value.aiCallsPerDay));
@@ -76,7 +101,27 @@ export function PersonalizationSettingsForm() {
     Number.isInteger(value) &&
     value >= 1 &&
     value <= 168;
-  const valid = hoursValid && aiLimitValid(aiPerUser) && aiLimitValid(aiPerDay);
+  const messageIds =
+    saved?.scenarios
+      .filter((scenario) => scenario.group === 'message')
+      .map(({ id }) => id) ?? [];
+  const weightsAvailable = saved?.messageWeightsBps !== undefined;
+  const units = weightEdit ? parseWeight(weightEdit.text) : null;
+  const shownWeights =
+    weightEdit && units !== null
+      ? editWeight(messageIds, messageWeights, weightEdit.id, units)
+      : messageWeights;
+  const weightsChanged =
+    weightsAvailable &&
+    !sameWeights(
+      shownWeights,
+      reconcileWeights(messageIds, saved?.messageWeightsBps)
+    );
+  const valid =
+    hoursValid &&
+    aiLimitValid(aiPerUser) &&
+    aiLimitValid(aiPerDay) &&
+    (!weightEdit || units !== null);
   const emailChanged =
     saved?.emailEnabled !== undefined && emailEnabled !== saved.emailEnabled;
   async function save() {
@@ -90,10 +135,20 @@ export function PersonalizationSettingsForm() {
         aiCallsPerDay: perDay,
         disabledScenarioIds: disabledScenarios,
         ...(emailChanged && { emailEnabled }),
+        ...(weightsChanged && { messageWeightsBps: shownWeights }),
       });
       setSaved(result);
       setEmailEnabled(result.emailEnabled === true);
       setDisabledScenarios(result.disabledScenarioIds);
+      setMessageWeights(
+        reconcileWeights(
+          result.scenarios
+            .filter((scenario) => scenario.group === 'message')
+            .map(({ id }) => id),
+          result.messageWeightsBps
+        )
+      );
+      setWeightEdit(null);
       setHours(String(result.minimumContactIntervalHours));
       setAiPerUser(String(result.aiCallsPerUser24h));
       setAiPerDay(String(result.aiCallsPerDay));
@@ -226,36 +281,136 @@ export function PersonalizationSettingsForm() {
                     </AccordionSummary>
                     <AccordionDetails>
                       <Stack spacing={3}>
+                        {group === 'message' && weightsAvailable && (
+                          <Stack
+                            spacing={1.25}
+                            sx={{
+                              borderBottom: 1,
+                              borderColor: 'divider',
+                              pb: 2,
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              useFlexGap
+                              flexWrap="wrap"
+                              spacing={1}
+                              alignItems="center"
+                              justifyContent="space-between"
+                            >
+                              <Typography fontWeight={700}>
+                                Total weight: 100%
+                              </Typography>
+                              <Button
+                                size="small"
+                                disabled={
+                                  busy || (shownWeights === null && !weightEdit)
+                                }
+                                onClick={() => {
+                                  setMessageWeights(null);
+                                  setWeightEdit(null);
+                                  setSuccess(false);
+                                }}
+                              >
+                                Reset to equal weights
+                              </Button>
+                            </Stack>
+                            <Typography color="text.secondary" variant="body2">
+                              Weights apply to equally useful messages. Editing
+                              one percentage redistributes the rest. Disabled
+                              messages keep their weights.
+                            </Typography>
+                          </Stack>
+                        )}
                         {visible.map((scenario) => (
                           <Box key={scenario.id}>
-                            <FormControlLabel
-                              sx={{
-                                m: 0,
-                                width: '100%',
-                                justifyContent: 'space-between',
-                                gap: 2,
-                              }}
-                              labelPlacement="start"
-                              label={scenario.title}
-                              control={
-                                <Switch
-                                  checked={
-                                    !disabledScenarios.includes(scenario.id)
-                                  }
+                            <Stack
+                              direction={{ xs: 'column', sm: 'row' }}
+                              alignItems={{ xs: 'stretch', sm: 'center' }}
+                              spacing={{ xs: 0.75, sm: 2 }}
+                            >
+                              <FormControlLabel
+                                sx={{
+                                  m: 0,
+                                  flex: 1,
+                                  minWidth: 0,
+                                  justifyContent: 'space-between',
+                                  gap: 2,
+                                }}
+                                labelPlacement="start"
+                                label={scenario.title}
+                                control={
+                                  <Switch
+                                    checked={
+                                      !disabledScenarios.includes(scenario.id)
+                                    }
+                                    disabled={busy}
+                                    onChange={(_, checked) => {
+                                      setDisabledScenarios((current) =>
+                                        checked
+                                          ? current.filter(
+                                              (id) => id !== scenario.id
+                                            )
+                                          : [...current, scenario.id]
+                                      );
+                                      setSuccess(false);
+                                    }}
+                                  />
+                                }
+                              />
+                              {group === 'message' && weightsAvailable && (
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  label="Weight %"
+                                  sx={{
+                                    width: 100,
+                                    flexShrink: 0,
+                                    alignSelf: { xs: 'flex-end', sm: 'center' },
+                                  }}
                                   disabled={busy}
-                                  onChange={(_, checked) => {
-                                    setDisabledScenarios((current) =>
-                                      checked
-                                        ? current.filter(
-                                            (id) => id !== scenario.id
-                                          )
-                                        : [...current, scenario.id]
-                                    );
+                                  error={
+                                    weightEdit?.id === scenario.id &&
+                                    units === null
+                                  }
+                                  value={
+                                    weightEdit?.id === scenario.id
+                                      ? weightEdit.text
+                                      : Number(
+                                          (
+                                            (shownWeights?.[scenario.id] ??
+                                              totalWeight / messageIds.length) /
+                                            100
+                                          ).toFixed(2)
+                                        )
+                                  }
+                                  onChange={(event) => {
+                                    setWeightEdit({
+                                      id: scenario.id,
+                                      text: event.target.value,
+                                    });
                                     setSuccess(false);
                                   }}
+                                  onBlur={() => {
+                                    if (
+                                      weightEdit?.id === scenario.id &&
+                                      units !== null
+                                    ) {
+                                      setMessageWeights(shownWeights);
+                                      setWeightEdit(null);
+                                    }
+                                  }}
+                                  slotProps={{
+                                    htmlInput: {
+                                      min: 0,
+                                      max: 100,
+                                      step: 0.01,
+                                      'aria-label': `Weight for ${scenario.title}`,
+                                    },
+                                  }}
                                 />
-                              }
-                            />
+                              )}
+                            </Stack>
                             <Typography variant="body2" sx={{ mt: 0.5 }}>
                               <Box component="span" fontWeight={700}>
                                 When:{' '}
@@ -377,6 +532,7 @@ export function PersonalizationSettingsForm() {
                   !valid ||
                   (value === saved.minimumContactIntervalHours &&
                     !emailChanged &&
+                    !weightsChanged &&
                     perUser === saved.aiCallsPerUser24h &&
                     perDay === saved.aiCallsPerDay &&
                     disabledScenarios.length ===
