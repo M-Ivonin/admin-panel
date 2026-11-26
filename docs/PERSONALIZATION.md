@@ -64,6 +64,13 @@ there is no new cron, AI call, enrollment, or send. A failed refresh retains the
 last successful values with an explicit stale-data warning. Changing period
 clears the previous report and cancels its pending request.
 
+**Download JSON** saves the loaded Results period with UTC bounds, account and
+message totals, daily activity, selections, and available scenario and delivery
+diagnostics. The versioned export excludes individual account records and
+purchase amounts. Scenario and channel breakdowns cover the selected period,
+while the daily activity series contains overall UTC calendar-day totals for
+**Last 7 days** only.
+
 The default view has four account cards, one Messages strip and four closed
 disclosures: Selected actions, How personalization works, Accounts and Metric
 definitions. Card values are unique contacted, opened, useful-action

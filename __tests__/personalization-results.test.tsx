@@ -425,3 +425,47 @@ it('shows an honest empty state and missing financial data', async () => {
   fireEvent.click(screen.getByText('Metric definitions'));
   expect(screen.getByText(/Totals are incomplete/)).toBeVisible();
 });
+
+it('downloads aggregate JSON for the loaded period without account details', async () => {
+  const createObjectURL = jest.fn<string, [Blob]>(() => 'blob:test');
+  const revokeObjectURL = jest.fn();
+  const click = jest
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('sirbro-personalization-7d-2026-11-03.json');
+    });
+  const originalURL = global.URL;
+  global.URL = Object.assign(class extends originalURL {}, {
+    createObjectURL,
+    revokeObjectURL,
+  });
+  try {
+    render(<PersonalizationResults />);
+    const button = screen.getByRole('button', { name: 'Download JSON' });
+    expect(button).toBeDisabled();
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.click(button);
+
+    expect(click).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0];
+    const json = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsText(blob);
+    });
+    expect(JSON.parse(json)).toMatchObject({
+      schemaVersion: 1,
+      period: { days: 7, from: report.from, to: report.to },
+      summary: { accounts: 2444, acceptedOrShown: 10 },
+      decisionReasons: report.decisionReasons,
+    });
+    expect(json).not.toMatch(
+      /account-a|Alex|accountLabel|userId|lastDecisionAt/
+    );
+    expect(read).toHaveBeenCalledTimes(1);
+  } finally {
+    global.URL = originalURL;
+    click.mockRestore();
+  }
+});

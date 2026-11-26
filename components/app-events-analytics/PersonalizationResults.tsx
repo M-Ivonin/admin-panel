@@ -2,6 +2,8 @@
 import { PersonalizationDailyActivity } from './PersonalizationDailyActivity';
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import { downloadPersonalizationResults } from '@/lib/personalization-results-export';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
@@ -485,6 +487,7 @@ export function PersonalizationResults() {
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         gap={2}
+        flexWrap={{ sm: 'wrap' }}
         alignItems={{ sm: 'center' }}
       >
         <Chip
@@ -524,6 +527,14 @@ export function PersonalizationResults() {
           onClick={() => setRevision((v) => v + 1)}
         >
           Refresh results
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<DownloadOutlinedIcon />}
+          disabled={!report}
+          onClick={() => report && downloadPersonalizationResults(report)}
+        >
+          Download JSON
         </Button>
       </Stack>
       {loading && !report ? (
