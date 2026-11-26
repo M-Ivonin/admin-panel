@@ -1,11 +1,34 @@
 import { adminAuthFetch } from '@/modules/http/admin-auth-client';
 
+export interface PersonalizationDecisionResult {
+  id: string;
+  createdAt: string;
+  aiCalled: boolean | null;
+  modelStatus: string | null;
+  modelReason: string | null;
+  selectionSource: string | null;
+  selectionReason: string | null;
+  scenarioId: string | null;
+  channel: string | null;
+  deliveryStatus: string | null;
+  deliveryReason?: string | null;
+}
+
+export interface GeneralNewsCohort {
+  accounts: number;
+  usefulActionAccounts: number;
+  notificationOptOutAccounts: number | null;
+}
+
 export interface PersonalizationAccountResults {
   userId: string;
   accountLabel: string;
   lastDecisionAt: string;
   decisions: number;
   aiDecisions: number;
+  aiCalls?: number;
+  ruleSelections?: number;
+  recentDecisions?: PersonalizationDecisionResult[];
   selectedContacts: number;
   deliveries: number;
   acceptedOrShown: number;
@@ -28,7 +51,7 @@ export interface PersonalizationResults {
   to: string;
   summary: Omit<
     PersonalizationAccountResults,
-    'userId' | 'accountLabel' | 'lastDecisionAt'
+    'userId' | 'accountLabel' | 'lastDecisionAt' | 'recentDecisions'
   > & {
     accounts: number;
     contactedAccounts: number;
@@ -46,6 +69,12 @@ export interface PersonalizationResults {
     count: number;
   }>;
   accounts: PersonalizationAccountResults[];
+  generalNewsOutcomes?: {
+    windowHours: number;
+    available: boolean;
+    sent: GeneralNewsCohort;
+    unsent: GeneralNewsCohort;
+  };
   accountLimit: number;
   grossPurchases: Array<{ currency: string; amount: string }>;
   missingPurchaseAmounts: number;

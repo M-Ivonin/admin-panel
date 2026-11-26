@@ -20,6 +20,10 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -55,6 +59,12 @@ const time = (value: string) =>
     minute: '2-digit',
   }) + ' UTC';
 const reasonLabels: Record<string, string> = {
+  user_ai_quota_exhausted: 'Account AI quota exhausted',
+  daily_ai_quota_exhausted: 'Daily AI quota exhausted',
+  general_news: 'General news',
+  weak_news_interest: 'Weak news interest',
+  relevant_news: 'Relevant news',
+  policy_exclusion: 'Excluded by policy',
   no_eligible_action: 'No eligible action',
   sparse_history: 'Not enough activity history',
   stale_snapshot: 'Activity profile needs updating',
@@ -68,6 +78,7 @@ const reasonLabels: Record<string, string> = {
   crm_dead: 'Inactive in CRM (DEAD)',
   quiet_hours: 'Quiet hours',
   no_channel: 'No available channel',
+  shared_outbound_limit: 'Account contact limit reached',
   source_unavailable: 'Source unavailable',
   in_app_expired: 'In-app expired before confirmation',
   reservation_expired: 'Contact reservation expired',
@@ -608,8 +619,197 @@ export function PersonalizationResults() {
   );
 }
 
+function AccountDecisions({
+  account,
+  onClose,
+}: {
+  account: Results['accounts'][number];
+  onClose: () => void;
+}) {
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      aria-labelledby="recent-decisions-title"
+    >
+      <DialogTitle
+        id="recent-decisions-title"
+        sx={{ overflowWrap: 'anywhere' }}
+      >
+        Recent decisions for {account.accountLabel}
+      </DialogTitle>
+      <DialogContent dividers>
+        <TableContainer>
+          <Table
+            size="small"
+            aria-label={`Recent decisions for ${account.accountLabel}`}
+            sx={(theme) => ({
+              [theme.breakpoints.down('sm')]: {
+                display: 'block',
+                '& thead': { display: 'none' },
+                '& tbody, & tbody tr': { display: 'block' },
+                '& tbody tr + tr': {
+                  borderTop: 1,
+                  borderColor: 'divider',
+                  mt: 1,
+                  pt: 1,
+                },
+                '& td': { display: 'block', border: 0, px: 0, py: 0.5 },
+                '& td[data-label]::before': {
+                  content: 'attr(data-label)',
+                  display: 'block',
+                  color: 'text.secondary',
+                  typography: 'caption',
+                },
+              },
+            })}
+          >
+            <TableHead>
+              <TableRow>
+                {['Time (UTC)', 'AI evaluation', 'Selection', 'Delivery'].map(
+                  (label) => (
+                    <TableCell key={label}>{label}</TableCell>
+                  )
+                )}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {account.recentDecisions?.map((d) => {
+                const source =
+                  d.selectionSource === 'model'
+                    ? 'AI'
+                    : d.selectionSource === 'baseline'
+                      ? 'Server rules'
+                      : 'Unknown source';
+                const channel =
+                  d.channel === 'in_app'
+                    ? 'In-app'
+                    : d.channel === 'push'
+                      ? 'Push'
+                      : d.channel === 'email'
+                        ? 'Email'
+                        : '';
+                const outcome = d.deliveryStatus
+                  ? [channel, humanize(d.deliveryStatus)]
+                      .filter(Boolean)
+                      .join(' ')
+                  : 'No recorded delivery';
+                return (
+                  <TableRow key={d.id}>
+                    <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
+                      {stamp(d.createdAt)}
+                    </TableCell>
+                    <TableCell data-label="AI evaluation">
+                      {d.aiCalled === true
+                        ? 'Called'
+                        : d.aiCalled === false
+                          ? 'Skipped'
+                          : 'Unknown'}
+                      <Typography variant="body2" color="text.secondary">
+                        {d.modelReason
+                          ? humanize(d.modelReason)
+                          : d.aiCalled === true && d.modelStatus
+                            ? humanize(d.modelStatus)
+                            : 'Reason unknown'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell data-label="Selection">
+                      {source}
+                      <Typography variant="body2" color="text.secondary">
+                        {d.selectionReason
+                          ? humanize(d.selectionReason)
+                          : 'Reason unknown'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell data-label="Delivery">
+                      {outcome}
+                      {d.deliveryReason && (
+                        <Typography variant="body2" color="text.secondary">
+                          {humanize(d.deliveryReason)}
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function GeneralNewsOutcomes({
+  outcomes,
+}: {
+  outcomes: NonNullable<Results['generalNewsOutcomes']>;
+}) {
+  return (
+    <Section title="General news outcomes" icon={<DescriptionOutlinedIcon />}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Accounts eligible for general news, observed for {outcomes.windowHours}{' '}
+        hours from the decision. Useful actions and news push opt-outs count
+        accounts in each group.
+      </Typography>
+      {!outcomes.available && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          Comparison unavailable for this period. Both groups need comparable
+          accounts with a complete observation window.
+        </Typography>
+      )}
+      <TableContainer>
+        <Table size="small" aria-label="General news outcome comparison">
+          <TableHead>
+            <TableRow>
+              {[
+                'Group',
+                'Eligible accounts',
+                'Useful actions',
+                'News push opt-outs',
+              ].map((label) => (
+                <TableCell key={label}>{label}</TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(['sent', 'unsent'] as const).map((key) => {
+              const group = outcomes[key];
+              return (
+                <TableRow key={key}>
+                  <TableCell component="th" scope="row">
+                    {key === 'sent' ? 'With a message' : 'Without a message'}
+                  </TableCell>
+                  <TableCell>{group.accounts}</TableCell>
+                  <TableCell>
+                    {group.accounts ? group.usefulActionAccounts : '—'}
+                  </TableCell>
+                  <TableCell>
+                    {group.accounts
+                      ? (group.notificationOptOutAccounts ?? 'Unavailable')
+                      : '—'}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Section>
+  );
+}
+
 function Report({ report: r }: { report: Results }) {
   const s = r.summary;
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detailAccount = detailId
+    ? r.accounts.find((a) => a.userId === detailId)
+    : undefined;
   const selectedActions = r.selectedActions;
   const definitions = [
     {
@@ -967,6 +1167,8 @@ function Report({ report: r }: { report: Results }) {
                         'Account',
                         'Last decision (UTC)',
                         'Decisions',
+                        'AI calls',
+                        'Rule selections',
                         'Accepted / shown',
                         'Opened',
                         'Useful actions',
@@ -979,7 +1181,7 @@ function Report({ report: r }: { report: Results }) {
                   <TableBody>
                     {r.accounts.map((a) => (
                       <TableRow key={a.userId}>
-                        <TableCell>
+                        <TableCell sx={{ minWidth: 170 }}>
                           <Link
                             href={`/dashboard/users/${encodeURIComponent(a.userId)}/portrait`}
                             style={{ overflowWrap: 'anywhere' }}
@@ -990,7 +1192,24 @@ function Report({ report: r }: { report: Results }) {
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
                           {stamp(a.lastDecisionAt)}
                         </TableCell>
-                        <TableCell>{a.decisions}</TableCell>
+                        <TableCell>
+                          {a.recentDecisions?.length ? (
+                            <Button
+                              size="small"
+                              aria-haspopup="dialog"
+                              aria-label={`Recent decisions for ${a.accountLabel}`}
+                              onClick={() => setDetailId(a.userId)}
+                              endIcon={<ExpandMoreIcon />}
+                              sx={{ minWidth: 0 }}
+                            >
+                              {a.decisions}
+                            </Button>
+                          ) : (
+                            a.decisions
+                          )}
+                        </TableCell>
+                        <TableCell>{a.aiCalls ?? '—'}</TableCell>
+                        <TableCell>{a.ruleSelections ?? '—'}</TableCell>
                         <TableCell>{a.acceptedOrShown}</TableCell>
                         <TableCell>{a.opened}</TableCell>
                         <TableCell>{a.usefulActions}</TableCell>
@@ -1002,13 +1221,22 @@ function Report({ report: r }: { report: Results }) {
               </TableContainer>
               <Typography variant="caption" color="text.secondary">
                 Showing {r.accounts.length} of {s.accounts.toLocaleString()}{' '}
-                evaluated accounts, most recent first. Account outcomes includes
-                all accounts; table activity columns count messages, actions and
-                purchases per account.
+                evaluated accounts, most recent first. Select a decision count
+                to see recent evaluations. Rule selections count messages chosen
+                by server rules. A dash means the count is unavailable.
               </Typography>
             </>
           )}
         </Section>
+        {detailAccount && (
+          <AccountDecisions
+            account={detailAccount}
+            onClose={() => setDetailId(null)}
+          />
+        )}
+        {r.generalNewsOutcomes && (
+          <GeneralNewsOutcomes outcomes={r.generalNewsOutcomes} />
+        )}
         <Section title="Metric definitions" icon={<InfoOutlinedIcon />}>
           <Stack spacing={2}>
             <Typography variant="body2">

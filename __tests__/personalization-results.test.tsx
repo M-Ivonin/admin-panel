@@ -197,6 +197,8 @@ it('mounts Accounts only while expanded and uses the latest refreshed report', a
     'Alex',
     '3 Nov 2026, 10:59 UTC',
     '10',
+    '—',
+    '—',
     '1',
     '1',
     '7',
@@ -548,4 +550,97 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
   expect(screen.queryByText('Quiet account')).not.toBeInTheDocument();
   expect(screen.getByText('No available channel: 1')).toBeVisible();
   expect(screen.getByRole('link', { name: 'No channel account' })).toBeVisible();
+});
+
+it('connects a rule-selected message to its AI and delivery evidence and compares decision cohorts', async () => {
+  const account = {
+    ...report.accounts[0],
+    decisions: 271,
+    aiCalls: 16,
+    ruleSelections: 1,
+    recentDecisions: [
+      {
+        id: 'decision-1',
+        createdAt: '2026-11-03T10:59:00Z',
+        aiCalled: false,
+        modelStatus: 'budget_exhausted',
+        modelReason: 'user_ai_quota_exhausted',
+        selectionSource: 'baseline',
+        selectionReason: 'weak_news_interest',
+        scenarioId: 'stored_news.v1',
+        channel: 'push',
+        deliveryStatus: 'accepted',
+      },
+      {
+        id: 'decision-2',
+        createdAt: '2026-11-03T11:00:00Z',
+        aiCalled: false,
+        modelStatus: 'not_requested',
+        modelReason: null,
+        selectionSource: 'baseline',
+        selectionReason: 'general_news',
+        scenarioId: 'stored_news.v1',
+        channel: 'push',
+        deliveryStatus: 'skipped',
+        deliveryReason: 'shared_outbound_limit',
+      },
+    ],
+  };
+  const current = {
+    ...report,
+    accounts: [account],
+    generalNewsOutcomes: {
+      windowHours: 24,
+      available: true,
+      sent: {
+        accounts: 6,
+        usefulActionAccounts: 2,
+        notificationOptOutAccounts: 0,
+      },
+      unsent: {
+        accounts: 3,
+        usefulActionAccounts: 1,
+        notificationOptOutAccounts: null,
+      },
+    },
+  };
+  read.mockResolvedValue(current);
+  render(<PersonalizationResults />);
+  fireEvent.click(await screen.findByText('Accounts', { exact: true }));
+  const accounts = await screen.findByRole('table', {
+    name: 'Permanent personalization accounts',
+  });
+  expect(
+    within(accounts).getByRole('columnheader', { name: 'AI calls' })
+  ).toBeVisible();
+  expect(
+    within(accounts).getByRole('columnheader', { name: 'Rule selections' })
+  ).toBeVisible();
+  fireEvent.click(
+    within(accounts).getByRole('button', { name: 'Recent decisions for Alex' })
+  );
+  const decisions = await screen.findByRole('table', {
+    name: 'Recent decisions for Alex',
+  });
+  expect(
+    within(decisions).getByText('Account AI quota exhausted')
+  ).toBeVisible();
+  expect(within(decisions).getByText('Weak news interest')).toBeVisible();
+  expect(within(decisions).getByText('Push accepted')).toBeVisible();
+  const skipped = within(decisions).getByText('Push skipped').closest('tr')!;
+  expect(within(skipped).getByText('Reason unknown')).toBeVisible();
+  expect(within(skipped).getByText('Account contact limit reached')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  );
+  fireEvent.click(screen.getByText('General news outcomes', { exact: true }));
+  const cohorts = await screen.findByRole('table', {
+    name: 'General news outcome comparison',
+  });
+  expect(
+    within(cohorts).getByRole('row', {
+      name: 'Without a message 3 1 Unavailable',
+    })
+  ).toBeVisible();
 });

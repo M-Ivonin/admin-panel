@@ -71,9 +71,8 @@ purchase amounts. Scenario and channel breakdowns cover the selected period,
 while the daily activity series contains overall UTC calendar-day totals for
 **Last 7 days** only.
 
-The default view has four account cards, one Messages strip and four closed
-disclosures: Selected actions, How personalization works, Accounts and Metric
-definitions. Card values are unique contacted, opened, useful-action
+The default view has four account cards, one Messages strip and closed
+disclosures for account details, selections, delivery, outcomes and metric definitions. Card values are unique contacted, opened, useful-action
 and purchasing accounts. Repeated messages/events/purchases from one account do
 not increase a card. Message totals remain separate and count delivery records.
 Not sent counts failed/skipped messages without acceptance/display; pending work
@@ -106,8 +105,18 @@ today is marked as in progress. Push openings count recorded notification taps.
 Daily account counts deduplicate within each date, so the same account can
 appear on multiple days. The report cards use the selected rolling period.
 
-Accounts still shows the latest 100 evaluated accounts, while card totals include
-all evaluated accounts.
+Accounts shows the latest 100 evaluated accounts. Each row distinguishes completed
+evaluations, actual AI calls, messages selected by server rules and accepted or
+shown messages. Select a decision count to inspect up to ten recent evaluations
+and their model evidence, selection reason and linked delivery status. Older
+responses without call or rule counts display a dash.
+
+General news outcomes compares eligible accounts with and without a recorded
+general news contact, over 24 complete hours from the decision. Groups share the
+decision day, access level, language and eligible channels. The table counts
+accounts with useful activity or an explicit news push opt-out from either group.
+A missing comparison or unavailable preference history is shown explicitly.
+These observational counts also appear in the aggregate JSON download.
 
 ## Personalized contact frequency
 

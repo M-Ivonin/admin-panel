@@ -17,6 +17,8 @@ export function downloadPersonalizationResults(report: PersonalizationResults) {
         accounts: summary.accounts,
         decisions: summary.decisions,
         aiDecisions: summary.aiDecisions,
+        aiCalls: summary.aiCalls,
+        ruleSelections: summary.ruleSelections,
         selectedContacts: summary.selectedContacts,
         deliveries: summary.deliveries,
         acceptedOrShown: summary.acceptedOrShown,
@@ -31,6 +33,7 @@ export function downloadPersonalizationResults(report: PersonalizationResults) {
         ? report.dailyActivity
         : undefined,
       selectedActions: report.selectedActions,
+      generalNewsOutcomes: report.generalNewsOutcomes,
       decisionReasons: report.decisionReasons,
       deliveryStatuses: report.deliveryStatuses,
       funnel: recovery?.funnel,
