@@ -79,6 +79,13 @@ not increase a card. Message totals remain separate and count delivery records.
 Not sent counts failed/skipped messages without acceptance/display; pending work
 remains visible in diagnostics. Provider acceptance is not device delivery.
 
+Admission and delivery ranks scenarios by sends and confirmed in-app displays.
+Each table column has a definition on hover or keyboard focus. Considered counts
+candidate options across evaluations, including multiple options for the same
+account. Chosen counts final selections. Admission block counts track changes
+to a blocked eligibility status before evaluation. Scenario titles come from
+the catalog even when a candidate was never chosen.
+
 Selected actions shows how many saved decisions chose each message scenario
 and channel, including a No contact row for decisions to stay silent. Each
 decision contributes once even if it has multiple delivery attempts or no

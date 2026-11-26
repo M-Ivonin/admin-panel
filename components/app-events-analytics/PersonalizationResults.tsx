@@ -81,6 +81,41 @@ const selectedChannelLabels = {
   none: '—',
 };
 
+const scenarioMetrics = [
+  [
+    'Sent / shown',
+    'published',
+    'Push and email sends recorded by the system, plus confirmed in-app displays.',
+  ],
+  ['Opened', 'opened', 'Messages with a recorded opening.'],
+  [
+    'Goal reached',
+    'usefulActions',
+    'Messages linked to a recorded action that matches the scenario goal.',
+  ],
+  [
+    'Chosen',
+    'selected',
+    'Final selections from the AI model or server rules. A selection can exist without a send.',
+  ],
+  [
+    'Considered',
+    'available',
+    'Candidate options in completed evaluations. An account can count more than once.',
+  ],
+] as const;
+
+const scenarioColumns = [
+  [
+    'Scenario',
+    'The personalization message or action considered for the account.',
+  ],
+  ['Channel', 'Where the message would appear: Push, Email, or In-app.'],
+  ...scenarioMetrics.map(
+    ([label, , description]) => [label, description] as const
+  ),
+] as const;
+
 function RecoveryResults({
   recovery,
   names,
@@ -95,6 +130,12 @@ function RecoveryResults({
     deliveryFailures,
     scenarios,
   } = recovery;
+  const sortedScenarios = [...scenarios].sort(
+    (a, b) =>
+      b.published - a.published ||
+      b.selected - a.selected ||
+      b.available - a.available
+  );
   const counts = [
     ['Admitted accounts', funnel.admitted],
     ['AI calls', funnel.aiCalled],
@@ -131,45 +172,29 @@ function RecoveryResults({
           </Box>
         ))}
       </Box>
-      {(
-        [
-          ['Account admission blocks', admissionReasons],
-          ['Unconfirmed deliveries', deliveryFailures],
-        ] as const
-      ).map(
-        ([title, reasons]) =>
-          reasons.length > 0 && (
-            <Box key={String(title)} sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                {title}
-              </Typography>
-              <Stack direction="row" flexWrap="wrap" gap={1}>
-                {reasons.map((entry) => (
-                  <Chip
-                    key={entry.reason}
-                    size="small"
-                    label={`${humanize(entry.reason)}: ${entry.count.toLocaleString()}`}
-                  />
-                ))}
-              </Stack>
-            </Box>
-          )
-      )}
       {scenarios.length > 0 && (
         <>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            Sent / shown counts provider-recorded sends and confirmed in-app
+            displays. Chosen counts final selections. Considered counts
+            candidate options across evaluations, so one account can count more
+            than once.
+          </Typography>
           <Stack
             aria-label="Scenario delivery results"
             spacing={2}
             sx={{ mt: 2, display: { xs: 'flex', md: 'none' } }}
           >
-            {scenarios.map((row) => (
+            {sortedScenarios.map((row) => (
               <Paper
                 key={`${row.scenarioId}:${row.channel}`}
                 variant="outlined"
                 sx={{ p: 2 }}
               >
                 <Typography variant="subtitle2">
-                  {names.get(row.scenarioId) ?? row.scenarioId}
+                  {row.scenarioTitle ??
+                    names.get(row.scenarioId) ??
+                    row.scenarioId}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {selectedChannelLabels[row.channel]}
@@ -184,13 +209,7 @@ function RecoveryResults({
                     gap: 1,
                   }}
                 >
-                  {[
-                    ['Available', row.available],
-                    ['Selected', row.selected],
-                    ['Confirmed', row.published],
-                    ['Opened', row.opened],
-                    ['Goal reached', row.usefulActions],
-                  ].map(([label, value]) => (
+                  {scenarioMetrics.map(([label, key]) => (
                     <Box key={label}>
                       <Typography
                         component="dt"
@@ -205,7 +224,7 @@ function RecoveryResults({
                         fontWeight={600}
                         sx={{ m: 0 }}
                       >
-                        {value.toLocaleString()}
+                        {row[key].toLocaleString()}
                       </Typography>
                     </Box>
                   ))}
@@ -217,37 +236,29 @@ function RecoveryResults({
             <Table size="small" aria-label="Scenario delivery results">
               <TableHead>
                 <TableRow>
-                  <TableCell>Scenario</TableCell>
-                  {[
-                    'Channel',
-                    'Available',
-                    'Selected',
-                    'Confirmed',
-                    'Opened',
-                    'Goal reached',
-                  ].map((label, index) => (
-                    <TableCell key={label} align={index ? 'right' : 'left'}>
-                      {label}
+                  {scenarioColumns.map(([label, description], index) => (
+                    <TableCell key={label} align={index < 2 ? 'left' : 'right'}>
+                      <Tooltip title={description} describeChild>
+                        <Box component="span" tabIndex={0}>
+                          {label}
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {scenarios.map((row) => (
+                {sortedScenarios.map((row) => (
                   <TableRow key={`${row.scenarioId}:${row.channel}`}>
                     <TableCell>
-                      {names.get(row.scenarioId) ?? row.scenarioId}
+                      {row.scenarioTitle ??
+                        names.get(row.scenarioId) ??
+                        row.scenarioId}
                     </TableCell>
                     <TableCell>{selectedChannelLabels[row.channel]}</TableCell>
-                    {[
-                      row.available,
-                      row.selected,
-                      row.published,
-                      row.opened,
-                      row.usefulActions,
-                    ].map((value, index) => (
-                      <TableCell key={index} align="right">
-                        {value.toLocaleString()}
+                    {scenarioMetrics.map(([label, key]) => (
+                      <TableCell key={label} align="right">
+                        {row[key].toLocaleString()}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -256,6 +267,41 @@ function RecoveryResults({
             </Table>
           </TableContainer>
         </>
+      )}
+      {(
+        [
+          ['Admission blocks', admissionReasons],
+          ['Delivery failures and skips', deliveryFailures],
+        ] as const
+      ).map(
+        ([title, reasons]) =>
+          reasons.length > 0 && (
+            <Box key={String(title)} sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                {title}
+              </Typography>
+              {title === 'Admission blocks' && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
+                  Counts changes to a blocked eligibility status before
+                  evaluation, grouped by reason. Scenario counts come from
+                  completed evaluations.
+                </Typography>
+              )}
+              <Stack direction="row" flexWrap="wrap" gap={1}>
+                {reasons.map((entry) => (
+                  <Chip
+                    key={entry.reason}
+                    size="small"
+                    label={`${humanize(entry.reason)}: ${entry.count.toLocaleString()}`}
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )
       )}
       {blockedAccounts.length > 0 && (
         <TableContainer sx={{ mt: 2 }}>

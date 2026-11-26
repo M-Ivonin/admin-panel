@@ -469,3 +469,64 @@ it('downloads aggregate JSON for the loaded period without account details', asy
     click.mockRestore();
   }
 });
+
+it('leads with confirmed outcomes and labels a scenario that was never chosen', async () => {
+  read.mockResolvedValue({
+    ...report,
+    recovery: {
+      funnel: {
+        admitted: 20,
+        aiCalled: 20,
+        selected: 12,
+        selectedWithoutAI: 0,
+        planned: 12,
+        pushAccepted: 10,
+        inAppPublished: 0,
+        emailAccepted: 0,
+        opened: 3,
+      },
+      admissionReasons: [{ reason: 'quiet_hours', count: 196 }],
+      blockedAccounts: [],
+      deliveryFailures: [],
+      scenarios: [
+        {
+          scenarioId: 'owned_ai_chat.v1',
+          scenarioTitle: 'Use available AI Chat',
+          channel: 'push',
+          available: 1807,
+          selected: 0,
+          published: 0,
+          opened: 0,
+          usefulActions: 0,
+        },
+        {
+          scenarioId: 'daily_free_pick.v1',
+          scenarioTitle: 'Daily Free Pick is available',
+          channel: 'push',
+          available: 15,
+          selected: 12,
+          published: 10,
+          opened: 3,
+          usefulActions: 0,
+        },
+      ],
+    },
+  });
+  render(<PersonalizationResults />);
+  fireEvent.click(await screen.findByText('Admission and delivery'));
+  const table = screen.getByRole('table', {
+    name: 'Scenario delivery results',
+  });
+  const rows = within(table).getAllByRole('row');
+  expect(rows.map((row) => row.textContent)).toEqual([
+    'ScenarioChannelSent / shownOpenedGoal reachedChosenConsidered',
+    'Daily Free Pick is availablePush10301215',
+    'Use available AI ChatPush00001,807',
+  ]);
+  const considered = within(table).getByText('Considered');
+  fireEvent.mouseOver(considered);
+  expect(await screen.findByRole('tooltip')).toHaveTextContent(
+    'Candidate options in completed evaluations.'
+  );
+  expect(screen.getByText('Quiet hours: 196')).toBeVisible();
+});

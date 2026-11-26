@@ -73,6 +73,7 @@ export interface PersonalizationResults {
     deliveryFailures: Array<{ reason: string; count: number }>;
     scenarios: Array<{
       scenarioId: string;
+      scenarioTitle?: string | null;
       channel: 'push' | 'email' | 'in_app';
       available: number;
       selected: number;
