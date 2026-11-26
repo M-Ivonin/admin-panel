@@ -113,6 +113,7 @@ export function removeEngagementExclusion(
 
 export interface PersonalizationSettings {
   emailEnabled?: boolean;
+  prioritizePushOpeners?: boolean;
   disabledScenarioIds: string[];
   messageWeightsBps?: Record<string, number> | null;
   scenarios: Array<{
@@ -141,7 +142,11 @@ export function savePersonalizationSettings(
   expectedRevision: number,
   controls?: Pick<
     PersonalizationSettings,
-    'aiCallsPerUser24h' | 'aiCallsPerDay' | 'emailEnabled' | 'messageWeightsBps'
+    | 'aiCallsPerUser24h'
+    | 'aiCallsPerDay'
+    | 'emailEnabled'
+    | 'prioritizePushOpeners'
+    | 'messageWeightsBps'
   > & { disabledScenarioIds?: string[] }
 ): Promise<PersonalizationSettings> {
   return request(`${base}/personalization-settings`, 'PATCH', {

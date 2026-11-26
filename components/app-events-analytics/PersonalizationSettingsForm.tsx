@@ -37,6 +37,7 @@ export function PersonalizationSettingsForm() {
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['message']);
   const [disabledScenarios, setDisabledScenarios] = useState<string[]>([]);
+  const [prioritizePushOpeners, setPrioritizePushOpeners] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [messageWeights, setMessageWeights] = useState<Record<
     string,
@@ -65,6 +66,7 @@ export function PersonalizationSettingsForm() {
     try {
       const value = await getPersonalizationSettings();
       setSaved(value);
+      setPrioritizePushOpeners(value.prioritizePushOpeners === true);
       setEmailEnabled(value.emailEnabled === true);
       setDisabledScenarios(value.disabledScenarioIds);
       setMessageWeights(
@@ -124,6 +126,9 @@ export function PersonalizationSettingsForm() {
     (!weightEdit || units !== null);
   const emailChanged =
     saved?.emailEnabled !== undefined && emailEnabled !== saved.emailEnabled;
+  const priorityChanged =
+    saved?.prioritizePushOpeners !== undefined &&
+    prioritizePushOpeners !== saved.prioritizePushOpeners;
   async function save() {
     if (!saved || !valid) return;
     setBusy(true);
@@ -134,10 +139,12 @@ export function PersonalizationSettingsForm() {
         aiCallsPerUser24h: perUser,
         aiCallsPerDay: perDay,
         disabledScenarioIds: disabledScenarios,
+        ...(priorityChanged && { prioritizePushOpeners }),
         ...(emailChanged && { emailEnabled }),
         ...(weightsChanged && { messageWeightsBps: shownWeights }),
       });
       setSaved(result);
+      setPrioritizePushOpeners(result.prioritizePushOpeners === true);
       setEmailEnabled(result.emailEnabled === true);
       setDisabledScenarios(result.disabledScenarioIds);
       setMessageWeights(
@@ -223,6 +230,38 @@ export function PersonalizationSettingsForm() {
                   : 'Allow personalized AI Chat reminders by email. Changes apply after saving.'}
               </Typography>
             </Box>
+            {saved.prioritizePushOpeners !== undefined && (
+              <Box>
+                <Typography component="h2" variant="h6" fontWeight={700}>
+                  Recipient priority
+                </Typography>
+                <FormControlLabel
+                  sx={{
+                    m: 0,
+                    mt: 1,
+                    width: '100%',
+                    justifyContent: 'space-between',
+                  }}
+                  labelPlacement="start"
+                  label="Prioritize accounts that open push notifications"
+                  control={
+                    <Switch
+                      checked={prioritizePushOpeners}
+                      disabled={busy}
+                      onChange={(_, checked) => {
+                        setPrioritizePushOpeners(checked);
+                        setSuccess(false);
+                      }}
+                    />
+                  }
+                />
+                <Typography color="text.secondary" variant="body2">
+                  When equally urgent accounts compete for a place, up to 20% of
+                  places go to accounts that opened personalized push
+                  notifications in the last 30 days.
+                </Typography>
+              </Box>
+            )}
             <Box>
               <Typography component="h2" variant="h6" fontWeight={700}>
                 Scenarios
@@ -531,6 +570,7 @@ export function PersonalizationSettingsForm() {
                   busy ||
                   !valid ||
                   (value === saved.minimumContactIntervalHours &&
+                    !priorityChanged &&
                     !emailChanged &&
                     !weightsChanged &&
                     perUser === saved.aiCallsPerUser24h &&

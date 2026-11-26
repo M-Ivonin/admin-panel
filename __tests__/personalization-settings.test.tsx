@@ -10,6 +10,7 @@ jest.mock('@/lib/api/user-engagement', () => ({
 }));
 const saved = {
   emailEnabled: false,
+  prioritizePushOpeners: true,
   minimumContactIntervalHours: 6,
   aiCallsPerUser24h: 4,
   aiCallsPerDay: 200,
@@ -53,6 +54,28 @@ it('saves the Email channel switch through the existing revision-protected form'
     expect.objectContaining({ emailEnabled: true })
   );
   expect(email).toBeChecked();
+});
+
+it('saves a disabled push opener priority and reads it back after reload', async () => {
+  const disabled = { ...saved, prioritizePushOpeners: false, revision: 2 };
+  jest.mocked(savePersonalizationSettings).mockResolvedValue(disabled);
+  const view = render(<PersonalizationSettingsForm />);
+  const label = 'Prioritize accounts that open push notifications';
+  const toggle = await screen.findByRole('switch', { name: label });
+  expect(toggle).toBeChecked();
+  fireEvent.click(toggle);
+  expect(savePersonalizationSettings).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Personalization settings saved.');
+  expect(savePersonalizationSettings).toHaveBeenCalledWith(
+    6,
+    1,
+    expect.objectContaining({ prioritizePushOpeners: false })
+  );
+  view.unmount();
+  jest.mocked(getPersonalizationSettings).mockResolvedValue(disabled);
+  render(<PersonalizationSettingsForm />);
+  expect(await screen.findByRole('switch', { name: label })).not.toBeChecked();
 });
 
 it('reads persisted frequency, validates whole hours and saves an explicit change with the read revision', async () => {

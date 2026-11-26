@@ -173,3 +173,12 @@ chances are about 67% and 33%. An eligible message with a clear advantage can
 still be selected regardless of its weight.
 
 The switches reuse the existing disabled-ID array and apply to personalization.
+
+## Recipient priority
+
+**Prioritize accounts that open push notifications** is on by default. Save
+changes to apply it to the next SirBro evaluation batch. When equally urgent
+accounts compete for places, up to one in five remaining places can go to
+recent openers with an available push channel. A batch of 20 equally urgent
+accounts keeps 16 places in ordinary queue order. The backend chooses the
+message and channel separately and applies its usual contact checks.
