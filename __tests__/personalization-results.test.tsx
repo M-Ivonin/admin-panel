@@ -485,8 +485,24 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
         emailAccepted: 0,
         opened: 3,
       },
-      admissionReasons: [{ reason: 'quiet_hours', count: 196 }],
-      blockedAccounts: [],
+      admissionReasons: [
+        { reason: 'quiet_hours', count: 196 },
+        { reason: 'no_channel', count: 1 },
+      ],
+      blockedAccounts: [
+        {
+          userId: 'quiet-account',
+          accountLabel: 'Quiet account',
+          reason: 'quiet_hours',
+          checkedAt: report.to,
+        },
+        {
+          userId: 'no-channel-account',
+          accountLabel: 'No channel account',
+          reason: 'no_channel',
+          checkedAt: report.to,
+        },
+      ],
       deliveryFailures: [],
       scenarios: [
         {
@@ -528,5 +544,8 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
   expect(await screen.findByRole('tooltip')).toHaveTextContent(
     'Candidate options in completed evaluations.'
   );
-  expect(screen.getByText('Quiet hours: 196')).toBeVisible();
+  expect(screen.queryByText('Quiet hours: 196')).not.toBeInTheDocument();
+  expect(screen.queryByText('Quiet account')).not.toBeInTheDocument();
+  expect(screen.getByText('No available channel: 1')).toBeVisible();
+  expect(screen.getByRole('link', { name: 'No channel account' })).toBeVisible();
 });

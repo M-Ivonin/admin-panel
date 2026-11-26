@@ -130,6 +130,12 @@ function RecoveryResults({
     deliveryFailures,
     scenarios,
   } = recovery;
+  const visibleAdmissionReasons = admissionReasons.filter(
+    ({ reason }) => reason !== 'quiet_hours'
+  );
+  const visibleBlockedAccounts = blockedAccounts.filter(
+    ({ reason }) => reason !== 'quiet_hours'
+  );
   const sortedScenarios = [...scenarios].sort(
     (a, b) =>
       b.published - a.published ||
@@ -270,7 +276,7 @@ function RecoveryResults({
       )}
       {(
         [
-          ['Admission blocks', admissionReasons],
+          ['Admission blocks', visibleAdmissionReasons],
           ['Delivery failures and skips', deliveryFailures],
         ] as const
       ).map(
@@ -303,7 +309,7 @@ function RecoveryResults({
             </Box>
           )
       )}
-      {blockedAccounts.length > 0 && (
+      {visibleBlockedAccounts.length > 0 && (
         <TableContainer sx={{ mt: 2 }}>
           <Table size="small" aria-label="Recently blocked accounts">
             <TableHead>
@@ -316,7 +322,7 @@ function RecoveryResults({
               </TableRow>
             </TableHead>
             <TableBody>
-              {blockedAccounts.map((account) => (
+              {visibleBlockedAccounts.map((account) => (
                 <TableRow key={account.userId}>
                   <TableCell>
                     <Link href={`/dashboard/users/${account.userId}/portrait`}>

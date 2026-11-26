@@ -83,8 +83,9 @@ Admission and delivery ranks scenarios by sends and confirmed in-app displays.
 Each table column has a definition on hover or keyboard focus. Considered counts
 candidate options across evaluations, including multiple options for the same
 account. Chosen counts final selections. Admission block counts track changes
-to a blocked eligibility status before evaluation. Scenario titles come from
-the catalog even when a candidate was never chosen.
+to a blocked eligibility status before evaluation. Quiet hours are omitted from
+the on-screen admission diagnostics and retained in Download JSON. Scenario
+titles come from the catalog even when a candidate was never chosen.
 
 Selected actions shows how many saved decisions chose each message scenario
 and channel, including a No contact row for decisions to stay silent. Each
