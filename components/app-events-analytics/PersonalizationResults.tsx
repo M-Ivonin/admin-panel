@@ -35,6 +35,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  type TableCellProps,
   TableContainer,
   TableHead,
   TableRow,
@@ -127,6 +128,31 @@ const scenarioColumns = [
   ),
 ] as const;
 
+// Older report responses may omit catalog titles, especially for unchosen scenarios.
+const scenarioFallbackTitles = new Map([
+  ['owned_ai_chat.v1', 'Use existing AI Chat access'],
+  ['observed_match_preview.v1', 'Match preview by observed interest'],
+]);
+
+function ColumnHeading({
+  label,
+  description,
+  ...cellProps
+}: Pick<TableCellProps, 'align' | 'sx'> & {
+  label: string;
+  description: string;
+}) {
+  return (
+    <TableCell {...cellProps}>
+      <Tooltip title={description} describeChild>
+        <Box component="span" tabIndex={0} sx={{ cursor: 'help' }}>
+          {label}
+        </Box>
+      </Tooltip>
+    </TableCell>
+  );
+}
+
 function RecoveryResults({
   recovery,
   names,
@@ -153,6 +179,14 @@ function RecoveryResults({
       b.selected - a.selected ||
       b.available - a.available
   );
+  const scenarioName = ({
+    scenarioId,
+    scenarioTitle,
+  }: (typeof scenarios)[number]) =>
+    scenarioTitle ??
+    names.get(scenarioId) ??
+    scenarioFallbackTitles.get(scenarioId) ??
+    scenarioId;
   const counts = [
     ['Admitted accounts', funnel.admitted],
     ['AI calls', funnel.aiCalled],
@@ -208,11 +242,7 @@ function RecoveryResults({
                 variant="outlined"
                 sx={{ p: 2 }}
               >
-                <Typography variant="subtitle2">
-                  {row.scenarioTitle ??
-                    names.get(row.scenarioId) ??
-                    row.scenarioId}
-                </Typography>
+                <Typography variant="subtitle2">{scenarioName(row)}</Typography>
                 <Typography variant="caption" color="text.secondary">
                   {selectedChannelLabels[row.channel]}
                 </Typography>
@@ -254,24 +284,19 @@ function RecoveryResults({
               <TableHead>
                 <TableRow>
                   {scenarioColumns.map(([label, description], index) => (
-                    <TableCell key={label} align={index < 2 ? 'left' : 'right'}>
-                      <Tooltip title={description} describeChild>
-                        <Box component="span" tabIndex={0}>
-                          {label}
-                        </Box>
-                      </Tooltip>
-                    </TableCell>
+                    <ColumnHeading
+                      key={label}
+                      label={label}
+                      description={description}
+                      align={index < 2 ? 'left' : 'right'}
+                    />
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {sortedScenarios.map((row) => (
                   <TableRow key={`${row.scenarioId}:${row.channel}`}>
-                    <TableCell>
-                      {row.scenarioTitle ??
-                        names.get(row.scenarioId) ??
-                        row.scenarioId}
-                    </TableCell>
+                    <TableCell>{scenarioName(row)}</TableCell>
                     <TableCell>{selectedChannelLabels[row.channel]}</TableCell>
                     {scenarioMetrics.map(([label, key]) => (
                       <TableCell key={label} align="right">
@@ -325,11 +350,19 @@ function RecoveryResults({
           <Table size="small" aria-label="Recently blocked accounts">
             <TableHead>
               <TableRow>
-                <TableCell>Account</TableCell>
-                <TableCell>Reason</TableCell>
-                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
-                  Checked
-                </TableCell>
+                <ColumnHeading
+                  label="Account"
+                  description="The blocked account. Select it to open its profile."
+                />
+                <ColumnHeading
+                  label="Reason"
+                  description="Why the account was blocked before evaluation."
+                />
+                <ColumnHeading
+                  label="Checked"
+                  description="When the account’s eligibility was checked, in UTC."
+                  sx={{ display: { xs: 'none', sm: 'table-cell' } }}
+                />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -668,11 +701,22 @@ function AccountDecisions({
           >
             <TableHead>
               <TableRow>
-                {['Time (UTC)', 'AI evaluation', 'Selection', 'Delivery'].map(
-                  (label) => (
-                    <TableCell key={label}>{label}</TableCell>
-                  )
-                )}
+                <ColumnHeading
+                  label="Time (UTC)"
+                  description="When this decision was recorded, in UTC."
+                />
+                <ColumnHeading
+                  label="AI evaluation"
+                  description="Whether AI was called and the recorded result or reason."
+                />
+                <ColumnHeading
+                  label="Selection"
+                  description="Who made the final selection and the reason recorded for it."
+                />
+                <ColumnHeading
+                  label="Delivery"
+                  description="The message channel, recorded delivery status and any failure or skip reason."
+                />
               </TableRow>
             </TableHead>
             <TableBody>
@@ -768,12 +812,28 @@ function GeneralNewsOutcomes({
           <TableHead>
             <TableRow>
               {[
-                'Group',
-                'Eligible accounts',
-                'Useful actions',
-                'News push opt-outs',
-              ].map((label) => (
-                <TableCell key={label}>{label}</TableCell>
+                [
+                  'Group',
+                  'Whether an eligible account cohort received a general news message.',
+                ],
+                [
+                  'Eligible accounts',
+                  'Accounts in this group with a complete observation window.',
+                ],
+                [
+                  'Useful actions',
+                  'Accounts with at least one qualifying product action during the observation window.',
+                ],
+                [
+                  'News push opt-outs',
+                  'Accounts that opted out of news push notifications during the observation window.',
+                ],
+              ].map(([label, description]) => (
+                <ColumnHeading
+                  key={label}
+                  label={label}
+                  description={description}
+                />
               ))}
             </TableRow>
           </TableHead>
@@ -1031,9 +1091,19 @@ function Report({ report: r }: { report: Results }) {
                   >
                     <TableHead>
                       <TableRow>
-                        <TableCell>Scenario</TableCell>
-                        <TableCell>Channel</TableCell>
-                        <TableCell align="right">Selections</TableCell>
+                        <ColumnHeading
+                          label="Scenario"
+                          description="The message scenario chosen, or No contact if the decision was to stay silent."
+                        />
+                        <ColumnHeading
+                          label="Channel"
+                          description="The channel chosen for the message: Push, Email, or In-app."
+                        />
+                        <ColumnHeading
+                          label="Selections"
+                          description="Saved decisions for this scenario and channel, counted once per decision."
+                          align="right"
+                        />
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1048,7 +1118,10 @@ function Report({ report: r }: { report: Results }) {
                               {channel === 'none'
                                 ? 'No contact'
                                 : (scenarioTitle ??
-                                  scenarioId?.replace(/_/g, ' ') ??
+                                  (scenarioId
+                                    ? (scenarioFallbackTitles.get(scenarioId) ??
+                                      scenarioId.replace(/_/g, ' '))
+                                    : null) ??
                                   'Unknown scenario')}
                             </TableCell>
                             <TableCell>
@@ -1164,17 +1237,48 @@ function Report({ report: r }: { report: Results }) {
                   <TableHead>
                     <TableRow>
                       {[
-                        'Account',
-                        'Last decision (UTC)',
-                        'Decisions',
-                        'AI calls',
-                        'Rule selections',
-                        'Accepted / shown',
-                        'Opened',
-                        'Useful actions',
-                        'Purchases',
-                      ].map((h) => (
-                        <TableCell key={h}>{h}</TableCell>
+                        [
+                          'Account',
+                          'The evaluated account. Select it to open its profile.',
+                        ],
+                        [
+                          'Last decision (UTC)',
+                          'When the most recent decision for the account was recorded, in UTC.',
+                        ],
+                        [
+                          'Decisions',
+                          'Completed personalization evaluations for the account in this period.',
+                        ],
+                        [
+                          'AI calls',
+                          'Evaluations that called the AI model for this account.',
+                        ],
+                        [
+                          'Rule selections',
+                          'Messages selected by server rules for this account.',
+                        ],
+                        [
+                          'Accepted / shown',
+                          'Push or email messages accepted by the provider, plus confirmed in-app displays.',
+                        ],
+                        [
+                          'Opened',
+                          'Messages for this account with a recorded opening.',
+                        ],
+                        [
+                          'Useful actions',
+                          'Qualifying product actions recorded after the account’s first contact in this period.',
+                        ],
+                        [
+                          'Purchases',
+                          'Verified positive production purchases after the account’s first contact in this period.',
+                        ],
+                      ].map(([label, description]) => (
+                        <ColumnHeading
+                          key={label}
+                          label={label}
+                          description={description}
+                        />
                       ))}
                     </TableRow>
                   </TableHead>

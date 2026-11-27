@@ -509,7 +509,7 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
       scenarios: [
         {
           scenarioId: 'owned_ai_chat.v1',
-          scenarioTitle: 'Use available AI Chat',
+          scenarioTitle: null,
           channel: 'push',
           available: 1807,
           selected: 0,
@@ -539,7 +539,7 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
   expect(rows.map((row) => row.textContent)).toEqual([
     'ScenarioChannelSent / shownOpenedGoal reachedChosenConsidered',
     'Daily Free Pick is availablePush10301215',
-    'Use available AI ChatPush00001,807',
+    'Use existing AI Chat accessPush00001,807',
   ]);
   const considered = within(table).getByText('Considered');
   fireEvent.mouseOver(considered);
@@ -549,7 +549,18 @@ it('leads with confirmed outcomes and labels a scenario that was never chosen', 
   expect(screen.queryByText('Quiet hours: 196')).not.toBeInTheDocument();
   expect(screen.queryByText('Quiet account')).not.toBeInTheDocument();
   expect(screen.getByText('No available channel: 1')).toBeVisible();
-  expect(screen.getByRole('link', { name: 'No channel account' })).toBeVisible();
+  expect(
+    screen.getByRole('link', { name: 'No channel account' })
+  ).toBeVisible();
+  expect(screen.getAllByText('Use existing AI Chat access')).toHaveLength(2);
+  fireEvent.mouseLeave(considered);
+  const blocked = screen.getByRole('table', {
+    name: 'Recently blocked accounts',
+  });
+  fireEvent.mouseOver(within(blocked).getByText('Reason'));
+  expect(
+    await screen.findByText('Why the account was blocked before evaluation.')
+  ).toBeVisible();
 });
 
 it('connects a rule-selected message to its AI and delivery evidence and compares decision cohorts', async () => {
